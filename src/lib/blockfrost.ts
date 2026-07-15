@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 /**
  * Blockfrost browser client.
@@ -106,6 +106,13 @@ export function useCardanoTip(intervalMs = 20_000) {
   const [tip, setTip] = useState<CardanoTip | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [loading, setLoading] = useState(BLOCKFROST_CONFIGURED);
+  const [refetchTick, setRefetchTick] = useState(0);
+
+  const refetch = useCallback(() => {
+    setError(null);
+    if (BLOCKFROST_CONFIGURED) setLoading(true);
+    setRefetchTick(t => t + 1);
+  }, []);
 
   useEffect(() => {
     if (!BLOCKFROST_CONFIGURED) {
@@ -149,7 +156,8 @@ export function useCardanoTip(intervalMs = 20_000) {
       controller.abort();
       window.clearInterval(id);
     };
-  }, [intervalMs]);
+  }, [intervalMs, refetchTick]);
 
-  return { tip, error, loading, configured: BLOCKFROST_CONFIGURED, network: NETWORK };
+  return { tip, error, loading, refetch, configured: BLOCKFROST_CONFIGURED, network: NETWORK };
 }
+

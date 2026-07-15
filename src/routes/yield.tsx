@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Activity, ArrowUpRight, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, ChevronUp, ExternalLink, Inbox, Radio, Search, ShieldCheck, TrendingUp, Zap, Copy, Check, AlertTriangle, X } from "lucide-react";
+import { Activity, ArrowUpRight, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, ChevronUp, ExternalLink, Inbox, Radio, RefreshCw, Search, ShieldCheck, TrendingUp, Zap, Copy, Check, AlertTriangle, X } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/StatusBadge";
 import { Sparkline } from "@/components/charts/Sparkline";
@@ -22,7 +22,7 @@ export const Route = createFileRoute("/yield")({
 
 function YieldEngine() {
   const live = useLiveYields(2000);
-  const { tip, error: tipError, loading: tipLoading, configured, network } = useCardanoTip(20_000);
+  const { tip, error: tipError, loading: tipLoading, refetch: refetchTip, configured, network } = useCardanoTip(20_000);
   const anchor = tip
     ? { epoch: tip.epoch, slot: tip.slot, block: tip.block, blockTime: tip.blockTime }
     : null;
@@ -129,11 +129,26 @@ function YieldEngine() {
         </div>
       )}
       {tipError && (
-        <div className="mt-4 flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-[12px] text-destructive">
+        <div className="mt-4 flex flex-wrap items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-[12px] text-destructive">
           <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-          <div>Blockfrost request failed: <span className="font-mono">{tipError.message}</span></div>
+          <div className="min-w-0 flex-1">
+            <div className="font-semibold">Blockfrost request failed</div>
+            <div className="opacity-90 mt-0.5 break-words">
+              <span className="font-mono">{tipError.message}</span>
+              {tip && <span className="ml-1 text-muted-foreground">· showing last known tip from epoch {tip.epoch}</span>}
+            </div>
+          </div>
+          <button
+            onClick={refetchTip}
+            disabled={tipLoading}
+            className="inline-flex items-center gap-1.5 rounded-md border border-destructive/40 bg-destructive/10 px-2.5 py-1 text-[11px] font-semibold text-destructive hover:bg-destructive/20 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`h-3 w-3 ${tipLoading ? "animate-spin" : ""}`} />
+            {tipLoading ? "Retrying…" : "Retry"}
+          </button>
         </div>
       )}
+
 
       <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <KpiTile icon={<TrendingUp className="h-3.5 w-3.5" />} label="Blended Net APY" value={`${totals.netApy.toFixed(2)}%`} delta="+0.14pp 24h" tone="success" />
@@ -297,7 +312,30 @@ function YieldEngine() {
                     </tr>
                   );
                 })}
-                {!isLoading && filtered.length === 0 && (
+                {!isLoading && tipError && filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-14">
+                      <div className="flex flex-col items-center text-center">
+                        <div className="rounded-full border border-destructive/40 bg-destructive/10 p-3 text-destructive">
+                          <AlertTriangle className="h-5 w-5" />
+                        </div>
+                        <div className="mt-3 text-sm font-semibold text-foreground">Couldn't load payouts from the indexer</div>
+                        <div className="mt-1 text-[12px] text-muted-foreground max-w-md break-words">
+                          Blockfrost returned an error: <span className="font-mono text-foreground/80">{tipError.message}</span>
+                        </div>
+                        <button
+                          onClick={refetchTip}
+                          disabled={tipLoading}
+                          className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-gradient-primary px-3 py-1.5 text-[11px] font-semibold text-primary-foreground shadow-glow disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          <RefreshCw className={`h-3 w-3 ${tipLoading ? "animate-spin" : ""}`} />
+                          {tipLoading ? "Retrying…" : "Retry"}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {!isLoading && !tipError && filtered.length === 0 && (
                   <tr>
                     <td colSpan={7} className="px-4 py-14">
                       <div className="flex flex-col items-center text-center">
