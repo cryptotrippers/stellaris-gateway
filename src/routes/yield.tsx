@@ -312,7 +312,30 @@ function YieldEngine() {
                     </tr>
                   );
                 })}
-                {!isLoading && filtered.length === 0 && (
+                {!isLoading && tipError && filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-14">
+                      <div className="flex flex-col items-center text-center">
+                        <div className="rounded-full border border-destructive/40 bg-destructive/10 p-3 text-destructive">
+                          <AlertTriangle className="h-5 w-5" />
+                        </div>
+                        <div className="mt-3 text-sm font-semibold text-foreground">Couldn't load payouts from the indexer</div>
+                        <div className="mt-1 text-[12px] text-muted-foreground max-w-md break-words">
+                          Blockfrost returned an error: <span className="font-mono text-foreground/80">{tipError.message}</span>
+                        </div>
+                        <button
+                          onClick={refetchTip}
+                          disabled={tipLoading}
+                          className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-gradient-primary px-3 py-1.5 text-[11px] font-semibold text-primary-foreground shadow-glow disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          <RefreshCw className={`h-3 w-3 ${tipLoading ? "animate-spin" : ""}`} />
+                          {tipLoading ? "Retrying…" : "Retry"}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {!isLoading && !tipError && filtered.length === 0 && (
                   <tr>
                     <td colSpan={7} className="px-4 py-14">
                       <div className="flex flex-col items-center text-center">
