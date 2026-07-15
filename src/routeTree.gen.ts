@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as StewardshipRouteImport } from './routes/stewardship'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SecurityRouteImport } from './routes/security'
 import { Route as MarketplaceRouteImport } from './routes/marketplace'
 import { Route as GovernanceRouteImport } from './routes/governance'
@@ -21,6 +22,11 @@ import { Route as GovernanceNewRouteImport } from './routes/governance.new'
 const StewardshipRoute = StewardshipRouteImport.update({
   id: '/stewardship',
   path: '/stewardship',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SecurityRoute = SecurityRouteImport.update({
@@ -65,6 +71,7 @@ export interface FileRoutesByFullPath {
   '/governance': typeof GovernanceRouteWithChildren
   '/marketplace': typeof MarketplaceRouteWithChildren
   '/security': typeof SecurityRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stewardship': typeof StewardshipRoute
   '/governance/new': typeof GovernanceNewRoute
   '/marketplace/$id': typeof MarketplaceIdRoute
@@ -75,6 +82,7 @@ export interface FileRoutesByTo {
   '/governance': typeof GovernanceRouteWithChildren
   '/marketplace': typeof MarketplaceRouteWithChildren
   '/security': typeof SecurityRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stewardship': typeof StewardshipRoute
   '/governance/new': typeof GovernanceNewRoute
   '/marketplace/$id': typeof MarketplaceIdRoute
@@ -86,6 +94,7 @@ export interface FileRoutesById {
   '/governance': typeof GovernanceRouteWithChildren
   '/marketplace': typeof MarketplaceRouteWithChildren
   '/security': typeof SecurityRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stewardship': typeof StewardshipRoute
   '/governance/new': typeof GovernanceNewRoute
   '/marketplace/$id': typeof MarketplaceIdRoute
@@ -98,6 +107,7 @@ export interface FileRouteTypes {
     | '/governance'
     | '/marketplace'
     | '/security'
+    | '/sitemap.xml'
     | '/stewardship'
     | '/governance/new'
     | '/marketplace/$id'
@@ -108,6 +118,7 @@ export interface FileRouteTypes {
     | '/governance'
     | '/marketplace'
     | '/security'
+    | '/sitemap.xml'
     | '/stewardship'
     | '/governance/new'
     | '/marketplace/$id'
@@ -118,6 +129,7 @@ export interface FileRouteTypes {
     | '/governance'
     | '/marketplace'
     | '/security'
+    | '/sitemap.xml'
     | '/stewardship'
     | '/governance/new'
     | '/marketplace/$id'
@@ -129,6 +141,7 @@ export interface RootRouteChildren {
   GovernanceRoute: typeof GovernanceRouteWithChildren
   MarketplaceRoute: typeof MarketplaceRouteWithChildren
   SecurityRoute: typeof SecurityRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StewardshipRoute: typeof StewardshipRoute
 }
 
@@ -139,6 +152,13 @@ declare module '@tanstack/react-router' {
       path: '/stewardship'
       fullPath: '/stewardship'
       preLoaderRoute: typeof StewardshipRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/security': {
@@ -223,6 +243,7 @@ const rootRouteChildren: RootRouteChildren = {
   GovernanceRoute: GovernanceRouteWithChildren,
   MarketplaceRoute: MarketplaceRouteWithChildren,
   SecurityRoute: SecurityRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   StewardshipRoute: StewardshipRoute,
 }
 export const routeTree = rootRouteImport
