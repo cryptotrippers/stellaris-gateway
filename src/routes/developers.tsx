@@ -28,7 +28,6 @@ const ENDPOINTS = [
 
 function Developers() {
   const [tab, setTab] = useState<"quickstart" | "keys" | "reference">("quickstart");
-  const [key] = useState("sk_live_stl_ff2c8a91***");
   return (
     <AppShell>
       <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
