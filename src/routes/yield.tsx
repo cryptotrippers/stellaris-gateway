@@ -30,16 +30,16 @@ function YieldEngine() {
   );
 
   const totals = useMemo(() => {
-    const weighted = live.reduce((acc, y) => {
+    const agg = live.reduce((acc, y) => {
       const a = ASSETS.find(x => x.id === y.assetId)!;
       const w = a.targetAda * (a.fundedPct / 100);
       return { sumW: acc.sumW + w, sumApy: acc.sumApy + y.apy * w };
     }, { sumW: 0, sumApy: 0 });
-    const netApy = totals.sumW ? totals.sumApy / totals.sumW : 0;
+    const netApy = agg.sumW ? agg.sumApy / agg.sumW : 0;
     const streamed = live.reduce((s, y) => s + y.streamedAda, 0);
     const distributed30d = PAYOUTS.filter(p => Date.now() - p.timestamp < 30 * 86_400_000)
       .reduce((s, p) => s + p.amountAda, 0);
-    const verifiedPct = 100; // every payout in the ledger carries a zk proof
+    const verifiedPct = 100;
     return { netApy, streamed, distributed30d, verifiedPct };
   }, [live]);
 

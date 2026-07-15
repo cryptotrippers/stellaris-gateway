@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as YieldRouteImport } from './routes/yield'
 import { Route as StewardshipRouteImport } from './routes/stewardship'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SecurityRouteImport } from './routes/security'
@@ -19,6 +20,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as MarketplaceIdRouteImport } from './routes/marketplace.$id'
 import { Route as GovernanceNewRouteImport } from './routes/governance.new'
 
+const YieldRoute = YieldRouteImport.update({
+  id: '/yield',
+  path: '/yield',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StewardshipRoute = StewardshipRouteImport.update({
   id: '/stewardship',
   path: '/stewardship',
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stewardship': typeof StewardshipRoute
+  '/yield': typeof YieldRoute
   '/governance/new': typeof GovernanceNewRoute
   '/marketplace/$id': typeof MarketplaceIdRoute
 }
@@ -84,6 +91,7 @@ export interface FileRoutesByTo {
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stewardship': typeof StewardshipRoute
+  '/yield': typeof YieldRoute
   '/governance/new': typeof GovernanceNewRoute
   '/marketplace/$id': typeof MarketplaceIdRoute
 }
@@ -96,6 +104,7 @@ export interface FileRoutesById {
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stewardship': typeof StewardshipRoute
+  '/yield': typeof YieldRoute
   '/governance/new': typeof GovernanceNewRoute
   '/marketplace/$id': typeof MarketplaceIdRoute
 }
@@ -109,6 +118,7 @@ export interface FileRouteTypes {
     | '/security'
     | '/sitemap.xml'
     | '/stewardship'
+    | '/yield'
     | '/governance/new'
     | '/marketplace/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -120,6 +130,7 @@ export interface FileRouteTypes {
     | '/security'
     | '/sitemap.xml'
     | '/stewardship'
+    | '/yield'
     | '/governance/new'
     | '/marketplace/$id'
   id:
@@ -131,6 +142,7 @@ export interface FileRouteTypes {
     | '/security'
     | '/sitemap.xml'
     | '/stewardship'
+    | '/yield'
     | '/governance/new'
     | '/marketplace/$id'
   fileRoutesById: FileRoutesById
@@ -143,10 +155,18 @@ export interface RootRouteChildren {
   SecurityRoute: typeof SecurityRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StewardshipRoute: typeof StewardshipRoute
+  YieldRoute: typeof YieldRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/yield': {
+      id: '/yield'
+      path: '/yield'
+      fullPath: '/yield'
+      preLoaderRoute: typeof YieldRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/stewardship': {
       id: '/stewardship'
       path: '/stewardship'
@@ -245,6 +265,7 @@ const rootRouteChildren: RootRouteChildren = {
   SecurityRoute: SecurityRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StewardshipRoute: StewardshipRoute,
+  YieldRoute: YieldRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
