@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { Activity, ArrowUpRight, CheckCircle2, ExternalLink, Radio, ShieldCheck, TrendingUp, Zap, Copy, Check, AlertTriangle } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Activity, ArrowUpRight, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, ExternalLink, Inbox, Loader2, Radio, Search, ShieldCheck, TrendingUp, Zap, Copy, Check, AlertTriangle, X } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/StatusBadge";
 import { Sparkline } from "@/components/charts/Sparkline";
@@ -29,11 +29,52 @@ function YieldEngine() {
   const payouts = usePayoutHistory(anchor);
   const [filter, setFilter] = useState<string>("all");
   const [selected, setSelected] = useState<Payout | null>(null);
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "timestamp", dir: "desc" });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
-  const filtered = useMemo(
-    () => (filter === "all" ? payouts : payouts.filter(p => p.assetId === filter)),
-    [filter, payouts],
-  );
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    let rows = filter === "all" ? payouts : payouts.filter(p => p.assetId === filter);
+    if (q) {
+      rows = rows.filter(p => {
+        const a = ASSETS.find(x => x.id === p.assetId);
+        return (
+          p.txHash.toLowerCase().includes(q) ||
+          String(p.block).includes(q) ||
+          String(p.epoch).includes(q) ||
+          (a?.name.toLowerCase().includes(q) ?? false) ||
+          (a?.category.toLowerCase().includes(q) ?? false)
+        );
+      });
+    }
+    const dir = sort.dir === "asc" ? 1 : -1;
+    return [...rows].sort((a, b) => {
+      switch (sort.key) {
+        case "vault": {
+          const an = ASSETS.find(x => x.id === a.assetId)?.name ?? "";
+          const bn = ASSETS.find(x => x.id === b.assetId)?.name ?? "";
+          return an.localeCompare(bn) * dir;
+        }
+        case "amount": return (a.amountAda - b.amountAda) * dir;
+        case "apy": return (a.apyAtPayout - b.apyAtPayout) * dir;
+        case "epoch": return ((a.epoch - b.epoch) || (a.slot - b.slot)) * dir;
+        case "timestamp":
+        default: return (a.timestamp - b.timestamp) * dir;
+      }
+    });
+  }, [payouts, filter, query, sort]);
+
+  // Reset to first page when filter/query/sort/pageSize change
+  useEffect(() => { setPage(1); }, [filter, query, sort, pageSize]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * pageSize;
+  const pageRows = filtered.slice(pageStart, pageStart + pageSize);
+  const isLoading = tipLoading && payouts.length === 0;
+  const activeAsset = filter === "all" ? null : ASSETS.find(a => a.id === filter);
 
   const totals = useMemo(() => {
     const agg = live.reduce((acc, y) => {
