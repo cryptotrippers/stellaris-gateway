@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Code2, Key, Copy, ExternalLink, Zap } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Code2, Key, Copy, ExternalLink, Zap, Plus, RotateCw, Ban, Trash2, ShieldAlert, Check, Eye, EyeOff, Activity } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/StatusBadge";
+import { useApiKeys, apiKeysStore, maskKey, type ApiKey, type ApiKeyEnv } from "@/lib/api-keys-store";
 
 export const Route = createFileRoute("/developers")({
   head: () => ({
