@@ -4,7 +4,7 @@ import { Check, Sparkles, Zap, ArrowLeft } from "lucide-react";
 import { StripeEmbeddedCheckout } from "@/components/StripeEmbeddedCheckout";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 
-export const Route = createFileRoute("/upgrade")({
+export const Route = createFileRoute("/upgrade/")({
   head: () => ({
     meta: [
       { title: "Upgrade to Pro — Stellaris Finance" },

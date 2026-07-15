@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as YieldRouteImport } from './routes/yield'
-import { Route as UpgradeRouteImport } from './routes/upgrade'
 import { Route as StewardshipRouteImport } from './routes/stewardship'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SecurityRouteImport } from './routes/security'
@@ -18,6 +17,7 @@ import { Route as MarketplaceRouteImport } from './routes/marketplace'
 import { Route as GovernanceRouteImport } from './routes/governance'
 import { Route as DevelopersRouteImport } from './routes/developers'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as UpgradeIndexRouteImport } from './routes/upgrade.index'
 import { Route as UpgradeReturnRouteImport } from './routes/upgrade.return'
 import { Route as MarketplaceIdRouteImport } from './routes/marketplace.$id'
 import { Route as GovernanceNewRouteImport } from './routes/governance.new'
@@ -25,11 +25,6 @@ import { Route as GovernanceNewRouteImport } from './routes/governance.new'
 const YieldRoute = YieldRouteImport.update({
   id: '/yield',
   path: '/yield',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const UpgradeRoute = UpgradeRouteImport.update({
-  id: '/upgrade',
-  path: '/upgrade',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StewardshipRoute = StewardshipRouteImport.update({
@@ -67,10 +62,15 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UpgradeIndexRoute = UpgradeIndexRouteImport.update({
+  id: '/upgrade/',
+  path: '/upgrade/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UpgradeReturnRoute = UpgradeReturnRouteImport.update({
-  id: '/return',
-  path: '/return',
-  getParentRoute: () => UpgradeRoute,
+  id: '/upgrade/return',
+  path: '/upgrade/return',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const MarketplaceIdRoute = MarketplaceIdRouteImport.update({
   id: '/$id',
@@ -91,11 +91,11 @@ export interface FileRoutesByFullPath {
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stewardship': typeof StewardshipRoute
-  '/upgrade': typeof UpgradeRouteWithChildren
   '/yield': typeof YieldRoute
   '/governance/new': typeof GovernanceNewRoute
   '/marketplace/$id': typeof MarketplaceIdRoute
   '/upgrade/return': typeof UpgradeReturnRoute
+  '/upgrade/': typeof UpgradeIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -105,11 +105,11 @@ export interface FileRoutesByTo {
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stewardship': typeof StewardshipRoute
-  '/upgrade': typeof UpgradeRouteWithChildren
   '/yield': typeof YieldRoute
   '/governance/new': typeof GovernanceNewRoute
   '/marketplace/$id': typeof MarketplaceIdRoute
   '/upgrade/return': typeof UpgradeReturnRoute
+  '/upgrade': typeof UpgradeIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -120,11 +120,11 @@ export interface FileRoutesById {
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stewardship': typeof StewardshipRoute
-  '/upgrade': typeof UpgradeRouteWithChildren
   '/yield': typeof YieldRoute
   '/governance/new': typeof GovernanceNewRoute
   '/marketplace/$id': typeof MarketplaceIdRoute
   '/upgrade/return': typeof UpgradeReturnRoute
+  '/upgrade/': typeof UpgradeIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -136,11 +136,11 @@ export interface FileRouteTypes {
     | '/security'
     | '/sitemap.xml'
     | '/stewardship'
-    | '/upgrade'
     | '/yield'
     | '/governance/new'
     | '/marketplace/$id'
     | '/upgrade/return'
+    | '/upgrade/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -150,11 +150,11 @@ export interface FileRouteTypes {
     | '/security'
     | '/sitemap.xml'
     | '/stewardship'
-    | '/upgrade'
     | '/yield'
     | '/governance/new'
     | '/marketplace/$id'
     | '/upgrade/return'
+    | '/upgrade'
   id:
     | '__root__'
     | '/'
@@ -164,11 +164,11 @@ export interface FileRouteTypes {
     | '/security'
     | '/sitemap.xml'
     | '/stewardship'
-    | '/upgrade'
     | '/yield'
     | '/governance/new'
     | '/marketplace/$id'
     | '/upgrade/return'
+    | '/upgrade/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -179,8 +179,9 @@ export interface RootRouteChildren {
   SecurityRoute: typeof SecurityRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StewardshipRoute: typeof StewardshipRoute
-  UpgradeRoute: typeof UpgradeRouteWithChildren
   YieldRoute: typeof YieldRoute
+  UpgradeReturnRoute: typeof UpgradeReturnRoute
+  UpgradeIndexRoute: typeof UpgradeIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -190,13 +191,6 @@ declare module '@tanstack/react-router' {
       path: '/yield'
       fullPath: '/yield'
       preLoaderRoute: typeof YieldRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/upgrade': {
-      id: '/upgrade'
-      path: '/upgrade'
-      fullPath: '/upgrade'
-      preLoaderRoute: typeof UpgradeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/stewardship': {
@@ -248,12 +242,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/upgrade/': {
+      id: '/upgrade/'
+      path: '/upgrade'
+      fullPath: '/upgrade/'
+      preLoaderRoute: typeof UpgradeIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/upgrade/return': {
       id: '/upgrade/return'
-      path: '/return'
+      path: '/upgrade/return'
       fullPath: '/upgrade/return'
       preLoaderRoute: typeof UpgradeReturnRouteImport
-      parentRoute: typeof UpgradeRoute
+      parentRoute: typeof rootRouteImport
     }
     '/marketplace/$id': {
       id: '/marketplace/$id'
@@ -296,17 +297,6 @@ const MarketplaceRouteWithChildren = MarketplaceRoute._addFileChildren(
   MarketplaceRouteChildren,
 )
 
-interface UpgradeRouteChildren {
-  UpgradeReturnRoute: typeof UpgradeReturnRoute
-}
-
-const UpgradeRouteChildren: UpgradeRouteChildren = {
-  UpgradeReturnRoute: UpgradeReturnRoute,
-}
-
-const UpgradeRouteWithChildren =
-  UpgradeRoute._addFileChildren(UpgradeRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DevelopersRoute: DevelopersRoute,
@@ -315,8 +305,9 @@ const rootRouteChildren: RootRouteChildren = {
   SecurityRoute: SecurityRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StewardshipRoute: StewardshipRoute,
-  UpgradeRoute: UpgradeRouteWithChildren,
   YieldRoute: YieldRoute,
+  UpgradeReturnRoute: UpgradeReturnRoute,
+  UpgradeIndexRoute: UpgradeIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
