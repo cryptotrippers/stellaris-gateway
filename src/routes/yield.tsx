@@ -61,21 +61,43 @@ function YieldEngine() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-success/30 bg-success/10 px-2.5 py-1 text-[11px] font-medium text-success">
+          <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${tip ? "border-success/30 bg-success/10 text-success" : tipError ? "border-destructive/40 bg-destructive/10 text-destructive" : "border-border bg-secondary/30 text-muted-foreground"}`}>
             <span className="relative flex h-1.5 w-1.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-70" />
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-success" />
+              {tip && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-70" />}
+              <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${tip ? "bg-success" : tipError ? "bg-destructive" : "bg-muted-foreground"}`} />
             </span>
-            Mainnet · epoch 512
+            {tip
+              ? `${network[0].toUpperCase()}${network.slice(1)} · epoch ${tip.epoch} · slot ${tip.epochSlot.toLocaleString()}`
+              : tipError
+              ? "Indexer offline"
+              : configured ? "Connecting to Blockfrost…" : "Blockfrost not configured"}
           </span>
           <Badge tone="accent"><Radio className="h-3 w-3" /> streaming</Badge>
         </div>
       </div>
 
+      {!configured && (
+        <div className="mt-4 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[12px] text-amber-200">
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+          <div>
+            <div className="font-semibold">Live Cardano indexer disabled</div>
+            <div className="opacity-80">
+              Set <code className="font-mono">VITE_BLOCKFROST_PROJECT_ID</code> (mainnet) to pull real epoch, slot, block and active-stake data from Blockfrost. Optional <code className="font-mono">VITE_BLOCKFROST_NETWORK</code>: <code>mainnet</code> · <code>preprod</code> · <code>preview</code>.
+            </div>
+          </div>
+        </div>
+      )}
+      {tipError && (
+        <div className="mt-4 flex items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-[12px] text-destructive">
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+          <div>Blockfrost request failed: <span className="font-mono">{tipError.message}</span></div>
+        </div>
+      )}
+
       <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <KpiTile icon={<TrendingUp className="h-3.5 w-3.5" />} label="Blended Net APY" value={`${totals.netApy.toFixed(2)}%`} delta="+0.14pp 24h" tone="success" />
         <KpiTile icon={<Zap className="h-3.5 w-3.5" />} label="Yield streaming now" value={`₳ ${totals.streamed.toFixed(2)}`} delta="live" tone="primary" ticking />
-        <KpiTile icon={<Activity className="h-3.5 w-3.5" />} label="Distributed · 30d" value={formatAda(totals.distributed30d)} delta={`${PAYOUTS.length} tx`} tone="primary" />
+        <KpiTile icon={<Activity className="h-3.5 w-3.5" />} label="Distributed · 30d" value={formatAda(totals.distributed30d)} delta={`${payouts.length} tx${tip ? ` · block #${tip.block.toLocaleString()}` : ""}`} tone="primary" />
         <KpiTile icon={<ShieldCheck className="h-3.5 w-3.5" />} label="ZK-verified" value={`${totals.verifiedPct}%`} delta="every payout" tone="success" />
       </div>
 
