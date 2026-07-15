@@ -18,6 +18,7 @@ import { Route as MarketplaceRouteImport } from './routes/marketplace'
 import { Route as GovernanceRouteImport } from './routes/governance'
 import { Route as DevelopersRouteImport } from './routes/developers'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as UpgradeIndexRouteImport } from './routes/upgrade.index'
 import { Route as UpgradeReturnRouteImport } from './routes/upgrade.return'
 import { Route as MarketplaceIdRouteImport } from './routes/marketplace.$id'
 import { Route as GovernanceNewRouteImport } from './routes/governance.new'
@@ -67,6 +68,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UpgradeIndexRoute = UpgradeIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => UpgradeRoute,
+} as any)
 const UpgradeReturnRoute = UpgradeReturnRouteImport.update({
   id: '/return',
   path: '/return',
@@ -96,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/governance/new': typeof GovernanceNewRoute
   '/marketplace/$id': typeof MarketplaceIdRoute
   '/upgrade/return': typeof UpgradeReturnRoute
+  '/upgrade/': typeof UpgradeIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -105,11 +112,11 @@ export interface FileRoutesByTo {
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stewardship': typeof StewardshipRoute
-  '/upgrade': typeof UpgradeRouteWithChildren
   '/yield': typeof YieldRoute
   '/governance/new': typeof GovernanceNewRoute
   '/marketplace/$id': typeof MarketplaceIdRoute
   '/upgrade/return': typeof UpgradeReturnRoute
+  '/upgrade': typeof UpgradeIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -125,6 +132,7 @@ export interface FileRoutesById {
   '/governance/new': typeof GovernanceNewRoute
   '/marketplace/$id': typeof MarketplaceIdRoute
   '/upgrade/return': typeof UpgradeReturnRoute
+  '/upgrade/': typeof UpgradeIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -141,6 +149,7 @@ export interface FileRouteTypes {
     | '/governance/new'
     | '/marketplace/$id'
     | '/upgrade/return'
+    | '/upgrade/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -150,11 +159,11 @@ export interface FileRouteTypes {
     | '/security'
     | '/sitemap.xml'
     | '/stewardship'
-    | '/upgrade'
     | '/yield'
     | '/governance/new'
     | '/marketplace/$id'
     | '/upgrade/return'
+    | '/upgrade'
   id:
     | '__root__'
     | '/'
@@ -169,6 +178,7 @@ export interface FileRouteTypes {
     | '/governance/new'
     | '/marketplace/$id'
     | '/upgrade/return'
+    | '/upgrade/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -248,6 +258,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/upgrade/': {
+      id: '/upgrade/'
+      path: '/'
+      fullPath: '/upgrade/'
+      preLoaderRoute: typeof UpgradeIndexRouteImport
+      parentRoute: typeof UpgradeRoute
+    }
     '/upgrade/return': {
       id: '/upgrade/return'
       path: '/return'
@@ -298,10 +315,12 @@ const MarketplaceRouteWithChildren = MarketplaceRoute._addFileChildren(
 
 interface UpgradeRouteChildren {
   UpgradeReturnRoute: typeof UpgradeReturnRoute
+  UpgradeIndexRoute: typeof UpgradeIndexRoute
 }
 
 const UpgradeRouteChildren: UpgradeRouteChildren = {
   UpgradeReturnRoute: UpgradeReturnRoute,
+  UpgradeIndexRoute: UpgradeIndexRoute,
 }
 
 const UpgradeRouteWithChildren =
