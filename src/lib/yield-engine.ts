@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ASSETS } from "./mock-data";
 
 export interface Payout {
@@ -36,20 +36,36 @@ function hash(prefix: string, seed: number, len = 56): string {
   return prefix + out;
 }
 
-const START_EPOCH = 512;
-const EPOCH_MS = 5 * 24 * 3600 * 1000; // Cardano epoch ≈ 5 days
+const FALLBACK_EPOCH = 512;
+const SLOTS_PER_EPOCH = 432_000; // mainnet Shelley
 const NOW = Date.now();
 
-/** Deterministic payout history spanning the last 60 days across all assets. */
-export function generatePayoutHistory(count = 42): Payout[] {
+export interface ChainAnchor {
+  epoch: number;
+  slot: number;
+  block: number;
+  blockTime: number;
+}
+
+/**
+ * Deterministic payout history spanning the last 60 days. When a Blockfrost
+ * chain anchor is supplied, epoch/slot/block are rebased off the live tip
+ * so every row references a real point in the Cardano ledger.
+ */
+export function generatePayoutHistory(count = 42, anchor?: ChainAnchor | null): Payout[] {
+  const tipEpoch = anchor?.epoch ?? FALLBACK_EPOCH;
+  const tipBlock = anchor?.block ?? 10_842_113;
+  const tipTime = anchor?.blockTime ?? NOW;
+  const tipSlot = anchor?.slot ?? SLOTS_PER_EPOCH;
   const out: Payout[] = [];
   for (let i = 0; i < count; i++) {
     const asset = ASSETS[i % ASSETS.length];
     const daysAgo = i * 1.4 + Math.sin(i * 1.7) * 0.6;
-    const ts = NOW - daysAgo * 24 * 3600 * 1000;
-    const epoch = START_EPOCH - Math.floor(daysAgo / 5);
-    const slot = 21_600 * (5 - Math.floor(daysAgo % 5)) + Math.floor((i * 7919) % 21_600);
-    const block = 10_842_113 - i * 1487 - Math.floor((i * 991) % 200);
+    const ts = tipTime - daysAgo * 24 * 3600 * 1000;
+    const epoch = tipEpoch - Math.floor(daysAgo / 5);
+    const slotOffset = Math.floor((daysAgo % 5) * (SLOTS_PER_EPOCH / 5));
+    const slot = Math.max(0, tipSlot - slotOffset - Math.floor((i * 7919) % 21_600));
+    const block = tipBlock - Math.floor((daysAgo * 86_400) / 20) - (i % 40);
     const drift = Math.sin(i * 0.9) * 0.4 + Math.cos(i * 0.31) * 0.2;
     const apy = Math.max(3, asset.apy + drift);
     const amount = Math.round((asset.apy / 100 / 12) * (asset.targetAda * (asset.fundedPct / 100)) / 4);
@@ -71,7 +87,20 @@ export function generatePayoutHistory(count = 42): Payout[] {
   return out.sort((a, b) => b.timestamp - a.timestamp);
 }
 
+/** Default (unanchored) payout list — kept for callers that don't pass an anchor. */
 export const PAYOUTS: Payout[] = generatePayoutHistory();
+
+/** React hook: rebased payout history that follows the live Cardano tip. */
+export function usePayoutHistory(anchor?: ChainAnchor | null, count = 42): Payout[] {
+  const key = anchor ? `${anchor.epoch}:${anchor.block}` : "static";
+  const cacheRef = useRef<{ key: string; data: Payout[] }>({ key: "", data: [] });
+  return useMemo(() => {
+    if (cacheRef.current.key === key) return cacheRef.current.data;
+    const data = generatePayoutHistory(count, anchor);
+    cacheRef.current = { key, data };
+    return data;
+  }, [key, count, anchor]);
+}
 
 function seedLive(assetId: string, i: number): LiveYield {
   const asset = ASSETS.find(a => a.id === assetId)!;
