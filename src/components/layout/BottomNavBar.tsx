@@ -1,12 +1,12 @@
 import { Link } from "@tanstack/react-router";
-import { LayoutDashboard, Store, Vote, ShieldCheck, Sparkles, type LucideIcon } from "lucide-react";
+import { LayoutDashboard, Store, Vote, ShieldCheck, Activity, type LucideIcon } from "lucide-react";
 
 type Item = { to: string; label: string; icon: LucideIcon; exact?: boolean };
 const items: Item[] = [
   { to: "/", label: "Portfolio", icon: LayoutDashboard, exact: true },
   { to: "/marketplace", label: "Market", icon: Store },
+  { to: "/yield", label: "Yield", icon: Activity },
   { to: "/governance", label: "Govern", icon: Vote },
-  { to: "/stewardship", label: "Impact", icon: Sparkles },
   { to: "/security", label: "Security", icon: ShieldCheck },
 ];
 
