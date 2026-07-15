@@ -10,8 +10,8 @@ export const Route = createFileRoute("/")({
     meta: [
       { title: "Portfolio · Stellaris Finance" },
       { name: "description", content: "Institutional-grade RealFi gateway on Cardano. Fractionalized real-world assets with ZK-verified compliance." },
-      { property: "og:title", content: "Stellaris Finance — RealFi on Cardano" },
-      { property: "og:description", content: "Bridge real-world assets and DeFi with institutional custody, ZK-KYC, and verifiable impact." },
+      { property: "og:title", content: "Portfolio · Stellaris Finance" },
+      { property: "og:description", content: "Institutional-grade RealFi gateway on Cardano. Fractionalized real-world assets with ZK-verified compliance." },
     ],
   }),
   component: PortfolioPage,
