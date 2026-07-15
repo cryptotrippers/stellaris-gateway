@@ -84,28 +84,7 @@ function Developers() {
         </div>
       )}
 
-      {tab === "keys" && (
-        <div className="mt-6 card-institutional p-6 max-w-3xl">
-          <h2 className="text-sm font-semibold text-foreground flex items-center gap-2"><Key className="h-4 w-4 text-primary" /> API Keys</h2>
-          <div className="mt-4 space-y-3">
-            <div className="flex items-center gap-3 rounded-xl border border-border bg-secondary/40 p-3">
-              <div className="flex-1">
-                <div className="text-xs text-muted-foreground">Primary (live)</div>
-                <div className="font-mono text-sm text-foreground">{key}</div>
-              </div>
-              <button className="inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground"><Copy className="h-3 w-3" /> Copy</button>
-            </div>
-            <div className="flex items-center gap-3 rounded-xl border border-border bg-secondary/40 p-3">
-              <div className="flex-1">
-                <div className="text-xs text-muted-foreground">Sandbox</div>
-                <div className="font-mono text-sm text-foreground">sk_test_stl_a71bde42***</div>
-              </div>
-              <button className="text-xs font-medium text-destructive hover:underline">Rotate</button>
-            </div>
-          </div>
-          <button className="mt-4 rounded-xl bg-gradient-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-glow">Generate new key</button>
-        </div>
-      )}
+      {tab === "keys" && <KeysPanel />}
 
       {tab === "reference" && (
         <div className="mt-6 card-institutional overflow-hidden">
