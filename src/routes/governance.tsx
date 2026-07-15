@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { LayoutDashboard, FileText, Vault, Users, Activity, PlusCircle, ChevronRight, Search, Radio, TrendingUp, TrendingDown, Shield, Zap } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
