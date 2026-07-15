@@ -183,35 +183,88 @@ function YieldEngine() {
       </section>
 
       <section className="mt-8">
-        <div className="flex flex-wrap items-end justify-between gap-2">
+        <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-sm font-semibold text-foreground">Payout ledger</h2>
-            <p className="text-[11px] text-muted-foreground">Every row links to its Cardano transaction, block, and ZK proof.</p>
+            <p className="text-[11px] text-muted-foreground">
+              Every row links to its Cardano transaction, block, and ZK proof.
+              {filtered.length > 0 && (
+                <> · <span className="text-foreground">{filtered.length.toLocaleString()}</span> payout{filtered.length === 1 ? "" : "s"}</>
+              )}
+            </p>
           </div>
-          <div className="flex flex-wrap gap-1.5">
-            <FilterPill active={filter === "all"} onClick={() => setFilter("all")}>All vaults</FilterPill>
-            {ASSETS.map(a => (
-              <FilterPill key={a.id} active={filter === a.id} onClick={() => setFilter(a.id)}>{a.name.split(" ").slice(0, 2).join(" ")}</FilterPill>
-            ))}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                placeholder="Search tx, block, vault…"
+                className="h-8 w-56 rounded-md border border-border bg-surface pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+              />
+              {query && (
+                <button
+                  onClick={() => setQuery("")}
+                  aria-label="Clear search"
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+            <div className="relative">
+              <select
+                value={filter}
+                onChange={e => setFilter(e.target.value)}
+                className="h-8 appearance-none rounded-md border border-border bg-surface pl-3 pr-7 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+              >
+                <option value="all">All vaults ({payouts.length})</option>
+                {ASSETS.map(a => {
+                  const count = payouts.filter(p => p.assetId === a.id).length;
+                  return <option key={a.id} value={a.id}>{a.name} ({count})</option>;
+                })}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+            </div>
           </div>
         </div>
+
+        {activeAsset && (
+          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] text-primary">
+            Filtered: {activeAsset.name}
+            <button onClick={() => setFilter("all")} aria-label="Clear filter" className="hover:text-foreground">
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        )}
 
         <div className="mt-3 card-institutional overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-secondary/30 text-left text-[10px] uppercase tracking-widest text-muted-foreground">
-                  <th className="px-4 py-3 font-medium">Time</th>
-                  <th className="px-4 py-3 font-medium">Vault</th>
-                  <th className="px-4 py-3 font-medium text-right">Amount</th>
-                  <th className="px-4 py-3 font-medium text-right">APY</th>
-                  <th className="px-4 py-3 font-medium">Epoch / Block</th>
+                  <SortableTh sortKey="timestamp" current={sort} onSort={setSort}>Time</SortableTh>
+                  <SortableTh sortKey="vault" current={sort} onSort={setSort}>Vault</SortableTh>
+                  <SortableTh sortKey="amount" current={sort} onSort={setSort} align="right">Amount</SortableTh>
+                  <SortableTh sortKey="apy" current={sort} onSort={setSort} align="right">APY</SortableTh>
+                  <SortableTh sortKey="epoch" current={sort} onSort={setSort}>Epoch / Block</SortableTh>
                   <th className="px-4 py-3 font-medium">Tx hash</th>
                   <th className="px-4 py-3 font-medium">Audit</th>
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(p => {
+                {isLoading && (
+                  Array.from({ length: 6 }).map((_, i) => (
+                    <tr key={`sk-${i}`} className="border-b border-border/60 last:border-0">
+                      {Array.from({ length: 7 }).map((__, j) => (
+                        <td key={j} className="px-4 py-3">
+                          <div className="h-3 w-full max-w-[140px] animate-pulse rounded bg-secondary/60" />
+                        </td>
+                      ))}
+                    </tr>
+                  ))
+                )}
+                {!isLoading && pageRows.map(p => {
                   const asset = ASSETS.find(a => a.id === p.assetId)!;
                   return (
                     <tr key={p.txHash} className="border-b border-border/60 last:border-0 hover:bg-secondary/30">
@@ -244,16 +297,77 @@ function YieldEngine() {
                     </tr>
                   );
                 })}
-                {filtered.length === 0 && (
+                {!isLoading && filtered.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-12 text-center text-sm text-muted-foreground">No payouts recorded for this vault yet.</td>
+                    <td colSpan={7} className="px-4 py-14">
+                      <div className="flex flex-col items-center text-center">
+                        <div className="rounded-full border border-border bg-secondary/40 p-3 text-muted-foreground">
+                          <Inbox className="h-5 w-5" />
+                        </div>
+                        <div className="mt-3 text-sm font-medium text-foreground">
+                          {query ? "No payouts match your search" : "No payouts recorded for this vault yet"}
+                        </div>
+                        <div className="mt-1 text-[12px] text-muted-foreground max-w-sm">
+                          {query
+                            ? "Try a different transaction hash, block number, or vault name."
+                            : "Once this vault distributes yield, every payout will appear here with a full on-chain audit trail."}
+                        </div>
+                        {(query || filter !== "all") && (
+                          <button
+                            onClick={() => { setQuery(""); setFilter("all"); }}
+                            className="mt-3 rounded-md border border-border bg-surface px-3 py-1.5 text-[11px] font-medium text-foreground hover:bg-secondary/40"
+                          >
+                            Reset filters
+                          </button>
+                        )}
+                      </div>
+                    </td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
+
+          {!isLoading && filtered.length > 0 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-secondary/20 px-4 py-2.5 text-[11px] text-muted-foreground">
+              <div className="flex items-center gap-2">
+                <span>Rows</span>
+                <div className="relative">
+                  <select
+                    value={pageSize}
+                    onChange={e => setPageSize(Number(e.target.value))}
+                    className="h-7 appearance-none rounded border border-border bg-surface pl-2 pr-6 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
+                  >
+                    {[10, 25, 50, 100].map(n => <option key={n} value={n}>{n}</option>)}
+                  </select>
+                  <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+                </div>
+                <span className="tabular-nums">
+                  {(pageStart + 1).toLocaleString()}–{Math.min(pageStart + pageSize, filtered.length).toLocaleString()} of {filtered.length.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="inline-flex h-7 items-center gap-1 rounded border border-border bg-surface px-2 text-foreground hover:bg-secondary/40 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" /> Prev
+                </button>
+                <span className="px-2 tabular-nums text-foreground">Page {currentPage} / {totalPages}</span>
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="inline-flex h-7 items-center gap-1 rounded border border-border bg-surface px-2 text-foreground hover:bg-secondary/40 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next <ChevronRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </section>
+
 
       {selected && <AuditDrawer payout={selected} onClose={() => setSelected(null)} />}
     </AppShell>
