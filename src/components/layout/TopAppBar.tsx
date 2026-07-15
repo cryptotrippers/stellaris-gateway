@@ -23,11 +23,11 @@ export function TopAppBar() {
 
         <div className="ml-auto flex items-center gap-2">
           <Link
-            to="/security"
-            className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent/10 px-2.5 py-1 text-[11px] font-medium text-accent-foreground"
+            to="/upgrade"
+            className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-accent to-primary px-3 py-1 text-[11px] font-semibold text-white shadow-sm hover:opacity-90 transition-opacity"
           >
-            <Shield className="h-3.5 w-3.5 text-accent" />
-            <span className="text-foreground/80">Institutional Grade</span>
+            <Shield className="h-3.5 w-3.5" />
+            <span>Upgrade to Pro</span>
           </Link>
           <button
             aria-label="Notifications"
