@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Activity, ArrowUpRight, CheckCircle2, ExternalLink, Radio, ShieldCheck, TrendingUp, Zap, Copy, Check } from "lucide-react";
+import { Activity, ArrowUpRight, CheckCircle2, ExternalLink, Radio, ShieldCheck, TrendingUp, Zap, Copy, Check, AlertTriangle } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/StatusBadge";
 import { Sparkline } from "@/components/charts/Sparkline";
 import { ASSETS, formatAda } from "@/lib/mock-data";
-import { PAYOUTS, useLiveYields, short, timeAgo, cardanoscanTx, cardanoscanBlock, type Payout } from "@/lib/yield-engine";
+import { useLiveYields, usePayoutHistory, short, timeAgo, cardanoscanTx, cardanoscanBlock, type Payout } from "@/lib/yield-engine";
+import { useCardanoTip } from "@/lib/blockfrost";
 
 export const Route = createFileRoute("/yield")({
   head: () => ({
@@ -21,12 +22,17 @@ export const Route = createFileRoute("/yield")({
 
 function YieldEngine() {
   const live = useLiveYields(2000);
+  const { tip, error: tipError, loading: tipLoading, configured, network } = useCardanoTip(20_000);
+  const anchor = tip
+    ? { epoch: tip.epoch, slot: tip.slot, block: tip.block, blockTime: tip.blockTime }
+    : null;
+  const payouts = usePayoutHistory(anchor);
   const [filter, setFilter] = useState<string>("all");
   const [selected, setSelected] = useState<Payout | null>(null);
 
   const filtered = useMemo(
-    () => (filter === "all" ? PAYOUTS : PAYOUTS.filter(p => p.assetId === filter)),
-    [filter],
+    () => (filter === "all" ? payouts : payouts.filter(p => p.assetId === filter)),
+    [filter, payouts],
   );
 
   const totals = useMemo(() => {
@@ -37,11 +43,11 @@ function YieldEngine() {
     }, { sumW: 0, sumApy: 0 });
     const netApy = agg.sumW ? agg.sumApy / agg.sumW : 0;
     const streamed = live.reduce((s, y) => s + y.streamedAda, 0);
-    const distributed30d = PAYOUTS.filter(p => Date.now() - p.timestamp < 30 * 86_400_000)
+    const distributed30d = payouts.filter(p => Date.now() - p.timestamp < 30 * 86_400_000)
       .reduce((s, p) => s + p.amountAda, 0);
     const verifiedPct = 100;
     return { netApy, streamed, distributed30d, verifiedPct };
-  }, [live]);
+  }, [live, payouts]);
 
   return (
     <AppShell>
