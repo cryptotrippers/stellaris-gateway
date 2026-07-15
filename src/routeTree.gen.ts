@@ -9,38 +9,186 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as StewardshipRouteImport } from './routes/stewardship'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as SecurityRouteImport } from './routes/security'
+import { Route as MarketplaceRouteImport } from './routes/marketplace'
+import { Route as GovernanceRouteImport } from './routes/governance'
+import { Route as DevelopersRouteImport } from './routes/developers'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MarketplaceIdRouteImport } from './routes/marketplace.$id'
+import { Route as GovernanceNewRouteImport } from './routes/governance.new'
 
+const StewardshipRoute = StewardshipRouteImport.update({
+  id: '/stewardship',
+  path: '/stewardship',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SecurityRoute = SecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketplaceRoute = MarketplaceRouteImport.update({
+  id: '/marketplace',
+  path: '/marketplace',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GovernanceRoute = GovernanceRouteImport.update({
+  id: '/governance',
+  path: '/governance',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DevelopersRoute = DevelopersRouteImport.update({
+  id: '/developers',
+  path: '/developers',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MarketplaceIdRoute = MarketplaceIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => MarketplaceRoute,
+} as any)
+const GovernanceNewRoute = GovernanceNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => GovernanceRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/developers': typeof DevelopersRoute
+  '/governance': typeof GovernanceRouteWithChildren
+  '/marketplace': typeof MarketplaceRouteWithChildren
+  '/security': typeof SecurityRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/stewardship': typeof StewardshipRoute
+  '/governance/new': typeof GovernanceNewRoute
+  '/marketplace/$id': typeof MarketplaceIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/developers': typeof DevelopersRoute
+  '/governance': typeof GovernanceRouteWithChildren
+  '/marketplace': typeof MarketplaceRouteWithChildren
+  '/security': typeof SecurityRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/stewardship': typeof StewardshipRoute
+  '/governance/new': typeof GovernanceNewRoute
+  '/marketplace/$id': typeof MarketplaceIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/developers': typeof DevelopersRoute
+  '/governance': typeof GovernanceRouteWithChildren
+  '/marketplace': typeof MarketplaceRouteWithChildren
+  '/security': typeof SecurityRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/stewardship': typeof StewardshipRoute
+  '/governance/new': typeof GovernanceNewRoute
+  '/marketplace/$id': typeof MarketplaceIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/developers'
+    | '/governance'
+    | '/marketplace'
+    | '/security'
+    | '/sitemap.xml'
+    | '/stewardship'
+    | '/governance/new'
+    | '/marketplace/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/developers'
+    | '/governance'
+    | '/marketplace'
+    | '/security'
+    | '/sitemap.xml'
+    | '/stewardship'
+    | '/governance/new'
+    | '/marketplace/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/developers'
+    | '/governance'
+    | '/marketplace'
+    | '/security'
+    | '/sitemap.xml'
+    | '/stewardship'
+    | '/governance/new'
+    | '/marketplace/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  DevelopersRoute: typeof DevelopersRoute
+  GovernanceRoute: typeof GovernanceRouteWithChildren
+  MarketplaceRoute: typeof MarketplaceRouteWithChildren
+  SecurityRoute: typeof SecurityRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  StewardshipRoute: typeof StewardshipRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/stewardship': {
+      id: '/stewardship'
+      path: '/stewardship'
+      fullPath: '/stewardship'
+      preLoaderRoute: typeof StewardshipRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/security': {
+      id: '/security'
+      path: '/security'
+      fullPath: '/security'
+      preLoaderRoute: typeof SecurityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/marketplace': {
+      id: '/marketplace'
+      path: '/marketplace'
+      fullPath: '/marketplace'
+      preLoaderRoute: typeof MarketplaceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/governance': {
+      id: '/governance'
+      path: '/governance'
+      fullPath: '/governance'
+      preLoaderRoute: typeof GovernanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/developers': {
+      id: '/developers'
+      path: '/developers'
+      fullPath: '/developers'
+      preLoaderRoute: typeof DevelopersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +196,56 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/marketplace/$id': {
+      id: '/marketplace/$id'
+      path: '/$id'
+      fullPath: '/marketplace/$id'
+      preLoaderRoute: typeof MarketplaceIdRouteImport
+      parentRoute: typeof MarketplaceRoute
+    }
+    '/governance/new': {
+      id: '/governance/new'
+      path: '/new'
+      fullPath: '/governance/new'
+      preLoaderRoute: typeof GovernanceNewRouteImport
+      parentRoute: typeof GovernanceRoute
+    }
   }
 }
 
+interface GovernanceRouteChildren {
+  GovernanceNewRoute: typeof GovernanceNewRoute
+}
+
+const GovernanceRouteChildren: GovernanceRouteChildren = {
+  GovernanceNewRoute: GovernanceNewRoute,
+}
+
+const GovernanceRouteWithChildren = GovernanceRoute._addFileChildren(
+  GovernanceRouteChildren,
+)
+
+interface MarketplaceRouteChildren {
+  MarketplaceIdRoute: typeof MarketplaceIdRoute
+}
+
+const MarketplaceRouteChildren: MarketplaceRouteChildren = {
+  MarketplaceIdRoute: MarketplaceIdRoute,
+}
+
+const MarketplaceRouteWithChildren = MarketplaceRoute._addFileChildren(
+  MarketplaceRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  DevelopersRoute: DevelopersRoute,
+  GovernanceRoute: GovernanceRouteWithChildren,
+  MarketplaceRoute: MarketplaceRouteWithChildren,
+  SecurityRoute: SecurityRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
+  StewardshipRoute: StewardshipRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
