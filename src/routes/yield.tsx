@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Activity, ArrowUpRight, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, ExternalLink, Inbox, Loader2, Radio, Search, ShieldCheck, TrendingUp, Zap, Copy, Check, AlertTriangle, X } from "lucide-react";
+import { Activity, ArrowUpRight, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, ChevronUp, ExternalLink, Inbox, Radio, Search, ShieldCheck, TrendingUp, Zap, Copy, Check, AlertTriangle, X } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/StatusBadge";
 import { Sparkline } from "@/components/charts/Sparkline";
@@ -387,16 +387,39 @@ function KpiTile({ icon, label, value, delta, tone = "primary", ticking }: { ico
   );
 }
 
-function FilterPill({ active, onClick, children }: { active?: boolean; onClick?: () => void; children: React.ReactNode }) {
+type SortKey = "timestamp" | "vault" | "amount" | "apy" | "epoch";
+type SortState = { key: SortKey; dir: "asc" | "desc" };
+
+function SortableTh({
+  sortKey,
+  current,
+  onSort,
+  align = "left",
+  children,
+}: {
+  sortKey: SortKey;
+  current: SortState;
+  onSort: (s: SortState) => void;
+  align?: "left" | "right";
+  children: React.ReactNode;
+}) {
+  const active = current.key === sortKey;
+  const dir = active ? current.dir : undefined;
+  const Icon = !active ? ChevronsUpDown : dir === "asc" ? ChevronUp : ChevronDown;
   return (
-    <button
-      onClick={onClick}
-      className={`rounded-full border px-3 py-1 text-[11px] font-medium ${active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-surface text-muted-foreground hover:text-foreground"}`}
-    >
-      {children}
-    </button>
+    <th className={`px-4 py-3 font-medium ${align === "right" ? "text-right" : "text-left"}`}>
+      <button
+        onClick={() => onSort({ key: sortKey, dir: active && dir === "desc" ? "asc" : "desc" })}
+        className={`inline-flex items-center gap-1 uppercase tracking-widest ${align === "right" ? "flex-row-reverse" : ""} ${active ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+        aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
+      >
+        {children}
+        <Icon className="h-3 w-3" />
+      </button>
+    </th>
   );
 }
+
 
 function AuditDrawer({ payout, onClose }: { payout: Payout; onClose: () => void }) {
   const asset = ASSETS.find(a => a.id === payout.assetId)!;
