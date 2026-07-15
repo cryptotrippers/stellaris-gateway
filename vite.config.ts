@@ -6,10 +6,45 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
+// High-value pages to pre-render at build time for indexing + fast TTFB.
+// Marketplace detail pages are added dynamically from mock data below.
+const STATIC_PRERENDER_PATHS = [
+  "/",
+  "/marketplace",
+  "/yield",
+  "/governance",
+  "/governance?tab=overview",
+  "/governance?tab=proposals",
+  "/governance?tab=vaults",
+  "/governance?tab=delegates",
+  "/governance?tab=signals",
+  "/stewardship",
+  "/security",
+  "/developers",
+  "/upgrade",
+];
+
+// Keep in sync with ASSETS in src/lib/mock-data.ts
+const MARKETPLACE_IDS = ["sfm-01", "ceb-02", "cc-03", "re-04", "inf-05", "ceb-06"];
+
+const PRERENDER_PATHS = [
+  ...STATIC_PRERENDER_PATHS,
+  ...MARKETPLACE_IDS.map((id) => `/marketplace/${id}`),
+];
+
 export default defineConfig({
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
     server: { entry: "server" },
+    prerender: {
+      enabled: true,
+      concurrency: 4,
+      failOnError: false,
+    },
+    pages: PRERENDER_PATHS.map((path) => ({
+      path,
+      prerender: { enabled: true, crawlLinks: false },
+    })),
   },
 });
