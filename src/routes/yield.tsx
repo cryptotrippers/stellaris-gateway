@@ -22,7 +22,7 @@ export const Route = createFileRoute("/yield")({
 
 function YieldEngine() {
   const live = useLiveYields(2000);
-  const { tip, error: tipError, loading: tipLoading, configured, network } = useCardanoTip(20_000);
+  const { tip, error: tipError, loading: tipLoading, refetch: refetchTip, configured, network } = useCardanoTip(20_000);
   const anchor = tip
     ? { epoch: tip.epoch, slot: tip.slot, block: tip.block, blockTime: tip.blockTime }
     : null;
