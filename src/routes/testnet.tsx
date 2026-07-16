@@ -36,9 +36,13 @@ export const Route = createFileRoute("/testnet")({
       { property: "og:description", content: "Connect a Cardano wallet on Preprod and follow the live chain tip." },
     ],
   }),
-  loader: ({ context }) => context.queryClient.ensureQueryData(tipQuery).catch(() => null),
+  loader: ({ context }) => Promise.all([
+    context.queryClient.ensureQueryData(healthQuery).catch(() => null),
+    context.queryClient.ensureQueryData(tipQuery).catch(() => null),
+  ]),
   component: TestnetPage,
 });
+
 
 const PROVIDER_LABEL: Record<string, WalletProvider> = {
   lace: "Lace", eternl: "Eternl", nami: "Nami", typhon: "Typhon",
