@@ -46,12 +46,17 @@ function InvitePage() {
   const [code, setCode] = useState("STELLAR");
   const [stats, setStats] = useState<InviteStats>({ count: 0, lastAt: null });
   const [referredBy, setReferredBy] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState<ReferralConfirmation | null>(null);
   const [copied, setCopied] = useState<"code" | "url" | null>(null);
 
   useEffect(() => {
     setCode(getMyCode());
     setStats(getInviteStats());
     setReferredBy(getReferredBy());
+    setConfirmation(getReferralConfirmation());
+    // Poll briefly so a wallet connect elsewhere in the app flips this UI live.
+    const t = window.setInterval(() => setConfirmation(getReferralConfirmation()), 1500);
+    return () => window.clearInterval(t);
   }, []);
 
   const inviteUrl = buildInviteUrl(code);
