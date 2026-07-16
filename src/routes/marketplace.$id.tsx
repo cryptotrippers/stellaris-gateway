@@ -5,7 +5,7 @@ import { Badge, RiskBadge } from "@/components/ui/StatusBadge";
 import { ASSETS, formatAda, formatUsd, sparkline } from "@/lib/mock-data";
 import { Sparkline } from "@/components/charts/Sparkline";
 import { useWallet } from "@/lib/wallet-store";
-import { FundingBar } from "@/routes/index";
+import { FundingBar } from "@/components/ui/funding-bar";
 
 export const Route = createFileRoute("/marketplace/$id")({
   loader: ({ params }) => {
@@ -222,7 +222,7 @@ function AssetDetail() {
             <h4 className="mt-3 text-lg font-semibold text-foreground">Investment confirmed</h4>
             <p className="mt-1 text-sm text-muted-foreground">You’ve invested {formatAda(n)} in {asset.name}.</p>
             <button
-              onClick={() => navigate({ to: "/" })}
+              onClick={() => navigate({ to: "/app" })}
               className="mt-5 w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground"
             >
               View portfolio

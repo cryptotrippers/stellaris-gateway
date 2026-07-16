@@ -13,7 +13,7 @@ export function TopAppBar() {
         </Link>
 
         <nav className="hidden md:flex items-center gap-1 ml-6">
-          <NavItem to="/">Portfolio</NavItem>
+          <NavItem to="/app">Portfolio</NavItem>
           <NavItem to="/marketplace">Marketplace</NavItem>
           <NavItem to="/yield">Yield Engine</NavItem>
           <NavItem to="/governance">Governance</NavItem>
@@ -49,7 +49,7 @@ function NavItem({ to, children }: { to: string; children: React.ReactNode }) {
   return (
     <Link
       to={to}
-      activeOptions={{ exact: to === "/" }}
+      activeOptions={{ exact: to === "/" || to === "/app" }}
       activeProps={{ className: "bg-secondary text-foreground" }}
       inactiveProps={{ className: "text-muted-foreground hover:text-foreground hover:bg-secondary/60" }}
       className="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"

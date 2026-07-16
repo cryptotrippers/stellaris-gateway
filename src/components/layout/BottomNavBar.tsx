@@ -3,7 +3,7 @@ import { LayoutDashboard, Store, Vote, ShieldCheck, Activity, type LucideIcon } 
 
 type Item = { to: string; label: string; icon: LucideIcon; exact?: boolean };
 const items: Item[] = [
-  { to: "/", label: "Portfolio", icon: LayoutDashboard, exact: true },
+  { to: "/app", label: "Portfolio", icon: LayoutDashboard, exact: true },
   { to: "/marketplace", label: "Market", icon: Store },
   { to: "/yield", label: "Yield", icon: Activity },
   { to: "/governance", label: "Govern", icon: Vote },
