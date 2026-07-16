@@ -13,7 +13,11 @@ const tipQuery = queryOptions({
   queryFn: () => getPreprodTip(),
   refetchInterval: 20_000,
   staleTime: 15_000,
+  retry: 1,
 });
+
+interface Banner { tone: "destructive" | "warning"; title: string; detail: string; }
+
 
 export const Route = createFileRoute("/testnet")({
   head: () => ({
