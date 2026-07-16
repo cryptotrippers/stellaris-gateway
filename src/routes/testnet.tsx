@@ -4,7 +4,7 @@ import { queryOptions, useQuery } from "@tanstack/react-query";
 import { Activity, Wallet, ExternalLink, RefreshCw, CheckCircle2, AlertCircle, Copy, Droplet } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/StatusBadge";
-import { getPreprodTip } from "@/lib/blockfrost.functions";
+import { getBlockfrostHealth, getPreprodTip } from "@/lib/blockfrost.functions";
 import { listWallets, type CardanoWalletInfo } from "@/lib/cip30";
 import { connectWallet, disconnectWallet, useWallet, shortAddr, type WalletProvider } from "@/lib/wallet-store";
 
@@ -15,6 +15,14 @@ const tipQuery = queryOptions({
   staleTime: 15_000,
   retry: 1,
 });
+
+const healthQuery = queryOptions({
+  queryKey: ["preprod", "blockfrost-health"],
+  queryFn: () => getBlockfrostHealth(),
+  staleTime: 60_000,
+  retry: 0,
+});
+
 
 interface Banner { tone: "destructive" | "warning"; title: string; detail: string; }
 
@@ -28,9 +36,13 @@ export const Route = createFileRoute("/testnet")({
       { property: "og:description", content: "Connect a Cardano wallet on Preprod and follow the live chain tip." },
     ],
   }),
-  loader: ({ context }) => context.queryClient.ensureQueryData(tipQuery).catch(() => null),
+  loader: ({ context }) => Promise.all([
+    context.queryClient.ensureQueryData(healthQuery).catch(() => null),
+    context.queryClient.ensureQueryData(tipQuery).catch(() => null),
+  ]),
   component: TestnetPage,
 });
+
 
 const PROVIDER_LABEL: Record<string, WalletProvider> = {
   lace: "Lace", eternl: "Eternl", nami: "Nami", typhon: "Typhon",
@@ -39,6 +51,7 @@ const PROVIDER_LABEL: Record<string, WalletProvider> = {
 
 function TestnetPage() {
   const tipQ = useQuery(tipQuery);
+  const healthQ = useQuery(healthQuery);
   const wallet = useWallet();
   const [wallets, setWallets] = useState<CardanoWalletInfo[]>([]);
   const [connectError, setConnectError] = useState<string | null>(null);
@@ -58,19 +71,29 @@ function TestnetPage() {
   const wrongNetwork = wallet.connected && wallet.networkId === 1;
 
   const banners: Banner[] = [];
-  if (tipQ.error) {
-    const msg = (tipQ.error as Error).message;
-    const isNetworkMismatch = /Network token mismatch|403/i.test(msg);
+  const health = healthQ.data;
+  if (health && health.status !== "ok") {
+    const titleMap: Record<Exclude<typeof health.status, "ok">, string> = {
+      missing: "Blockfrost is not configured",
+      wrong_network: `Blockfrost key is for ${health.detectedNetwork ?? "another network"}, not Preprod`,
+      invalid: "Blockfrost rejected the project ID",
+      unreachable: "Blockfrost is unreachable",
+    };
+
     banners.push({
-      tone: "destructive",
-      title: isNetworkMismatch
-        ? "Blockfrost project ID is not for Preprod"
-        : "Preprod chain tip unavailable",
-      detail: isNetworkMismatch
-        ? "The saved BLOCKFROST_PREPROD_PROJECT_ID belongs to a different network (mainnet/preview). Create a Preprod project at blockfrost.io and update the secret."
-        : msg,
+      tone: health.status === "unreachable" ? "warning" : "destructive",
+      title: titleMap[health.status],
+      detail: health.detail,
+    });
+  } else if (tipQ.error && (!health || health.status === "ok")) {
+    // Health said OK but a live tip fetch still failed — network blip / rate limit.
+    banners.push({
+      tone: "warning",
+      title: "Preprod chain tip unavailable",
+      detail: (tipQ.error as Error).message,
     });
   }
+
   if (wrongNetwork) {
     banners.push({
       tone: "warning",
