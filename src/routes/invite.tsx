@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { Gift, Copy, Check, RefreshCw, Users, Sparkles, ArrowRight, Share2, Trophy } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Gift, Copy, Check, RefreshCw, Users, Sparkles, ArrowRight, Share2, Trophy, ShieldCheck, AlertTriangle, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { StellarisWordmark } from "@/components/brand/Logo";
 import { Badge } from "@/components/ui/StatusBadge";
@@ -12,9 +12,12 @@ import {
   bumpInviteSent,
   getReferredBy,
   getReferralConfirmation,
+  getAuditLog,
+  clearAuditLog,
   REFERRAL_ERROR_COPY,
   type InviteStats,
   type ReferralConfirmation,
+  type AuditEvent,
 } from "@/lib/referral";
 import { trackEvent } from "@/lib/analytics";
 import { toast } from "sonner";
