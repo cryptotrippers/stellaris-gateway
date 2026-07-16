@@ -19,6 +19,7 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MarketplaceRouteImport } from './routes/marketplace'
 import { Route as GovernanceRouteImport } from './routes/governance'
 import { Route as DevelopersRouteImport } from './routes/developers'
+import { Route as BlockfrostHealthRouteImport } from './routes/blockfrost-health'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UpgradeIndexRouteImport } from './routes/upgrade.index'
 import { Route as UpgradeReturnRouteImport } from './routes/upgrade.return'
@@ -78,6 +79,11 @@ const DevelopersRoute = DevelopersRouteImport.update({
   path: '/developers',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BlockfrostHealthRoute = BlockfrostHealthRouteImport.update({
+  id: '/blockfrost-health',
+  path: '/blockfrost-health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -124,6 +130,7 @@ const Char91DotmcpChar93InvokeToolToolRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/blockfrost-health': typeof BlockfrostHealthRoute
   '/developers': typeof DevelopersRoute
   '/governance': typeof GovernanceRouteWithChildren
   '/marketplace': typeof MarketplaceRouteWithChildren
@@ -144,6 +151,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/blockfrost-health': typeof BlockfrostHealthRoute
   '/developers': typeof DevelopersRoute
   '/governance': typeof GovernanceRouteWithChildren
   '/marketplace': typeof MarketplaceRouteWithChildren
@@ -164,6 +172,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/blockfrost-health': typeof BlockfrostHealthRoute
   '/developers': typeof DevelopersRoute
   '/governance': typeof GovernanceRouteWithChildren
   '/marketplace': typeof MarketplaceRouteWithChildren
@@ -186,6 +195,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/blockfrost-health'
     | '/developers'
     | '/governance'
     | '/marketplace'
@@ -206,6 +216,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/blockfrost-health'
     | '/developers'
     | '/governance'
     | '/marketplace'
@@ -225,6 +236,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/blockfrost-health'
     | '/developers'
     | '/governance'
     | '/marketplace'
@@ -246,6 +258,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BlockfrostHealthRoute: typeof BlockfrostHealthRoute
   DevelopersRoute: typeof DevelopersRoute
   GovernanceRoute: typeof GovernanceRouteWithChildren
   MarketplaceRoute: typeof MarketplaceRouteWithChildren
@@ -331,6 +344,13 @@ declare module '@tanstack/react-router' {
       path: '/developers'
       fullPath: '/developers'
       preLoaderRoute: typeof DevelopersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blockfrost-health': {
+      id: '/blockfrost-health'
+      path: '/blockfrost-health'
+      fullPath: '/blockfrost-health'
+      preLoaderRoute: typeof BlockfrostHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -431,6 +451,7 @@ const UpgradeRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BlockfrostHealthRoute: BlockfrostHealthRoute,
   DevelopersRoute: DevelopersRoute,
   GovernanceRoute: GovernanceRouteWithChildren,
   MarketplaceRoute: MarketplaceRouteWithChildren,
