@@ -6,6 +6,7 @@ import { trackEvent } from "@/lib/analytics";
 const CODE_KEY = "stellaris.referral.myCode";
 const REFERRED_BY_KEY = "stellaris.referral.referredBy";
 const INVITES_KEY = "stellaris.referral.invites"; // JSON: { count, lastAt }
+const CONFIRMED_KEY = "stellaris.referral.confirmed"; // JSON: { code, reason, at }
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no O/0/I/1
 
@@ -109,3 +110,63 @@ export function buildInviteUrl(code: string, path = "/"): string {
   const origin = typeof window !== "undefined" ? window.location.origin : "https://stellaris-gateway.lovable.app";
   return `${origin}${path}?ref=${encodeURIComponent(code)}`;
 }
+
+// ---- Attribution / confirmation --------------------------------------------
+// A referral is *captured* the moment a visitor lands with ?ref=CODE, but that
+// alone is cheap to fake. We only *confirm* (and count as a completed invite)
+// after a real conversion signal: signup or first wallet connect. Once
+// confirmed, the record is immutable so later disconnect/re-connect doesn't
+// double-count.
+
+export type ReferralConfirmReason = "signup" | "wallet_connect" | "first_investment";
+
+export interface ReferralConfirmation {
+  code: string;
+  reason: ReferralConfirmReason;
+  at: number;
+}
+
+export function getReferralConfirmation(): ReferralConfirmation | null {
+  const s = safeStorage();
+  if (!s) return null;
+  try {
+    const raw = s.getItem(CONFIRMED_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.code || !parsed?.reason) return null;
+    return { code: String(parsed.code), reason: parsed.reason, at: Number(parsed.at) || Date.now() };
+  } catch {
+    return null;
+  }
+}
+
+export function isReferralConfirmed(): boolean {
+  return getReferralConfirmation() !== null;
+}
+
+/**
+ * Confirm the captured referral after a real conversion event (signup, first
+ * wallet connect, first investment). No-op when there's no captured referrer,
+ * when the referrer is the user's own code, or when already confirmed.
+ * Returns the confirmation record (existing or newly written), or null when
+ * nothing to confirm.
+ */
+export function confirmReferral(reason: ReferralConfirmReason): ReferralConfirmation | null {
+  const s = safeStorage();
+  if (!s) return null;
+
+  const existing = getReferralConfirmation();
+  if (existing) return existing; // immutable once set
+
+  const referredBy = s.getItem(REFERRED_BY_KEY);
+  if (!referredBy) return null;
+
+  const mine = s.getItem(CODE_KEY);
+  if (mine && referredBy === mine) return null; // self-invite guard
+
+  const record: ReferralConfirmation = { code: referredBy, reason, at: Date.now() };
+  s.setItem(CONFIRMED_KEY, JSON.stringify(record));
+  trackEvent("referral_confirmed", { code: referredBy, reason });
+  return record;
+}
+

@@ -7,6 +7,8 @@ import {
   type Cip34Chain,
   type PairingHandle,
 } from "./walletconnect";
+import { confirmReferral } from "./referral";
+
 
 
 export type WalletProvider = "Lace" | "Eternl" | "Nami" | "Typhon" | "Flint" | "Yoroi" | "GeroWallet" | "WalletConnect";
@@ -61,6 +63,7 @@ export async function connectWallet(provider: Exclude<WalletProvider, "WalletCon
         wcTopic: null,
       };
       emit();
+      confirmReferral("wallet_connect");
       return { ok: true };
     } catch (e) {
       return { ok: false, error: (e as Error).message };
@@ -100,6 +103,7 @@ export async function connectWithWalletConnect(chain: Cip34Chain = "preprod"): P
         wcTopic: acct.topic,
       };
       emit();
+      confirmReferral("wallet_connect");
     })
     .catch(() => {
       /* surfaced to caller via handle.approval */
