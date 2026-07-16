@@ -53,14 +53,20 @@ function InvitePage() {
   const [referredBy, setReferredBy] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<ReferralConfirmation | null>(null);
   const [copied, setCopied] = useState<"code" | "url" | null>(null);
+  const [auditLog, setAuditLog] = useState<AuditEvent[]>([]);
+  const [auditFilter, setAuditFilter] = useState<"all" | "ok" | "blocked">("all");
 
   useEffect(() => {
     setCode(getMyCode());
     setStats(getInviteStats());
     setReferredBy(getReferredBy());
     setConfirmation(getReferralConfirmation());
+    setAuditLog(getAuditLog());
     // Poll briefly so a wallet connect elsewhere in the app flips this UI live.
-    const t = window.setInterval(() => setConfirmation(getReferralConfirmation()), 1500);
+    const t = window.setInterval(() => {
+      setConfirmation(getReferralConfirmation());
+      setAuditLog(getAuditLog());
+    }, 1500);
     return () => window.clearInterval(t);
   }, []);
 
