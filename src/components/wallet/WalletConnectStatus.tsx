@@ -44,6 +44,7 @@ export function WalletConnectStatus() {
     setStatus("idle");
     setUri(null);
     setError(null);
+    setConfirmDisconnect(false);
   }
 
   async function beginPairing() {
