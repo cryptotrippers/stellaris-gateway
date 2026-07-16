@@ -103,6 +103,7 @@ export async function connectWithWalletConnect(chain: Cip34Chain = "preprod"): P
         wcTopic: acct.topic,
       };
       emit();
+      confirmReferral("wallet_connect");
     })
     .catch(() => {
       /* surfaced to caller via handle.approval */
