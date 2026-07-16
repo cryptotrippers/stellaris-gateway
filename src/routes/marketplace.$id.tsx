@@ -5,7 +5,8 @@ import { Badge, RiskBadge } from "@/components/ui/StatusBadge";
 import { ASSETS, formatAda, formatUsd, sparkline } from "@/lib/mock-data";
 import { Sparkline } from "@/components/charts/Sparkline";
 import { useWallet } from "@/lib/wallet-store";
-import { FundingBar } from "@/routes/index";
+import { FundingBar } from "@/components/ui/funding-bar";
+import { ShareRow } from "@/components/landing/ShareRow";
 
 export const Route = createFileRoute("/marketplace/$id")({
   loader: ({ params }) => {
@@ -54,6 +55,16 @@ function AssetDetail() {
           </div>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground">{asset.name}</h1>
           <p className="mt-2 text-sm text-muted-foreground">{asset.issuer} · {asset.location}</p>
+
+          <div className="mt-5">
+            <ShareRow
+              url={`/marketplace/${asset.id}`}
+              text={`I'm eyeing ${asset.name} — ${asset.apy}% APY, ESG ${asset.esgRating}, on Cardano.`}
+              eventName="asset_share_click"
+              label="Share this asset"
+            />
+          </div>
+
 
           <div className="mt-6 card-institutional p-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -222,7 +233,7 @@ function AssetDetail() {
             <h4 className="mt-3 text-lg font-semibold text-foreground">Investment confirmed</h4>
             <p className="mt-1 text-sm text-muted-foreground">You’ve invested {formatAda(n)} in {asset.name}.</p>
             <button
-              onClick={() => navigate({ to: "/" })}
+              onClick={() => navigate({ to: "/app" })}
               className="mt-5 w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground"
             >
               View portfolio

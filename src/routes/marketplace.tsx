@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Search, Filter, Leaf, Wind, Building2, Sun } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Badge, RiskBadge } from "@/components/ui/StatusBadge";
-import { FundingBar } from "@/routes/index";
+import { FundingBar } from "@/components/ui/funding-bar";
 import { ASSETS, formatAda, type RiskProfile } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/marketplace")({

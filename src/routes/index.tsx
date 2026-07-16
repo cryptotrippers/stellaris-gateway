@@ -1,20 +1,102 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowUpRight, TrendingUp, Leaf, Sun, Building2, Wind } from "lucide-react";
-import { AppShell } from "@/components/layout/AppShell";
-import { Sparkline } from "@/components/charts/Sparkline";
-import { RiskBadge, Badge } from "@/components/ui/StatusBadge";
-import { ASSETS, PORTFOLIO, formatAda, formatUsd, sparkline } from "@/lib/mock-data";
+import { useState } from "react";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  Wallet,
+  Coins,
+  TrendingUp,
+  ShieldCheck,
+  Leaf,
+  Sun,
+  Wind,
+  Building2,
+  ChevronDown,
+  Sparkles,
+} from "lucide-react";
+import { Badge, RiskBadge } from "@/components/ui/StatusBadge";
+import { StellarisWordmark } from "@/components/brand/Logo";
+import { ShareRow } from "@/components/landing/ShareRow";
+import { ASSETS } from "@/lib/mock-data";
+import { trackEvent } from "@/lib/analytics";
+import ogAsset from "@/assets/og-landing.jpg.asset.json";
+
+const SITE = "https://stellaris-gateway.lovable.app";
+const OG_IMAGE = `${SITE}${ogAsset.url}`;
+
+const FAQ = [
+  {
+    q: "Is this actually safe?",
+    a: "Every vault is issued by a registered, audited entity, custody is institutional (Fireblocks), and withdrawals carry a 24h timelock. All positions settle on Cardano — you always hold the on-chain token, not an IOU.",
+  },
+  {
+    q: "Do I need to know anything about crypto?",
+    a: "No. You can invest with a debit card via Stripe, or connect a Cardano wallet if you already have one. Yield is paid in ADA and can be converted back to your local currency at any time.",
+  },
+  {
+    q: "What's the minimum investment?",
+    a: "Positions start at ₳10 (about $4 USD). Different vaults have different minimums — most sit between ₳100 and ₳500.",
+  },
+  {
+    q: "What are the fees?",
+    a: "0.4% per year, streamed continuously from yield. No entry fee, no exit fee, no lockups beyond the 24h security timelock.",
+  },
+  {
+    q: "Who can invest?",
+    a: "Retail investors in 60+ jurisdictions where fractional RWAs are permitted. Our one-click ZK-KYC checks eligibility in seconds without exposing your data.",
+  },
+  {
+    q: "What is Cardano and why does it matter?",
+    a: "Cardano is a public blockchain known for peer-reviewed engineering and low fees. Using it means every share, every dividend, and every audit is transparent and verifiable — not locked inside a private database.",
+  },
+];
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Portfolio · Stellaris Finance" },
-      { name: "description", content: "Institutional-grade RealFi gateway on Cardano. Fractionalized real-world assets with ZK-verified compliance." },
-      { property: "og:title", content: "Portfolio · Stellaris Finance" },
-      { property: "og:description", content: "Institutional-grade RealFi gateway on Cardano. Fractionalized real-world assets with ZK-verified compliance." },
+      { title: "Own real-world assets from ₳10 · Stellaris" },
+      { name: "description", content: "Solar farms, coffee estates, and real estate — fractionalized on Cardano. Verified yields, ESG ratings, and 24h withdrawals. Start with ₳10." },
+      { property: "og:title", content: "Own real-world assets from ₳10 · Stellaris" },
+      { property: "og:description", content: "Solar farms, coffee estates, and real estate — fractionalized on Cardano. Verified yields, ESG ratings, and 24h withdrawals." },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: SITE + "/" },
+      { property: "og:image", content: OG_IMAGE },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Own real-world assets from ₳10 · Stellaris" },
+      { name: "twitter:description", content: "Solar farms, coffee estates, and real estate — fractionalized on Cardano." },
+      { name: "twitter:image", content: OG_IMAGE },
+    ],
+    links: [{ rel: "canonical", href: SITE + "/" }],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "Stellaris Finance",
+          url: SITE,
+          potentialAction: {
+            "@type": "SearchAction",
+            target: `${SITE}/marketplace?q={search_term_string}`,
+            "query-input": "required name=search_term_string",
+          },
+        }),
+      },
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: FAQ.map(f => ({
+            "@type": "Question",
+            name: f.q,
+            acceptedAnswer: { "@type": "Answer", text: f.a },
+          })),
+        }),
+      },
     ],
   }),
-  component: PortfolioPage,
+  component: LandingPage,
 });
 
 const categoryIcon = {
@@ -25,146 +107,202 @@ const categoryIcon = {
   "Infrastructure": Sun,
 } as const;
 
-function PortfolioPage() {
-  const totalAda = PORTFOLIO.reduce((s, p) => s + p.currentValueAda, 0);
-  const totalYield = PORTFOLIO.reduce((s, p) => s + p.yieldEarnedAda, 0);
-  const yieldPct = (totalYield / (totalAda - totalYield)) * 100;
-
+function LandingPage() {
   return (
-    <AppShell>
-      {/* Hero header */}
-      <section className="grid gap-6 lg:grid-cols-[1.35fr_1fr]">
-        <div className="card-institutional bg-gradient-to-br from-primary via-primary to-[oklch(0.28_0.16_264)] p-6 md:p-8 text-primary-foreground overflow-hidden relative">
-          <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-accent/25 blur-3xl" />
-          <div className="relative">
-            <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-primary-foreground/70">
-              <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-              Total Portfolio Value · Cardano Mainnet
-            </div>
-            <div className="mt-3 flex items-end gap-3">
-              <div className="number-display text-4xl md:text-5xl font-semibold tracking-tight">{formatAda(totalAda)}</div>
-              <div className="pb-2 text-sm text-primary-foreground/70">≈ {formatUsd(totalAda)}</div>
-            </div>
-            <div className="mt-2 flex items-center gap-2 text-sm">
-              <TrendingUp className="h-4 w-4 text-accent" />
-              <span className="text-accent font-medium">+{yieldPct.toFixed(2)}%</span>
-              <span className="text-primary-foreground/60">lifetime yield · {formatAda(totalYield)} earned</span>
-            </div>
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="pointer-events-none fixed inset-x-0 top-0 h-[520px] bg-gradient-hero opacity-90" />
+      <MarketingNav />
+      <main className="relative">
+        <Hero />
+        <SocialProof />
+        <HowItWorks />
+        <FeaturedAssets />
+        <ImpactStrip />
+        <FaqSection />
+        <FinalCta />
+      </main>
+      <Footer />
+    </div>
+  );
+}
 
-            <div className="mt-6 -mx-1">
-              <Sparkline
-                data={sparkline(3, 40)}
-                stroke="oklch(0.85 0.12 200)"
-                fill="oklch(0.85 0.12 200)"
-                height={72}
-              />
-            </div>
+function MarketingNav() {
+  return (
+    <header className="sticky top-0 z-30 border-b border-border/70 bg-surface/85 backdrop-blur-md">
+      <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-4 px-4 md:px-6">
+        <Link to="/" className="shrink-0"><StellarisWordmark /></Link>
+        <nav className="ml-6 hidden md:flex items-center gap-1">
+          <NavLink to="/marketplace">Marketplace</NavLink>
+          <NavLink to="/yield">How yield works</NavLink>
+          <NavLink to="/stewardship">Impact</NavLink>
+          <NavLink to="/security">Security</NavLink>
+        </nav>
+        <div className="ml-auto flex items-center gap-2">
+          <Link
+            to="/app"
+            onClick={() => trackEvent("nav_open_app_click")}
+            className="hidden sm:inline-flex text-sm text-muted-foreground hover:text-foreground px-3 py-1.5"
+          >
+            Open app
+          </Link>
+          <Link
+            to="/marketplace"
+            onClick={() => trackEvent("nav_cta_click", { location: "topbar" })}
+            className="inline-flex items-center gap-1.5 rounded-full bg-gradient-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-glow hover:-translate-y-0.5 transition-transform"
+          >
+            Start investing <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </div>
+    </header>
+  );
+}
 
-            <div className="mt-6 grid grid-cols-3 gap-3">
-              <MiniStat label="Active Vaults" value="3" />
-              <MiniStat label="24h Yield" value="+₳ 84.20" />
-              <MiniStat label="APY (blended)" value="7.9%" />
-            </div>
+function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
+  return (
+    <Link to={to} className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors">
+      {children}
+    </Link>
+  );
+}
+
+function Hero() {
+  return (
+    <section className="relative mx-auto max-w-[1400px] px-4 md:px-6 pt-16 md:pt-24 pb-12 md:pb-20">
+      <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr] items-center">
+        <div>
+          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/70 backdrop-blur px-3 py-1 text-[11px] uppercase tracking-[0.22em] text-primary">
+            <Sparkles className="h-3 w-3" /> Now open to retail · From ₳10
+          </div>
+          <h1 className="mt-5 text-4xl md:text-6xl font-semibold tracking-tight leading-[1.05]">
+            Own a piece of the <span className="text-transparent bg-clip-text bg-gradient-primary">real world.</span>
+            <br className="hidden md:block" />
+            From <span className="number-display">₳10</span>.
+          </h1>
+          <p className="mt-5 max-w-xl text-base md:text-lg text-muted-foreground leading-relaxed">
+            Solar farms, coffee estates, and real estate — fractionalized on Cardano. Verified yields, ESG ratings, and 24-hour withdrawals. No suits, no minimums that don't make sense.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center gap-3">
+            <Link
+              to="/marketplace"
+              onClick={() => trackEvent("landing_hero_cta_click", { target: "marketplace" })}
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-primary px-6 py-3.5 text-sm md:text-base font-semibold text-primary-foreground shadow-glow hover:-translate-y-0.5 transition-transform"
+            >
+              Explore assets <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
+              to="/app"
+              onClick={() => trackEvent("landing_hero_cta_click", { target: "app" })}
+              className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-6 py-3.5 text-sm md:text-base font-semibold text-foreground hover:border-primary/50 hover:bg-secondary transition-colors"
+            >
+              See a live portfolio
+            </Link>
+          </div>
+          <div className="mt-6 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-success" /> ZK-verified compliance</span>
+            <span className="inline-flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5 text-primary" /> Card or wallet</span>
+            <span className="inline-flex items-center gap-1.5"><TrendingUp className="h-3.5 w-3.5 text-accent" /> 6–13% target APY</span>
           </div>
         </div>
 
-        {/* Quick actions & compliance */}
-        <div className="grid gap-4">
-          <div className="card-institutional p-5">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-foreground">Compliance Status</h3>
-              <Badge tone="success">ZK-Verified</Badge>
-            </div>
-            <ul className="mt-4 space-y-2 text-sm">
-              <ComplianceRow label="One-Click KYC (ZK-Proof)" ok />
-              <ComplianceRow label="Accredited investor attestation" ok />
-              <ComplianceRow label="Jurisdiction: EU / MiCA-compliant" ok />
-              <ComplianceRow label="Multi-Factor Authentication" ok />
-            </ul>
+        <div className="relative">
+          <div className="relative rounded-3xl overflow-hidden border border-border/70 shadow-elegant">
+            <img
+              src={ogAsset.url}
+              alt="Stellaris — own real-world assets on Cardano"
+              width={1200}
+              height={630}
+              className="w-full h-auto"
+            />
           </div>
-          <div className="card-institutional p-5">
-            <h3 className="text-sm font-semibold text-foreground">Quick Actions</h3>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <QuickAction to="/marketplace" label="Browse assets" />
-              <QuickAction to="/governance" label="Vote SIPs" />
-              <QuickAction to="/security" label="Security" />
-              <QuickAction to="/stewardship" label="Impact" />
-            </div>
+          <div className="absolute -bottom-4 -left-4 hidden md:block rounded-2xl border border-border bg-surface/95 backdrop-blur px-4 py-3 shadow-elegant">
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Live blended APY</div>
+            <div className="number-display text-2xl font-semibold text-accent">7.9%</div>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
+  );
+}
 
-      {/* Active investments */}
-      <section className="mt-10">
-        <SectionHeader title="Active Investments" href="/marketplace" hrefLabel="Explore marketplace" />
-        <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {PORTFOLIO.map((inv, i) => {
-            const asset = ASSETS.find(a => a.id === inv.assetId)!;
-            const Icon = categoryIcon[asset.category];
-            const pnl = inv.currentValueAda - inv.amountAda;
-            const pnlPct = (pnl / inv.amountAda) * 100;
-            return (
-              <Link
-                key={inv.assetId}
-                to="/marketplace/$id"
-                params={{ id: asset.id }}
-                className="card-institutional card-institutional-hover p-5 group"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{asset.category}</div>
-                      <div className="text-sm font-semibold text-foreground line-clamp-1">{asset.name}</div>
-                    </div>
-                  </div>
-                  <RiskBadge risk={asset.risk} />
-                </div>
+function SocialProof() {
+  const stats = [
+    { k: "Tokenized on-chain", v: "$14.2M+" },
+    { k: "Retail investors", v: "12,400+" },
+    { k: "Blended target APY", v: "7.9%" },
+    { k: "Jurisdictions", v: "60+" },
+  ];
+  return (
+    <section className="relative border-y border-border/60 bg-surface/40">
+      <div className="mx-auto max-w-[1400px] px-4 md:px-6 py-8 grid grid-cols-2 md:grid-cols-4 gap-6">
+        {stats.map(s => (
+          <div key={s.k} className="text-center md:text-left">
+            <div className="number-display text-2xl md:text-3xl font-semibold text-foreground">{s.v}</div>
+            <div className="mt-1 text-[11px] uppercase tracking-widest text-muted-foreground">{s.k}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
-                <div className="mt-5 flex items-end justify-between">
-                  <div>
-                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Position</div>
-                    <div className="number-display text-xl font-semibold text-foreground">{formatAda(inv.currentValueAda)}</div>
-                  </div>
-                  <div className={`text-sm font-semibold ${pnl >= 0 ? "text-success" : "text-destructive"}`}>
-                    +{pnlPct.toFixed(2)}%
-                  </div>
-                </div>
+function HowItWorks() {
+  const steps = [
+    { icon: Coins, title: "Pick an asset", body: "Browse curated real-world vaults — solar, farms, real estate. Every listing is ESG-rated and audit-verified." },
+    { icon: Wallet, title: "Invest in a tap", body: "Pay with a card or connect a Cardano wallet. Your position is minted as an on-chain token you actually own." },
+    { icon: TrendingUp, title: "Earn yield in ADA", body: "Yield streams directly to your wallet, on-chain and provable. Withdraw anytime after the 24h security window." },
+  ];
+  return (
+    <section className="mx-auto max-w-[1400px] px-4 md:px-6 py-16 md:py-24">
+      <div className="max-w-2xl">
+        <div className="text-[11px] uppercase tracking-[0.22em] text-primary">How it works</div>
+        <h2 className="mt-2 text-3xl md:text-4xl font-semibold tracking-tight">Three steps. No jargon.</h2>
+        <p className="mt-3 text-muted-foreground">Same real-world investments that used to require a private banker — now open, transparent, and starting at ₳10.</p>
+      </div>
+      <div className="mt-10 grid gap-4 md:grid-cols-3">
+        {steps.map((s, i) => (
+          <div key={s.title} className="card-institutional card-institutional-hover p-6 relative">
+            <div className="absolute top-4 right-4 number-display text-4xl font-semibold text-primary/10">0{i + 1}</div>
+            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-gradient-primary text-primary-foreground shadow-glow">
+              <s.icon className="h-6 w-6" />
+            </div>
+            <h3 className="mt-5 text-lg font-semibold text-foreground">{s.title}</h3>
+            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{s.body}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
-                <div className="mt-3">
-                  <Sparkline data={sparkline(i * 7 + 2, 28)} stroke="var(--color-primary)" fill="var(--color-primary)" height={38} />
-                </div>
-
-                <div className="mt-4 flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">APY {asset.apy}% · ESG {asset.esgRating}</span>
-                  <span className="inline-flex items-center gap-1 text-primary font-medium">
-                    View <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                  </span>
-                </div>
-              </Link>
-            );
-          })}
+function FeaturedAssets() {
+  const featured = ASSETS.slice(0, 6);
+  return (
+    <section className="relative bg-surface/40 border-y border-border/60">
+      <div className="mx-auto max-w-[1400px] px-4 md:px-6 py-16 md:py-24">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <div className="text-[11px] uppercase tracking-[0.22em] text-primary">Featured vaults</div>
+            <h2 className="mt-2 text-3xl md:text-4xl font-semibold tracking-tight">Real things that make real money.</h2>
+          </div>
+          <Link to="/marketplace" className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80">
+            All vaults <ArrowUpRight className="h-4 w-4" />
+          </Link>
         </div>
-      </section>
-
-      {/* Featured opportunities */}
-      <section className="mt-10">
-        <SectionHeader title="Featured Opportunities" href="/marketplace" hrefLabel="See all" />
-        <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {ASSETS.slice(0, 3).map(asset => {
+        <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {featured.map(asset => {
             const Icon = categoryIcon[asset.category];
             return (
               <Link
                 key={asset.id}
                 to="/marketplace/$id"
                 params={{ id: asset.id }}
+                onClick={() => trackEvent("landing_asset_click", { asset: asset.id })}
                 className="card-institutional card-institutional-hover p-5 flex flex-col"
               >
                 <div className="flex items-center justify-between">
                   <Badge tone="primary">{asset.category}</Badge>
-                  <span className="text-xs text-muted-foreground">ESG {asset.esgRating}</span>
+                  <RiskBadge risk={asset.risk} />
                 </div>
                 <div className="mt-4 flex items-center gap-3">
                   <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-primary text-primary-foreground">
@@ -175,75 +313,157 @@ function PortfolioPage() {
                     <div className="text-xs text-muted-foreground">{asset.location}</div>
                   </div>
                 </div>
-                <div className="mt-5 flex items-end justify-between">
+                <p className="mt-3 text-xs text-muted-foreground line-clamp-2">{asset.description}</p>
+                <div className="mt-4 flex items-end justify-between">
                   <div>
                     <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Target APY</div>
-                    <div className="number-display text-2xl font-semibold text-primary">{asset.apy}%</div>
+                    <div className="number-display text-2xl font-semibold text-accent">{asset.apy}%</div>
                   </div>
-                  <RiskBadge risk={asset.risk} />
+                  <div className="text-right">
+                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground">ESG</div>
+                    <div className="text-sm font-semibold text-foreground">{asset.esgRating}</div>
+                  </div>
                 </div>
-                <FundingBar pct={asset.fundedPct} />
               </Link>
             );
           })}
         </div>
-      </section>
-    </AppShell>
-  );
-}
-
-function MiniStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl bg-white/10 backdrop-blur-sm border border-white/10 px-3 py-2.5">
-      <div className="text-[10px] uppercase tracking-widest text-primary-foreground/60">{label}</div>
-      <div className="number-display text-base font-semibold">{value}</div>
-    </div>
-  );
-}
-
-function ComplianceRow({ label, ok }: { label: string; ok?: boolean }) {
-  return (
-    <li className="flex items-center justify-between">
-      <span className="text-foreground/85">{label}</span>
-      <span className={`inline-flex items-center gap-1 text-xs font-medium ${ok ? "text-success" : "text-muted-foreground"}`}>
-        <span className={`h-1.5 w-1.5 rounded-full ${ok ? "bg-success" : "bg-muted-foreground"}`} />
-        {ok ? "Active" : "Pending"}
-      </span>
-    </li>
-  );
-}
-
-function QuickAction({ to, label }: { to: string; label: string }) {
-  return (
-    <Link to={to} className="rounded-xl border border-border bg-secondary/50 px-3 py-2.5 text-sm font-medium text-foreground hover:border-primary/40 hover:bg-secondary transition-colors">
-      {label}
-    </Link>
-  );
-}
-
-export function SectionHeader({ title, href, hrefLabel }: { title: string; href?: string; hrefLabel?: string }) {
-  return (
-    <div className="flex items-center justify-between">
-      <h2 className="text-lg font-semibold tracking-tight text-foreground">{title}</h2>
-      {href && (
-        <Link to={href} className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80">
-          {hrefLabel} <ArrowUpRight className="h-4 w-4" />
-        </Link>
-      )}
-    </div>
-  );
-}
-
-export function FundingBar({ pct }: { pct: number }) {
-  return (
-    <div className="mt-5">
-      <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-        <span>Funded</span>
-        <span className="number-display text-foreground font-medium">{pct}%</span>
       </div>
-      <div className="mt-1.5 h-1.5 rounded-full bg-secondary overflow-hidden">
-        <div className="h-full rounded-full bg-gradient-primary" style={{ width: `${pct}%` }} />
+    </section>
+  );
+}
+
+function ImpactStrip() {
+  const impacts = [
+    { k: "Tonnes CO₂ offset", v: "48,200" },
+    { k: "Households powered", v: "62,000" },
+    { k: "Hectares protected", v: "12,340" },
+    { k: "Farmers financed", v: "1,890" },
+  ];
+  return (
+    <section className="mx-auto max-w-[1400px] px-4 md:px-6 py-16 md:py-24">
+      <div className="grid gap-8 lg:grid-cols-[1fr_1.4fr] items-center">
+        <div>
+          <div className="text-[11px] uppercase tracking-[0.22em] text-success">Verifiable impact</div>
+          <h2 className="mt-2 text-3xl md:text-4xl font-semibold tracking-tight">Every ₳ has a footprint you can check.</h2>
+          <p className="mt-3 text-muted-foreground">Every impact metric is anchored on-chain and independently attested. No greenwashing, no marketing math.</p>
+          <Link to="/stewardship" className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80">
+            See the impact ledger <ArrowUpRight className="h-4 w-4" />
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          {impacts.map(i => (
+            <div key={i.k} className="card-institutional p-6">
+              <div className="number-display text-3xl md:text-4xl font-semibold text-success">{i.v}</div>
+              <div className="mt-1 text-xs uppercase tracking-widest text-muted-foreground">{i.k}</div>
+            </div>
+          ))}
+        </div>
       </div>
+    </section>
+  );
+}
+
+function FaqSection() {
+  const [open, setOpen] = useState<number | null>(0);
+  return (
+    <section className="mx-auto max-w-[900px] px-4 md:px-6 py-16 md:py-24">
+      <div className="text-center">
+        <div className="text-[11px] uppercase tracking-[0.22em] text-primary">FAQ</div>
+        <h2 className="mt-2 text-3xl md:text-4xl font-semibold tracking-tight">Everything you're probably wondering.</h2>
+      </div>
+      <div className="mt-10 space-y-3">
+        {FAQ.map((item, i) => {
+          const isOpen = open === i;
+          return (
+            <div key={item.q} className="card-institutional overflow-hidden">
+              <button
+                onClick={() => setOpen(isOpen ? null : i)}
+                className="w-full flex items-center justify-between gap-4 p-5 text-left"
+              >
+                <span className="text-base font-semibold text-foreground">{item.q}</span>
+                <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
+              </button>
+              {isOpen && (
+                <div className="px-5 pb-5 text-sm text-muted-foreground leading-relaxed">{item.a}</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function FinalCta() {
+  return (
+    <section className="mx-auto max-w-[1400px] px-4 md:px-6 pb-20">
+      <div className="card-institutional bg-gradient-to-br from-primary via-primary to-[oklch(0.28_0.16_264)] p-10 md:p-16 text-primary-foreground text-center relative overflow-hidden">
+        <div className="absolute -right-24 -top-24 h-72 w-72 rounded-full bg-accent/30 blur-3xl" />
+        <div className="absolute -left-24 -bottom-24 h-72 w-72 rounded-full bg-accent/20 blur-3xl" />
+        <div className="relative">
+          <h2 className="text-3xl md:text-5xl font-semibold tracking-tight">Start with ₳10. Own something real.</h2>
+          <p className="mt-4 max-w-xl mx-auto text-primary-foreground/80">The rich have owned real assets forever. It's your turn.</p>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              to="/marketplace"
+              onClick={() => trackEvent("landing_final_cta_click")}
+              className="inline-flex items-center gap-2 rounded-xl bg-white text-primary px-6 py-3.5 text-base font-semibold hover:-translate-y-0.5 transition-transform"
+            >
+              Browse assets <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
+              to="/app"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/30 bg-white/10 backdrop-blur px-6 py-3.5 text-base font-semibold text-white hover:bg-white/20 transition-colors"
+            >
+              Open the app
+            </Link>
+          </div>
+          <div className="mt-10 flex justify-center">
+            <ShareRow
+              url="/"
+              text="I found a way to own solar farms, coffee estates, and real estate from ₳10. On Cardano."
+              eventName="landing_share_click"
+              label="Tell a friend"
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="border-t border-border/60 bg-surface/40">
+      <div className="mx-auto max-w-[1400px] px-4 md:px-6 py-12 grid gap-8 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
+        <div>
+          <StellarisWordmark />
+          <p className="mt-3 text-sm text-muted-foreground max-w-sm">Fractional real-world assets on Cardano. Retail-friendly, institutionally engineered.</p>
+        </div>
+        <FooterCol title="Product" links={[["Marketplace", "/marketplace"], ["Yield engine", "/yield"], ["Governance", "/governance"]]} />
+        <FooterCol title="Trust" links={[["Security", "/security"], ["Stewardship", "/stewardship"], ["Developers", "/developers"]]} />
+        <FooterCol title="Account" links={[["Open app", "/app"], ["Upgrade", "/upgrade"]]} />
+      </div>
+      <div className="border-t border-border/60">
+        <div className="mx-auto max-w-[1400px] px-4 md:px-6 py-4 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+          <span>© {new Date().getFullYear()} Stellaris Finance. Built on Cardano.</span>
+          <span>Not investment advice. Yield is not guaranteed.</span>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+function FooterCol({ title, links }: { title: string; links: [string, string][] }) {
+  return (
+    <div>
+      <div className="text-[11px] uppercase tracking-widest text-muted-foreground">{title}</div>
+      <ul className="mt-3 space-y-2 text-sm">
+        {links.map(([label, to]) => (
+          <li key={to}><Link to={to} className="text-foreground/85 hover:text-primary transition-colors">{label}</Link></li>
+        ))}
+      </ul>
     </div>
   );
 }

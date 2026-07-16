@@ -20,6 +20,7 @@ import { Route as MarketplaceRouteImport } from './routes/marketplace'
 import { Route as GovernanceRouteImport } from './routes/governance'
 import { Route as DevelopersRouteImport } from './routes/developers'
 import { Route as BlockfrostHealthRouteImport } from './routes/blockfrost-health'
+import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UpgradeIndexRouteImport } from './routes/upgrade.index'
 import { Route as UpgradeReturnRouteImport } from './routes/upgrade.return'
@@ -86,6 +87,11 @@ const BlockfrostHealthRoute = BlockfrostHealthRouteImport.update({
   path: '/blockfrost-health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppRoute = AppRouteImport.update({
+  id: '/app',
+  path: '/app',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -144,6 +150,7 @@ const ApiPublicBlockfrostWebhookRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/app': typeof AppRoute
   '/blockfrost-health': typeof BlockfrostHealthRoute
   '/developers': typeof DevelopersRoute
   '/governance': typeof GovernanceRouteWithChildren
@@ -167,6 +174,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/app': typeof AppRoute
   '/blockfrost-health': typeof BlockfrostHealthRoute
   '/developers': typeof DevelopersRoute
   '/governance': typeof GovernanceRouteWithChildren
@@ -190,6 +198,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/app': typeof AppRoute
   '/blockfrost-health': typeof BlockfrostHealthRoute
   '/developers': typeof DevelopersRoute
   '/governance': typeof GovernanceRouteWithChildren
@@ -215,6 +224,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/app'
     | '/blockfrost-health'
     | '/developers'
     | '/governance'
@@ -238,6 +248,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/app'
     | '/blockfrost-health'
     | '/developers'
     | '/governance'
@@ -260,6 +271,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/app'
     | '/blockfrost-health'
     | '/developers'
     | '/governance'
@@ -284,6 +296,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AppRoute: typeof AppRoute
   BlockfrostHealthRoute: typeof BlockfrostHealthRoute
   DevelopersRoute: typeof DevelopersRoute
   GovernanceRoute: typeof GovernanceRouteWithChildren
@@ -379,6 +392,13 @@ declare module '@tanstack/react-router' {
       path: '/blockfrost-health'
       fullPath: '/blockfrost-health'
       preLoaderRoute: typeof BlockfrostHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -493,6 +513,7 @@ const UpgradeRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AppRoute: AppRoute,
   BlockfrostHealthRoute: BlockfrostHealthRoute,
   DevelopersRoute: DevelopersRoute,
   GovernanceRoute: GovernanceRouteWithChildren,

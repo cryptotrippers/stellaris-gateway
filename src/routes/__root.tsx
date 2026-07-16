@@ -72,24 +72,21 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
+const OG_IMAGE = "https://stellaris-gateway.lovable.app/__l5e/assets-v1/2bd9f637-d650-4bde-b8b5-e2806a389cbe/og-landing.jpg";
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Portfolio · Stellaris Finance" },
-      { name: "description", content: "Institutional-grade RealFi gateway on Cardano. Fractionalized real-world assets with ZK-verified compliance." },
+      { title: "Stellaris · Own real-world assets from ₳10" },
+      { name: "description", content: "Solar farms, coffee estates, and real estate — fractionalized on Cardano. Verified yields, ESG ratings, and 24h withdrawals." },
       { name: "author", content: "Stellaris Finance" },
       { name: "theme-color", content: "#0033ad" },
-      { property: "og:title", content: "Portfolio · Stellaris Finance" },
-      { property: "og:description", content: "Institutional-grade RealFi gateway on Cardano. Fractionalized real-world assets with ZK-verified compliance." },
+      { property: "og:site_name", content: "Stellaris Finance" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@StellarisFi" },
-      { name: "twitter:title", content: "Portfolio · Stellaris Finance" },
-      { name: "twitter:description", content: "Institutional-grade RealFi gateway on Cardano. Fractionalized real-world assets with ZK-verified compliance." },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/kkRMH6YoQcU8KW7Yj4MEMf05Ysx1/social-images/social-1784102144692-a_high_fidelity_professional_3d_isometric_illustration_of_a_mission_control.webp" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/kkRMH6YoQcU8KW7Yj4MEMf05Ysx1/social-images/social-1784102144692-a_high_fidelity_professional_3d_isometric_illustration_of_a_mission_control.webp" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -97,6 +94,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" },
+    ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Organization",
+          name: "Stellaris Finance",
+          url: "https://stellaris-gateway.lovable.app",
+          logo: OG_IMAGE,
+          sameAs: ["https://twitter.com/StellarisFi"],
+        }),
+      },
     ],
   }),
   shellComponent: RootShell,
