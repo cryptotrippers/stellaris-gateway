@@ -8,7 +8,7 @@
   "mcp": {
     "server": {
       "name": "stellaris-gateway-mcp",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "title": "Stellaris Gateway MCP"
     },
     "tools": [
@@ -138,6 +138,93 @@
           "required": [
             "assetId",
             "amountAda"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_vault_activity",
+        "title": "List vault activity (authenticated)",
+        "description": "List recent vault activity — deposits, withdrawals, yield distributions, rebalances, and timelock events. Requires an MCP API key.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "apiKey": {
+              "type": "string",
+              "minLength": 1,
+              "description": "MCP API key issued by the app operator."
+            },
+            "limit": {
+              "description": "Max entries to return (default 20).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            },
+            "kind": {
+              "description": "Filter by activity kind.",
+              "type": "string",
+              "enum": [
+                "Deposit",
+                "Withdrawal",
+                "Yield Distribution",
+                "Rebalance",
+                "Timelock Set"
+              ]
+            }
+          },
+          "required": [
+            "apiKey"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_stewardship",
+        "title": "List stewardship activity (authenticated)",
+        "description": "List governance proposals under stewardship review, including voting status, quorum, and author. Requires an MCP API key.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "apiKey": {
+              "type": "string",
+              "minLength": 1,
+              "description": "MCP API key issued by the app operator."
+            },
+            "status": {
+              "description": "Filter by proposal status.",
+              "type": "string",
+              "enum": [
+                "Voting",
+                "Executed",
+                "Defeated",
+                "Queued"
+              ]
+            },
+            "category": {
+              "description": "Filter by proposal category.",
+              "type": "string",
+              "enum": [
+                "Treasury",
+                "Protocol",
+                "Listing",
+                "Risk"
+              ]
+            }
+          },
+          "required": [
+            "apiKey"
           ]
         },
         "outputSchema": null
