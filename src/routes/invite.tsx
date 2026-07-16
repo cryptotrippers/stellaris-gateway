@@ -12,10 +12,12 @@ import {
   bumpInviteSent,
   getReferredBy,
   getReferralConfirmation,
+  REFERRAL_ERROR_COPY,
   type InviteStats,
   type ReferralConfirmation,
 } from "@/lib/referral";
 import { trackEvent } from "@/lib/analytics";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/invite")({
   head: () => ({
@@ -62,13 +64,22 @@ function InvitePage() {
   const inviteUrl = buildInviteUrl(code);
   const shareText = `I'm using Stellaris to own fractions of real-world assets (solar farms, coffee estates, real estate) on Cardano — starting from ₳10. Join with my code ${code} and we both get ₳${REWARD_PER_SIGNUP}.`;
 
+  function trySend(channel: string): boolean {
+    const r = bumpInviteSent(channel);
+    setStats(getInviteStats());
+    if (!r.ok) {
+      toast.error(REFERRAL_ERROR_COPY[r.reason]);
+      return false;
+    }
+    return true;
+  }
+
   async function copy(kind: "code" | "url", value: string) {
     try {
       await navigator.clipboard.writeText(value);
       setCopied(kind);
       trackEvent("referral_copy", { kind });
-      bumpInviteSent(`copy_${kind}`);
-      setStats(getInviteStats());
+      trySend(`copy_${kind}`);
       setTimeout(() => setCopied(null), 1600);
     } catch { /* ignore */ }
   }
@@ -78,8 +89,7 @@ function InvitePage() {
     if (typeof navigator !== "undefined" && "share" in navigator) {
       try {
         await navigator.share({ title: "Join me on Stellaris", text: shareText, url: inviteUrl });
-        bumpInviteSent("native");
-        setStats(getInviteStats());
+        trySend("native");
         return;
       } catch { /* cancelled */ }
     }
@@ -88,15 +98,21 @@ function InvitePage() {
 
   function externalShare(channel: "x" | "reddit" | "whatsapp" | "telegram" | "email", href: string) {
     trackEvent("referral_share", { channel });
-    bumpInviteSent(channel);
-    setStats(getInviteStats());
+    if (!trySend(channel)) return;
     window.open(href, "_blank", "noopener,noreferrer");
   }
 
   function regenerate() {
-    const next = regenerateMyCode();
-    setCode(next);
+    const r = regenerateMyCode();
+    if (!r.ok) {
+      const mins = Math.max(1, Math.ceil(r.retryAfterMs / 60_000));
+      toast.error(`${REFERRAL_ERROR_COPY.rate_limited} (~${mins} min)`);
+      return;
+    }
+    setCode(r.code);
+    toast.success("New invite code generated");
   }
+
 
   const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(inviteUrl)}`;
   const redditUrl = `https://www.reddit.com/submit?url=${encodeURIComponent(inviteUrl)}&title=${encodeURIComponent("Fractional real-world assets on Cardano — ₳25 signup bonus")}`;
