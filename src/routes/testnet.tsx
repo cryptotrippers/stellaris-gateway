@@ -106,7 +106,30 @@ function TestnetPage() {
         </div>
       </div>
 
+      {banners.length > 0 && (
+        <div className="mt-4 space-y-2">
+          {banners.map((b, i) => (
+            <div
+              key={i}
+              role="alert"
+              className={`flex items-start gap-3 rounded-lg border p-3 text-sm ${
+                b.tone === "destructive"
+                  ? "border-destructive/40 bg-destructive/10 text-destructive"
+                  : "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+              }`}
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div className="flex-1">
+                <div className="font-semibold">{b.title}</div>
+                <div className="mt-0.5 text-xs opacity-90 break-words">{b.detail}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="mt-6 grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+
         {/* Chain tip */}
         <div className="card-institutional p-6">
           <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
