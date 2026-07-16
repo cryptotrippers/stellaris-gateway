@@ -51,6 +51,7 @@ const PROVIDER_LABEL: Record<string, WalletProvider> = {
 
 function TestnetPage() {
   const tipQ = useQuery(tipQuery);
+  const healthQ = useQuery(healthQuery);
   const wallet = useWallet();
   const [wallets, setWallets] = useState<CardanoWalletInfo[]>([]);
   const [connectError, setConnectError] = useState<string | null>(null);
@@ -70,19 +71,29 @@ function TestnetPage() {
   const wrongNetwork = wallet.connected && wallet.networkId === 1;
 
   const banners: Banner[] = [];
-  if (tipQ.error) {
-    const msg = (tipQ.error as Error).message;
-    const isNetworkMismatch = /Network token mismatch|403/i.test(msg);
+  const health = healthQ.data;
+  if (health && health.status !== "ok") {
+    const titleMap: Record<typeof health.status, string> = {
+      missing: "Blockfrost is not configured",
+      wrong_network: `Blockfrost key is for ${health.detectedNetwork ?? "another network"}, not Preprod`,
+      invalid: "Blockfrost rejected the project ID",
+      unreachable: "Blockfrost is unreachable",
+      ok: "",
+    };
     banners.push({
-      tone: "destructive",
-      title: isNetworkMismatch
-        ? "Blockfrost project ID is not for Preprod"
-        : "Preprod chain tip unavailable",
-      detail: isNetworkMismatch
-        ? "The saved BLOCKFROST_PREPROD_PROJECT_ID belongs to a different network (mainnet/preview). Create a Preprod project at blockfrost.io and update the secret."
-        : msg,
+      tone: health.status === "unreachable" ? "warning" : "destructive",
+      title: titleMap[health.status],
+      detail: health.detail,
+    });
+  } else if (tipQ.error && (!health || health.status === "ok")) {
+    // Health said OK but a live tip fetch still failed — network blip / rate limit.
+    banners.push({
+      tone: "warning",
+      title: "Preprod chain tip unavailable",
+      detail: (tipQ.error as Error).message,
     });
   }
+
   if (wrongNetwork) {
     banners.push({
       tone: "warning",
