@@ -290,12 +290,14 @@ export function bumpInviteSent(channel: string): InviteSendResult {
 
   if (rec.lastAt && now - rec.lastAt < MIN_MS_BETWEEN_INVITES) {
     trackEvent("referral_invite_blocked", { channel, reason: "too_fast" });
+    appendAudit({ type: "invite_blocked", outcome: "blocked", reason: "too_fast", channel });
     return { ok: false, reason: "too_fast", retryAfterMs: MIN_MS_BETWEEN_INVITES - (now - rec.lastAt) };
   }
 
   if (recentSends.length >= MAX_INVITES_PER_HOUR) {
     const retryAfterMs = Math.max(0, recentSends[0] + 60 * 60 * 1000 - now);
     trackEvent("referral_invite_blocked", { channel, reason: "rate_limited" });
+    appendAudit({ type: "invite_blocked", outcome: "blocked", reason: "rate_limited", channel });
     return { ok: false, reason: "rate_limited", retryAfterMs };
   }
 
@@ -306,6 +308,7 @@ export function bumpInviteSent(channel: string): InviteSendResult {
   };
   s.setItem(INVITES_KEY, JSON.stringify(next));
   trackEvent("referral_invite_sent", { channel });
+  appendAudit({ type: "invite_sent", outcome: "ok", channel });
   return { ok: true };
 }
 
