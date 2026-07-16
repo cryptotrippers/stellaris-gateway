@@ -17,6 +17,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SecurityRouteImport } from './routes/security'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MarketplaceRouteImport } from './routes/marketplace'
+import { Route as InviteRouteImport } from './routes/invite'
 import { Route as GovernanceRouteImport } from './routes/governance'
 import { Route as DevelopersRouteImport } from './routes/developers'
 import { Route as BlockfrostHealthRouteImport } from './routes/blockfrost-health'
@@ -70,6 +71,11 @@ const McpRoute = McpRouteImport.update({
 const MarketplaceRoute = MarketplaceRouteImport.update({
   id: '/marketplace',
   path: '/marketplace',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InviteRoute = InviteRouteImport.update({
+  id: '/invite',
+  path: '/invite',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GovernanceRoute = GovernanceRouteImport.update({
@@ -154,6 +160,7 @@ export interface FileRoutesByFullPath {
   '/blockfrost-health': typeof BlockfrostHealthRoute
   '/developers': typeof DevelopersRoute
   '/governance': typeof GovernanceRouteWithChildren
+  '/invite': typeof InviteRoute
   '/marketplace': typeof MarketplaceRouteWithChildren
   '/mcp': typeof McpRoute
   '/security': typeof SecurityRoute
@@ -178,6 +185,7 @@ export interface FileRoutesByTo {
   '/blockfrost-health': typeof BlockfrostHealthRoute
   '/developers': typeof DevelopersRoute
   '/governance': typeof GovernanceRouteWithChildren
+  '/invite': typeof InviteRoute
   '/marketplace': typeof MarketplaceRouteWithChildren
   '/mcp': typeof McpRoute
   '/security': typeof SecurityRoute
@@ -202,6 +210,7 @@ export interface FileRoutesById {
   '/blockfrost-health': typeof BlockfrostHealthRoute
   '/developers': typeof DevelopersRoute
   '/governance': typeof GovernanceRouteWithChildren
+  '/invite': typeof InviteRoute
   '/marketplace': typeof MarketplaceRouteWithChildren
   '/mcp': typeof McpRoute
   '/security': typeof SecurityRoute
@@ -228,6 +237,7 @@ export interface FileRouteTypes {
     | '/blockfrost-health'
     | '/developers'
     | '/governance'
+    | '/invite'
     | '/marketplace'
     | '/mcp'
     | '/security'
@@ -252,6 +262,7 @@ export interface FileRouteTypes {
     | '/blockfrost-health'
     | '/developers'
     | '/governance'
+    | '/invite'
     | '/marketplace'
     | '/mcp'
     | '/security'
@@ -275,6 +286,7 @@ export interface FileRouteTypes {
     | '/blockfrost-health'
     | '/developers'
     | '/governance'
+    | '/invite'
     | '/marketplace'
     | '/mcp'
     | '/security'
@@ -300,6 +312,7 @@ export interface RootRouteChildren {
   BlockfrostHealthRoute: typeof BlockfrostHealthRoute
   DevelopersRoute: typeof DevelopersRoute
   GovernanceRoute: typeof GovernanceRouteWithChildren
+  InviteRoute: typeof InviteRoute
   MarketplaceRoute: typeof MarketplaceRouteWithChildren
   McpRoute: typeof McpRoute
   SecurityRoute: typeof SecurityRoute
@@ -371,6 +384,13 @@ declare module '@tanstack/react-router' {
       path: '/marketplace'
       fullPath: '/marketplace'
       preLoaderRoute: typeof MarketplaceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invite': {
+      id: '/invite'
+      path: '/invite'
+      fullPath: '/invite'
+      preLoaderRoute: typeof InviteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/governance': {
@@ -517,6 +537,7 @@ const rootRouteChildren: RootRouteChildren = {
   BlockfrostHealthRoute: BlockfrostHealthRoute,
   DevelopersRoute: DevelopersRoute,
   GovernanceRoute: GovernanceRouteWithChildren,
+  InviteRoute: InviteRoute,
   MarketplaceRoute: MarketplaceRouteWithChildren,
   McpRoute: McpRoute,
   SecurityRoute: SecurityRoute,
