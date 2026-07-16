@@ -60,6 +60,64 @@ function readJSON<T>(s: Storage, key: string, fallback: T): T {
   }
 }
 
+// ---- Audit log -------------------------------------------------------------
+// Transparent, tamper-visible record of every referral-relevant event on this
+// device. Purely client-side (localStorage), capped at AUDIT_LOG_MAX entries.
+// When Cloud lands, mirror the same shape server-side; the UI stays identical.
+export type AuditEventType =
+  | "capture_ok"
+  | "capture_blocked"
+  | "confirm_ok"
+  | "confirm_blocked"
+  | "regenerate_ok"
+  | "regenerate_blocked"
+  | "invite_sent"
+  | "invite_blocked";
+
+export type AuditOutcome = "ok" | "blocked";
+
+export interface AuditEvent {
+  id: string;
+  type: AuditEventType;
+  outcome: AuditOutcome;
+  at: number;
+  code?: string;
+  channel?: string;
+  reason?: string;
+}
+
+function appendAudit(ev: Omit<AuditEvent, "id" | "at"> & { at?: number }): void {
+  const s = safeStorage();
+  if (!s) return;
+  try {
+    const list = readJSON<AuditEvent[]>(s, AUDIT_LOG_KEY, []);
+    const entry: AuditEvent = {
+      id: Array.from(randomBytes(6), b => b.toString(16).padStart(2, "0")).join(""),
+      at: ev.at ?? Date.now(),
+      type: ev.type,
+      outcome: ev.outcome,
+      code: ev.code,
+      channel: ev.channel,
+      reason: ev.reason,
+    };
+    const next = [entry, ...list].slice(0, AUDIT_LOG_MAX);
+    s.setItem(AUDIT_LOG_KEY, JSON.stringify(next));
+  } catch { /* swallow — audit must never break UX */ }
+}
+
+export function getAuditLog(): AuditEvent[] {
+  const s = safeStorage();
+  if (!s) return [];
+  return readJSON<AuditEvent[]>(s, AUDIT_LOG_KEY, []);
+}
+
+export function clearAuditLog(): void {
+  const s = safeStorage();
+  if (!s) return;
+  s.removeItem(AUDIT_LOG_KEY);
+}
+
+
 /** Stable per-browser device ID. Not a fingerprint — just a local pseudonym
  *  used to spot the same device claiming multiple invite codes. Trivially
  *  bypassed by clearing storage; re-enforce server-side. */
