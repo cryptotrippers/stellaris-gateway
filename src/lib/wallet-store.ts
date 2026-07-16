@@ -63,6 +63,7 @@ export async function connectWallet(provider: Exclude<WalletProvider, "WalletCon
         wcTopic: null,
       };
       emit();
+      confirmReferral("wallet_connect");
       return { ok: true };
     } catch (e) {
       return { ok: false, error: (e as Error).message };
