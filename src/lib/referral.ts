@@ -12,6 +12,9 @@ const CONFIRMED_KEY = "stellaris.referral.confirmed"; // JSON: { code, reason, a
 const DEVICE_ID_KEY = "stellaris.referral.deviceId";
 const DEVICE_CLAIMED_KEY = "stellaris.referral.deviceClaimedCodes"; // JSON string[]
 const REGEN_HISTORY_KEY = "stellaris.referral.regenHistory"; // JSON number[] (ms timestamps)
+const AUDIT_LOG_KEY = "stellaris.referral.auditLog"; // JSON AuditEvent[]
+const AUDIT_LOG_MAX = 100;
+
 
 // Anti-abuse thresholds — mirror these server-side when Cloud is wired.
 const MAX_REGEN_PER_HOUR = 5;
