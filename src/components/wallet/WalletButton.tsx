@@ -1,18 +1,73 @@
-import { useState } from "react";
-import { Wallet, Check, X, QrCode } from "lucide-react";
-import { connectWallet, disconnectWallet, shortAddr, useWallet, type WalletProvider } from "@/lib/wallet-store";
+import { useEffect, useRef, useState } from "react";
+import { Wallet, Check, X, QrCode, Loader2, Copy } from "lucide-react";
+import QRCode from "qrcode";
+import {
+  connectWallet,
+  connectWithWalletConnect,
+  disconnectWallet,
+  isWalletConnectConfigured,
+  shortAddr,
+  useWallet,
+  type WalletProvider,
+} from "@/lib/wallet-store";
+
+type BrowserProvider = Exclude<WalletProvider, "WalletConnect">;
 
 const PROVIDERS: { id: WalletProvider; desc: string; color: string }[] = [
   { id: "Lace", desc: "Cardano native wallet by IOG", color: "from-sky-500/20 to-cyan-400/10" },
   { id: "Eternl", desc: "Feature-rich multi-account wallet", color: "from-indigo-500/20 to-blue-400/10" },
   { id: "Nami", desc: "Lightweight browser wallet", color: "from-amber-500/20 to-orange-400/10" },
-  { id: "WalletConnect", desc: "Scan QR from any mobile wallet", color: "from-emerald-500/20 to-teal-400/10" },
+  { id: "WalletConnect", desc: "Scan QR from any CIP-45 mobile wallet", color: "from-emerald-500/20 to-teal-400/10" },
 ];
 
 export function WalletButton() {
   const wallet = useWallet();
   const [open, setOpen] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [wcUri, setWcUri] = useState<string | null>(null);
+  const [wcStatus, setWcStatus] = useState<"idle" | "pairing" | "waiting" | "error">("idle");
+  const [wcError, setWcError] = useState<string | null>(null);
+  const qrCanvas = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    if (!wcUri || !qrCanvas.current) return;
+    QRCode.toCanvas(qrCanvas.current, wcUri, { width: 224, margin: 1, color: { dark: "#0f172a", light: "#ffffff" } }).catch(() => {
+      /* ignore render error */
+    });
+  }, [wcUri]);
+
+  async function beginWalletConnect() {
+    setWcError(null);
+    setShowQR(true);
+    if (!isWalletConnectConfigured()) {
+      setWcStatus("error");
+      setWcError(
+        "WalletConnect is not configured. Add VITE_WALLETCONNECT_PROJECT_ID (free at cloud.reown.com) and reload."
+      );
+      return;
+    }
+    setWcStatus("pairing");
+    try {
+      const handle = await connectWithWalletConnect("preprod");
+      setWcUri(handle.uri);
+      setWcStatus("waiting");
+      await handle.approval;
+      setOpen(false);
+      setShowQR(false);
+      setWcUri(null);
+      setWcStatus("idle");
+    } catch (e) {
+      setWcStatus("error");
+      setWcError((e as Error).message);
+    }
+  }
+
+  function closeQr() {
+    setShowQR(false);
+    setWcUri(null);
+    setWcStatus("idle");
+    setWcError(null);
+  }
 
   if (wallet.connected) {
     return (
@@ -34,7 +89,7 @@ export function WalletButton() {
               <div className="number-display text-xl font-semibold text-foreground">₳ {wallet.balanceAda.toLocaleString()}</div>
             </div>
             <button
-              onClick={() => { disconnectWallet(); setOpen(false); }}
+              onClick={() => { void disconnectWallet(); setOpen(false); }}
               className="mt-3 w-full rounded-lg border border-border py-2 text-sm font-medium text-foreground hover:bg-secondary"
             >
               Disconnect
@@ -56,7 +111,7 @@ export function WalletButton() {
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/30 backdrop-blur-sm p-4" onClick={() => setOpen(false)}>
+        <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/30 backdrop-blur-sm p-4" onClick={() => { setOpen(false); closeQr(); }}>
           <div
             onClick={e => e.stopPropagation()}
             className="w-full max-w-md rounded-3xl border border-border bg-surface p-6 shadow-elevated"
@@ -66,21 +121,42 @@ export function WalletButton() {
                 <h3 className="text-lg font-semibold text-foreground">Connect a wallet</h3>
                 <p className="mt-1 text-sm text-muted-foreground">Cardano-native. ZK-verified. Non-custodial.</p>
               </div>
-              <button onClick={() => setOpen(false)} className="rounded-full p-1 hover:bg-secondary">
+              <button onClick={() => { setOpen(false); closeQr(); }} className="rounded-full p-1 hover:bg-secondary">
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             {showQR ? (
               <div className="mt-6 flex flex-col items-center">
-                <div className="grid h-56 w-56 place-items-center rounded-2xl border border-border bg-secondary/40">
-                  <QRPreview />
+                <div className="relative grid h-56 w-56 place-items-center rounded-2xl border border-border bg-white overflow-hidden">
+                  {wcStatus === "pairing" && (
+                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                      <Loader2 className="h-6 w-6 animate-spin" />
+                      <span className="text-xs">Requesting pairing…</span>
+                    </div>
+                  )}
+                  {wcStatus === "waiting" && <canvas ref={qrCanvas} className="h-56 w-56" />}
+                  {wcStatus === "error" && (
+                    <div className="p-4 text-center text-xs text-destructive">{wcError}</div>
+                  )}
                 </div>
-                <p className="mt-3 text-xs text-muted-foreground text-center">Scan with any Cardano mobile wallet</p>
-                <button onClick={() => { connectWallet("WalletConnect"); setOpen(false); setShowQR(false); }} className="mt-4 w-full rounded-lg bg-primary py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90">
-                  Simulate connection
+
+                {wcStatus === "waiting" && (
+                  <>
+                    <p className="mt-3 text-xs text-muted-foreground text-center">
+                      Scan with a CIP-45 wallet (Eternl mobile, Vespr, etc.)
+                    </p>
+                    <button
+                      onClick={() => { if (wcUri) void navigator.clipboard.writeText(wcUri); }}
+                      className="mt-2 inline-flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground"
+                    >
+                      <Copy className="h-3 w-3" /> Copy pairing URI
+                    </button>
+                  </>
+                )}
+                <button onClick={closeQr} className="mt-4 text-xs text-muted-foreground hover:text-foreground">
+                  Back
                 </button>
-                <button onClick={() => setShowQR(false)} className="mt-2 text-xs text-muted-foreground hover:text-foreground">Back</button>
               </div>
             ) : (
               <div className="mt-5 grid gap-2">
@@ -88,8 +164,8 @@ export function WalletButton() {
                   <button
                     key={p.id}
                     onClick={() => {
-                      if (p.id === "WalletConnect") { setShowQR(true); return; }
-                      connectWallet(p.id);
+                      if (p.id === "WalletConnect") { void beginWalletConnect(); return; }
+                      void connectWallet(p.id as BrowserProvider);
                       setOpen(false);
                     }}
                     className={`group flex items-center gap-3 rounded-xl border border-border bg-gradient-to-br ${p.color} p-3 text-left transition-colors hover:border-primary/40`}
@@ -115,22 +191,5 @@ export function WalletButton() {
         </div>
       )}
     </>
-  );
-}
-
-function QRPreview() {
-  // Deterministic pseudo-QR grid
-  const cells = 21;
-  return (
-    <svg viewBox={`0 0 ${cells} ${cells}`} className="h-44 w-44">
-      {Array.from({ length: cells * cells }).map((_, i) => {
-        const x = i % cells;
-        const y = Math.floor(i / cells);
-        const isFinder =
-          (x < 7 && y < 7) || (x > cells - 8 && y < 7) || (x < 7 && y > cells - 8);
-        const on = isFinder ? ((x === 0 || x === 6 || y === 0 || y === 6) || (x > 1 && x < 5 && y > 1 && y < 5)) : (Math.sin(x * 12.9898 + y * 78.233) * 43758.5453) % 1 > 0.5;
-        return on ? <rect key={i} x={x} y={y} width="1" height="1" fill="currentColor" /> : null;
-      })}
-    </svg>
   );
 }
