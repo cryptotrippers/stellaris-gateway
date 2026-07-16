@@ -171,12 +171,45 @@ export function WalletConnectStatus() {
                   </div>
                   <div className="mt-1 break-all font-mono text-xs text-foreground">{wallet.address}</div>
                 </div>
-                <button
-                  onClick={() => { void disconnectWallet(); setOpen(false); }}
-                  className="mt-3 w-full rounded-lg border border-border py-2 text-sm font-medium text-foreground hover:bg-secondary"
-                >
-                  Disconnect
-                </button>
+                {confirmDisconnect ? (
+                  <div className="mt-3 rounded-lg border border-destructive/40 bg-destructive/10 p-3">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                      <div className="text-xs text-foreground">
+                        <div className="font-semibold">Disconnect this wallet?</div>
+                        <p className="mt-1 text-muted-foreground">
+                          Your WalletConnect session will end. You'll need to scan a new QR to
+                          reconnect.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => setConfirmDisconnect(false)}
+                        className="rounded-lg border border-border py-2 text-xs font-medium text-foreground hover:bg-secondary"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => {
+                          void disconnectWallet();
+                          setConfirmDisconnect(false);
+                          setOpen(false);
+                        }}
+                        className="rounded-lg bg-destructive py-2 text-xs font-semibold text-destructive-foreground hover:opacity-90"
+                      >
+                        Yes, disconnect
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setConfirmDisconnect(true)}
+                    className="mt-3 w-full rounded-lg border border-border py-2 text-sm font-medium text-foreground hover:bg-secondary"
+                  >
+                    Disconnect
+                  </button>
+                )}
               </>
 
             ) : status === "waiting" && uri ? (
