@@ -11,7 +11,9 @@ import {
   getInviteStats,
   bumpInviteSent,
   getReferredBy,
+  getReferralConfirmation,
   type InviteStats,
+  type ReferralConfirmation,
 } from "@/lib/referral";
 import { trackEvent } from "@/lib/analytics";
 
