@@ -57,6 +57,32 @@ function TestnetPage() {
 
   const wrongNetwork = wallet.connected && wallet.networkId === 1;
 
+  const banners: Banner[] = [];
+  if (tipQ.error) {
+    const msg = (tipQ.error as Error).message;
+    const isNetworkMismatch = /Network token mismatch|403/i.test(msg);
+    banners.push({
+      tone: "destructive",
+      title: isNetworkMismatch
+        ? "Blockfrost project ID is not for Preprod"
+        : "Preprod chain tip unavailable",
+      detail: isNetworkMismatch
+        ? "The saved BLOCKFROST_PREPROD_PROJECT_ID belongs to a different network (mainnet/preview). Create a Preprod project at blockfrost.io and update the secret."
+        : msg,
+    });
+  }
+  if (wrongNetwork) {
+    banners.push({
+      tone: "warning",
+      title: `${wallet.provider} is on mainnet`,
+      detail: "Switch your wallet's network to Preprod (Settings → Network) and reconnect to test against RealFi's testnet.",
+    });
+  }
+  if (connectError) {
+    banners.push({ tone: "destructive", title: "Wallet connection failed", detail: connectError });
+  }
+
+
   return (
     <AppShell>
       <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
