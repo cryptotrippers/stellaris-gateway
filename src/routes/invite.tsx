@@ -123,14 +123,21 @@ function InvitePage() {
             Share your code. When a friend joins with it and makes their first investment, you both get ₳{REWARD_PER_SIGNUP} credited to your portfolio. No cap.
           </p>
 
-          {referredBy && (
+          {referredBy && !confirmation && (
             <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs">
               <Sparkles className="h-3.5 w-3.5 text-accent" />
-              Invited by <span className="font-semibold">{referredBy}</span> — you'll get ₳{REWARD_PER_SIGNUP} on your first investment.
+              Invited by <span className="font-semibold">{referredBy}</span> — connect your wallet to lock in your ₳{REWARD_PER_SIGNUP} bonus.
+            </div>
+          )}
+          {confirmation && (
+            <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-success/40 bg-success/15 px-3 py-1.5 text-xs text-primary-foreground">
+              <Check className="h-3.5 w-3.5 text-success" />
+              Invite from <span className="font-semibold">{confirmation.code}</span> confirmed via {confirmation.reason.replace("_", " ")} — ₳{REWARD_PER_SIGNUP} credited.
             </div>
           )}
         </div>
       </section>
+
 
       {/* Code + share */}
       <section className="mt-6 grid gap-6 lg:grid-cols-[1.35fr_1fr]">
