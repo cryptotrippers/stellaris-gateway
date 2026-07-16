@@ -136,13 +136,23 @@ function RootComponent() {
   useEffect(() => {
     // Capture ?ref=CODE deep-links on any route so invite links work even
     // when shared to /marketplace/foo etc. Dynamic import keeps this off SSR.
-    import("../lib/referral").then(m => m.captureReferralFromUrl()).catch(() => {});
+    (async () => {
+      try {
+        const m = await import("../lib/referral");
+        const result = m.captureReferralFromUrl();
+        if (result && !result.ok) {
+          const { toast } = await import("sonner");
+          toast.error(m.REFERRAL_ERROR_COPY[result.reason]);
+        }
+      } catch { /* ignore */ }
+    })();
   }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
+      <Toaster />
     </QueryClientProvider>
   );
 }
