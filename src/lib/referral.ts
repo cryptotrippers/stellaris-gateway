@@ -202,6 +202,7 @@ export function captureReferralFromUrl(): CaptureResult | null {
   }
   if (!CODE_REGEX.test(clean)) {
     trackEvent("referral_capture_blocked", { reason: "invalid" });
+    appendAudit({ type: "capture_blocked", outcome: "blocked", reason: "invalid", code: clean });
     return { ok: false, reason: "invalid", attempted: clean };
   }
 
@@ -211,6 +212,7 @@ export function captureReferralFromUrl(): CaptureResult | null {
   const mine = s.getItem(CODE_KEY);
   if (mine && clean === mine) {
     trackEvent("referral_capture_blocked", { reason: "self_invite" });
+    appendAudit({ type: "capture_blocked", outcome: "blocked", reason: "self_invite", code: clean });
     return { ok: false, reason: "self_invite", attempted: clean };
   }
 
@@ -219,22 +221,26 @@ export function captureReferralFromUrl(): CaptureResult | null {
   const claimed = readJSON<string[]>(s, DEVICE_CLAIMED_KEY, []);
   if (claimed.length > 0 && !claimed.includes(clean)) {
     trackEvent("referral_capture_blocked", { reason: "device_already_claimed" });
+    appendAudit({ type: "capture_blocked", outcome: "blocked", reason: "device_already_claimed", code: clean });
     return { ok: false, reason: "device_already_claimed", attempted: clean };
   }
 
   const existing = s.getItem(REFERRED_BY_KEY);
   if (existing && existing !== clean) {
     trackEvent("referral_capture_blocked", { reason: "already_referred" });
+    appendAudit({ type: "capture_blocked", outcome: "blocked", reason: "already_referred", code: clean });
     return { ok: false, reason: "already_referred", attempted: clean };
   }
 
   if (getReferralConfirmation()) {
+    appendAudit({ type: "capture_blocked", outcome: "blocked", reason: "already_confirmed", code: clean });
     return { ok: false, reason: "already_confirmed", attempted: clean };
   }
 
   if (!existing) {
     s.setItem(REFERRED_BY_KEY, clean);
     trackEvent("referral_captured", { code: clean });
+    appendAudit({ type: "capture_ok", outcome: "ok", code: clean });
     return { ok: true, code: clean };
   }
   return { ok: true, code: clean, alreadyStored: true };
