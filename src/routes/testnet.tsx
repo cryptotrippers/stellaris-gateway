@@ -4,7 +4,7 @@ import { queryOptions, useQuery } from "@tanstack/react-query";
 import { Activity, Wallet, ExternalLink, RefreshCw, CheckCircle2, AlertCircle, Copy, Droplet } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/StatusBadge";
-import { getPreprodTip } from "@/lib/blockfrost.functions";
+import { getBlockfrostHealth, getPreprodTip } from "@/lib/blockfrost.functions";
 import { listWallets, type CardanoWalletInfo } from "@/lib/cip30";
 import { connectWallet, disconnectWallet, useWallet, shortAddr, type WalletProvider } from "@/lib/wallet-store";
 
@@ -15,6 +15,14 @@ const tipQuery = queryOptions({
   staleTime: 15_000,
   retry: 1,
 });
+
+const healthQuery = queryOptions({
+  queryKey: ["preprod", "blockfrost-health"],
+  queryFn: () => getBlockfrostHealth(),
+  staleTime: 60_000,
+  retry: 0,
+});
+
 
 interface Banner { tone: "destructive" | "warning"; title: string; detail: string; }
 
