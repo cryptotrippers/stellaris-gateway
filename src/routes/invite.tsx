@@ -298,6 +298,66 @@ function InvitePage() {
         </p>
       </section>
 
+      {/* Audit log — transparent record of every referral event on this device */}
+      <section className="mt-10">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-accent" />
+            <h2 className="text-lg font-semibold text-foreground">Fraud &amp; audit log</h2>
+            {blockedCount > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning/10 px-2 py-0.5 text-[10px] font-medium text-warning">
+                <AlertTriangle className="h-3 w-3" /> {blockedCount} blocked
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1 rounded-lg border border-border bg-surface p-0.5 text-[11px]">
+            {(["all", "ok", "blocked"] as const).map(f => (
+              <button
+                key={f}
+                onClick={() => setAuditFilter(f)}
+                className={`px-2.5 py-1 rounded-md capitalize transition-colors ${
+                  auditFilter === f ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+            <button
+              onClick={clearAudit}
+              disabled={auditLog.length === 0}
+              className="ml-1 inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-muted-foreground hover:text-destructive disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              aria-label="Clear audit log"
+            >
+              <Trash2 className="h-3 w-3" /> Clear
+            </button>
+          </div>
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Every capture, confirmation, regenerate, and share attempt on this device is recorded locally. Kept for transparency — the last {100} events are shown.
+        </p>
+
+        <div className="mt-4 card-institutional overflow-hidden">
+          <div className="grid grid-cols-[auto_1fr_auto_auto] gap-3 px-4 py-2.5 border-b border-border bg-secondary/40 text-[10px] uppercase tracking-widest text-muted-foreground">
+            <span>Status</span>
+            <span>Event</span>
+            <span className="text-right">Detail</span>
+            <span className="text-right">When</span>
+          </div>
+          {filteredAudit.length === 0 ? (
+            <div className="px-4 py-8 text-center text-xs text-muted-foreground">
+              No events {auditFilter !== "all" ? `matching "${auditFilter}"` : "yet"}. Actions on this page will appear here.
+            </div>
+          ) : (
+            <div className="max-h-[360px] overflow-y-auto">
+              {filteredAudit.map(ev => (
+                <AuditRow key={ev.id} ev={ev} />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+
       {/* Fine print */}
       <section className="mt-10 card-institutional p-6">
         <div className="flex items-center gap-2 mb-3">
