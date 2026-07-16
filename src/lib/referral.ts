@@ -159,6 +159,7 @@ export function regenerateMyCode(): RegenerateResult {
   if (history.length >= MAX_REGEN_PER_HOUR) {
     const retryAfterMs = Math.max(0, history[0] + 60 * 60 * 1000 - now);
     trackEvent("referral_regenerate_blocked", { reason: "rate_limited" });
+    appendAudit({ type: "regenerate_blocked", outcome: "blocked", reason: "rate_limited" });
     return { ok: false, reason: "rate_limited", retryAfterMs };
   }
 
@@ -166,6 +167,7 @@ export function regenerateMyCode(): RegenerateResult {
   s.setItem(CODE_KEY, code);
   s.setItem(REGEN_HISTORY_KEY, JSON.stringify([...history, now]));
   trackEvent("referral_code_regenerated");
+  appendAudit({ type: "regenerate_ok", outcome: "ok", code });
   return { ok: true, code };
 }
 
