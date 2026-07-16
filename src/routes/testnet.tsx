@@ -44,10 +44,12 @@ export const Route = createFileRoute("/testnet")({
 });
 
 
-const PROVIDER_LABEL: Record<string, WalletProvider> = {
+type BrowserWalletProvider = Exclude<WalletProvider, "WalletConnect">;
+const PROVIDER_LABEL: Record<string, BrowserWalletProvider> = {
   lace: "Lace", eternl: "Eternl", nami: "Nami", typhon: "Typhon",
   flint: "Flint", yoroi: "Yoroi", gerowallet: "GeroWallet",
 };
+
 
 function TestnetPage() {
   const tipQ = useQuery(tipQuery);
