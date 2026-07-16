@@ -6,6 +6,7 @@ import { trackEvent } from "@/lib/analytics";
 const CODE_KEY = "stellaris.referral.myCode";
 const REFERRED_BY_KEY = "stellaris.referral.referredBy";
 const INVITES_KEY = "stellaris.referral.invites"; // JSON: { count, lastAt }
+const CONFIRMED_KEY = "stellaris.referral.confirmed"; // JSON: { code, reason, at }
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no O/0/I/1
 
