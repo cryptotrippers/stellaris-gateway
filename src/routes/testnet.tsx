@@ -64,7 +64,7 @@ function TestnetPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge tone={tipQ.data ? "success" : tipQ.error ? "danger" : "muted"}>
+          <Badge tone={tipQ.data ? "success" : tipQ.error ? "destructive" : "muted"}>
             <Activity className="h-3 w-3" /> Preprod {tipQ.data ? "live" : tipQ.error ? "unreachable" : "…"}
           </Badge>
           <button
