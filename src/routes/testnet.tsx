@@ -128,7 +128,7 @@ function TestnetPage() {
             <div className="mt-4 space-y-3">
               <div className="flex items-center gap-2 text-xs">
                 {wrongNetwork ? (
-                  <Badge tone="danger"><AlertCircle className="h-3 w-3" /> Mainnet — switch to Preprod</Badge>
+                  <Badge tone="destructive"><AlertCircle className="h-3 w-3" /> Mainnet — switch to Preprod</Badge>
                 ) : (
                   <Badge tone="success"><CheckCircle2 className="h-3 w-3" /> {wallet.provider} · {wallet.networkId === 0 ? "Testnet" : "unknown"}</Badge>
                 )}
