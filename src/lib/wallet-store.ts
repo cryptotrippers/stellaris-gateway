@@ -46,18 +46,19 @@ const ID_MAP: Record<Exclude<WalletProvider, "WalletConnect">, CardanoWalletId> 
  * Connect to a browser wallet via CIP-30. Falls back to a mock connection
  * if the wallet extension isn't installed, so the demo UI still functions.
  */
-export async function connectWallet(provider: WalletProvider): Promise<{ ok: boolean; mock?: boolean; error?: string }> {
+export async function connectWallet(provider: Exclude<WalletProvider, "WalletConnect">): Promise<{ ok: boolean; mock?: boolean; error?: string }> {
   const id = ID_MAP[provider];
-  if (id && typeof window !== "undefined" && (window as unknown as { cardano?: Record<string, unknown> }).cardano?.[id]) {
+  if (typeof window !== "undefined" && (window as unknown as { cardano?: Record<string, unknown> }).cardano?.[id]) {
     try {
       const info = await enableWallet(id);
       state = {
         connected: true,
         provider,
-        address: info.changeAddressHex,     // hex — pass through to server for bech32 lookup if needed
+        address: info.changeAddressHex,
         addressHex: info.changeAddressHex,
         balanceAda: info.balanceAda,
         networkId: info.networkId,
+        wcTopic: null,
       };
       emit();
       return { ok: true };
@@ -65,7 +66,7 @@ export async function connectWallet(provider: WalletProvider): Promise<{ ok: boo
       return { ok: false, error: (e as Error).message };
     }
   }
-  // fallback mock (matches previous behaviour)
+  // fallback mock (matches previous behaviour when extension is missing)
   const rand = Math.random().toString(16).slice(2, 10);
   state = {
     connected: true,
@@ -74,15 +75,47 @@ export async function connectWallet(provider: WalletProvider): Promise<{ ok: boo
     addressHex: null,
     balanceAda: 24_812.44,
     networkId: 0,
+    wcTopic: null,
   };
   emit();
   return { ok: true, mock: true };
 }
 
-export function disconnectWallet() {
-  state = { connected: false, provider: null, address: null, addressHex: null, balanceAda: 0, networkId: null };
-  emit();
+/**
+ * Begin a CIP-45 WalletConnect pairing. Returns the pairing URI (encode
+ * as QR) and a promise that resolves once the mobile wallet approves.
+ */
+export async function connectWithWalletConnect(chain: Cip34Chain = "preprod"): Promise<PairingHandle> {
+  const handle = await startPairing(chain);
+  // Fire-and-forget: when approval lands, promote it into wallet state.
+  handle.approval
+    .then((acct) => {
+      state = {
+        connected: true,
+        provider: "WalletConnect",
+        address: acct.stakeAddress,
+        addressHex: null,
+        balanceAda: 0, // balance requires a follow-up cardano_getBalance RPC
+        networkId: acct.networkId,
+        wcTopic: acct.topic,
+      };
+      emit();
+    })
+    .catch(() => {
+      /* surfaced to caller via handle.approval */
+    });
+  return handle;
 }
+
+export { isWalletConnectConfigured };
+
+export async function disconnectWallet() {
+  const topic = state.wcTopic;
+  state = { connected: false, provider: null, address: null, addressHex: null, balanceAda: 0, networkId: null, wcTopic: null };
+  emit();
+  if (topic) await disconnectSession(topic);
+}
+
 
 export function useWallet(): WalletState {
   return useSyncExternalStore(
