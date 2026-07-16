@@ -16,6 +16,88 @@ async function bf<T>(path: string): Promise<T> {
   return JSON.parse(body) as T;
 }
 
+export type BlockfrostHealthStatus = "ok" | "missing" | "wrong_network" | "invalid" | "unreachable";
+
+export interface BlockfrostHealth {
+  status: BlockfrostHealthStatus;
+  expectedNetwork: "preprod";
+  detectedNetwork: "mainnet" | "preprod" | "preview" | "unknown" | null;
+  detail: string;
+  checkedAt: number;
+}
+
+/** Startup / on-demand validation of the BLOCKFROST_PREPROD_PROJECT_ID secret. */
+export const getBlockfrostHealth = createServerFn({ method: "GET" }).handler(async (): Promise<BlockfrostHealth> => {
+  const now = Date.now();
+  const key = process.env.BLOCKFROST_PREPROD_PROJECT_ID;
+  if (!key) {
+    return {
+      status: "missing",
+      expectedNetwork: "preprod",
+      detectedNetwork: null,
+      detail: "BLOCKFROST_PREPROD_PROJECT_ID is not set. Add a Preprod project ID from blockfrost.io.",
+      checkedAt: now,
+    };
+  }
+  const prefix = key.slice(0, 7).toLowerCase();
+  const prefixNetwork: BlockfrostHealth["detectedNetwork"] =
+    prefix.startsWith("preprod") ? "preprod"
+    : prefix.startsWith("preview") ? "preview"
+    : prefix.startsWith("mainnet") ? "mainnet"
+    : "unknown";
+  if (prefixNetwork !== "preprod" && prefixNetwork !== "unknown") {
+    return {
+      status: "wrong_network",
+      expectedNetwork: "preprod",
+      detectedNetwork: prefixNetwork,
+      detail: `Key prefix indicates ${prefixNetwork}. Create a Cardano preprod project at blockfrost.io and update the secret.`,
+      checkedAt: now,
+    };
+  }
+  // Live probe against Preprod
+  try {
+    const res = await fetch(`${BASE}/network`, { headers: { project_id: key } });
+    if (res.status === 403) {
+      const body = await res.text().catch(() => "");
+      const netMismatch = /Network token mismatch/i.test(body);
+      return {
+        status: netMismatch ? "wrong_network" : "invalid",
+        expectedNetwork: "preprod",
+        detectedNetwork: netMismatch ? "unknown" : null,
+        detail: netMismatch
+          ? "Blockfrost rejected the key as belonging to a different network. Use a Cardano preprod project ID."
+          : "Blockfrost rejected the key (403). Regenerate it in your Blockfrost dashboard.",
+        checkedAt: now,
+      };
+    }
+    if (!res.ok) {
+      return {
+        status: "unreachable",
+        expectedNetwork: "preprod",
+        detectedNetwork: null,
+        detail: `Blockfrost /network returned ${res.status}. Try again shortly.`,
+        checkedAt: now,
+      };
+    }
+    return {
+      status: "ok",
+      expectedNetwork: "preprod",
+      detectedNetwork: "preprod",
+      detail: "Connected to Cardano Preprod.",
+      checkedAt: now,
+    };
+  } catch (e) {
+    return {
+      status: "unreachable",
+      expectedNetwork: "preprod",
+      detectedNetwork: null,
+      detail: `Network error contacting Blockfrost: ${(e as Error).message}`,
+      checkedAt: now,
+    };
+  }
+});
+
+
 export interface PreprodTip {
   network: "preprod";
   epoch: number;
