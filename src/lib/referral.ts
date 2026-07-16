@@ -373,12 +373,14 @@ export function confirmReferral(reason: ReferralConfirmReason): ConfirmResult {
   const mine = s.getItem(CODE_KEY);
   if (mine && referredBy === mine) {
     trackEvent("referral_confirm_blocked", { reason: "self_invite" });
+    appendAudit({ type: "confirm_blocked", outcome: "blocked", reason: "self_invite", code: referredBy });
     return { ok: false, reason: "self_invite" };
   }
 
   const claimed = readJSON<string[]>(s, DEVICE_CLAIMED_KEY, []);
   if (claimed.length > 0 && !claimed.includes(referredBy)) {
     trackEvent("referral_confirm_blocked", { reason: "device_already_claimed" });
+    appendAudit({ type: "confirm_blocked", outcome: "blocked", reason: "device_already_claimed", code: referredBy });
     return { ok: false, reason: "device_already_claimed" };
   }
 
@@ -386,6 +388,7 @@ export function confirmReferral(reason: ReferralConfirmReason): ConfirmResult {
   s.setItem(CONFIRMED_KEY, JSON.stringify(record));
   s.setItem(DEVICE_CLAIMED_KEY, JSON.stringify([...new Set([...claimed, referredBy])]));
   trackEvent("referral_confirmed", { code: referredBy, reason, deviceId: getDeviceId() });
+  appendAudit({ type: "confirm_ok", outcome: "ok", code: referredBy, reason });
   return { ok: true, confirmation: record };
 }
 
