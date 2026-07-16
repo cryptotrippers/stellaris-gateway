@@ -11,6 +11,7 @@ export const Route = createFileRoute("/sitemap.xml")({
         const govTabs = ["overview", "proposals", "vaults", "delegates", "signals"];
         const entries = [
           { path: "/", priority: "1.0", changefreq: "daily" as const },
+          { path: "/app", priority: "0.7", changefreq: "daily" as const },
           { path: "/marketplace", priority: "0.9", changefreq: "hourly" as const },
           { path: "/yield", priority: "0.8", changefreq: "daily" as const },
           { path: "/governance", priority: "0.8", changefreq: "hourly" as const },
