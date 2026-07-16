@@ -1,0 +1,147 @@
+{
+  "version": 1,
+  "sdk_version": "0.22.2",
+  "path": "/mcp",
+  "auth": {
+    "type": "none"
+  },
+  "mcp": {
+    "server": {
+      "name": "stellaris-gateway-mcp",
+      "version": "0.1.0",
+      "title": "Stellaris Gateway MCP"
+    },
+    "tools": [
+      {
+        "name": "list_assets",
+        "title": "List marketplace assets",
+        "description": "List tokenized real-world assets available in the Stellaris marketplace. Optionally filter by category or risk profile.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "category": {
+              "description": "Filter by asset category.",
+              "type": "string",
+              "enum": [
+                "Sustainable Farming",
+                "Clean Energy",
+                "Real Estate",
+                "Carbon Credits",
+                "Infrastructure"
+              ]
+            },
+            "risk": {
+              "description": "Filter by risk profile.",
+              "type": "string",
+              "enum": [
+                "Conservative",
+                "Moderate",
+                "Aggressive"
+              ]
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_asset",
+        "title": "Get asset details",
+        "description": "Fetch full details for a single Stellaris marketplace asset by its ID (e.g. 'sfm-01').",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The asset ID, e.g. 'sfm-01'."
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "search_assets",
+        "title": "Search marketplace assets",
+        "description": "Full-text search Stellaris marketplace assets by name, description, issuer, or location.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Search query."
+            },
+            "limit": {
+              "description": "Max results (default 10).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            }
+          },
+          "required": [
+            "query"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "estimate_yield",
+        "title": "Estimate yield for an asset",
+        "description": "Estimate projected yield in ADA for a given Stellaris asset, investment amount, and holding period.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "assetId": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Asset ID to estimate yield for."
+            },
+            "amountAda": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "Investment amount in ADA."
+            },
+            "months": {
+              "description": "Holding period in months (defaults to asset maturity).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 120
+            }
+          },
+          "required": [
+            "assetId",
+            "amountAda"
+          ]
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
