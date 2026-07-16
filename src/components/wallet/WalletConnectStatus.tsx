@@ -28,6 +28,7 @@ export function WalletConnectStatus() {
   const [status, setStatus] = useState<WcStatus>("idle");
   const [uri, setUri] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
