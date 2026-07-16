@@ -1,5 +1,13 @@
 import { useSyncExternalStore } from "react";
 import { enableWallet, type CardanoWalletId } from "./cip30";
+import {
+  startPairing,
+  disconnectSession,
+  isWalletConnectConfigured,
+  type Cip34Chain,
+  type PairingHandle,
+} from "./walletconnect";
+
 
 export type WalletProvider = "Lace" | "Eternl" | "Nami" | "Typhon" | "Flint" | "Yoroi" | "GeroWallet" | "WalletConnect";
 
