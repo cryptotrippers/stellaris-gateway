@@ -20,6 +20,7 @@ export function TopAppBar() {
           <NavItem to="/stewardship">Stewardship</NavItem>
           <NavItem to="/security">Security</NavItem>
           <NavItem to="/developers">Developers</NavItem>
+          <NavItem to="/invite">Invite</NavItem>
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
