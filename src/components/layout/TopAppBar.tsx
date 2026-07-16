@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Bell, Shield } from "lucide-react";
+import { Bell, Shield, Gift } from "lucide-react";
 import { StellarisWordmark } from "@/components/brand/Logo";
 import { WalletButton } from "@/components/wallet/WalletButton";
 import { WalletConnectStatus } from "@/components/wallet/WalletConnectStatus";
@@ -20,6 +20,7 @@ export function TopAppBar() {
           <NavItem to="/stewardship">Stewardship</NavItem>
           <NavItem to="/security">Security</NavItem>
           <NavItem to="/developers">Developers</NavItem>
+          <NavItem to="/invite">Invite</NavItem>
         </nav>
 
         <div className="ml-auto flex items-center gap-2">

@@ -132,6 +132,12 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  useEffect(() => {
+    // Capture ?ref=CODE deep-links on any route so invite links work even
+    // when shared to /marketplace/foo etc. Dynamic import keeps this off SSR.
+    import("../lib/referral").then(m => m.captureReferralFromUrl()).catch(() => {});
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
