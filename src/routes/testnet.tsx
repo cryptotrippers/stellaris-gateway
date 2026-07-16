@@ -13,7 +13,11 @@ const tipQuery = queryOptions({
   queryFn: () => getPreprodTip(),
   refetchInterval: 20_000,
   staleTime: 15_000,
+  retry: 1,
 });
+
+interface Banner { tone: "destructive" | "warning"; title: string; detail: string; }
+
 
 export const Route = createFileRoute("/testnet")({
   head: () => ({
@@ -53,6 +57,32 @@ function TestnetPage() {
 
   const wrongNetwork = wallet.connected && wallet.networkId === 1;
 
+  const banners: Banner[] = [];
+  if (tipQ.error) {
+    const msg = (tipQ.error as Error).message;
+    const isNetworkMismatch = /Network token mismatch|403/i.test(msg);
+    banners.push({
+      tone: "destructive",
+      title: isNetworkMismatch
+        ? "Blockfrost project ID is not for Preprod"
+        : "Preprod chain tip unavailable",
+      detail: isNetworkMismatch
+        ? "The saved BLOCKFROST_PREPROD_PROJECT_ID belongs to a different network (mainnet/preview). Create a Preprod project at blockfrost.io and update the secret."
+        : msg,
+    });
+  }
+  if (wrongNetwork) {
+    banners.push({
+      tone: "warning",
+      title: `${wallet.provider} is on mainnet`,
+      detail: "Switch your wallet's network to Preprod (Settings → Network) and reconnect to test against RealFi's testnet.",
+    });
+  }
+  if (connectError) {
+    banners.push({ tone: "destructive", title: "Wallet connection failed", detail: connectError });
+  }
+
+
   return (
     <AppShell>
       <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
@@ -76,7 +106,30 @@ function TestnetPage() {
         </div>
       </div>
 
+      {banners.length > 0 && (
+        <div className="mt-4 space-y-2">
+          {banners.map((b, i) => (
+            <div
+              key={i}
+              role="alert"
+              className={`flex items-start gap-3 rounded-lg border p-3 text-sm ${
+                b.tone === "destructive"
+                  ? "border-destructive/40 bg-destructive/10 text-destructive"
+                  : "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+              }`}
+            >
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div className="flex-1">
+                <div className="font-semibold">{b.title}</div>
+                <div className="mt-0.5 text-xs opacity-90 break-words">{b.detail}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="mt-6 grid gap-4 lg:grid-cols-[1.4fr_1fr]">
+
         {/* Chain tip */}
         <div className="card-institutional p-6">
           <h2 className="text-sm font-semibold text-foreground flex items-center gap-2">
