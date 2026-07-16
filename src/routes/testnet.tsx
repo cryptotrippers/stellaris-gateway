@@ -73,13 +73,13 @@ function TestnetPage() {
   const banners: Banner[] = [];
   const health = healthQ.data;
   if (health && health.status !== "ok") {
-    const titleMap: Record<typeof health.status, string> = {
+    const titleMap: Record<Exclude<typeof health.status, "ok">, string> = {
       missing: "Blockfrost is not configured",
       wrong_network: `Blockfrost key is for ${health.detectedNetwork ?? "another network"}, not Preprod`,
       invalid: "Blockfrost rejected the project ID",
       unreachable: "Blockfrost is unreachable",
-      ok: "",
     };
+
     banners.push({
       tone: health.status === "unreachable" ? "warning" : "destructive",
       title: titleMap[health.status],
