@@ -405,3 +405,57 @@ function ShareChip({ label, onClick }: { label: string; onClick: () => void }) {
     </button>
   );
 }
+
+const EVENT_LABELS: Record<AuditEvent["type"], string> = {
+  capture_ok: "Referral captured",
+  capture_blocked: "Capture blocked",
+  confirm_ok: "Referral confirmed",
+  confirm_blocked: "Confirmation blocked",
+  regenerate_ok: "Code regenerated",
+  regenerate_blocked: "Regenerate blocked",
+  invite_sent: "Invite sent",
+  invite_blocked: "Invite blocked",
+};
+
+function formatWhen(ts: number): string {
+  const diff = Date.now() - ts;
+  if (diff < 60_000) return "just now";
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
+  return new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function AuditRow({ ev }: { ev: AuditEvent }) {
+  const isBlocked = ev.outcome === "blocked";
+  const detail = ev.reason
+    ? ev.reason.replace(/_/g, " ")
+    : ev.code
+    ? ev.code
+    : ev.channel ?? "—";
+  return (
+    <div className="grid grid-cols-[auto_1fr_auto_auto] gap-3 px-4 py-2.5 border-b border-border/50 last:border-0 items-center text-xs">
+      <span
+        className={`inline-flex items-center justify-center h-5 w-5 rounded-full ${
+          isBlocked ? "bg-destructive/15 text-destructive" : "bg-success/15 text-success"
+        }`}
+        aria-label={ev.outcome}
+        title={ev.outcome}
+      >
+        {isBlocked ? <AlertTriangle className="h-3 w-3" /> : <Check className="h-3 w-3" />}
+      </span>
+      <span className="text-foreground truncate">
+        {EVENT_LABELS[ev.type]}
+        {ev.code && !ev.reason && <span className="ml-1.5 font-mono text-muted-foreground">{ev.code}</span>}
+        {ev.channel && ev.outcome === "ok" && ev.type === "invite_sent" && (
+          <span className="ml-1.5 text-muted-foreground">via {ev.channel}</span>
+        )}
+      </span>
+      <span className={`text-right font-mono truncate ${isBlocked ? "text-destructive" : "text-muted-foreground"}`}>
+        {detail}
+      </span>
+      <span className="text-right text-muted-foreground tabular-nums" title={new Date(ev.at).toLocaleString()}>
+        {formatWhen(ev.at)}
+      </span>
+    </div>
+  );
+}
