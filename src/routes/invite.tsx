@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { Gift, Copy, Check, RefreshCw, Users, Sparkles, ArrowRight, Share2, Trophy } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Gift, Copy, Check, RefreshCw, Users, Sparkles, ArrowRight, Share2, Trophy, ShieldCheck, AlertTriangle, Trash2 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { StellarisWordmark } from "@/components/brand/Logo";
 import { Badge } from "@/components/ui/StatusBadge";
@@ -12,9 +12,12 @@ import {
   bumpInviteSent,
   getReferredBy,
   getReferralConfirmation,
+  getAuditLog,
+  clearAuditLog,
   REFERRAL_ERROR_COPY,
   type InviteStats,
   type ReferralConfirmation,
+  type AuditEvent,
 } from "@/lib/referral";
 import { trackEvent } from "@/lib/analytics";
 import { toast } from "sonner";
@@ -50,14 +53,20 @@ function InvitePage() {
   const [referredBy, setReferredBy] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<ReferralConfirmation | null>(null);
   const [copied, setCopied] = useState<"code" | "url" | null>(null);
+  const [auditLog, setAuditLog] = useState<AuditEvent[]>([]);
+  const [auditFilter, setAuditFilter] = useState<"all" | "ok" | "blocked">("all");
 
   useEffect(() => {
     setCode(getMyCode());
     setStats(getInviteStats());
     setReferredBy(getReferredBy());
     setConfirmation(getReferralConfirmation());
+    setAuditLog(getAuditLog());
     // Poll briefly so a wallet connect elsewhere in the app flips this UI live.
-    const t = window.setInterval(() => setConfirmation(getReferralConfirmation()), 1500);
+    const t = window.setInterval(() => {
+      setConfirmation(getReferralConfirmation());
+      setAuditLog(getAuditLog());
+    }, 1500);
     return () => window.clearInterval(t);
   }, []);
 
@@ -67,6 +76,7 @@ function InvitePage() {
   function trySend(channel: string): boolean {
     const r = bumpInviteSent(channel);
     setStats(getInviteStats());
+    setAuditLog(getAuditLog());
     if (!r.ok) {
       toast.error(REFERRAL_ERROR_COPY[r.reason]);
       return false;
@@ -104,6 +114,7 @@ function InvitePage() {
 
   function regenerate() {
     const r = regenerateMyCode();
+    setAuditLog(getAuditLog());
     if (!r.ok) {
       const mins = Math.max(1, Math.ceil(r.retryAfterMs / 60_000));
       toast.error(`${REFERRAL_ERROR_COPY.rate_limited} (~${mins} min)`);
@@ -112,6 +123,20 @@ function InvitePage() {
     setCode(r.code);
     toast.success("New invite code generated");
   }
+
+  function clearAudit() {
+    clearAuditLog();
+    setAuditLog([]);
+    trackEvent("referral_audit_cleared");
+    toast.success("Audit log cleared");
+  }
+
+  const filteredAudit = useMemo(
+    () => auditFilter === "all" ? auditLog : auditLog.filter(e => e.outcome === auditFilter),
+    [auditLog, auditFilter],
+  );
+  const blockedCount = useMemo(() => auditLog.filter(e => e.outcome === "blocked").length, [auditLog]);
+
 
 
   const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(inviteUrl)}`;
@@ -273,6 +298,66 @@ function InvitePage() {
         </p>
       </section>
 
+      {/* Audit log — transparent record of every referral event on this device */}
+      <section className="mt-10">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-accent" />
+            <h2 className="text-lg font-semibold text-foreground">Fraud &amp; audit log</h2>
+            {blockedCount > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full border border-warning/40 bg-warning/10 px-2 py-0.5 text-[10px] font-medium text-warning">
+                <AlertTriangle className="h-3 w-3" /> {blockedCount} blocked
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-1 rounded-lg border border-border bg-surface p-0.5 text-[11px]">
+            {(["all", "ok", "blocked"] as const).map(f => (
+              <button
+                key={f}
+                onClick={() => setAuditFilter(f)}
+                className={`px-2.5 py-1 rounded-md capitalize transition-colors ${
+                  auditFilter === f ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+            <button
+              onClick={clearAudit}
+              disabled={auditLog.length === 0}
+              className="ml-1 inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-muted-foreground hover:text-destructive disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              aria-label="Clear audit log"
+            >
+              <Trash2 className="h-3 w-3" /> Clear
+            </button>
+          </div>
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">
+          Every capture, confirmation, regenerate, and share attempt on this device is recorded locally. Kept for transparency — the last {100} events are shown.
+        </p>
+
+        <div className="mt-4 card-institutional overflow-hidden">
+          <div className="grid grid-cols-[auto_1fr_auto_auto] gap-3 px-4 py-2.5 border-b border-border bg-secondary/40 text-[10px] uppercase tracking-widest text-muted-foreground">
+            <span>Status</span>
+            <span>Event</span>
+            <span className="text-right">Detail</span>
+            <span className="text-right">When</span>
+          </div>
+          {filteredAudit.length === 0 ? (
+            <div className="px-4 py-8 text-center text-xs text-muted-foreground">
+              No events {auditFilter !== "all" ? `matching "${auditFilter}"` : "yet"}. Actions on this page will appear here.
+            </div>
+          ) : (
+            <div className="max-h-[360px] overflow-y-auto">
+              {filteredAudit.map(ev => (
+                <AuditRow key={ev.id} ev={ev} />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+
       {/* Fine print */}
       <section className="mt-10 card-institutional p-6">
         <div className="flex items-center gap-2 mb-3">
@@ -318,5 +403,59 @@ function ShareChip({ label, onClick }: { label: string; onClick: () => void }) {
     >
       {label}
     </button>
+  );
+}
+
+const EVENT_LABELS: Record<AuditEvent["type"], string> = {
+  capture_ok: "Referral captured",
+  capture_blocked: "Capture blocked",
+  confirm_ok: "Referral confirmed",
+  confirm_blocked: "Confirmation blocked",
+  regenerate_ok: "Code regenerated",
+  regenerate_blocked: "Regenerate blocked",
+  invite_sent: "Invite sent",
+  invite_blocked: "Invite blocked",
+};
+
+function formatWhen(ts: number): string {
+  const diff = Date.now() - ts;
+  if (diff < 60_000) return "just now";
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
+  return new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function AuditRow({ ev }: { ev: AuditEvent }) {
+  const isBlocked = ev.outcome === "blocked";
+  const detail = ev.reason
+    ? ev.reason.replace(/_/g, " ")
+    : ev.code
+    ? ev.code
+    : ev.channel ?? "—";
+  return (
+    <div className="grid grid-cols-[auto_1fr_auto_auto] gap-3 px-4 py-2.5 border-b border-border/50 last:border-0 items-center text-xs">
+      <span
+        className={`inline-flex items-center justify-center h-5 w-5 rounded-full ${
+          isBlocked ? "bg-destructive/15 text-destructive" : "bg-success/15 text-success"
+        }`}
+        aria-label={ev.outcome}
+        title={ev.outcome}
+      >
+        {isBlocked ? <AlertTriangle className="h-3 w-3" /> : <Check className="h-3 w-3" />}
+      </span>
+      <span className="text-foreground truncate">
+        {EVENT_LABELS[ev.type]}
+        {ev.code && !ev.reason && <span className="ml-1.5 font-mono text-muted-foreground">{ev.code}</span>}
+        {ev.channel && ev.outcome === "ok" && ev.type === "invite_sent" && (
+          <span className="ml-1.5 text-muted-foreground">via {ev.channel}</span>
+        )}
+      </span>
+      <span className={`text-right font-mono truncate ${isBlocked ? "text-destructive" : "text-muted-foreground"}`}>
+        {detail}
+      </span>
+      <span className="text-right text-muted-foreground tabular-nums" title={new Date(ev.at).toLocaleString()}>
+        {formatWhen(ev.at)}
+      </span>
+    </div>
   );
 }
