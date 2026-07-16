@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Bell, Shield } from "lucide-react";
+import { Bell, Shield, Gift } from "lucide-react";
 import { StellarisWordmark } from "@/components/brand/Logo";
 import { WalletButton } from "@/components/wallet/WalletButton";
 import { WalletConnectStatus } from "@/components/wallet/WalletConnectStatus";
