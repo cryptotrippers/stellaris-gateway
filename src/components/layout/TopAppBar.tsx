@@ -37,6 +37,7 @@ export function TopAppBar() {
             <Bell className="h-4 w-4 text-muted-foreground" />
             <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-accent" />
           </button>
+          <WalletConnectStatus />
           <WalletButton />
         </div>
       </div>
