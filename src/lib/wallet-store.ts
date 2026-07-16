@@ -19,6 +19,8 @@ export interface WalletState {
   addressHex: string | null;
   balanceAda: number;
   networkId: 0 | 1 | null; // 0 = testnet
+  /** WalletConnect session topic (only set when provider === "WalletConnect"). */
+  wcTopic?: string | null;
 }
 
 let state: WalletState = {
@@ -28,15 +30,17 @@ let state: WalletState = {
   addressHex: null,
   balanceAda: 0,
   networkId: null,
+  wcTopic: null,
 };
 
 const listeners = new Set<() => void>();
 function emit() { listeners.forEach(l => l()); }
 
-const ID_MAP: Record<WalletProvider, CardanoWalletId | null> = {
+const ID_MAP: Record<Exclude<WalletProvider, "WalletConnect">, CardanoWalletId> = {
   Lace: "lace", Eternl: "eternl", Nami: "nami", Typhon: "typhon",
-  Flint: "flint", Yoroi: "yoroi", GeroWallet: "gerowallet", WalletConnect: null,
+  Flint: "flint", Yoroi: "yoroi", GeroWallet: "gerowallet",
 };
+
 
 /**
  * Connect to a browser wallet via CIP-30. Falls back to a mock connection
