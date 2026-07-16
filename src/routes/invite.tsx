@@ -76,6 +76,7 @@ function InvitePage() {
   function trySend(channel: string): boolean {
     const r = bumpInviteSent(channel);
     setStats(getInviteStats());
+    setAuditLog(getAuditLog());
     if (!r.ok) {
       toast.error(REFERRAL_ERROR_COPY[r.reason]);
       return false;
@@ -113,6 +114,7 @@ function InvitePage() {
 
   function regenerate() {
     const r = regenerateMyCode();
+    setAuditLog(getAuditLog());
     if (!r.ok) {
       const mins = Math.max(1, Math.ceil(r.retryAfterMs / 60_000));
       toast.error(`${REFERRAL_ERROR_COPY.rate_limited} (~${mins} min)`);
@@ -121,6 +123,20 @@ function InvitePage() {
     setCode(r.code);
     toast.success("New invite code generated");
   }
+
+  function clearAudit() {
+    clearAuditLog();
+    setAuditLog([]);
+    trackEvent("referral_audit_cleared");
+    toast.success("Audit log cleared");
+  }
+
+  const filteredAudit = useMemo(
+    () => auditFilter === "all" ? auditLog : auditLog.filter(e => e.outcome === auditFilter),
+    [auditLog, auditFilter],
+  );
+  const blockedCount = useMemo(() => auditLog.filter(e => e.outcome === "blocked").length, [auditLog]);
+
 
 
   const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(inviteUrl)}`;
