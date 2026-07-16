@@ -135,8 +135,39 @@ export function WalletConnectStatus() {
               </div>
             ) : isWc ? (
               <>
+                {(() => {
+                  const isMainnet = wallet.networkId === 1;
+                  const isTestnet = wallet.networkId === 0;
+                  const netLabel = isMainnet ? "Mainnet" : isTestnet ? "Preprod Testnet" : "Unknown network";
+                  const netTone = isMainnet
+                    ? "bg-success/15 text-success border-success/30"
+                    : isTestnet
+                      ? "bg-warning/15 text-warning border-warning/30"
+                      : "bg-muted text-muted-foreground border-border";
+                  return (
+                    <div className="mt-3 flex items-center gap-2">
+                      <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${netTone}`}>
+                        <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                        {netLabel}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">
+                        networkId {wallet.networkId ?? "—"}
+                      </span>
+                    </div>
+                  );
+                })()}
                 <div className="mt-3 rounded-xl bg-secondary/60 p-3">
-                  <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Address</div>
+                  <div className="flex items-center justify-between">
+                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                      {wallet.address?.startsWith("stake") ? "Stake address" : "Address"}
+                    </div>
+                    <button
+                      onClick={() => { if (wallet.address) void navigator.clipboard.writeText(wallet.address); }}
+                      className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground"
+                    >
+                      <Copy className="h-3 w-3" /> Copy
+                    </button>
+                  </div>
                   <div className="mt-1 break-all font-mono text-xs text-foreground">{wallet.address}</div>
                 </div>
                 <button
@@ -146,6 +177,7 @@ export function WalletConnectStatus() {
                   Disconnect
                 </button>
               </>
+
             ) : status === "waiting" && uri ? (
               <div className="mt-4 flex flex-col items-center">
                 <div className="grid h-56 w-56 place-items-center rounded-2xl border border-border bg-white overflow-hidden">
