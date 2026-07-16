@@ -7,6 +7,8 @@ import {
   type Cip34Chain,
   type PairingHandle,
 } from "./walletconnect";
+import { confirmReferral } from "./referral";
+
 
 
 export type WalletProvider = "Lace" | "Eternl" | "Nami" | "Typhon" | "Flint" | "Yoroi" | "GeroWallet" | "WalletConnect";
