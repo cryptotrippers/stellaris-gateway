@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, CheckCircle2, AlertCircle, ExternalLink, Unlock } from "lucide-react";
 import { Badge } from "@/components/ui/StatusBadge";
 import { useWallet } from "@/lib/wallet-store";
@@ -8,6 +9,7 @@ import {
   withdrawAdaFromVault,
   type WithdrawResult,
 } from "@/lib/vault";
+import { VAULT_HOLDINGS_KEY } from "@/hooks/useVaultHoldings";
 
 /**
  * Spend the caller's vault UTxOs back to their wallet. The validator only
@@ -16,6 +18,7 @@ import {
  */
 export function WithdrawVaultCard() {
   const wallet = useWallet();
+  const queryClient = useQueryClient();
   const [status, setStatus] = useState<"idle" | "signing" | "success" | "error">("idle");
   const [result, setResult] = useState<WithdrawResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +36,7 @@ export function WithdrawVaultCard() {
       const r = await withdrawAdaFromVault();
       setResult(r);
       setStatus("success");
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: VAULT_HOLDINGS_KEY(wallet.address) }), 25_000);
     } catch (e) {
       setError((e as Error).message || "Withdraw failed");
       setStatus("error");
