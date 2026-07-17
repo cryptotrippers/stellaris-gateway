@@ -11,6 +11,7 @@ import {
 } from "@/lib/vault";
 import { APP_NETWORK, EXPECTED_WALLET_NETWORK_ID, networkNameFromId } from "@/lib/network";
 import { VAULT_HOLDINGS_KEY } from "@/hooks/useVaultHoldings";
+import { NetworkSwitchHelp } from "@/components/wallet/NetworkSwitchHelp";
 
 /**
  * Spend the caller's vault UTxOs back to their wallet. The validator only
