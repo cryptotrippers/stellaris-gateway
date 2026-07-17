@@ -52,11 +52,10 @@ function MarketplaceIndex() {
         <div>
           <div className="text-[11px] uppercase tracking-[0.22em] text-primary">Marketplace</div>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground">Real-World Asset Opportunities</h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Curated, ZK-verified issuers. Fractionalized, transparent, on-chain settlement in ADA.</p>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Fractionalised, transparent, on-chain settlement in ADA. Assets appear here once issuers register and pass verification.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge tone="accent">{ASSETS.length} live vaults</Badge>
-          <Badge tone="success">ZK-KYC bridged</Badge>
+          <Badge tone="accent">{ASSETS.length} live vault{ASSETS.length === 1 ? "" : "s"}</Badge>
         </div>
       </div>
 
