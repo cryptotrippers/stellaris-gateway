@@ -14,6 +14,110 @@ export type Database = {
   }
   public: {
     Tables: {
+      assets: {
+        Row: {
+          audit_report_url: string | null
+          category: string
+          created_at: string
+          data_source: string
+          description: string | null
+          funding_status: string
+          id: string
+          issuer: string
+          location: string | null
+          maturity_months: number | null
+          min_deposit_lovelace: number
+          name: string
+          oracle_feed_id: string | null
+          raised_lovelace: number
+          target_lovelace: number
+          updated_at: string
+        }
+        Insert: {
+          audit_report_url?: string | null
+          category: string
+          created_at?: string
+          data_source?: string
+          description?: string | null
+          funding_status?: string
+          id: string
+          issuer: string
+          location?: string | null
+          maturity_months?: number | null
+          min_deposit_lovelace?: number
+          name: string
+          oracle_feed_id?: string | null
+          raised_lovelace?: number
+          target_lovelace?: number
+          updated_at?: string
+        }
+        Update: {
+          audit_report_url?: string | null
+          category?: string
+          created_at?: string
+          data_source?: string
+          description?: string | null
+          funding_status?: string
+          id?: string
+          issuer?: string
+          location?: string | null
+          maturity_months?: number | null
+          min_deposit_lovelace?: number
+          name?: string
+          oracle_feed_id?: string | null
+          raised_lovelace?: number
+          target_lovelace?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assets_oracle_feed_fk"
+            columns: ["oracle_feed_id"]
+            isOneToOne: false
+            referencedRelation: "oracle_feeds"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_audits: {
+        Row: {
+          audited_at: string
+          auditor: string
+          blueprint_hash: string | null
+          commit_hash: string
+          contract_name: string
+          created_at: string
+          id: string
+          network: string
+          report_url: string
+          updated_at: string
+        }
+        Insert: {
+          audited_at: string
+          auditor: string
+          blueprint_hash?: string | null
+          commit_hash: string
+          contract_name: string
+          created_at?: string
+          id?: string
+          network?: string
+          report_url: string
+          updated_at?: string
+        }
+        Update: {
+          audited_at?: string
+          auditor?: string
+          blueprint_hash?: string | null
+          commit_hash?: string
+          contract_name?: string
+          created_at?: string
+          id?: string
+          network?: string
+          report_url?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       governance_proposals: {
         Row: {
           created_at: string
@@ -44,6 +148,81 @@ export type Database = {
           title?: string
           updated_at?: string
           votes_for_pct?: number
+        }
+        Relationships: []
+      }
+      kyc_attestations: {
+        Row: {
+          attestation_type: string
+          created_at: string
+          expires_at: string | null
+          id: string
+          proof_cid: string
+          subject_stake_address: string | null
+          user_id: string
+          verified_at: string
+          verifier: string
+        }
+        Insert: {
+          attestation_type: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          proof_cid: string
+          subject_stake_address?: string | null
+          user_id: string
+          verified_at?: string
+          verifier: string
+        }
+        Update: {
+          attestation_type?: string
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          proof_cid?: string
+          subject_stake_address?: string | null
+          user_id?: string
+          verified_at?: string
+          verifier?: string
+        }
+        Relationships: []
+      }
+      oracle_feeds: {
+        Row: {
+          created_at: string
+          feed_address: string
+          id: string
+          last_observed_at: string | null
+          last_price: number | null
+          last_tx_hash: string | null
+          network: string
+          pair: string
+          provider: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          feed_address: string
+          id?: string
+          last_observed_at?: string | null
+          last_price?: number | null
+          last_tx_hash?: string | null
+          network?: string
+          pair: string
+          provider: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          feed_address?: string
+          id?: string
+          last_observed_at?: string | null
+          last_price?: number | null
+          last_tx_hash?: string | null
+          network?: string
+          pair?: string
+          provider?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -134,6 +313,69 @@ export type Database = {
           type?: Database["public"]["Enums"]["transaction_type"]
           user_id?: string
           vault_id?: string
+        }
+        Relationships: []
+      }
+      treasury_config: {
+        Row: {
+          active_since_slot: number | null
+          buyback_pct_bps: number
+          created_at: string
+          id: number
+          network: string
+          treasury_address: string | null
+          updated_at: string
+        }
+        Insert: {
+          active_since_slot?: number | null
+          buyback_pct_bps?: number
+          created_at?: string
+          id?: number
+          network?: string
+          treasury_address?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active_since_slot?: number | null
+          buyback_pct_bps?: number
+          created_at?: string
+          id?: number
+          network?: string
+          treasury_address?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      treasury_events: {
+        Row: {
+          amount_lovelace: number
+          block_time: string
+          created_at: string
+          event_type: string
+          id: string
+          network: string
+          slot: number
+          tx_hash: string
+        }
+        Insert: {
+          amount_lovelace: number
+          block_time: string
+          created_at?: string
+          event_type: string
+          id?: string
+          network?: string
+          slot: number
+          tx_hash: string
+        }
+        Update: {
+          amount_lovelace?: number
+          block_time?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          network?: string
+          slot?: number
+          tx_hash?: string
         }
         Relationships: []
       }
