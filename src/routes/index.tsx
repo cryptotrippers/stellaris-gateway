@@ -199,9 +199,9 @@ function Hero() {
             </Link>
           </div>
           <div className="mt-6 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-success" /> ZK-verified compliance</span>
-            <span className="inline-flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5 text-primary" /> Card or wallet</span>
-            <span className="inline-flex items-center gap-1.5"><TrendingUp className="h-3.5 w-3.5 text-accent" /> 6–13% target APY</span>
+            <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-primary" /> Open-source, testnet</span>
+            <span className="inline-flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5 text-primary" /> CIP-30 wallets</span>
+            <span className="inline-flex items-center gap-1.5"><TrendingUp className="h-3.5 w-3.5 text-accent" /> Live on Cardano preprod</span>
           </div>
         </div>
 
@@ -216,8 +216,8 @@ function Hero() {
             />
           </div>
           <div className="absolute -bottom-4 -left-4 hidden md:block rounded-2xl border border-border bg-surface/95 backdrop-blur px-4 py-3 shadow-elegant">
-            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Live blended APY</div>
-            <div className="number-display text-2xl font-semibold text-accent">7.9%</div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Network</div>
+            <div className="number-display text-lg font-semibold text-accent">Cardano Preprod</div>
           </div>
         </div>
       </div>
@@ -227,10 +227,10 @@ function Hero() {
 
 function SocialProof() {
   const stats = [
-    { k: "Tokenized on-chain", v: "$14.2M+" },
-    { k: "Retail investors", v: "12,400+" },
-    { k: "Blended target APY", v: "7.9%" },
-    { k: "Jurisdictions", v: "60+" },
+    { k: "Network", v: "Preprod" },
+    { k: "Vaults live", v: "0" },
+    { k: "Assets tokenised", v: "0" },
+    { k: "Audit reports", v: "0" },
   ];
   return (
     <section className="relative border-y border-border/60 bg-surface/40">
@@ -241,6 +241,9 @@ function SocialProof() {
             <div className="mt-1 text-[11px] uppercase tracking-widest text-muted-foreground">{s.k}</div>
           </div>
         ))}
+      </div>
+      <div className="mx-auto max-w-[1400px] px-4 md:px-6 pb-6 -mt-3 text-[11px] text-muted-foreground">
+        Testnet build. See <a href="/NETWORK.md" className="text-primary hover:underline">NETWORK.md</a> for the path to mainnet.
       </div>
     </section>
   );
