@@ -216,8 +216,8 @@ function Hero() {
             />
           </div>
           <div className="absolute -bottom-4 -left-4 hidden md:block rounded-2xl border border-border bg-surface/95 backdrop-blur px-4 py-3 shadow-elegant">
-            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Live blended APY</div>
-            <div className="number-display text-2xl font-semibold text-accent">7.9%</div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Network</div>
+            <div className="number-display text-lg font-semibold text-accent">Cardano Preprod</div>
           </div>
         </div>
       </div>
