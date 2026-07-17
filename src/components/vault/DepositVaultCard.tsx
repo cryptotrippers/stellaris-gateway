@@ -11,6 +11,7 @@ import {
 } from "@/lib/vault";
 import { VAULT_HOLDINGS_KEY } from "@/hooks/useVaultHoldings";
 import { APP_NETWORK, EXPECTED_WALLET_NETWORK_ID, networkNameFromId } from "@/lib/network";
+import { NetworkSwitchHelp } from "@/components/wallet/NetworkSwitchHelp";
 
 /**
  * On-chain deposit card for the Phase-1 Preprod vault.
@@ -78,6 +79,9 @@ export function DepositVaultCard() {
           {wallet.connected
             ? `Network mismatch — this app is on ${APP_NETWORK === "mainnet" ? "Mainnet" : "Preprod testnet"} but your wallet is on ${networkNameFromId(wallet.networkId)}. Switch your wallet's network and reconnect.`
             : "Connect a CIP-30 wallet (Lace, Eternl, Nami) from the top bar to continue."}
+          {wallet.connected && (
+            <div className="mt-2"><NetworkSwitchHelp compact /></div>
+          )}
         </div>
       )}
 

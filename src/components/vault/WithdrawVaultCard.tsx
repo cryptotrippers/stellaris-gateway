@@ -11,6 +11,7 @@ import {
 } from "@/lib/vault";
 import { APP_NETWORK, EXPECTED_WALLET_NETWORK_ID, networkNameFromId } from "@/lib/network";
 import { VAULT_HOLDINGS_KEY } from "@/hooks/useVaultHoldings";
+import { NetworkSwitchHelp } from "@/components/wallet/NetworkSwitchHelp";
 
 /**
  * Spend the caller's vault UTxOs back to their wallet. The validator only
@@ -65,6 +66,9 @@ export function WithdrawVaultCard() {
           {wallet.connected
             ? `Network mismatch — this app is on ${APP_NETWORK === "mainnet" ? "Mainnet" : "Preprod testnet"} but your wallet is on ${networkNameFromId(wallet.networkId)}. Switch your wallet's network and reconnect.`
             : "Connect a CIP-30 wallet from the top bar to continue."}
+          {wallet.connected && (
+            <div className="mt-2"><NetworkSwitchHelp compact /></div>
+          )}
         </div>
       )}
 
