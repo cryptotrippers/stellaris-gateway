@@ -4,6 +4,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Sparkline } from "@/components/charts/Sparkline";
 import { RiskBadge, Badge } from "@/components/ui/StatusBadge";
 import { FundingBar, SectionHeader } from "@/components/ui/funding-bar";
+import { ChainStatusCard } from "@/components/chain/ChainStatusCard";
 import { ASSETS, PORTFOLIO, formatAda, formatUsd, sparkline } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/app")({
@@ -65,6 +66,7 @@ function PortfolioPage() {
         </div>
 
         <div className="grid gap-4">
+          <ChainStatusCard />
           <div className="card-institutional p-5">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-foreground">Compliance Status</h3>
