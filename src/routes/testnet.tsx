@@ -67,7 +67,7 @@ function TestnetPage() {
     const label = PROVIDER_LABEL[w.id] ?? "Lace";
     const r = await connectWallet(label);
     setPending(null);
-    if (!r.ok) setConnectError(r.error ?? "Connection failed");
+    if (!r.ok) setConnectError(r.error.message ?? "Connection failed");
   }
 
   const wrongNetwork = wallet.connected && wallet.networkId === 1;
