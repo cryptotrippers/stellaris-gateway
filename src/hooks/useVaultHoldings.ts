@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useWallet } from "@/lib/wallet-store";
 import { fetchMyVaultHoldings, type VaultHoldings } from "@/lib/vault-holdings";
+import { EXPECTED_WALLET_NETWORK_ID } from "@/lib/network";
 
 export const VAULT_HOLDINGS_KEY = (address: string | null) =>
   ["vault-holdings", address ?? "disconnected"] as const;
