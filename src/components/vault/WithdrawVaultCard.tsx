@@ -9,6 +9,7 @@ import {
   withdrawAdaFromVault,
   type WithdrawResult,
 } from "@/lib/vault";
+import { APP_NETWORK, EXPECTED_WALLET_NETWORK_ID, networkNameFromId } from "@/lib/network";
 import { VAULT_HOLDINGS_KEY } from "@/hooks/useVaultHoldings";
 
 /**
