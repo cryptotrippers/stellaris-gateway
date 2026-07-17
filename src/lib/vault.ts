@@ -86,7 +86,8 @@ export async function depositAdaToVault(amountAda: number): Promise<DepositResul
   }
 
   const VaultDatumSchema = Data.Object({ owner: Data.Bytes() });
-  const datumCbor = Data.to({ owner: paymentCred.hash }, VaultDatumSchema);
+  type VaultDatum = { owner: string };
+  const datumCbor = Data.to<VaultDatum>({ owner: paymentCred.hash }, VaultDatumSchema as unknown as VaultDatum);
 
   const lovelace = BigInt(Math.round(amountAda * 1_000_000));
 

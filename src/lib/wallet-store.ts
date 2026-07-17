@@ -129,6 +129,10 @@ export function useWallet(): WalletState {
   );
 }
 
+export function getWalletState(): WalletState {
+  return state;
+}
+
 export function shortAddr(addr: string | null) {
   if (!addr) return "";
   if (addr.length <= 16) return addr;
