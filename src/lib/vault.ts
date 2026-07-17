@@ -142,6 +142,73 @@ async function fetchVaultScript(scriptHash: string) {
 }
 
 /**
+ * Turn a raw CIP-30 / Lucid / Blockfrost error into something a human can act on.
+ * Cardano nodes return validation failures as deeply-nested Haskell-ish blobs;
+ * this walks the payload for well-known tags and produces a short cause.
+ */
+export function decodeVaultError(err: unknown, ctx: { ownerHash?: string } = {}): string {
+  const raw =
+    err instanceof Error ? err.message :
+    typeof err === "string" ? err :
+    (() => { try { return JSON.stringify(err); } catch { return String(err); } })();
+
+  if (!raw) return "Unknown error.";
+  const s = raw.toLowerCase();
+
+  // Wallet user actions
+  if (s.includes("user declined") || s.includes("user rejected") || /\bcode":?\s*-?2\b/.test(s)) {
+    return "You declined the signature in your wallet.";
+  }
+
+  // Validator-level failures — the vault script failed on-chain.
+  //   The Aiken source runs one check: `list.has(tx.extra_signatories, d.owner)`.
+  //   If that returns False, ledger emits ScriptFailure / ValidationTagMismatch.
+  const scriptFailed =
+    s.includes("scriptexecutionfailure") ||
+    s.includes("validationtagmismatch") ||
+    s.includes("script failed") ||
+    s.includes("scriptserror") ||
+    s.includes("plutusfailure");
+  if (scriptFailed) {
+    // Missing owner signature is the only way this specific validator returns False.
+    return (
+      "Vault validator rejected the tx. The Aiken script requires the datum's owner PKH to appear in tx.extra_signatories — most likely you're trying to withdraw a UTxO that was deposited by a different wallet, or the wallet didn't attach the required signer." +
+      (ctx.ownerHash ? ` (this wallet's PKH: ${ctx.ownerHash.slice(0, 12)}…)` : "")
+    );
+  }
+
+  // Ledger-level missing signer — script accepted, but no signature was attached.
+  if (s.includes("missingrequiredsigners") || s.includes("missingvkeywitnessesutxow") || s.includes("missing required signers")) {
+    return "Transaction was built but your wallet didn't include the required signature. Try again — some wallets need to re-open the sign popup after switching networks.";
+  }
+
+  // Fee / collateral / UTxO problems.
+  if (s.includes("insufficientcollateral") || s.includes("nocollateralinputs") || s.includes("collateralcontainsnonada")) {
+    return "Your wallet has no eligible collateral UTxO. Plutus spends need a pure-ADA UTxO of ~5 tADA set aside as collateral — top up from the faucet.";
+  }
+  if (s.includes("valuenotconservedutxo") || s.includes("insufficient") && s.includes("fee")) {
+    return "Not enough ADA in the wallet to cover fees + collateral. Fund the wallet from the Preprod faucet and retry.";
+  }
+  if (s.includes("outsidevalidityintervalutxo") || s.includes("outsideforecast")) {
+    return "Transaction validity window drifted. Refresh the page and rebuild — the wallet cached stale slot info.";
+  }
+  if (s.includes("badinputsutxo") || s.includes("input not found") || s.includes("utxo not found")) {
+    return "One of the vault UTxOs was already spent or hasn't confirmed yet. Wait ~20s for the previous tx and retry.";
+  }
+  if (s.includes("ppviewhashesdontmatch")) {
+    return "Wallet used stale Plutus protocol params (usually a stuck Nami/Eternl cache). Reload the wallet extension and retry.";
+  }
+
+  // Blockfrost transport
+  if (s.includes("blockfrost") && s.includes("403")) return "Blockfrost rejected the request (bad project ID or wrong network).";
+  if (s.includes("blockfrost") && s.includes("429")) return "Blockfrost rate limit hit. Wait a few seconds and retry.";
+
+  // Fall back to the raw message, trimmed.
+  const trimmed = raw.length > 400 ? raw.slice(0, 400) + "…" : raw;
+  return `On-chain submission failed: ${trimmed}`;
+}
+
+/**
  * Spend every vault UTxO owned by the connected wallet back to the wallet.
  * The Aiken validator only checks `tx.extra_signatories.contains(owner)`,
  * so the redeemer is a placeholder (`Data.void()`).
@@ -167,30 +234,43 @@ export async function withdrawAdaFromVault(): Promise<WithdrawResult> {
   const allUtxos = await lucid.utxosAt(VAULT_SCRIPT_ADDRESS!);
   const VaultDatumSchema = Data.Object({ owner: Data.Bytes() });
   type VaultDatum = { owner: string };
+
+  let matched = 0;
+  let mismatched = 0;
   const mine = allUtxos.filter(u => {
     if (!u.datum) return false;
     try {
       const d = Data.from<VaultDatum>(u.datum, VaultDatumSchema as unknown as VaultDatum);
-      return d.owner === ownerHash;
+      if (d.owner === ownerHash) { matched++; return true; }
+      mismatched++;
+      return false;
     } catch {
       return false;
     }
   });
   if (mine.length === 0) {
+    if (mismatched > 0) {
+      throw new Error(
+        `Found ${mismatched} vault UTxO${mismatched === 1 ? "" : "s"} at the script address, but none are owned by this wallet (PKH ${ownerHash.slice(0, 12)}…). Connect the wallet that made the deposit and try again.`,
+      );
+    }
     throw new Error("No vault UTxOs found for this wallet. Make a deposit first, or wait for the previous tx to confirm (~20s on Preprod).");
   }
 
   const script = await fetchVaultScript(scriptCred.hash);
   const totalLovelace = mine.reduce((n, u) => n + (u.assets.lovelace ?? 0n), 0n);
 
-  const tx = await lucid
-    .newTx()
-    .collectFrom(mine, Data.void())
-    .attach.SpendingValidator({ type: script.type, script: script.cbor })
-    .addSignerKey(ownerHash)
-    .complete();
-  const signed = await tx.sign.withWallet().complete();
-  const txHash = await signed.submit();
-
-  return { txHash, amountAda: Number(totalLovelace) / 1_000_000, utxoCount: mine.length };
+  try {
+    const tx = await lucid
+      .newTx()
+      .collectFrom(mine, Data.void())
+      .attach.SpendingValidator({ type: script.type, script: script.cbor })
+      .addSignerKey(ownerHash)
+      .complete();
+    const signed = await tx.sign.withWallet().complete();
+    const txHash = await signed.submit();
+    return { txHash, amountAda: Number(totalLovelace) / 1_000_000, utxoCount: matched };
+  } catch (e) {
+    throw new Error(decodeVaultError(e, { ownerHash }));
+  }
 }
