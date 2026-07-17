@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/StatusBadge";
 import { Sparkline } from "@/components/charts/Sparkline";
 import { ASSETS, formatAda } from "@/lib/mock-data";
 import { useLiveYields, usePayoutHistory, short, timeAgo, cardanoscanTx, cardanoscanBlock, type Payout } from "@/lib/yield-engine";
-import { useCardanoTip } from "@/lib/blockfrost";
+import { useQuery } from "@tanstack/react-query";
+import { getBlockfrostHealth, getPreprodTip } from "@/lib/blockfrost.functions";
 
 export const Route = createFileRoute("/yield")({
   head: () => ({
