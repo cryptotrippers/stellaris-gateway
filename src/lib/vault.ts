@@ -7,18 +7,21 @@
  */
 
 import { getWalletState } from "./wallet-store";
+import {
+  APP_NETWORK,
+  BLOCKFROST_PROJECT_ID,
+  BLOCKFROST_URL,
+  LUCID_NETWORK,
+  assertWalletMatchesAppNetwork,
+} from "./network";
 
 // Preprod script address for the per-user vault validator.
 // Derived from contracts/vault/plutus.json via `aiken address` — safe to commit
 // (script addresses are public on-chain identifiers, not secrets).
 export const VAULT_SCRIPT_ADDRESS: string | undefined =
-  "addr_test1wplwxwujdq6t6lvc8j5agv7wurxpjx8dt094779t09whq4chqhwe6";
-
-const BLOCKFROST_PROJECT_ID = import.meta.env.VITE_BLOCKFROST_PROJECT_ID as
-  | string
-  | undefined;
-
-const BLOCKFROST_URL = "https://cardano-preprod.blockfrost.io/api/v0";
+  APP_NETWORK === "preprod"
+    ? "addr_test1wplwxwujdq6t6lvc8j5agv7wurxpjx8dt094779t09whq4chqhwe6"
+    : undefined;
 
 const PROVIDER_KEY: Record<string, string> = {
   Lace: "lace",
