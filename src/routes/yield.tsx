@@ -107,7 +107,7 @@ function YieldEngine() {
     const streamed = live.reduce((s, y) => s + y.streamedAda, 0);
     const distributed30d = payouts.filter(p => Date.now() - p.timestamp < 30 * 86_400_000)
       .reduce((s, p) => s + p.amountAda, 0);
-    const verifiedPct = 100;
+    const verifiedPct = payouts.length > 0 ? 100 : 0;
     return { netApy, streamed, distributed30d, verifiedPct };
   }, [live, payouts]);
 
