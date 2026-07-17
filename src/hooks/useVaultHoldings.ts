@@ -7,7 +7,7 @@ export const VAULT_HOLDINGS_KEY = (address: string | null) =>
 
 export function useVaultHoldings() {
   const wallet = useWallet();
-  const enabled = wallet.connected && wallet.networkId === 0;
+  const enabled = wallet.connected && wallet.networkId === EXPECTED_WALLET_NETWORK_ID;
   const address = wallet.address ?? null;
 
   const query = useQuery<VaultHoldings>({
