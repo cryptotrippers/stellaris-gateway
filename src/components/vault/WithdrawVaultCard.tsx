@@ -9,6 +9,7 @@ import {
   withdrawAdaFromVault,
   type WithdrawResult,
 } from "@/lib/vault";
+import { APP_NETWORK, EXPECTED_WALLET_NETWORK_ID, networkNameFromId } from "@/lib/network";
 import { VAULT_HOLDINGS_KEY } from "@/hooks/useVaultHoldings";
 
 /**
@@ -25,7 +26,7 @@ export function WithdrawVaultCard() {
 
   const pre = checkVaultPreconditions();
   const deployed = Boolean(VAULT_SCRIPT_ADDRESS);
-  const walletReady = wallet.connected && wallet.networkId === 0;
+  const walletReady = wallet.connected && wallet.networkId === EXPECTED_WALLET_NETWORK_ID;
   const canSubmit = pre.ok && status !== "signing";
 
   async function submit() {
@@ -62,7 +63,7 @@ export function WithdrawVaultCard() {
       {!walletReady && deployed && (
         <div className="mt-4 rounded-lg border border-border bg-secondary/60 p-3 text-xs text-muted-foreground">
           {wallet.connected
-            ? "Switch your wallet to the Preprod testnet to sign this transaction."
+            ? `Network mismatch — this app is on ${APP_NETWORK === "mainnet" ? "Mainnet" : "Preprod testnet"} but your wallet is on ${networkNameFromId(wallet.networkId)}. Switch your wallet's network and reconnect.`
             : "Connect a CIP-30 wallet from the top bar to continue."}
         </div>
       )}

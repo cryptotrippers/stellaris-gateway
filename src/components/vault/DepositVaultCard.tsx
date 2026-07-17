@@ -10,6 +10,7 @@ import {
   type DepositResult,
 } from "@/lib/vault";
 import { VAULT_HOLDINGS_KEY } from "@/hooks/useVaultHoldings";
+import { APP_NETWORK, EXPECTED_WALLET_NETWORK_ID, networkNameFromId } from "@/lib/network";
 
 /**
  * On-chain deposit card for the Phase-1 Preprod vault.
@@ -25,7 +26,7 @@ export function DepositVaultCard() {
 
   const pre = checkVaultPreconditions();
   const deployed = Boolean(VAULT_SCRIPT_ADDRESS);
-  const walletReady = wallet.connected && wallet.networkId === 0;
+  const walletReady = wallet.connected && wallet.networkId === EXPECTED_WALLET_NETWORK_ID;
   const n = Number(amount) || 0;
   const canSubmit = pre.ok && n >= 2 && status !== "signing";
 
@@ -75,7 +76,7 @@ export function DepositVaultCard() {
         <div className="mt-4 rounded-lg border border-border bg-secondary/60 p-3 text-xs text-muted-foreground">
           <Wallet className="mr-1 inline h-3.5 w-3.5 text-primary" />
           {wallet.connected
-            ? "Switch your wallet to the Preprod testnet to sign this transaction."
+            ? `Network mismatch — this app is on ${APP_NETWORK === "mainnet" ? "Mainnet" : "Preprod testnet"} but your wallet is on ${networkNameFromId(wallet.networkId)}. Switch your wallet's network and reconnect.`
             : "Connect a CIP-30 wallet (Lace, Eternl, Nami) from the top bar to continue."}
         </div>
       )}

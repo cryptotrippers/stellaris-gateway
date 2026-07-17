@@ -7,18 +7,21 @@
  */
 
 import { getWalletState } from "./wallet-store";
+import {
+  APP_NETWORK,
+  BLOCKFROST_PROJECT_ID,
+  BLOCKFROST_URL,
+  LUCID_NETWORK,
+  assertWalletMatchesAppNetwork,
+} from "./network";
 
 // Preprod script address for the per-user vault validator.
 // Derived from contracts/vault/plutus.json via `aiken address` — safe to commit
 // (script addresses are public on-chain identifiers, not secrets).
 export const VAULT_SCRIPT_ADDRESS: string | undefined =
-  "addr_test1wplwxwujdq6t6lvc8j5agv7wurxpjx8dt094779t09whq4chqhwe6";
-
-const BLOCKFROST_PROJECT_ID = import.meta.env.VITE_BLOCKFROST_PROJECT_ID as
-  | string
-  | undefined;
-
-const BLOCKFROST_URL = "https://cardano-preprod.blockfrost.io/api/v0";
+  APP_NETWORK === "preprod"
+    ? "addr_test1wplwxwujdq6t6lvc8j5agv7wurxpjx8dt094779t09whq4chqhwe6"
+    : undefined;
 
 const PROVIDER_KEY: Record<string, string> = {
   Lace: "lace",
@@ -45,17 +48,15 @@ export interface WithdrawResult {
 /** Preconditions the browser can enforce without touching Lucid. */
 export function checkVaultPreconditions(): { ok: true } | { ok: false; reason: string } {
   if (!VAULT_SCRIPT_ADDRESS) {
-    return { ok: false, reason: "Vault not deployed yet. Compile the Aiken validator locally and set VITE_VAULT_SCRIPT_ADDRESS." };
-  }
-  if (!VAULT_SCRIPT_ADDRESS.startsWith("addr_test1")) {
-    return { ok: false, reason: "VITE_VAULT_SCRIPT_ADDRESS is not a Preprod address (must start with addr_test1)." };
+    return { ok: false, reason: `Vault validator isn't deployed on ${APP_NETWORK}. Switch the app to Preprod (VITE_BLOCKFROST_NETWORK=preprod) to use the vault.` };
   }
   if (!BLOCKFROST_PROJECT_ID) {
-    return { ok: false, reason: "VITE_BLOCKFROST_PROJECT_ID missing — needed to query wallet UTxOs on Preprod." };
+    return { ok: false, reason: `VITE_BLOCKFROST_PROJECT_ID missing — needed to query wallet UTxOs on ${APP_NETWORK}.` };
   }
   const w = getWalletState();
   if (!w.connected) return { ok: false, reason: "Connect a Cardano wallet first." };
-  if (w.networkId !== 0) return { ok: false, reason: "Switch your wallet to the Preprod testnet." };
+  const netCheck = assertWalletMatchesAppNetwork(w.networkId);
+  if (!netCheck.ok) return netCheck;
   if (!w.provider || !(w.provider in PROVIDER_KEY)) {
     return { ok: false, reason: "This wallet provider isn't supported for on-chain deposits yet." };
   }
@@ -73,7 +74,7 @@ export async function initLucidWithWallet() {
   const lucidMod = await import("@lucid-evolution/lucid");
   const lucid = await lucidMod.Lucid(
     new lucidMod.Blockfrost(BLOCKFROST_URL, BLOCKFROST_PROJECT_ID!),
-    "Preprod",
+    LUCID_NETWORK,
   );
   lucid.selectWallet.fromAPI(walletApi as Parameters<typeof lucid.selectWallet.fromAPI>[0]);
   return { lucid, lucidMod };
