@@ -118,8 +118,9 @@ function YieldEngine() {
           <div className="text-[11px] uppercase tracking-[0.22em] text-primary">Real-time Yield Engine</div>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground">Live APY & Verifiable Payouts</h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Streaming APY per vault, updated every 2 seconds. Every payout is anchored to a Cardano block with a
-            ZK-attested Merkle proof — no datapoint exists without an on-chain audit trail.
+            Streaming APY per vault. Every payout will be anchored to a Cardano block once vaults
+            and oracle feeds are wired to the on-chain indexer — until then, this view shows real
+            chain tip data only.
           </p>
         </div>
         <div className="flex items-center gap-2">
