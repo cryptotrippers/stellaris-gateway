@@ -26,7 +26,7 @@ export function WithdrawVaultCard() {
 
   const pre = checkVaultPreconditions();
   const deployed = Boolean(VAULT_SCRIPT_ADDRESS);
-  const walletReady = wallet.connected && wallet.networkId === 0;
+  const walletReady = wallet.connected && wallet.networkId === EXPECTED_WALLET_NETWORK_ID;
   const canSubmit = pre.ok && status !== "signing";
 
   async function submit() {
