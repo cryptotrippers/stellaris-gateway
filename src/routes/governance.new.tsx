@@ -114,20 +114,34 @@ validator stellarisTreasury {
               <CheckCircle2 className="h-8 w-8" />
             </div>
             <h3 className="mt-3 text-lg font-semibold text-foreground">Proposal submitted</h3>
-            <p className="mt-1 text-sm text-muted-foreground">SIP-043 · Voting opens in 24h after timelock.</p>
+            <p className="mt-1 text-sm text-muted-foreground">{sipNumber ?? "SIP"} · Voting opens in 24h after timelock.</p>
             <button onClick={() => navigate({ to: "/governance" })} className="mt-5 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground">Back to Governance</button>
           </div>
         )}
 
         {!signed && (
-          <div className="mt-8 flex items-center justify-between">
-            <button onClick={() => setStep(s => Math.max(0, s - 1))} disabled={step === 0} className="text-sm text-muted-foreground hover:text-foreground disabled:opacity-40">Back</button>
-            {step < 2 ? (
-              <button onClick={() => setStep(s => s + 1)} className="inline-flex items-center gap-1 rounded-xl bg-gradient-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-glow">
-                Continue <ChevronRight className="h-4 w-4" />
-              </button>
-            ) : (
-              <button onClick={() => setSigned(true)} className="rounded-xl bg-gradient-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-glow">Sign & submit</button>
+          <div className="mt-8 space-y-3">
+            {error && (
+              <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
+            )}
+            <div className="flex items-center justify-between">
+              <button onClick={() => setStep(s => Math.max(0, s - 1))} disabled={step === 0 || submitting} className="text-sm text-muted-foreground hover:text-foreground disabled:opacity-40">Back</button>
+              {step < 2 ? (
+                <button onClick={() => setStep(s => s + 1)} className="inline-flex items-center gap-1 rounded-xl bg-gradient-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-glow">
+                  Continue <ChevronRight className="h-4 w-4" />
+                </button>
+              ) : (
+                <button onClick={handleSubmit} disabled={submitting} className="inline-flex items-center gap-2 rounded-xl bg-gradient-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-glow disabled:opacity-60">
+                  {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {submitting ? "Submitting…" : "Sign & submit"}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
             )}
           </div>
         )}
