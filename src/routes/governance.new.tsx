@@ -1,7 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { ArrowLeft, ChevronRight, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, ChevronRight, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
+import { createProposal } from "@/lib/governance-submit.functions";
 
 export const Route = createFileRoute("/governance/new")({
   head: () => ({
