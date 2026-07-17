@@ -1,10 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { LayoutDashboard, FileText, Vault, Users, Activity, PlusCircle, ChevronRight, Search, Radio, TrendingUp, TrendingDown, Shield, Zap } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/StatusBadge";
 import { Sparkline } from "@/components/charts/Sparkline";
 import { PROPOSALS, VAULT_ACTIVITY, formatAda, sparkline } from "@/lib/mock-data";
+import { supabase } from "@/integrations/supabase/client";
+import { getProtocolStats } from "@/lib/governance.functions";
+import type { Database } from "@/integrations/supabase/types";
+
+type ProposalRow = Database["public"]["Tables"]["governance_proposals"]["Row"];
 
 type GovTab = "overview" | "proposals" | "vaults" | "delegates" | "signals";
 const TABS: GovTab[] = ["overview", "proposals", "vaults", "delegates", "signals"];
