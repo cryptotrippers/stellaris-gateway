@@ -29,7 +29,25 @@ validator stellarisTreasury {
   }
 }`);
   const [signed, setSigned] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sipNumber, setSipNumber] = useState<string | null>(null);
+  const submitProposal = useServerFn(createProposal);
   const navigate = useNavigate();
+
+  async function handleSubmit() {
+    setError(null);
+    setSubmitting(true);
+    try {
+      const result = await submitProposal({ data: { title, category, summary, code } });
+      setSipNumber(result.sip_number);
+      setSigned(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to submit proposal");
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   return (
     <AppShell>
