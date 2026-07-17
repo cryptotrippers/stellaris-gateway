@@ -66,6 +66,7 @@ function PortfolioPage() {
         </div>
 
         <div className="grid gap-4">
+          <ChainStatusCard />
           <div className="card-institutional p-5">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-foreground">Compliance Status</h3>
