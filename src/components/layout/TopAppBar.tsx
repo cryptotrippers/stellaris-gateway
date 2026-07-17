@@ -24,6 +24,7 @@ export function TopAppBar() {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
+          <NetworkBadge />
           <Link
             to="/upgrade"
             className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-accent to-primary px-3 py-1 text-[11px] font-semibold text-white shadow-sm hover:opacity-90 transition-opacity"
