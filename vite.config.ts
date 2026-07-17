@@ -6,8 +6,6 @@
 // You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/tanstack/vite";
-import wasm from "vite-plugin-wasm";
-import topLevelAwait from "vite-plugin-top-level-await";
 
 // High-value pages to pre-render at build time for indexing + fast TTFB.
 // Marketplace detail pages are added dynamically from mock data below.
@@ -51,12 +49,6 @@ export default defineConfig({
     })),
   },
   vite: {
-    plugins: [mcpPlugin(), wasm(), topLevelAwait()],
-    optimizeDeps: {
-      exclude: ["@lucid-evolution/lucid", "@lucid-evolution/uplc"],
-    },
-    build: {
-      target: "esnext",
-    },
+    plugins: [mcpPlugin()],
   },
 });
