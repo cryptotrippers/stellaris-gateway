@@ -572,9 +572,13 @@ function KPI({ label, value, delta, spark, tone = "primary" }: { label: string; 
   );
 }
 
-function ProposalStatus({ status }: { status: "Voting" | "Executed" | "Defeated" | "Queued" }) {
-  const map = { Voting: "accent", Executed: "success", Defeated: "destructive", Queued: "primary" } as const;
-  return <Badge tone={map[status]}>{status}</Badge>;
+function ProposalStatus({ status }: { status: "Voting" | "Executed" | "Defeated" | "Queued" | "active" | "draft" | "passed" | "rejected" | "executed" }) {
+  const map = {
+    Voting: "accent", Executed: "success", Defeated: "destructive", Queued: "primary",
+    active: "accent", executed: "success", rejected: "destructive", passed: "success", draft: "primary",
+  } as const;
+  const label = status.charAt(0).toUpperCase() + status.slice(1);
+  return <Badge tone={map[status]}>{label}</Badge>;
 }
 
 function TreasuryCard({ title, amount, pct }: { title: string; amount: string; pct: number }) {
