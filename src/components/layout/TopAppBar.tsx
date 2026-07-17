@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Bell, Shield } from "lucide-react";
 import { StellarisWordmark } from "@/components/brand/Logo";
 import { WalletButton } from "@/components/wallet/WalletButton";
+import { NetworkBadge } from "@/components/layout/NetworkBadge";
 
 export function TopAppBar() {
   return (
