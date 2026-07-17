@@ -142,10 +142,8 @@ validator stellarisTreasury {
             </div>
           </div>
         )}
-            )}
-          </div>
-        )}
       </div>
+
 
       <style>{`.input{width:100%;border:1px solid var(--color-border);background:var(--color-surface);border-radius:0.75rem;padding:0.65rem 0.85rem;font-size:0.875rem;color:var(--color-foreground);outline:none} .input:focus{border-color:var(--color-primary);box-shadow:0 0 0 3px oklch(0.55 0.19 258 / 0.2)}`}</style>
     </AppShell>
