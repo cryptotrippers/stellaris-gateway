@@ -4,6 +4,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Sparkline } from "@/components/charts/Sparkline";
 import { RiskBadge, Badge } from "@/components/ui/StatusBadge";
 import { FundingBar, SectionHeader } from "@/components/ui/funding-bar";
+import { ChainStatusCard } from "@/components/chain/ChainStatusCard";
 import { ASSETS, PORTFOLIO, formatAda, formatUsd, sparkline } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/app")({
