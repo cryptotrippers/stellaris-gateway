@@ -164,6 +164,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_security_settings: {
+        Row: {
+          created_at: string
+          hardware_wallet: boolean
+          id: string
+          mfa: boolean
+          timelock_24h: boolean
+          updated_at: string
+          user_id: string
+          withdrawal_whitelist: boolean
+        }
+        Insert: {
+          created_at?: string
+          hardware_wallet?: boolean
+          id?: string
+          mfa?: boolean
+          timelock_24h?: boolean
+          updated_at?: string
+          user_id: string
+          withdrawal_whitelist?: boolean
+        }
+        Update: {
+          created_at?: string
+          hardware_wallet?: boolean
+          id?: string
+          mfa?: boolean
+          timelock_24h?: boolean
+          updated_at?: string
+          user_id?: string
+          withdrawal_whitelist?: boolean
+        }
+        Relationships: []
+      }
       vault_positions: {
         Row: {
           amount_ada: number
