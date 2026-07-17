@@ -1,8 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Shield, KeyRound, Clock, MapPin, Fingerprint, ShieldCheck, ShieldAlert, Monitor, Smartphone } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/StatusBadge";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/security")({
   head: () => ({
@@ -16,14 +17,74 @@ export const Route = createFileRoute("/security")({
   component: SecurityPage,
 });
 
-function SecurityPage() {
-  const [mfa, setMfa] = useState(true);
-  const [hwWallet, setHwWallet] = useState(true);
-  const [whitelist, setWhitelist] = useState(true);
-  const [timelock, setTimelock] = useState(true);
-  const [mfaSetupOpen, setMfaSetupOpen] = useState(false);
+type SettingKey = "mfa" | "hardware_wallet" | "withdrawal_whitelist" | "timelock_24h";
+type Settings = Record<SettingKey, boolean>;
+type SessionRow = { id: string; device: string | null; browser: string | null; location: string | null; last_seen: string; revoked: boolean };
+type LogRow = { id: string; action: string; detail: unknown; created_at: string };
 
-  const score = [mfa, hwWallet, whitelist, timelock].filter(Boolean).length;
+const DEFAULT_SETTINGS: Settings = { mfa: false, hardware_wallet: false, withdrawal_whitelist: false, timelock_24h: false };
+
+function SecurityPage() {
+  const [userId, setUserId] = useState<string | null>(null);
+  const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [sessions, setSessions] = useState<SessionRow[]>([]);
+  const [logs, setLogs] = useState<LogRow[]>([]);
+  const [mfaSetupOpen, setMfaSetupOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const loadAll = useCallback(async (uid: string) => {
+    const [settingsRes, sessionsRes, logsRes] = await Promise.all([
+      supabase.from("user_security_settings").select("mfa, hardware_wallet, withdrawal_whitelist, timelock_24h").eq("user_id", uid).maybeSingle(),
+      supabase.from("security_sessions").select("id, device, browser, location, last_seen, revoked").eq("user_id", uid).eq("revoked", false).order("last_seen", { ascending: false }),
+      supabase.from("security_audit_log").select("id, action, detail, created_at").eq("user_id", uid).order("created_at", { ascending: false }).limit(20),
+    ]);
+    if (settingsRes.data) setSettings(settingsRes.data as Settings);
+    setSessions((sessionsRes.data as SessionRow[]) ?? []);
+    setLogs((logsRes.data as LogRow[]) ?? []);
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      const uid = data.user?.id ?? null;
+      if (!mounted) return;
+      setUserId(uid);
+      if (uid) await loadAll(uid);
+      setLoading(false);
+    })();
+    return () => { mounted = false; };
+  }, [loadAll]);
+
+  const updateSetting = useCallback(async (key: SettingKey, value: boolean) => {
+    if (!userId) return;
+    setSettings(s => ({ ...s, [key]: value }));
+    const { error } = await supabase
+      .from("user_security_settings")
+      .update({ [key]: value })
+      .eq("user_id", userId);
+    if (error) {
+      // Revert on failure
+      setSettings(s => ({ ...s, [key]: !value }));
+      return;
+    }
+    // Refresh audit log to reflect the trigger-written entry
+    const { data: fresh } = await supabase
+      .from("security_audit_log")
+      .select("id, action, detail, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    setLogs((fresh as LogRow[]) ?? []);
+  }, [userId]);
+
+  const revokeSession = useCallback(async (id: string) => {
+    if (!userId) return;
+    setSessions(list => list.filter(s => s.id !== id));
+    await supabase.from("security_sessions").update({ revoked: true }).eq("id", id).eq("user_id", userId);
+  }, [userId]);
+
+  const score = [settings.mfa, settings.hardware_wallet, settings.withdrawal_whitelist, settings.timelock_24h].filter(Boolean).length;
   const scorePct = (score / 4) * 100;
 
   return (
@@ -46,40 +107,54 @@ function SecurityPage() {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
-        <SecurityToggle icon={KeyRound} title="Multi-Factor Authentication" desc="Require TOTP or Yubikey for all sensitive actions." on={mfa} setOn={v => v ? setMfaSetupOpen(true) : setMfa(false)} required />
-        <SecurityToggle icon={Fingerprint} title="Hardware Wallet Enforcement" desc="Only allow signing from Lace, Eternl (hardware mode), Ledger, or Yubikey." on={hwWallet} setOn={setHwWallet} />
-        <SecurityToggle icon={MapPin} title="Withdrawal Whitelisting" desc="Withdrawals only to pre-approved addresses with 24h cooldown." on={whitelist} setOn={setWhitelist} />
-        <SecurityToggle icon={Clock} title="24h Timelock on Withdrawals" desc="All outgoing transactions delayed 24h with revoke window." on={timelock} setOn={setTimelock} />
-      </div>
+      {!loading && !userId && (
+        <div className="mt-6 card-institutional p-6 text-center text-sm text-muted-foreground">
+          Sign in to manage your security settings, sessions, and audit log.
+        </div>
+      )}
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-[1.3fr_1fr]">
-        <div className="card-institutional p-5">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-foreground flex items-center gap-2"><Monitor className="h-4 w-4 text-primary" /> Live Sessions</h2>
-            <Badge tone="accent">3 active</Badge>
+      {userId && (
+        <>
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <SecurityToggle icon={KeyRound} title="Multi-Factor Authentication" desc="Require TOTP or Yubikey for all sensitive actions." on={settings.mfa} setOn={v => v ? setMfaSetupOpen(true) : updateSetting("mfa", false)} required />
+            <SecurityToggle icon={Fingerprint} title="Hardware Wallet Enforcement" desc="Only allow signing from Lace, Eternl (hardware mode), Ledger, or Yubikey." on={settings.hardware_wallet} setOn={v => updateSetting("hardware_wallet", v)} />
+            <SecurityToggle icon={MapPin} title="Withdrawal Whitelisting" desc="Withdrawals only to pre-approved addresses with 24h cooldown." on={settings.withdrawal_whitelist} setOn={v => updateSetting("withdrawal_whitelist", v)} />
+            <SecurityToggle icon={Clock} title="24h Timelock on Withdrawals" desc="All outgoing transactions delayed 24h with revoke window." on={settings.timelock_24h} setOn={v => updateSetting("timelock_24h", v)} />
           </div>
-          <SessionMap />
-          <ul className="mt-4 divide-y divide-border">
-            <SessionRow icon={Monitor} device="MacBook Pro · Chrome 130" loc="Berlin, DE" ip="88.130.***" current />
-            <SessionRow icon={Smartphone} device="iPhone 16 · Safari" loc="Berlin, DE" ip="88.130.***" />
-            <SessionRow icon={Monitor} device="Windows · Firefox 132" loc="Zurich, CH" ip="46.42.***" />
-          </ul>
-        </div>
 
-        <div className="card-institutional p-5">
-          <h2 className="text-sm font-semibold text-foreground">Audit Log</h2>
-          <ul className="mt-3 space-y-2 text-sm">
-            <LogRow t="12:04" e="Signed transaction · Nordic Wind III · ₳ 25,000" tone="primary" />
-            <LogRow t="11:41" e="Whitelisted address added · addr1q9…j2k" tone="accent" />
-            <LogRow t="09:18" e="MFA challenge passed · Yubikey #2" tone="success" />
-            <LogRow t="Yesterday" e="Withdrawal timelock started · ₳ 4,200 · 24h" tone="warning" />
-            <LogRow t="Yesterday" e="Login from new device · verified" tone="muted" />
-          </ul>
-        </div>
-      </div>
+          <div className="mt-6 grid gap-4 lg:grid-cols-[1.3fr_1fr]">
+            <div className="card-institutional p-5">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-foreground flex items-center gap-2"><Monitor className="h-4 w-4 text-primary" /> Live Sessions</h2>
+                <Badge tone="accent">{sessions.length} active</Badge>
+              </div>
+              <SessionMap />
+              {sessions.length === 0 ? (
+                <p className="mt-4 text-sm text-muted-foreground">No active sessions recorded.</p>
+              ) : (
+                <ul className="mt-4 divide-y divide-border">
+                  {sessions.map((s, i) => (
+                    <SessionRowItem key={s.id} icon={/iphone|android|mobile/i.test(s.device ?? "") ? Smartphone : Monitor} device={`${s.device ?? "Unknown device"}${s.browser ? ` · ${s.browser}` : ""}`} loc={s.location ?? "Unknown"} current={i === 0} onRevoke={() => revokeSession(s.id)} />
+                  ))}
+                </ul>
+              )}
+            </div>
 
-      {mfaSetupOpen && <MFASetup onDone={() => { setMfa(true); setMfaSetupOpen(false); }} onClose={() => setMfaSetupOpen(false)} />}
+            <div className="card-institutional p-5">
+              <h2 className="text-sm font-semibold text-foreground">Audit Log</h2>
+              {logs.length === 0 ? (
+                <p className="mt-3 text-sm text-muted-foreground">No events yet.</p>
+              ) : (
+                <ul className="mt-3 space-y-2 text-sm">
+                  {logs.map(l => <LogRowItem key={l.id} log={l} />)}
+                </ul>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {mfaSetupOpen && <MFASetup onDone={() => { updateSetting("mfa", true); setMfaSetupOpen(false); }} onClose={() => setMfaSetupOpen(false)} />}
     </AppShell>
   );
 }
@@ -118,25 +193,14 @@ function SessionMap() {
           </pattern>
         </defs>
         <rect width="400" height="160" fill="url(#grid)" />
-        {/* pseudo continents */}
         <path d="M40,60 q30,-20 70,-10 t60,20 q20,20 -20,30 t-70,0 t-40,-40z" fill="oklch(0.36 0.19 264 / 0.15)" />
         <path d="M200,40 q40,-10 80,10 t50,50 q-20,30 -60,20 t-70,-30z" fill="oklch(0.36 0.19 264 / 0.15)" />
-        {/* dots */}
-        {[{ x: 210, y: 62, c: "success" }, { x: 210, y: 66, c: "success" }, { x: 200, y: 60, c: "accent" }].map((d, i) => (
-          <g key={i}>
-            <circle cx={d.x} cy={d.y} r="4" className={d.c === "success" ? "fill-success" : "fill-accent"} />
-            <circle cx={d.x} cy={d.y} r="10" className={d.c === "success" ? "fill-success" : "fill-accent"} opacity="0.25">
-              <animate attributeName="r" values="4;14;4" dur="2.4s" repeatCount="indefinite" />
-              <animate attributeName="opacity" values="0.35;0;0.35" dur="2.4s" repeatCount="indefinite" />
-            </circle>
-          </g>
-        ))}
       </svg>
     </div>
   );
 }
 
-function SessionRow({ icon: Icon, device, loc, ip, current }: { icon: React.ComponentType<{ className?: string }>; device: string; loc: string; ip: string; current?: boolean }) {
+function SessionRowItem({ icon: Icon, device, loc, current, onRevoke }: { icon: React.ComponentType<{ className?: string }>; device: string; loc: string; current?: boolean; onRevoke: () => void }) {
   return (
     <li className="flex items-center gap-3 py-3">
       <div className="grid h-9 w-9 place-items-center rounded-lg bg-secondary text-muted-foreground">
@@ -147,21 +211,43 @@ function SessionRow({ icon: Icon, device, loc, ip, current }: { icon: React.Comp
           <span className="text-sm font-medium text-foreground truncate">{device}</span>
           {current && <Badge tone="success">This device</Badge>}
         </div>
-        <div className="text-[11px] text-muted-foreground">{loc} · {ip}</div>
+        <div className="text-[11px] text-muted-foreground">{loc}</div>
       </div>
-      {!current && <button className="text-xs font-medium text-destructive hover:underline">Revoke</button>}
+      {!current && <button onClick={onRevoke} className="text-xs font-medium text-destructive hover:underline">Revoke</button>}
     </li>
   );
 }
 
-function LogRow({ t, e, tone }: { t: string; e: string; tone: "primary" | "accent" | "success" | "warning" | "muted" }) {
+function formatRelative(iso: string) {
+  const d = new Date(iso);
+  const diff = Date.now() - d.getTime();
+  if (diff < 60_000) return "just now";
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
+  return d.toLocaleDateString();
+}
+
+function toneForAction(action: string): "primary" | "accent" | "success" | "warning" | "muted" {
+  if (action.includes("transaction")) return "primary";
+  if (action.includes("mfa")) return "success";
+  if (action.includes("timelock") || action.includes("withdrawal")) return "warning";
+  if (action.includes("login") || action.includes("device")) return "muted";
+  return "accent";
+}
+
+function LogRowItem({ log }: { log: LogRow }) {
+  const tone = toneForAction(log.action);
   const dot = { primary: "bg-primary", accent: "bg-accent", success: "bg-success", warning: "bg-warning", muted: "bg-muted-foreground/40" }[tone];
+  const detail = log.detail as Record<string, unknown> | null;
+  const label = log.action === "security_setting_changed" && detail
+    ? `Setting changed · ${String(detail.setting)} → ${detail.value ? "on" : "off"}`
+    : log.action.replace(/_/g, " ");
   return (
     <li className="flex items-start gap-3 rounded-lg px-3 py-2 hover:bg-secondary/50">
       <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} />
       <div className="min-w-0 flex-1">
-        <div className="text-sm text-foreground">{e}</div>
-        <div className="text-[11px] text-muted-foreground">{t}</div>
+        <div className="text-sm text-foreground capitalize">{label}</div>
+        <div className="text-[11px] text-muted-foreground">{formatRelative(log.created_at)}</div>
       </div>
     </li>
   );
