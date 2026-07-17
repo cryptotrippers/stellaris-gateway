@@ -131,14 +131,17 @@ function PortfolioPage() {
           <div className="card-institutional p-5">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-foreground">Compliance Status</h3>
-              <Badge tone="success">ZK-Verified</Badge>
+              <Badge tone="accent">Not verified</Badge>
             </div>
             <ul className="mt-4 space-y-2 text-sm">
-              <ComplianceRow label="One-Click KYC (ZK-Proof)" ok />
-              <ComplianceRow label="Accredited investor attestation" ok />
-              <ComplianceRow label="Jurisdiction: EU / MiCA-compliant" ok />
-              <ComplianceRow label="Multi-Factor Authentication" ok />
+              <ComplianceRow label="ZK-KYC attestation" ok={false} />
+              <ComplianceRow label="Accredited investor attestation" ok={false} />
+              <ComplianceRow label="Jurisdictional eligibility" ok={false} />
+              <ComplianceRow label="Multi-Factor Authentication" ok={false} />
             </ul>
+            <p className="mt-3 text-[11px] text-muted-foreground">
+              KYC integration pending. No attestations issued on this account.
+            </p>
           </div>
           <div className="card-institutional p-5">
             <h3 className="text-sm font-semibold text-foreground">Quick Actions</h3>
