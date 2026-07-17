@@ -227,10 +227,10 @@ function Hero() {
 
 function SocialProof() {
   const stats = [
-    { k: "Tokenized on-chain", v: "$14.2M+" },
-    { k: "Retail investors", v: "12,400+" },
-    { k: "Blended target APY", v: "7.9%" },
-    { k: "Jurisdictions", v: "60+" },
+    { k: "Network", v: "Preprod" },
+    { k: "Vaults live", v: "0" },
+    { k: "Assets tokenised", v: "0" },
+    { k: "Audit reports", v: "0" },
   ];
   return (
     <section className="relative border-y border-border/60 bg-surface/40">
@@ -241,6 +241,9 @@ function SocialProof() {
             <div className="mt-1 text-[11px] uppercase tracking-widest text-muted-foreground">{s.k}</div>
           </div>
         ))}
+      </div>
+      <div className="mx-auto max-w-[1400px] px-4 md:px-6 pb-6 -mt-3 text-[11px] text-muted-foreground">
+        Testnet build. See <a href="/NETWORK.md" className="text-primary hover:underline">NETWORK.md</a> for the path to mainnet.
       </div>
     </section>
   );
