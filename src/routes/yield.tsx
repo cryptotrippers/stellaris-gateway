@@ -173,10 +173,10 @@ function YieldEngine() {
 
 
       <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <KpiTile icon={<TrendingUp className="h-3.5 w-3.5" />} label="Blended Net APY" value={`${totals.netApy.toFixed(2)}%`} delta="+0.14pp 24h" tone="success" />
-        <KpiTile icon={<Zap className="h-3.5 w-3.5" />} label="Yield streaming now" value={`₳ ${totals.streamed.toFixed(2)}`} delta="live" tone="primary" ticking />
-        <KpiTile icon={<Activity className="h-3.5 w-3.5" />} label="Distributed · 30d" value={formatAda(totals.distributed30d)} delta={`${payouts.length} tx${tip ? ` · block #${tip.block.toLocaleString()}` : ""}`} tone="primary" />
-        <KpiTile icon={<ShieldCheck className="h-3.5 w-3.5" />} label="ZK-verified" value={`${totals.verifiedPct}%`} delta="every payout" tone="success" />
+        <KpiTile icon={<TrendingUp className="h-3.5 w-3.5" />} label="Blended Net APY" value={live.length === 0 ? "—" : `${totals.netApy.toFixed(2)}%`} delta={live.length === 0 ? "No live vaults" : "Live"} tone="success" />
+        <KpiTile icon={<Zap className="h-3.5 w-3.5" />} label="Yield streaming now" value={live.length === 0 ? "—" : `₳ ${totals.streamed.toFixed(2)}`} delta={live.length === 0 ? "No live vaults" : "live"} tone="primary" ticking={live.length > 0} />
+        <KpiTile icon={<Activity className="h-3.5 w-3.5" />} label="Distributed · 30d" value={payouts.length === 0 ? "—" : formatAda(totals.distributed30d)} delta={payouts.length === 0 ? "No payouts yet" : `${payouts.length} tx${tip ? ` · block #${tip.block.toLocaleString()}` : ""}`} tone="primary" />
+        <KpiTile icon={<ShieldCheck className="h-3.5 w-3.5" />} label="ZK-verified" value={payouts.length === 0 ? "—" : `${totals.verifiedPct}%`} delta={payouts.length === 0 ? "Pending indexer" : "every payout"} tone="success" />
       </div>
 
       <section className="mt-6">
