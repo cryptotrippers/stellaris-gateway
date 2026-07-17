@@ -9,9 +9,10 @@ export const getProtocolStats = createServerFn({ method: "GET" }).handler(async 
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data, error } = await supabaseAdmin
     .from("vault_positions")
-    .select("amount_ada");
+    .select("amount_ada, vault_id");
   if (error) throw new Error(error.message);
-  const totalAda = (data ?? []).reduce((sum, row) => sum + Number(row.amount_ada ?? 0), 0);
-  const activeVaults = new Set((data ?? []).map((r: { vault_id?: string }) => r.vault_id)).size;
+  const rows = data ?? [];
+  const totalAda = rows.reduce((sum, row) => sum + Number(row.amount_ada ?? 0), 0);
+  const activeVaults = new Set(rows.map((r) => r.vault_id)).size;
   return { totalAda, activeVaults };
 });
