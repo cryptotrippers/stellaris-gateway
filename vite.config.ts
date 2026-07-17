@@ -59,8 +59,8 @@ export default defineConfig({
       mcpPlugin(),
       wasm(),
       nodePolyfills({
-        include: ["events", "buffer", "stream", "util", "process"],
-        globals: { Buffer: true, global: true, process: true },
+        include: ["events", "buffer", "stream", "util"],
+        globals: { Buffer: true, global: true, process: false },
       }),
     ],
   },
