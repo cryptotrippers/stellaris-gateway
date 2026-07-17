@@ -74,7 +74,7 @@ export async function initLucidWithWallet() {
   const lucidMod = await import("@lucid-evolution/lucid");
   const lucid = await lucidMod.Lucid(
     new lucidMod.Blockfrost(BLOCKFROST_URL, BLOCKFROST_PROJECT_ID!),
-    "Preprod",
+    LUCID_NETWORK,
   );
   lucid.selectWallet.fromAPI(walletApi as Parameters<typeof lucid.selectWallet.fromAPI>[0]);
   return { lucid, lucidMod };
