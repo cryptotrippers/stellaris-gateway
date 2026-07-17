@@ -144,7 +144,7 @@ function YieldEngine() {
           <div>
             <div className="font-semibold">Live Cardano indexer disabled</div>
             <div className="opacity-80">
-              Set <code className="font-mono">VITE_BLOCKFROST_PROJECT_ID</code> (mainnet) to pull real epoch, slot, block and active-stake data from Blockfrost. Optional <code className="font-mono">VITE_BLOCKFROST_NETWORK</code>: <code>mainnet</code> · <code>preprod</code> · <code>preview</code>.
+              Set the <code className="font-mono">BLOCKFROST_PREPROD_PROJECT_ID</code> server secret to pull real epoch, slot, block and active-stake data from Cardano Preprod via Blockfrost.
             </div>
           </div>
         </div>
