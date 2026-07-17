@@ -8,6 +8,7 @@ import { useWallet } from "@/lib/wallet-store";
 import { FundingBar } from "@/components/ui/funding-bar";
 import { ShareRow } from "@/components/landing/ShareRow";
 import { DepositVaultCard } from "@/components/vault/DepositVaultCard";
+import { WithdrawVaultCard } from "@/components/vault/WithdrawVaultCard";
 
 export const Route = createFileRoute("/marketplace/$id")({
   loader: ({ params }) => {
@@ -111,6 +112,7 @@ function AssetDetail() {
         <aside className="lg:sticky lg:top-24 h-fit space-y-4">
           <InvestPanel />
           {asset.id === "sfm-01" && <DepositVaultCard />}
+          {asset.id === "sfm-01" && <WithdrawVaultCard />}
         </aside>
       </div>
     </div>
