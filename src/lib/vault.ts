@@ -48,17 +48,15 @@ export interface WithdrawResult {
 /** Preconditions the browser can enforce without touching Lucid. */
 export function checkVaultPreconditions(): { ok: true } | { ok: false; reason: string } {
   if (!VAULT_SCRIPT_ADDRESS) {
-    return { ok: false, reason: "Vault not deployed yet. Compile the Aiken validator locally and set VITE_VAULT_SCRIPT_ADDRESS." };
-  }
-  if (!VAULT_SCRIPT_ADDRESS.startsWith("addr_test1")) {
-    return { ok: false, reason: "VITE_VAULT_SCRIPT_ADDRESS is not a Preprod address (must start with addr_test1)." };
+    return { ok: false, reason: `Vault validator isn't deployed on ${APP_NETWORK}. Switch the app to Preprod (VITE_BLOCKFROST_NETWORK=preprod) to use the vault.` };
   }
   if (!BLOCKFROST_PROJECT_ID) {
-    return { ok: false, reason: "VITE_BLOCKFROST_PROJECT_ID missing — needed to query wallet UTxOs on Preprod." };
+    return { ok: false, reason: `VITE_BLOCKFROST_PROJECT_ID missing — needed to query wallet UTxOs on ${APP_NETWORK}.` };
   }
   const w = getWalletState();
   if (!w.connected) return { ok: false, reason: "Connect a Cardano wallet first." };
-  if (w.networkId !== 0) return { ok: false, reason: "Switch your wallet to the Preprod testnet." };
+  const netCheck = assertWalletMatchesAppNetwork(w.networkId);
+  if (!netCheck.ok) return netCheck;
   if (!w.provider || !(w.provider in PROVIDER_KEY)) {
     return { ok: false, reason: "This wallet provider isn't supported for on-chain deposits yet." };
   }
