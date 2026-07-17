@@ -1,11 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowUpRight, TrendingUp, Leaf, Sun, Building2, Wind } from "lucide-react";
+import { ArrowUpRight, TrendingUp, Leaf, Sun, Building2, Wind, Wallet } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/layout/AppShell";
 import { Sparkline } from "@/components/charts/Sparkline";
 import { RiskBadge, Badge } from "@/components/ui/StatusBadge";
 import { FundingBar, SectionHeader } from "@/components/ui/funding-bar";
 import { ChainStatusCard } from "@/components/chain/ChainStatusCard";
-import { ASSETS, PORTFOLIO, formatAda, formatUsd, sparkline } from "@/lib/mock-data";
+import { ASSETS, formatAda, formatUsd, sparkline } from "@/lib/mock-data";
+import { useWallet } from "@/lib/wallet-store";
+import { supabase } from "@/integrations/supabase/client";
+
 
 export const Route = createFileRoute("/app")({
   head: () => ({
