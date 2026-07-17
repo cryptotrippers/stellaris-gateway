@@ -216,8 +216,9 @@ function OverviewTab() {
           <div className="grid gap-4 md:grid-cols-3">
             {treasury.map(t => (
               <div key={t.id} className="card-institutional p-5">
-                <div className="text-sm font-semibold text-foreground">{t.label ?? "Treasury"}</div>
-                <div className="mt-2 text-xs text-muted-foreground break-all">{t.address ?? "—"}</div>
+                <div className="text-sm font-semibold text-foreground capitalize">{t.network} treasury</div>
+                <div className="mt-2 text-xs text-muted-foreground break-all">{t.treasury_address ?? "Address not yet configured"}</div>
+                <div className="mt-2 text-[11px] text-muted-foreground">Buyback: {(t.buyback_pct_bps / 100).toFixed(2)}%</div>
               </div>
             ))}
           </div>
