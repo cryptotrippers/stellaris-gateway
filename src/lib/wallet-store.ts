@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { enableWallet, type CardanoWalletId } from "./cip30";
+import { enableWallet, classifyCIP30Error, hasExtension, isWalletEnabled, type CardanoWalletId, type CIP30Error } from "./cip30";
 import {
   startPairing,
   disconnectSession,
@@ -9,9 +9,20 @@ import {
 } from "./walletconnect";
 import { confirmReferral } from "./referral";
 
+export type WalletProvider =
+  | "Lace"
+  | "Eternl"
+  | "Nami"
+  | "Typhon"
+  | "Flint"
+  | "Yoroi"
+  | "GeroWallet"
+  | "Vespr"
+  | "WalletConnect";
 
-
-export type WalletProvider = "Lace" | "Eternl" | "Nami" | "Typhon" | "Flint" | "Yoroi" | "GeroWallet" | "WalletConnect";
+export type WalletConnectResult =
+  | { ok: true; mock?: false }
+  | { ok: false; error: CIP30Error };
 
 export interface WalletState {
   connected: boolean;
@@ -24,6 +35,8 @@ export interface WalletState {
   /** WalletConnect session topic (only set when provider === "WalletConnect"). */
   wcTopic?: string | null;
 }
+
+const STORAGE_KEY = "stellaris:wallet:last-provider";
 
 let state: WalletState = {
   connected: false,
@@ -39,49 +52,87 @@ const listeners = new Set<() => void>();
 function emit() { listeners.forEach(l => l()); }
 
 const ID_MAP: Record<Exclude<WalletProvider, "WalletConnect">, CardanoWalletId> = {
-  Lace: "lace", Eternl: "eternl", Nami: "nami", Typhon: "typhon",
-  Flint: "flint", Yoroi: "yoroi", GeroWallet: "gerowallet",
+  Lace: "lace",
+  Eternl: "eternl",
+  Nami: "nami",
+  Typhon: "typhon",
+  Flint: "flint",
+  Yoroi: "yoroi",
+  GeroWallet: "gerowallet",
+  Vespr: "vespr",
 };
 
+function persist(provider: WalletProvider | null) {
+  if (typeof window === "undefined") return;
+  try {
+    if (provider && provider !== "WalletConnect") window.localStorage.setItem(STORAGE_KEY, provider);
+    else window.localStorage.removeItem(STORAGE_KEY);
+  } catch { /* ignore quota / private-mode */ }
+}
 
 /**
- * Connect to a browser wallet via CIP-30. Falls back to a mock connection
- * if the wallet extension isn't installed, so the demo UI still functions.
+ * Connect to a browser wallet via CIP-30. Returns a typed error on failure —
+ * no silent mock fallback.
  */
-export async function connectWallet(provider: Exclude<WalletProvider, "WalletConnect">): Promise<{ ok: boolean; mock?: boolean; error?: string }> {
+export async function connectWallet(
+  provider: Exclude<WalletProvider, "WalletConnect">,
+): Promise<WalletConnectResult> {
   const id = ID_MAP[provider];
-  if (typeof window !== "undefined" && (window as unknown as { cardano?: Record<string, unknown> }).cardano?.[id]) {
-    try {
-      const info = await enableWallet(id);
-      state = {
-        connected: true,
-        provider,
-        address: info.changeAddressHex,
-        addressHex: info.changeAddressHex,
-        balanceAda: info.balanceAda,
-        networkId: info.networkId,
-        wcTopic: null,
-      };
-      emit();
-      confirmReferral("wallet_connect");
-      return { ok: true };
-    } catch (e) {
-      return { ok: false, error: (e as Error).message };
-    }
+  const installed = hasExtension(id);
+  if (!installed) {
+    return { ok: false, error: { kind: "no_extension", message: `${provider} extension not detected. Install it and reload the page.` } };
   }
-  // fallback mock (matches previous behaviour when extension is missing)
-  const rand = Math.random().toString(16).slice(2, 10);
-  state = {
-    connected: true,
-    provider,
-    address: `addr_test1q${rand}${"x".repeat(48)}`.slice(0, 58),
-    addressHex: null,
-    balanceAda: 24_812.44,
-    networkId: 0,
-    wcTopic: null,
-  };
-  emit();
-  return { ok: true, mock: true };
+  try {
+    const info = await enableWallet(id);
+    state = {
+      connected: true,
+      provider,
+      address: info.changeAddressHex,
+      addressHex: info.changeAddressHex,
+      balanceAda: info.balanceAda,
+      networkId: info.networkId,
+      wcTopic: null,
+    };
+    persist(provider);
+    emit();
+    confirmReferral("wallet_connect");
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: classifyCIP30Error(e, installed) };
+  }
+}
+
+/**
+ * Try to silently restore the last connected browser wallet (called on app boot).
+ * Only re-enables if the extension still reports an active session — never prompts.
+ */
+export async function restoreWallet(): Promise<void> {
+  if (typeof window === "undefined") return;
+  if (state.connected) return;
+  let stored: string | null = null;
+  try { stored = window.localStorage.getItem(STORAGE_KEY); } catch { return; }
+  if (!stored) return;
+  const provider = stored as Exclude<WalletProvider, "WalletConnect">;
+  const id = ID_MAP[provider];
+  if (!id) return;
+  if (!hasExtension(id)) return;
+  const enabled = await isWalletEnabled(id);
+  if (!enabled) return;
+  try {
+    const info = await enableWallet(id);
+    state = {
+      connected: true,
+      provider,
+      address: info.changeAddressHex,
+      addressHex: info.changeAddressHex,
+      balanceAda: info.balanceAda,
+      networkId: info.networkId,
+      wcTopic: null,
+    };
+    emit();
+  } catch {
+    persist(null);
+  }
 }
 
 /**
@@ -116,6 +167,7 @@ export { isWalletConnectConfigured };
 export async function disconnectWallet() {
   const topic = state.wcTopic;
   state = { connected: false, provider: null, address: null, addressHex: null, balanceAda: 0, networkId: null, wcTopic: null };
+  persist(null);
   emit();
   if (topic) await disconnectSession(topic);
 }
