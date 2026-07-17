@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/StatusBadge";
 import { Sparkline } from "@/components/charts/Sparkline";
 import { ASSETS, formatAda } from "@/lib/mock-data";
 import { useLiveYields, usePayoutHistory, short, timeAgo, cardanoscanTx, cardanoscanBlock, type Payout } from "@/lib/yield-engine";
-import { useCardanoTip } from "@/lib/blockfrost";
+import { useQuery } from "@tanstack/react-query";
+import { getBlockfrostHealth, getPreprodTip } from "@/lib/blockfrost.functions";
 
 export const Route = createFileRoute("/yield")({
   head: () => ({
@@ -22,7 +23,27 @@ export const Route = createFileRoute("/yield")({
 
 function YieldEngine() {
   const live = useLiveYields(2000);
-  const { tip, error: tipError, loading: tipLoading, refetch: refetchTip, configured, network } = useCardanoTip(20_000);
+  const healthQ = useQuery({
+    queryKey: ["preprod", "blockfrost-health"],
+    queryFn: () => getBlockfrostHealth(),
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+    retry: 0,
+  });
+  const configured = healthQ.data ? healthQ.data.status !== "missing" : true;
+  const network: "preprod" = "preprod";
+  const tipQ = useQuery({
+    queryKey: ["preprod", "tip"],
+    queryFn: () => getPreprodTip(),
+    refetchInterval: 20_000,
+    staleTime: 10_000,
+    retry: 0,
+    enabled: healthQ.data?.status === "ok",
+  });
+  const tip = tipQ.data ?? null;
+  const tipError = (tipQ.error as Error | null) ?? (healthQ.data && healthQ.data.status !== "ok" ? new Error(healthQ.data.detail) : null);
+  const tipLoading = tipQ.isFetching || healthQ.isFetching;
+  const refetchTip = () => { healthQ.refetch(); tipQ.refetch(); };
   const anchor = tip
     ? { epoch: tip.epoch, slot: tip.slot, block: tip.block, blockTime: tip.blockTime }
     : null;
@@ -123,7 +144,7 @@ function YieldEngine() {
           <div>
             <div className="font-semibold">Live Cardano indexer disabled</div>
             <div className="opacity-80">
-              Set <code className="font-mono">VITE_BLOCKFROST_PROJECT_ID</code> (mainnet) to pull real epoch, slot, block and active-stake data from Blockfrost. Optional <code className="font-mono">VITE_BLOCKFROST_NETWORK</code>: <code>mainnet</code> · <code>preprod</code> · <code>preview</code>.
+              Set the <code className="font-mono">BLOCKFROST_PREPROD_PROJECT_ID</code> server secret to pull real epoch, slot, block and active-stake data from Cardano Preprod via Blockfrost.
             </div>
           </div>
         </div>
