@@ -23,7 +23,27 @@ export const Route = createFileRoute("/yield")({
 
 function YieldEngine() {
   const live = useLiveYields(2000);
-  const { tip, error: tipError, loading: tipLoading, refetch: refetchTip, configured, network } = useCardanoTip(20_000);
+  const healthQ = useQuery({
+    queryKey: ["preprod", "blockfrost-health"],
+    queryFn: () => getBlockfrostHealth(),
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+    retry: 0,
+  });
+  const configured = healthQ.data ? healthQ.data.status !== "missing" : true;
+  const network: "preprod" = "preprod";
+  const tipQ = useQuery({
+    queryKey: ["preprod", "tip"],
+    queryFn: () => getPreprodTip(),
+    refetchInterval: 20_000,
+    staleTime: 10_000,
+    retry: 0,
+    enabled: healthQ.data?.status === "ok",
+  });
+  const tip = tipQ.data ?? null;
+  const tipError = (tipQ.error as Error | null) ?? (healthQ.data && healthQ.data.status !== "ok" ? new Error(healthQ.data.detail) : null);
+  const tipLoading = tipQ.isFetching || healthQ.isFetching;
+  const refetchTip = () => { healthQ.refetch(); tipQ.refetch(); };
   const anchor = tip
     ? { epoch: tip.epoch, slot: tip.slot, block: tip.block, blockTime: tip.blockTime }
     : null;
