@@ -76,7 +76,7 @@ export function DepositVaultCard() {
         <div className="mt-4 rounded-lg border border-border bg-secondary/60 p-3 text-xs text-muted-foreground">
           <Wallet className="mr-1 inline h-3.5 w-3.5 text-primary" />
           {wallet.connected
-            ? "Switch your wallet to the Preprod testnet to sign this transaction."
+            ? `Network mismatch — this app is on ${APP_NETWORK === "mainnet" ? "Mainnet" : "Preprod testnet"} but your wallet is on ${networkNameFromId(wallet.networkId)}. Switch your wallet's network and reconnect.`
             : "Connect a CIP-30 wallet (Lace, Eternl, Nami) from the top bar to continue."}
         </div>
       )}
