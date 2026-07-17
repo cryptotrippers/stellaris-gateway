@@ -7,6 +7,7 @@ import { Sparkline } from "@/components/charts/Sparkline";
 import { useWallet } from "@/lib/wallet-store";
 import { FundingBar } from "@/components/ui/funding-bar";
 import { ShareRow } from "@/components/landing/ShareRow";
+import { DepositVaultCard } from "@/components/vault/DepositVaultCard";
 
 export const Route = createFileRoute("/marketplace/$id")({
   loader: ({ params }) => {
@@ -107,8 +108,9 @@ function AssetDetail() {
         </div>
 
         {/* Invest panel */}
-        <aside className="lg:sticky lg:top-24 h-fit">
+        <aside className="lg:sticky lg:top-24 h-fit space-y-4">
           <InvestPanel />
+          {asset.id === "sfm-01" && <DepositVaultCard />}
         </aside>
       </div>
     </div>
