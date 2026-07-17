@@ -11,6 +11,7 @@ import {
 } from "@/lib/vault";
 import { VAULT_HOLDINGS_KEY } from "@/hooks/useVaultHoldings";
 import { APP_NETWORK, EXPECTED_WALLET_NETWORK_ID, networkNameFromId } from "@/lib/network";
+import { NetworkSwitchHelp } from "@/components/wallet/NetworkSwitchHelp";
 
 /**
  * On-chain deposit card for the Phase-1 Preprod vault.
