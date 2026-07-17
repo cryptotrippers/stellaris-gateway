@@ -32,7 +32,6 @@ const categoryIcon = {
   "Infrastructure": Sun,
 } as const;
 
-function PortfolioPage() {
 type Position = { vault_id: string; amount_ada: number; opened_at: string; tx_hash: string };
 type Txn = { type: "deposit" | "withdraw" | "yield"; amount_ada: number; created_at: string; vault_id: string };
 
