@@ -78,6 +78,9 @@ export function DepositVaultCard() {
           {wallet.connected
             ? `Network mismatch — this app is on ${APP_NETWORK === "mainnet" ? "Mainnet" : "Preprod testnet"} but your wallet is on ${networkNameFromId(wallet.networkId)}. Switch your wallet's network and reconnect.`
             : "Connect a CIP-30 wallet (Lace, Eternl, Nami) from the top bar to continue."}
+          {wallet.connected && (
+            <div className="mt-2"><NetworkSwitchHelp compact /></div>
+          )}
         </div>
       )}
 
