@@ -62,7 +62,7 @@ export function checkVaultPreconditions(): { ok: true } | { ok: false; reason: s
   return { ok: true };
 }
 
-async function initLucidWithWallet() {
+export async function initLucidWithWallet() {
   const wallet = getWalletState();
   const walletKey = PROVIDER_KEY[wallet.provider as keyof typeof PROVIDER_KEY];
   const cardano = (window as unknown as { cardano?: Record<string, { enable: () => Promise<unknown> } | undefined> }).cardano;

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, CheckCircle2, AlertCircle, ExternalLink, Wallet, Shield } from "lucide-react";
 import { Badge } from "@/components/ui/StatusBadge";
 import { useWallet } from "@/lib/wallet-store";
@@ -8,6 +9,7 @@ import {
   depositAdaToVault,
   type DepositResult,
 } from "@/lib/vault";
+import { VAULT_HOLDINGS_KEY } from "@/hooks/useVaultHoldings";
 
 /**
  * On-chain deposit card for the Phase-1 Preprod vault.
@@ -15,6 +17,7 @@ import {
  */
 export function DepositVaultCard() {
   const wallet = useWallet();
+  const queryClient = useQueryClient();
   const [amount, setAmount] = useState("5");
   const [status, setStatus] = useState<"idle" | "signing" | "success" | "error">("idle");
   const [result, setResult] = useState<DepositResult | null>(null);
@@ -34,6 +37,8 @@ export function DepositVaultCard() {
       const r = await depositAdaToVault(n);
       setResult(r);
       setStatus("success");
+      // Nudge the live holdings card ~25s later, once the tx should be confirmed.
+      setTimeout(() => queryClient.invalidateQueries({ queryKey: VAULT_HOLDINGS_KEY(wallet.address) }), 25_000);
     } catch (e) {
       setError((e as Error).message || "Deposit failed");
       setStatus("error");

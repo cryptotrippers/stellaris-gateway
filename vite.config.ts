@@ -7,7 +7,7 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/tanstack/vite";
 import wasm from "vite-plugin-wasm";
-import topLevelAwait from "vite-plugin-top-level-await";
+import { nodePolyfills } from "vite-plugin-node-polyfills";
 
 // High-value pages to pre-render at build time for indexing + fast TTFB.
 // Marketplace detail pages are added dynamically from mock data below.
@@ -51,6 +51,17 @@ export default defineConfig({
     })),
   },
   vite: {
-    plugins: [mcpPlugin(), wasm(), topLevelAwait()],
+    // Lucid Evolution uses top-level await, so raise the browser baseline.
+    build: { target: "es2022" },
+    esbuild: { target: "es2022" },
+    optimizeDeps: { esbuildOptions: { target: "es2022" } },
+    plugins: [
+      mcpPlugin(),
+      wasm(),
+      nodePolyfills({
+        include: ["events", "buffer", "stream", "util", "process"],
+        globals: { Buffer: true, global: true, process: true },
+      }),
+    ],
   },
 });

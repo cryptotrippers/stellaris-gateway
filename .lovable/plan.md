@@ -1,75 +1,91 @@
 
-# Goal
+## Part A — Unblock the build
 
-Turn Stellaris Finance's homepage into a shareable, retail-friendly public landing page so that links posted on TikTok/Instagram/X/Reddit convert curious visitors into wallet-connect signups. The current `/` route drops visitors straight into a portfolio dashboard with mock numbers — great for logged-in users, terrible as a share target.
+The client bundle now transitively pulls in `@walletconnect/heartbeat`, which imports Node's `events` module. Vite's default browser externals stub it out, so rollup fails at build time. Fix by adding node polyfills to the client build.
 
-## Approach
+- Install `vite-plugin-node-polyfills`.
+- In `vite.config.ts`, add it to the `vite.plugins` array alongside `wasm()` / `topLevelAwait()`, enabling the `events`, `buffer`, `stream`, `util`, and `process` polyfills (the set Lucid + WalletConnect need in the browser).
+- Verify `bun run build:dev` succeeds before touching feature code.
 
-Split the home route: keep the current dashboard behind `/app`, and build a brand-new public landing page at `/` with hooks, big numbers, social proof, and share affordances aimed at general retail users.
+## Part B — Real deposits in portfolio
 
-## Scope
+Show the connected wallet's confirmed on-chain vault holdings anywhere the app currently uses mock "invest" state.
 
-### 1. Route split
-- Move the current dashboard component from `src/routes/index.tsx` to `src/routes/app.tsx` (URL: `/app`), keeping all existing logic and mock data.
-- Update in-app links that currently point to `/` for the "portfolio" tab (BottomNavBar, TopAppBar, quick actions) to point at `/app`.
-- Rewrite `src/routes/index.tsx` as the new marketing landing page.
+### 1. New chain-read helper: `src/lib/vault-holdings.ts`
 
-### 2. Landing page (retail hook stack)
-Structure top to bottom:
-- Hero: bold headline ("Own a piece of the real world. From ₳10."), animated value counter, one primary CTA "Explore assets" → `/marketplace`, secondary CTA "See a live portfolio" → `/app`.
-- Social proof strip: "$2.4M+ tokenized", "1,200+ investors", "7.9% blended APY", "ZK-verified compliance" — pulled from mock-data aggregates.
-- "How it works" 3-step: Pick asset → Invest with wallet or card → Earn yield. Big icons, no jargon.
-- Featured assets carousel/grid — reuses existing asset cards from mock data (solar, farms, real estate). Each card links to `/marketplace/$id`.
-- Impact strip: ESG/stewardship numbers linking to `/stewardship`.
-- FAQ (accordion, ~6 Q's) covering: Is this safe? Do I need crypto? Minimum? Fees? Who can invest? What's Cardano?
-- Final CTA band with wallet-connect + "Browse marketplace" buttons.
-- Footer with links to /marketplace, /yield, /governance, /security, /developers.
+Client-side (browser) module. Exports:
 
-Tone: retail-consumer, plain English, big numbers, generous whitespace, keep the existing dark institutional palette so it doesn't clash with the rest of the app. No new fonts, no new color tokens — use existing `card-institutional`, gradients, and semantic tokens.
+```
+export type VaultHolding = {
+  txHash: string;         // origin tx (UTxO producer)
+  outputIndex: number;
+  lovelace: bigint;
+  ada: number;            // lovelace / 1_000_000
+  ownerPkh: string;
+};
 
-### 3. SEO + social share optimization
-- Per-route `head()` on the new landing: distinctive `<title>` (<60 chars), meta description (<160 chars), `og:title`, `og:description`, `og:type: "website"`, `og:url`, `twitter:card: "summary_large_image"`, canonical link on this leaf.
-- Generate a 1200×630 `og:image` (branded hero card, "Own real-world assets on Cardano") via imagegen, upload via `lovable-assets`, wire absolute URL into `og:image` and `twitter:image`.
-- Add JSON-LD: `Organization` on `__root.tsx` (name, url, logo) and `WebSite` with `SearchAction` on `/`, plus a `FAQPage` schema on `/` using the FAQ copy.
-- Update `src/routes/sitemap[.]xml.ts` to keep `/` at priority 1.0 and add `/app` at 0.7.
-- Update `head()` on `marketplace.tsx`, `yield.tsx`, `governance.tsx`, `security.tsx`, `stewardship.tsx` so each has a unique title/description/og pair (many currently share defaults). This is what makes individual page shares look good, not just the homepage.
+export type VaultHoldings = {
+  address: string;        // wallet payment address
+  ownerPkh: string;
+  holdings: VaultHolding[];
+  totalAda: number;
+};
 
-### 4. Share affordances (viral loop)
-- Add a small `<ShareRow />` component (native `navigator.share` with copy-link fallback + X/Reddit intent URLs) placed:
-  - Bottom of landing page ("Share Stellaris")
-  - On each `/marketplace/$id` asset detail page ("Share this asset")
-- Pre-composed share text per asset: "I'm eyeing {asset.name} — {apy}% APY, ESG {rating}, on Cardano. {url}"
-
-### 5. Analytics hook (lightweight)
-- Add a tiny `trackEvent(name, props)` util that no-ops when no analytics is wired, and instrument: `landing_hero_cta_click`, `landing_share_click`, `asset_share_click`, `wallet_connect_click`. This gives the user a single place to plug in Plausible/PostHog later without another refactor. No provider is added now.
-
-## Explicitly out of scope
-
-- No referral/invite system (that was the other option).
-- No backend/Lovable Cloud changes.
-- No new fonts, palette overhaul, or design-system rewrite.
-- No changes to auth, wallet, Stripe, or Blockfrost logic.
-- No A/B test harness.
-
-## Technical notes
-
-```text
-src/routes/
-  index.tsx          ← NEW public landing (marketing)
-  app.tsx            ← moved from old index.tsx (dashboard)
-  __root.tsx         ← add Organization + WebSite JSON-LD
-  sitemap[.]xml.ts   ← add /app entry
-src/components/
-  landing/Hero.tsx
-  landing/HowItWorks.tsx
-  landing/FeaturedAssets.tsx
-  landing/ImpactStrip.tsx
-  landing/FAQ.tsx
-  landing/ShareRow.tsx
-src/lib/
-  analytics.ts       ← trackEvent no-op stub
-src/assets/
-  og-landing.jpg.asset.json  ← generated 1200×630 share card
+export async function fetchMyVaultHoldings(): Promise<VaultHoldings>;
 ```
 
-Nav updates: `BottomNavBar` "Portfolio" item's `to` becomes `/app` (exact:true), and any `<Link to="/">` inside the dashboard that meant "portfolio home" retargets to `/app`. The marketing `/` is not added to the bottom nav (it's a public entry point, not an in-app tab).
+Implementation:
+- Reuses `initLucidWithWallet()` from `vault.ts` (refactor: export it, or lift into `vault-lucid.ts` shared by both files).
+- Derives owner PKH via `paymentCredentialOf(walletAddress)`.
+- `lucid.utxosAt(VAULT_SCRIPT_ADDRESS)` → filter by inline `VaultDatum.owner === ownerPkh` (same decoder as withdraw).
+- Maps each UTxO to `VaultHolding` (uses `u.txHash`, `u.outputIndex`, `u.assets.lovelace`).
+- Wraps failures in `decodeVaultError` so the caller gets a readable reason.
+
+### 2. Data hook: `src/hooks/useVaultHoldings.ts`
+
+- Uses TanStack Query (already in the app).
+- `queryKey: ['vault-holdings', walletAddress]`.
+- `enabled: wallet.connected && wallet.networkId === 0`.
+- `queryFn: fetchMyVaultHoldings`.
+- `staleTime: 20_000`, `refetchInterval: 30_000` (Preprod block time is ~20s).
+- Returns `{ holdings, totalAda, isLoading, error, refetch }`.
+
+### 3. UI: `MyVaultHoldingsCard`
+
+New component `src/components/vault/MyVaultHoldingsCard.tsx`, rendered on `/marketplace/sfm-01` in the aside stack under the deposit/withdraw cards:
+
+- Header: "Your on-chain position" + live indicator.
+- Big number: total tADA locked.
+- Per-UTxO list: `txHash` (short + Cardanoscan link), ADA amount, output index.
+- Empty state: "No confirmed deposits yet — new deposits appear ~20s after the tx confirms."
+- Error state: reuses `decodeVaultError` message.
+- Manual refresh button that calls `refetch()`.
+
+### 4. Cross-cutting integration
+
+Replace the mock "Your position" line in `InvestPanel` (inside `src/routes/marketplace.$id.tsx`) so `sfm-01` shows the real on-chain total pulled from `useVaultHoldings`. Other asset IDs keep their existing mock display (no other assets have real vaults yet — Phase 1 scope).
+
+Auto-refresh after a successful `DepositVaultCard` / `WithdrawVaultCard` submission by invalidating the `['vault-holdings', walletAddress]` query on the success path (accept a `queryClient` from context inside the cards).
+
+### 5. Out of scope
+
+- No portfolio/aggregate view across multiple assets — the vault is still per-wallet, single-script Phase 1.
+- No indexer or database — Blockfrost is queried live each time.
+- No historical activity feed (that was the other option — leave for a later step).
+
+## Files touched
+
+- `vite.config.ts` — add `nodePolyfills()`
+- `package.json` — add `vite-plugin-node-polyfills`
+- `src/lib/vault.ts` — export `initLucidWithWallet` (or extract to `vault-lucid.ts`)
+- `src/lib/vault-holdings.ts` — new
+- `src/hooks/useVaultHoldings.ts` — new
+- `src/components/vault/MyVaultHoldingsCard.tsx` — new
+- `src/components/vault/DepositVaultCard.tsx` — invalidate holdings query on success
+- `src/components/vault/WithdrawVaultCard.tsx` — invalidate holdings query on success
+- `src/routes/marketplace.$id.tsx` — mount the card, wire InvestPanel's "your position" to real data for `sfm-01`
+
+## Verification
+
+- `bun run build:dev` exits 0 (Part A fix).
+- On `/marketplace/sfm-01` with a connected Preprod wallet, `MyVaultHoldingsCard` shows the deposit made in the previous step and disappears after a successful withdraw.
