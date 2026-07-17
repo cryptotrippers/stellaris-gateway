@@ -59,9 +59,10 @@ function SecurityPage() {
   const updateSetting = useCallback(async (key: SettingKey, value: boolean) => {
     if (!userId) return;
     setSettings(s => ({ ...s, [key]: value }));
+    const patch: Partial<Settings> = { [key]: value };
     const { error } = await supabase
       .from("user_security_settings")
-      .update({ [key]: value })
+      .update(patch)
       .eq("user_id", userId);
     if (error) {
       // Revert on failure
