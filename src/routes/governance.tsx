@@ -105,13 +105,39 @@ function GovSidebar({ active }: { active: GovTab }) {
 /* ---------------- Overview ---------------- */
 
 function OverviewTab() {
+  const fetchStats = useServerFn(getProtocolStats);
+  const [tvl, setTvl] = useState<number | null>(null);
+  const [proposals, setProposals] = useState<ProposalRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [statsRes, propRes] = await Promise.all([
+        fetchStats().catch(() => ({ totalAda: 0, activeVaults: 0 })),
+        supabase
+          .from("governance_proposals")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(5),
+      ]);
+      if (cancelled) return;
+      setTvl(statsRes.totalAda);
+      setProposals((propRes.data as ProposalRow[]) ?? []);
+      setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [fetchStats]);
+
+  const activeCount = proposals.filter(p => p.status === "active").length;
+
   return (
     <>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <KPI label="Total Value Locked" value="₳ 128.4M" delta="+4.2%" spark={sparkline(1, 24)} />
-        <KPI label="Active Proposals" value="7" delta="+2" spark={sparkline(7, 24)} />
-        <KPI label="Vault Health" value="98.6%" delta="Nominal" spark={sparkline(4, 24)} tone="success" />
-        <KPI label="Treasury Runway" value="42 mo" delta="Stable" spark={sparkline(11, 24)} />
+        <KPI label="Total Value Locked" value={tvl === null ? "—" : formatAda(tvl)} delta={loading ? "Loading…" : "Live"} spark={sparkline(1, 24)} />
+        <KPI label="Active Proposals" value={loading ? "—" : String(activeCount)} delta={loading ? "Loading…" : "Live"} spark={sparkline(7, 24)} />
+        <KPI label="Vault Health" value="—" delta="No data" spark={sparkline(4, 24)} tone="success" />
+        <KPI label="Treasury Runway" value="—" delta="No data" spark={sparkline(11, 24)} />
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-[1.4fr_1fr]">
@@ -120,37 +146,45 @@ function OverviewTab() {
             <h2 className="text-sm font-semibold text-foreground">Recent Proposals</h2>
             <Link to="/governance" search={{ tab: "proposals" }} className="text-xs text-primary">View all</Link>
           </div>
-          <div className="mt-3 overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-[10px] uppercase tracking-widest text-muted-foreground">
-                  <th className="pb-2 font-medium">SIP</th>
-                  <th className="pb-2 font-medium">Title</th>
-                  <th className="pb-2 font-medium">Status</th>
-                  <th className="pb-2 font-medium text-right">For</th>
-                  <th className="pb-2 font-medium">Ends</th>
-                </tr>
-              </thead>
-              <tbody>
-                {PROPOSALS.map(p => (
-                  <tr key={p.id} className="border-t border-border/70 hover:bg-secondary/40 cursor-pointer">
-                    <td className="py-3 pr-2 font-mono text-xs text-muted-foreground">{p.id}</td>
-                    <td className="py-3 pr-2 font-medium text-foreground">{p.title}</td>
-                    <td className="py-3 pr-2"><ProposalStatus status={p.status} /></td>
-                    <td className="py-3 pr-2 text-right">
-                      <div className="inline-flex items-center gap-1">
-                        <div className="h-1.5 w-16 rounded-full bg-secondary">
-                          <div className="h-full rounded-full bg-success" style={{ width: `${p.forPct}%` }} />
-                        </div>
-                        <span className="number-display text-xs text-foreground">{p.forPct}%</span>
-                      </div>
-                    </td>
-                    <td className="py-3 text-xs text-muted-foreground">{p.endsIn}</td>
+          {loading ? (
+            <div className="mt-6 text-center text-sm text-muted-foreground">Loading proposals…</div>
+          ) : proposals.length === 0 ? (
+            <div className="mt-6 rounded-lg border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+              No active proposals.
+            </div>
+          ) : (
+            <div className="mt-3 overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[10px] uppercase tracking-widest text-muted-foreground">
+                    <th className="pb-2 font-medium">SIP</th>
+                    <th className="pb-2 font-medium">Title</th>
+                    <th className="pb-2 font-medium">Status</th>
+                    <th className="pb-2 font-medium text-right">For</th>
+                    <th className="pb-2 font-medium">Ends</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {proposals.map(p => (
+                    <tr key={p.id} className="border-t border-border/70 hover:bg-secondary/40 cursor-pointer">
+                      <td className="py-3 pr-2 font-mono text-xs text-muted-foreground">{p.sip_number}</td>
+                      <td className="py-3 pr-2 font-medium text-foreground">{p.title}</td>
+                      <td className="py-3 pr-2"><ProposalStatus status={p.status} /></td>
+                      <td className="py-3 pr-2 text-right">
+                        <div className="inline-flex items-center gap-1">
+                          <div className="h-1.5 w-16 rounded-full bg-secondary">
+                            <div className="h-full rounded-full bg-success" style={{ width: `${p.votes_for_pct}%` }} />
+                          </div>
+                          <span className="number-display text-xs text-foreground">{Number(p.votes_for_pct).toFixed(0)}%</span>
+                        </div>
+                      </td>
+                      <td className="py-3 text-xs text-muted-foreground">{p.ends_at ? new Date(p.ends_at).toLocaleDateString() : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         <div className="card-institutional p-5">
