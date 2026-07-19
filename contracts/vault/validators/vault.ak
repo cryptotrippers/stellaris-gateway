@@ -78,8 +78,8 @@ fn output_to(pkh: ByteArray) -> Output {
     value: assets.zero,
     datum: NoDatum,
     reference_script: None,
-  }
 }
+
 
 fn tx_with(signers: List<ByteArray>, outs: List<Output>) -> Transaction {
   Transaction { ..placeholder, extra_signatories: signers, outputs: outs }
