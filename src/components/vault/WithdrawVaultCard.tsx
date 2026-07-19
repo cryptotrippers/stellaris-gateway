@@ -4,7 +4,7 @@ import { Loader2, CheckCircle2, AlertCircle, ExternalLink, Unlock } from "lucide
 import { Badge } from "@/components/ui/StatusBadge";
 import { useWallet } from "@/lib/wallet-store";
 import {
-  VAULT_SCRIPT_ADDRESS,
+  isVaultDeployedOnNetwork,
   checkVaultPreconditions,
   withdrawAdaFromVault,
   type WithdrawResult,
@@ -26,7 +26,7 @@ export function WithdrawVaultCard() {
   const [error, setError] = useState<string | null>(null);
 
   const pre = checkVaultPreconditions();
-  const deployed = Boolean(VAULT_SCRIPT_ADDRESS);
+  const deployed = isVaultDeployedOnNetwork();
   const walletReady = wallet.connected && wallet.networkId === EXPECTED_WALLET_NETWORK_ID;
   const canSubmit = pre.ok && status !== "signing";
 

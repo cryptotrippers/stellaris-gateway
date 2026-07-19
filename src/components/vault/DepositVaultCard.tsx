@@ -26,7 +26,7 @@ export function DepositVaultCard() {
   const [error, setError] = useState<string | null>(null);
 
   const pre = checkVaultPreconditions();
-  const deployed = Boolean(VAULT_SCRIPT_ADDRESS);
+  const deployed = isVaultDeployedOnNetwork();
   const walletReady = wallet.connected && wallet.networkId === EXPECTED_WALLET_NETWORK_ID;
   const n = Number(amount) || 0;
   const canSubmit = pre.ok && n >= 2 && status !== "signing";
