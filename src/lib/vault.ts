@@ -16,11 +16,22 @@
 import { getWalletState } from "./wallet-store";
 import {
   APP_NETWORK,
-  BLOCKFROST_PROJECT_ID,
-  BLOCKFROST_URL,
   LUCID_NETWORK,
   assertWalletMatchesAppNetwork,
 } from "./network";
+import { getBlockfrostClientConfig } from "./blockfrost.functions";
+
+/** Cached Blockfrost client config fetched from the server function. */
+let blockfrostConfigPromise: Promise<{ projectId: string; url: string }> | null = null;
+async function getBlockfrostConfig() {
+  if (!blockfrostConfigPromise) {
+    blockfrostConfigPromise = getBlockfrostClientConfig().catch(e => {
+      blockfrostConfigPromise = null;
+      throw e;
+    });
+  }
+  return blockfrostConfigPromise;
+}
 
 // ---------------------------------------------------------------------------
 // Blueprint (unapplied) — pinned from contracts/vault/plutus.json.
@@ -70,9 +81,6 @@ export function checkVaultPreconditions(): { ok: true } | { ok: false; reason: s
   if (!isVaultDeployedOnNetwork()) {
     return { ok: false, reason: `Vault validator isn't deployed on ${APP_NETWORK}. Switch the app to Preprod (VITE_BLOCKFROST_NETWORK=preprod) to use the vault.` };
   }
-  if (!BLOCKFROST_PROJECT_ID) {
-    return { ok: false, reason: `VITE_BLOCKFROST_PROJECT_ID missing — needed to query wallet UTxOs on ${APP_NETWORK}.` };
-  }
   const w = getWalletState();
   if (!w.connected) return { ok: false, reason: "Connect a Cardano wallet first." };
   const netCheck = assertWalletMatchesAppNetwork(w.networkId);
@@ -91,9 +99,10 @@ export async function initLucidWithWallet() {
   if (!walletEntry) throw new Error(`${wallet.provider} is no longer available in the browser.`);
   const walletApi = await walletEntry.enable();
 
+  const bf = await getBlockfrostConfig();
   const lucidMod = await import("@lucid-evolution/lucid");
   const lucid = await lucidMod.Lucid(
-    new lucidMod.Blockfrost(BLOCKFROST_URL, BLOCKFROST_PROJECT_ID!),
+    new lucidMod.Blockfrost(bf.url, bf.projectId),
     LUCID_NETWORK,
   );
   lucid.selectWallet.fromAPI(walletApi as Parameters<typeof lucid.selectWallet.fromAPI>[0]);
