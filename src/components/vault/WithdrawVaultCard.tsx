@@ -12,6 +12,8 @@ import {
 import { APP_NETWORK, EXPECTED_WALLET_NETWORK_ID, networkNameFromId } from "@/lib/network";
 import { VAULT_HOLDINGS_KEY } from "@/hooks/useVaultHoldings";
 import { NetworkSwitchHelp } from "@/components/wallet/NetworkSwitchHelp";
+import { recordVaultTx } from "@/lib/vault-tx-history";
+import { TxConfirmationBadge } from "@/components/vault/TxConfirmationBadge";
 
 /**
  * Spend the caller's vault UTxOs back to their wallet. The validator only
@@ -41,6 +43,14 @@ export function WithdrawVaultCard() {
       const r = await withdrawAdaFromVault();
       setResult(r);
       setStatus("success");
+      recordVaultTx({
+        txHash: r.txHash,
+        kind: "withdraw",
+        amountAda: r.amountAda,
+        utxoCount: r.utxoCount,
+        address: wallet.address ?? "",
+        network: APP_NETWORK === "mainnet" ? "mainnet" : "preprod",
+      });
       setTimeout(() => queryClient.invalidateQueries({ queryKey: VAULT_HOLDINGS_KEY(wallet.address) }), 25_000);
     } catch (e) {
       const message = (e as Error).message || "Withdraw failed";
@@ -119,6 +129,7 @@ export function WithdrawVaultCard() {
           >
             View on Cardanoscan <ExternalLink className="h-3 w-3" />
           </a>
+          <div><TxConfirmationBadge txHash={result.txHash} /></div>
         </div>
       )}
 
