@@ -4,9 +4,9 @@
  */
 
 import {
-  VAULT_SCRIPT_ADDRESS,
   checkVaultPreconditions,
   decodeVaultError,
+  getVaultScript,
   initLucidWithWallet,
 } from "./vault";
 
@@ -38,7 +38,8 @@ export async function fetchMyVaultHoldings(): Promise<VaultHoldings> {
     if (cred.type !== "Key") throw new Error("Wallet isn't a key-hash address.");
     const ownerPkh = cred.hash;
 
-    const utxos = await lucid.utxosAt(VAULT_SCRIPT_ADDRESS!);
+    const script = await getVaultScript(lucid, lucidMod);
+    const utxos = await lucid.utxosAt(script.address);
     const VaultDatumSchema = Data.Object({ owner: Data.Bytes() });
     type VaultDatum = { owner: string };
 
