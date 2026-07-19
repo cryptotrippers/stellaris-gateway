@@ -99,9 +99,10 @@ export async function initLucidWithWallet() {
   if (!walletEntry) throw new Error(`${wallet.provider} is no longer available in the browser.`);
   const walletApi = await walletEntry.enable();
 
+  const bf = await getBlockfrostConfig();
   const lucidMod = await import("@lucid-evolution/lucid");
   const lucid = await lucidMod.Lucid(
-    new lucidMod.Blockfrost(BLOCKFROST_URL, BLOCKFROST_PROJECT_ID!),
+    new lucidMod.Blockfrost(bf.url, bf.projectId),
     LUCID_NETWORK,
   );
   lucid.selectWallet.fromAPI(walletApi as Parameters<typeof lucid.selectWallet.fromAPI>[0]);
