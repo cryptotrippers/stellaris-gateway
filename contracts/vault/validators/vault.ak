@@ -8,8 +8,9 @@
 ////   3. The redeemer is a well-typed `VaultRedeemer`.
 
 use aiken/collection/list
-use cardano/address.{VerificationKey}
-use cardano/transaction.{Output, OutputReference, Transaction}
+use cardano/address.{Address, VerificationKey}
+use cardano/assets
+use cardano/transaction.{NoDatum, Output, OutputReference, Transaction, placeholder}
 
 pub type VaultDatum {
   owner: ByteArray,
