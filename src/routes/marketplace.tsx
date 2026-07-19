@@ -41,7 +41,13 @@ const categoryIcon = {
   "Infrastructure": Sun,
 } as const;
 
-const RISKS: (RiskProfile | "All")[] = ["All", "Conservative", "Moderate", "Aggressive"];
+const STATUS_TONE: Record<string, "primary" | "accent" | "warning" | "success"> = {
+  pilot: "warning",
+  draft: "warning",
+  open: "accent",
+  funded: "success",
+  closed: "primary",
+};
 
 function MarketplaceLayout() {
   const matchRoute = useMatchRoute();
@@ -54,11 +60,28 @@ function MarketplaceLayout() {
 
 function MarketplaceIndex() {
   const [query, setQuery] = useState("");
-  const [risk, setRisk] = useState<RiskProfile | "All">("All");
+  const [assets, setAssets] = useState<AssetRow[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const filtered = ASSETS.filter(a =>
-    (risk === "All" || a.risk === risk) &&
-    (query === "" || a.name.toLowerCase().includes(query.toLowerCase()) || a.category.toLowerCase().includes(query.toLowerCase()))
+  useEffect(() => {
+    let alive = true;
+    supabase
+      .from("assets")
+      .select("id,name,category,issuer,location,description,target_lovelace,raised_lovelace,maturity_months,funding_status")
+      .order("created_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (!alive) return;
+        if (error) { setError(error.message); setAssets([]); return; }
+        setAssets((data ?? []) as AssetRow[]);
+      });
+    return () => { alive = false; };
+  }, []);
+
+  const filtered = (assets ?? []).filter(a =>
+    query === "" ||
+    a.name.toLowerCase().includes(query.toLowerCase()) ||
+    a.category.toLowerCase().includes(query.toLowerCase()) ||
+    a.issuer.toLowerCase().includes(query.toLowerCase())
   );
 
   return (
@@ -70,7 +93,7 @@ function MarketplaceIndex() {
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Fractionalised, transparent, on-chain settlement in ADA. Assets appear here once issuers register and pass verification.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge tone="accent">{ASSETS.length} live vault{ASSETS.length === 1 ? "" : "s"}</Badge>
+          <Badge tone="accent">{(assets ?? []).length} live vault{(assets ?? []).length === 1 ? "" : "s"}</Badge>
         </div>
       </div>
 
@@ -85,25 +108,30 @@ function MarketplaceIndex() {
             className="w-full rounded-lg border border-border bg-surface pl-9 pr-3 py-2 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
-        <div className="flex items-center gap-1.5 overflow-x-auto">
-          <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
-          {RISKS.map(r => (
-            <button
-              key={r}
-              onClick={() => setRisk(r)}
-              className={`rounded-full border px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors ${
-                risk === r ? "border-primary bg-primary text-primary-foreground" : "border-border bg-surface text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {r}
-            </button>
-          ))}
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Filter className="h-4 w-4" />
+          Live from on-chain registry
         </div>
       </div>
 
+      {assets === null && (
+        <div className="mt-6 card-institutional p-6 text-sm text-muted-foreground">Loading assets…</div>
+      )}
+      {error && (
+        <div className="mt-6 card-institutional p-6 text-sm text-destructive">Failed to load assets: {error}</div>
+      )}
+      {assets && filtered.length === 0 && !error && (
+        <div className="mt-6 card-institutional p-6 text-sm text-muted-foreground">
+          No assets are registered yet. Issuers must complete on-chain verification before their vaults appear here.
+        </div>
+      )}
+
       <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {filtered.map(asset => {
-          const Icon = categoryIcon[asset.category];
+          const Icon = (categoryIcon as Record<string, typeof Leaf>)[asset.category] ?? Landmark;
+          const target = Number(asset.target_lovelace);
+          const raised = Number(asset.raised_lovelace);
+          const fundedPct = target > 0 ? Math.min(100, (raised / target) * 100) : 0;
           return (
             <Link
               key={asset.id}
@@ -113,7 +141,7 @@ function MarketplaceIndex() {
             >
               <div className="flex items-center justify-between">
                 <Badge tone="primary">{asset.category}</Badge>
-                <RiskBadge risk={asset.risk} />
+                <Badge tone={STATUS_TONE[asset.funding_status] ?? "primary"}>{asset.funding_status}</Badge>
               </div>
               <div className="mt-4 flex items-center gap-3">
                 <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-primary text-primary-foreground">
@@ -121,21 +149,23 @@ function MarketplaceIndex() {
                 </div>
                 <div className="min-w-0">
                   <div className="text-sm font-semibold text-foreground truncate">{asset.name}</div>
-                  <div className="text-xs text-muted-foreground">{asset.location} · {asset.issuer}</div>
+                  <div className="text-xs text-muted-foreground">{asset.location ?? "—"} · {asset.issuer}</div>
                 </div>
               </div>
-              <p className="mt-3 text-xs text-muted-foreground line-clamp-2">{asset.description}</p>
+              {asset.description && (
+                <p className="mt-3 text-xs text-muted-foreground line-clamp-2">{asset.description}</p>
+              )}
 
               <div className="mt-5 grid grid-cols-3 gap-3 text-center">
-                <Metric label="APY" value={`${asset.apy}%`} accent />
-                <Metric label="ESG" value={asset.esgRating} />
-                <Metric label="Term" value={`${asset.maturityMonths}mo`} />
+                <Metric label="Raised" value={`${lovelaceToAda(raised).toLocaleString()} ₳`} accent />
+                <Metric label="Target" value={target > 0 ? formatAda(lovelaceToAda(target)) : "—"} />
+                <Metric label="Term" value={asset.maturity_months ? `${asset.maturity_months}mo` : "—"} />
               </div>
 
-              <FundingBar pct={asset.fundedPct} />
+              <FundingBar pct={fundedPct} />
               <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
-                <span>Target</span>
-                <span className="number-display text-foreground">{formatAda(asset.targetAda)}</span>
+                <span>Funded</span>
+                <span className="number-display text-foreground">{fundedPct.toFixed(1)}%</span>
               </div>
             </Link>
           );
@@ -143,6 +173,7 @@ function MarketplaceIndex() {
       </div>
     </>
   );
+
 }
 
 function Metric({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
