@@ -30,7 +30,15 @@ fn output_pays_to(output: Output, pkh: ByteArray) -> Bool {
   }
 }
 
-validator vault {
+/// Parameterized validator.
+///
+/// `version` is a compile-time parameter that is NOT read by the logic. Its
+/// only purpose is to change the applied UPLC — and therefore the on-chain
+/// script hash and address — whenever we mint a new deployment. This gives
+/// us a clean, source-diff-free upgrade path: bump the version constant on
+/// the app side, get a brand new script address, migrate liquidity, retire
+/// the old address. No validator rule ever changes silently.
+validator vault(_version: Int) {
   spend(
     datum: Option<VaultDatum>,
     redeemer: VaultRedeemer,
@@ -38,14 +46,11 @@ validator vault {
     tx: Transaction,
   ) {
     expect Some(d) = datum
-    when redeemer is {
-      Withdraw -> {
-        let owner_signed = list.has(tx.extra_signatories, d.owner)
-        let owner_gets_output =
-          list.any(tx.outputs, fn(o) { output_pays_to(o, d.owner) })
-        owner_signed && owner_gets_output
-      }
-    }
+    let Withdraw = redeemer
+    let owner_signed = list.has(tx.extra_signatories, d.owner)
+    let owner_gets_output =
+      list.any(tx.outputs, fn(o) { output_pays_to(o, d.owner) })
+    owner_signed && owner_gets_output
   }
 
   else(_) {
