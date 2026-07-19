@@ -81,9 +81,6 @@ export function checkVaultPreconditions(): { ok: true } | { ok: false; reason: s
   if (!isVaultDeployedOnNetwork()) {
     return { ok: false, reason: `Vault validator isn't deployed on ${APP_NETWORK}. Switch the app to Preprod (VITE_BLOCKFROST_NETWORK=preprod) to use the vault.` };
   }
-  if (!BLOCKFROST_PROJECT_ID) {
-    return { ok: false, reason: `VITE_BLOCKFROST_PROJECT_ID missing — needed to query wallet UTxOs on ${APP_NETWORK}.` };
-  }
   const w = getWalletState();
   if (!w.connected) return { ok: false, reason: "Connect a Cardano wallet first." };
   const netCheck = assertWalletMatchesAppNetwork(w.networkId);
