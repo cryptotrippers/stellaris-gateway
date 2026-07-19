@@ -20,11 +20,11 @@ import {
 // (scripts/verify-vault-hash.mjs) fails the build if contracts/vault/plutus.json
 // drifts from this hash, preventing accidental deploys against a stale address.
 export const VAULT_SCRIPT_HASH =
-  "7ee33b926834bd7d983ca9d433cee0cc1918ed5bcb5f78ab795d7057";
+  "209ef4d27b1c3988583140d565363502b64689f145aaa31634b5da6f";
 
 export const VAULT_SCRIPT_ADDRESS: string | undefined =
   APP_NETWORK === "preprod"
-    ? "addr_test1wplwxwujdq6t6lvc8j5agv7wurxpjx8dt094779t09whq4chqhwe6"
+    ? "addr_test1wqsfaaxj0vwrnzzcx9qd2efkx5ptv35f79z64gckxj6a5mcryvk5r"
     : undefined;
 
 const PROVIDER_KEY: Record<string, string> = {

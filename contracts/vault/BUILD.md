@@ -12,20 +12,20 @@ Phase 1 script pinned in `src/lib/vault.ts`.
 After `aiken build`, `contracts/vault/plutus.json` MUST contain:
 
 ```
-validators[0].hash    = 7ee33b926834bd7d983ca9d433cee0cc1918ed5bcb5f78ab795d7057
+validators[0].hash    = 209ef4d27b1c3988583140d565363502b64689f145aaa31634b5da6f
 ```
 
 And `aiken address` MUST print:
 
 ```
-addr_test1wplwxwujdq6t6lvc8j5agv7wurxpjx8dt094779t09whq4chqhwe6
+addr_test1wqsfaaxj0vwrnzzcx9qd2efkx5ptv35f79z64gckxj6a5mcryvk5r
 ```
 
 ## Build steps
 
 ```bash
 cd contracts/vault
-aiken check      # 4 unit tests should pass
+aiken check      # 5 unit tests should pass
 aiken build      # regenerates plutus.json
 aiken address    # prints the bech32 script address
 node ../../scripts/verify-vault-hash.mjs
