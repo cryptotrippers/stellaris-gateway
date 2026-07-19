@@ -26,6 +26,21 @@ export interface BlockfrostHealth {
   checkedAt: number;
 }
 
+/**
+ * Return the Blockfrost project ID + base URL to the browser so Lucid can
+ * talk to Blockfrost directly for wallet UTxO queries and tx submission.
+ * The project ID is not a signing key — it identifies a Blockfrost account
+ * for rate-limiting. It's exposed to the browser deliberately here; rotate
+ * via the `BLOCKFROST_PREPROD_PROJECT_ID` secret if it leaks or is abused.
+ */
+export const getBlockfrostClientConfig = createServerFn({ method: "GET" }).handler(
+  async (): Promise<{ projectId: string; url: string; network: "preprod" }> => {
+    const key = process.env.BLOCKFROST_PREPROD_PROJECT_ID;
+    if (!key) throw new Error("BLOCKFROST_PREPROD_PROJECT_ID not configured on the server.");
+    return { projectId: key, url: BASE, network: "preprod" };
+  },
+);
+
 /** Startup / on-demand validation of the BLOCKFROST_PREPROD_PROJECT_ID secret. */
 export const getBlockfrostHealth = createServerFn({ method: "GET" }).handler(async (): Promise<BlockfrostHealth> => {
   const now = Date.now();
