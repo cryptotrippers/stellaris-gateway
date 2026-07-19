@@ -1,9 +1,16 @@
 /**
- * Phase-1 on-chain vault helpers.
+ * Phase-1 on-chain vault helpers (Step 4 — parameterized + versioned).
+ *
+ * The Aiken validator now takes a single Int parameter (`_version`). The
+ * blueprint in `contracts/vault/plutus.json` stores the *unapplied* script
+ * — a pure hash of the logic. We derive the *applied* script hash and
+ * bech32 address in the browser by calling Lucid's `applyParamsToScript`
+ * with `VAULT_VERSION`. Bumping `VAULT_VERSION` mints a fresh vault
+ * instance without editing Aiken source.
  *
  * Lucid Evolution is dynamically imported inside each function so it never
- * ships into an SSR bundle. All calls must run in the browser after the user
- * has connected a CIP-30 wallet on Preprod.
+ * ships into an SSR bundle. All calls must run in the browser after the
+ * user has connected a CIP-30 wallet on Preprod.
  */
 
 import { getWalletState } from "./wallet-store";
@@ -15,17 +22,26 @@ import {
   assertWalletMatchesAppNetwork,
 } from "./network";
 
-// Preprod vault validator — Phase 1.
-// Pin BOTH the on-chain script hash and its bech32 address. The verify script
-// (scripts/verify-vault-hash.mjs) fails the build if contracts/vault/plutus.json
-// drifts from this hash, preventing accidental deploys against a stale address.
-export const VAULT_SCRIPT_HASH =
-  "209ef4d27b1c3988583140d565363502b64689f145aaa31634b5da6f";
+// ---------------------------------------------------------------------------
+// Blueprint (unapplied) — pinned from contracts/vault/plutus.json.
+// scripts/verify-vault-hash.mjs fails the build if these drift.
+// ---------------------------------------------------------------------------
 
-export const VAULT_SCRIPT_ADDRESS: string | undefined =
-  APP_NETWORK === "preprod"
-    ? "addr_test1wqsfaaxj0vwrnzzcx9qd2efkx5ptv35f79z64gckxj6a5mcryvk5r"
-    : undefined;
+/** Bumping this value produces a fresh vault instance on-chain. */
+export const VAULT_VERSION = 1n;
+
+/** Hash of the *unapplied* parameterized validator from plutus.json. */
+export const VAULT_BLUEPRINT_HASH =
+  "ae8cfbb91361a3c5a544ad3fd3212da939b043efae1969ea6606745f";
+
+/** Compiled CBOR of the *unapplied* parameterized validator (PlutusV3). */
+export const VAULT_BLUEPRINT_CBOR =
+  "590149010100229800aba2aba1aab9faab9eaab9dab9a9bad002488888896600264653001300800198041804800cc0200092225980099b8748008c020dd500144ca60026018003300c300d0019b874800122259800980098061baa0078acc004c034dd5003c566002600260186ea800a264b3001323322330020020012259800800c528456600266e3cdd71809800801c528c4cc008008c05000500f20243758602260246024602460246024602460246024601e6ea801cdd7180818071baa001899198008009bac301130123012300f375400e44b30010018a508acc004c966002600a60206ea8006266e3cdd7180998089baa001375c602660226ea8012294100f180918081baa301230103754602400314a313300200230130014038808a294100c180798069baa0028b20168b201c8b201618049baa0028b200e180400098021baa0088a4d1365640081";
+
+/** Whether the vault is available on the network the app is pointed at. */
+export function isVaultDeployedOnNetwork(): boolean {
+  return APP_NETWORK === "preprod";
+}
 
 const PROVIDER_KEY: Record<string, string> = {
   Lace: "lace",
@@ -51,7 +67,7 @@ export interface WithdrawResult {
 
 /** Preconditions the browser can enforce without touching Lucid. */
 export function checkVaultPreconditions(): { ok: true } | { ok: false; reason: string } {
-  if (!VAULT_SCRIPT_ADDRESS) {
+  if (!isVaultDeployedOnNetwork()) {
     return { ok: false, reason: `Vault validator isn't deployed on ${APP_NETWORK}. Switch the app to Preprod (VITE_BLOCKFROST_NETWORK=preprod) to use the vault.` };
   }
   if (!BLOCKFROST_PROJECT_ID) {
@@ -84,6 +100,64 @@ export async function initLucidWithWallet() {
   return { lucid, lucidMod };
 }
 
+// ---------------------------------------------------------------------------
+// Applied script — derived at runtime by applying VAULT_VERSION.
+// ---------------------------------------------------------------------------
+
+type LucidMod = Awaited<ReturnType<typeof initLucidWithWallet>>["lucidMod"];
+type LucidInstance = Awaited<ReturnType<typeof initLucidWithWallet>>["lucid"];
+
+export interface AppliedVault {
+  /** CBOR of the fully-applied validator (ready to attach to a tx). */
+  cbor: string;
+  /** Applied script hash (bech32 payment credential of the vault address). */
+  scriptHash: string;
+  /** Bech32 vault address for the active network. */
+  address: string;
+  /** Plutus language version — always V3 for this blueprint. */
+  type: "PlutusV3";
+}
+
+let appliedCache: AppliedVault | null = null;
+let loggedOnce = false;
+
+/**
+ * Apply `VAULT_VERSION` to the blueprint CBOR and return the applied script
+ * + its address on the active network. Cached for the session.
+ */
+export async function getVaultScript(
+  lucid: LucidInstance,
+  lucidMod: LucidMod,
+): Promise<AppliedVault> {
+  if (appliedCache) return appliedCache;
+
+  const { applyParamsToScript, validatorToAddress, validatorToScriptHash, Data } = lucidMod as unknown as {
+    applyParamsToScript: (cbor: string, params: unknown[]) => string;
+    validatorToAddress: (network: typeof LUCID_NETWORK, validator: { type: "PlutusV3"; script: string }) => string;
+    validatorToScriptHash: (validator: { type: "PlutusV3"; script: string }) => string;
+    Data: LucidMod["Data"];
+  };
+
+  // Encode Int parameter as a plain bigint — Lucid serialises to Plutus Data.
+  const appliedCbor = applyParamsToScript(VAULT_BLUEPRINT_CBOR, [VAULT_VERSION]);
+  const validator = { type: "PlutusV3" as const, script: appliedCbor };
+  const scriptHash = validatorToScriptHash(validator);
+  const address = validatorToAddress(LUCID_NETWORK, validator);
+
+  appliedCache = { cbor: appliedCbor, scriptHash, address, type: "PlutusV3" };
+
+  if (!loggedOnce) {
+    loggedOnce = true;
+    // eslint-disable-next-line no-console
+    console.info(
+      `[vault] applied version=${VAULT_VERSION} → hash=${scriptHash} address=${address}`,
+    );
+  }
+  // Silence unused-var lints in strict builds.
+  void Data;
+  return appliedCache;
+}
+
 /**
  * Lock `amountAda` in the vault script UTxO with an inline datum that pins
  * the current wallet's payment key hash as the owner.
@@ -96,6 +170,7 @@ export async function depositAdaToVault(amountAda: number): Promise<DepositResul
 
   const { lucid, lucidMod } = await initLucidWithWallet();
   const { Data, paymentCredentialOf } = lucidMod;
+  const script = await getVaultScript(lucid, lucidMod);
 
   const ownerAddress = await lucid.wallet().address();
   const paymentCred = paymentCredentialOf(ownerAddress);
@@ -112,7 +187,7 @@ export async function depositAdaToVault(amountAda: number): Promise<DepositResul
   const tx = await lucid
     .newTx()
     .pay.ToContract(
-      VAULT_SCRIPT_ADDRESS!,
+      script.address,
       { kind: "inline", value: datumCbor },
       { lovelace },
     )
@@ -120,31 +195,10 @@ export async function depositAdaToVault(amountAda: number): Promise<DepositResul
   const signed = await tx.sign.withWallet().complete();
   const txHash = await signed.submit();
 
-  return { txHash, amountAda, scriptAddress: VAULT_SCRIPT_ADDRESS! };
+  return { txHash, amountAda, scriptAddress: script.address };
 }
 
 // ---- Withdraw --------------------------------------------------------
-
-async function bfGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${BLOCKFROST_URL}${path}`, {
-    headers: { project_id: BLOCKFROST_PROJECT_ID! },
-  });
-  if (!res.ok) throw new Error(`Blockfrost ${res.status}: ${await res.text().catch(() => res.statusText)}`);
-  return res.json() as Promise<T>;
-}
-
-/** Compiled validator CBOR from Blockfrost, cached per session. */
-let scriptCache: { hash: string; type: "PlutusV1" | "PlutusV2" | "PlutusV3"; cbor: string } | null = null;
-
-async function fetchVaultScript(scriptHash: string) {
-  if (scriptCache?.hash === scriptHash) return scriptCache;
-  const meta = await bfGet<{ type: string }>(`/scripts/${scriptHash}`);
-  const { cbor } = await bfGet<{ cbor: string }>(`/scripts/${scriptHash}/cbor`);
-  const t = meta.type.toLowerCase();
-  const type = t === "plutusv3" ? "PlutusV3" : t === "plutusv2" ? "PlutusV2" : "PlutusV1";
-  scriptCache = { hash: scriptHash, type, cbor };
-  return scriptCache;
-}
 
 /**
  * Turn a raw CIP-30 / Lucid / Blockfrost error into something a human can act on.
@@ -160,14 +214,10 @@ export function decodeVaultError(err: unknown, ctx: { ownerHash?: string } = {})
   if (!raw) return "Unknown error.";
   const s = raw.toLowerCase();
 
-  // Wallet user actions
   if (s.includes("user declined") || s.includes("user rejected") || /\bcode":?\s*-?2\b/.test(s)) {
     return "You declined the signature in your wallet.";
   }
 
-  // Validator-level failures — the vault script failed on-chain.
-  //   The Aiken source runs one check: `list.has(tx.extra_signatories, d.owner)`.
-  //   If that returns False, ledger emits ScriptFailure / ValidationTagMismatch.
   const scriptFailed =
     s.includes("scriptexecutionfailure") ||
     s.includes("validationtagmismatch") ||
@@ -175,19 +225,16 @@ export function decodeVaultError(err: unknown, ctx: { ownerHash?: string } = {})
     s.includes("scriptserror") ||
     s.includes("plutusfailure");
   if (scriptFailed) {
-    // Missing owner signature is the only way this specific validator returns False.
     return (
-      "Vault validator rejected the tx. The Aiken script requires the datum's owner PKH to appear in tx.extra_signatories — most likely you're trying to withdraw a UTxO that was deposited by a different wallet, or the wallet didn't attach the required signer." +
+      "Vault validator rejected the tx. The Aiken script requires the datum's owner PKH to appear in tx.extra_signatories AND at least one output paying that same PKH — most likely you're trying to withdraw a UTxO deposited by a different wallet, or the wallet didn't attach the required signer." +
       (ctx.ownerHash ? ` (this wallet's PKH: ${ctx.ownerHash.slice(0, 12)}…)` : "")
     );
   }
 
-  // Ledger-level missing signer — script accepted, but no signature was attached.
   if (s.includes("missingrequiredsigners") || s.includes("missingvkeywitnessesutxow") || s.includes("missing required signers")) {
     return "Transaction was built but your wallet didn't include the required signature. Try again — some wallets need to re-open the sign popup after switching networks.";
   }
 
-  // Fee / collateral / UTxO problems.
   if (s.includes("insufficientcollateral") || s.includes("nocollateralinputs") || s.includes("collateralcontainsnonada")) {
     return "Your wallet has no eligible collateral UTxO. Plutus spends need a pure-ADA UTxO of ~5 tADA set aside as collateral — top up from the faucet.";
   }
@@ -204,19 +251,19 @@ export function decodeVaultError(err: unknown, ctx: { ownerHash?: string } = {})
     return "Wallet used stale Plutus protocol params (usually a stuck Nami/Eternl cache). Reload the wallet extension and retry.";
   }
 
-  // Blockfrost transport
   if (s.includes("blockfrost") && s.includes("403")) return "Blockfrost rejected the request (bad project ID or wrong network).";
   if (s.includes("blockfrost") && s.includes("429")) return "Blockfrost rate limit hit. Wait a few seconds and retry.";
 
-  // Fall back to the raw message, trimmed.
   const trimmed = raw.length > 400 ? raw.slice(0, 400) + "…" : raw;
   return `On-chain submission failed: ${trimmed}`;
 }
 
 /**
  * Spend every vault UTxO owned by the connected wallet back to the wallet.
- * The Aiken validator only checks `tx.extra_signatories.contains(owner)`,
- * so the redeemer is a placeholder (`Data.void()`).
+ * The Aiken validator enforces:
+ *   1. `tx.extra_signatories` contains the datum owner PKH.
+ *   2. At least one output pays that same PKH.
+ * The redeemer is the typed constructor `VaultRedeemer::Withdraw` (index 0).
  */
 export async function withdrawAdaFromVault(): Promise<WithdrawResult> {
   const pre = checkVaultPreconditions();
@@ -224,6 +271,7 @@ export async function withdrawAdaFromVault(): Promise<WithdrawResult> {
 
   const { lucid, lucidMod } = await initLucidWithWallet();
   const { Data, paymentCredentialOf } = lucidMod;
+  const script = await getVaultScript(lucid, lucidMod);
 
   const ownerAddress = await lucid.wallet().address();
   const paymentCred = paymentCredentialOf(ownerAddress);
@@ -232,11 +280,7 @@ export async function withdrawAdaFromVault(): Promise<WithdrawResult> {
   }
   const ownerHash = paymentCred.hash;
 
-  const scriptCred = paymentCredentialOf(VAULT_SCRIPT_ADDRESS!);
-  if (scriptCred.type !== "Script") throw new Error("Vault address isn't a script address.");
-
-  // Discover UTxOs at the script and filter by inline datum owner == this wallet.
-  const allUtxos = await lucid.utxosAt(VAULT_SCRIPT_ADDRESS!);
+  const allUtxos = await lucid.utxosAt(script.address);
   const VaultDatumSchema = Data.Object({ owner: Data.Bytes() });
   type VaultDatum = { owner: string };
 
@@ -262,17 +306,16 @@ export async function withdrawAdaFromVault(): Promise<WithdrawResult> {
     throw new Error("No vault UTxOs found for this wallet. Make a deposit first, or wait for the previous tx to confirm (~20s on Preprod).");
   }
 
-  const script = await fetchVaultScript(scriptCred.hash);
   const totalLovelace = mine.reduce((n, u) => n + (u.assets.lovelace ?? 0n), 0n);
 
-  // Redeemer = VaultRedeemer::Withdraw (zero-arity constructor, index 0).
+  // Typed redeemer: VaultRedeemer::Withdraw (zero-arity constructor, index 0).
   const withdrawRedeemer = Data.to(new lucidMod.Constr(0, []));
 
   try {
     const tx = await lucid
       .newTx()
       .collectFrom(mine, withdrawRedeemer)
-      .attach.SpendingValidator({ type: script.type, script: script.cbor })
+      .attach.SpendingValidator({ type: "PlutusV3", script: script.cbor })
       .addSignerKey(ownerHash)
       .complete();
     const signed = await tx.sign.withWallet().complete();
