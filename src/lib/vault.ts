@@ -253,6 +253,9 @@ export function decodeVaultError(err: unknown, ctx: { ownerHash?: string } = {})
   if (s.includes("outsidevalidityintervalutxo") || s.includes("outsideforecast")) {
     return "Transaction validity window drifted. Refresh the page and rebuild — the wallet cached stale slot info.";
   }
+  if (s.includes("all inputs are spent") || s.includes("transaction has probably already been included")) {
+    return "These vault UTxOs have already been spent. The withdrawal was probably accepted on the first submission; refresh your holdings and check your wallet transaction history. Do not sign it again.";
+  }
   if (s.includes("badinputsutxo") || s.includes("input not found") || s.includes("utxo not found")) {
     return "One of the vault UTxOs was already spent or hasn't confirmed yet. Wait ~20s for the previous tx and retry.";
   }
