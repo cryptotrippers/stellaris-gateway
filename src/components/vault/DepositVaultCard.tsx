@@ -12,12 +12,14 @@ import {
 import { VAULT_HOLDINGS_KEY } from "@/hooks/useVaultHoldings";
 import { APP_NETWORK, EXPECTED_WALLET_NETWORK_ID, networkNameFromId } from "@/lib/network";
 import { NetworkSwitchHelp } from "@/components/wallet/NetworkSwitchHelp";
+import { recordVaultTx } from "@/lib/vault-tx-history";
+import { TxConfirmationBadge } from "@/components/vault/TxConfirmationBadge";
 
 /**
  * On-chain deposit card for the Phase-1 Preprod vault.
  * Rendered next to the mock invest widget on `/marketplace/sfm-01`.
  */
-export function DepositVaultCard() {
+export function DepositVaultCard({ assetId }: { assetId?: string } = {}) {
   const wallet = useWallet();
   const queryClient = useQueryClient();
   const [amount, setAmount] = useState("5");
@@ -39,6 +41,14 @@ export function DepositVaultCard() {
       const r = await depositAdaToVault(n);
       setResult(r);
       setStatus("success");
+      recordVaultTx({
+        txHash: r.txHash,
+        kind: "deposit",
+        amountAda: r.amountAda,
+        address: wallet.address ?? "",
+        assetId,
+        network: APP_NETWORK === "mainnet" ? "mainnet" : "preprod",
+      });
       // Nudge the live holdings card ~25s later, once the tx should be confirmed.
       setTimeout(() => queryClient.invalidateQueries({ queryKey: VAULT_HOLDINGS_KEY(wallet.address) }), 25_000);
     } catch (e) {
@@ -139,6 +149,7 @@ export function DepositVaultCard() {
           >
             View on Cardanoscan <ExternalLink className="h-3 w-3" />
           </a>
+          <div><TxConfirmationBadge txHash={result.txHash} /></div>
         </div>
       )}
 

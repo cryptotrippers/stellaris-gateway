@@ -170,3 +170,48 @@ export const getPreprodAddress = createServerFn({ method: "GET" })
       stakeAddress: info.stake_address,
     };
   });
+
+export interface TxConfirmationResult {
+  state: "pending" | "confirmed" | "not_found" | "error";
+  confirmations: number;
+  block: number | null;
+  blockTime: number | null;
+  detail?: string;
+}
+
+/**
+ * Check whether a tx hash has landed in a block on Preprod. Returns
+ * `pending` while the mempool still holds it (Blockfrost 404s until
+ * inclusion), `confirmed` once the tx has any depth, and includes the
+ * current tip-based confirmation count so the UI can show "N confirmations".
+ */
+export const getTxConfirmation = createServerFn({ method: "GET" })
+  .inputValidator((data: { txHash: string }) => {
+    const txHash = String(data?.txHash ?? "").trim().toLowerCase();
+    if (!/^[0-9a-f]{64}$/.test(txHash)) throw new Error("Invalid tx hash");
+    return { txHash };
+  })
+  .handler(async ({ data }): Promise<TxConfirmationResult> => {
+    const key = process.env.BLOCKFROST_PREPROD_PROJECT_ID;
+    if (!key) return { state: "error", confirmations: 0, block: null, blockTime: null, detail: "Blockfrost not configured" };
+    try {
+      const res = await fetch(`${BASE}/txs/${data.txHash}`, { headers: { project_id: key } });
+      if (res.status === 404) {
+        return { state: "pending", confirmations: 0, block: null, blockTime: null };
+      }
+      if (!res.ok) {
+        return { state: "error", confirmations: 0, block: null, blockTime: null, detail: `Blockfrost ${res.status}` };
+      }
+      const tx = (await res.json()) as { block_height: number; block_time: number };
+      const tip = await bf<{ height: number }>("/blocks/latest").catch(() => null);
+      const confirmations = tip ? Math.max(0, tip.height - tx.block_height + 1) : 1;
+      return {
+        state: "confirmed",
+        confirmations,
+        block: tx.block_height,
+        blockTime: tx.block_time * 1000,
+      };
+    } catch (e) {
+      return { state: "error", confirmations: 0, block: null, blockTime: null, detail: (e as Error).message };
+    }
+  });
