@@ -57,10 +57,6 @@ validator vault {
 // Unit tests — run with `aiken check`.
 // ------------------------------------------------------------------
 
-use cardano/address.{Address}
-use cardano/assets
-use cardano/transaction.{NoDatum, placeholder}
-
 const owner_pkh: ByteArray = #"11111111111111111111111111111111111111111111111111111111"
 const other_pkh: ByteArray = #"22222222222222222222222222222222222222222222222222222222"
 
