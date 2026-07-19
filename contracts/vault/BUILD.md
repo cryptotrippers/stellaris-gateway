@@ -1,4 +1,4 @@
-# Vault validator — deterministic build
+# Vault validator — deterministic, parameterized build
 
 Phase 1 script pinned in `src/lib/vault.ts`.
 
@@ -7,30 +7,36 @@ Phase 1 script pinned in `src/lib/vault.ts`.
 - Aiken **v1.1.23** (matches `aiken.toml`)
 - stdlib **v2.2.0** (see `aiken.toml`)
 
+## Parameterization
+
+`validator vault(_version: Int)` takes one compile-time parameter. `aiken build`
+emits the **unapplied** blueprint — the CBOR still has the free `version` slot.
+
+The applied script (with `version = 1`) is derived on the JS side at module
+init using Lucid's `applyParamsToScript`. Bumping `VAULT_VERSION` in
+`src/lib/vault.ts` mints a fresh script hash / address without editing this
+file. The validator's spending rules never change silently.
+
 ## Expected artifacts
 
-After `aiken build`, `contracts/vault/plutus.json` MUST contain:
+After `aiken build`, `contracts/vault/plutus.json` MUST contain the
+**unapplied blueprint hash** pinned in `VAULT_BLUEPRINT_HASH` in
+`src/lib/vault.ts`. `scripts/verify-vault-hash.mjs` fails the build if it
+drifts.
 
-```
-validators[0].hash    = 209ef4d27b1c3988583140d565363502b64689f145aaa31634b5da6f
-```
-
-And `aiken address` MUST print:
-
-```
-addr_test1wqsfaaxj0vwrnzzcx9qd2efkx5ptv35f79z64gckxj6a5mcryvk5r
-```
+`aiken address` is **not** meaningful for a parameterized validator — it
+would produce an address for the unapplied script, which is never deployed.
+Use the JS-derived `VAULT_SCRIPT_ADDRESS` (logged at app boot) instead.
 
 ## Build steps
 
 ```bash
 cd contracts/vault
 aiken check      # 5 unit tests should pass
-aiken build      # regenerates plutus.json
-aiken address    # prints the bech32 script address
+aiken build      # regenerates plutus.json (unapplied blueprint)
 node ../../scripts/verify-vault-hash.mjs
 ```
 
-The last command fails if the compiled hash drifts from the value pinned in
-`src/lib/vault.ts` (`VAULT_SCRIPT_HASH`). Never change that constant without
-also withdrawing every live UTxO at the old address first.
+The verify script fails if the unapplied blueprint hash drifts from
+`VAULT_BLUEPRINT_HASH` in `src/lib/vault.ts`. Never bump `VAULT_VERSION`
+without first withdrawing every live UTxO at the old applied address.
