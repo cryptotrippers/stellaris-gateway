@@ -15,9 +15,13 @@ import {
   assertWalletMatchesAppNetwork,
 } from "./network";
 
-// Preprod script address for the per-user vault validator.
-// Derived from contracts/vault/plutus.json via `aiken address` — safe to commit
-// (script addresses are public on-chain identifiers, not secrets).
+// Preprod vault validator — Phase 1.
+// Pin BOTH the on-chain script hash and its bech32 address. The verify script
+// (scripts/verify-vault-hash.mjs) fails the build if contracts/vault/plutus.json
+// drifts from this hash, preventing accidental deploys against a stale address.
+export const VAULT_SCRIPT_HASH =
+  "7ee33b926834bd7d983ca9d433cee0cc1918ed5bcb5f78ab795d7057";
+
 export const VAULT_SCRIPT_ADDRESS: string | undefined =
   APP_NETWORK === "preprod"
     ? "addr_test1wplwxwujdq6t6lvc8j5agv7wurxpjx8dt094779t09whq4chqhwe6"
