@@ -8,8 +8,9 @@
 ////   3. The redeemer is a well-typed `VaultRedeemer`.
 
 use aiken/collection/list
-use cardano/address.{VerificationKey}
-use cardano/transaction.{Output, OutputReference, Transaction}
+use cardano/address.{Address, VerificationKey}
+use cardano/assets
+use cardano/transaction.{NoDatum, Output, OutputReference, Transaction, placeholder}
 
 pub type VaultDatum {
   owner: ByteArray,
@@ -55,10 +56,6 @@ validator vault {
 // ------------------------------------------------------------------
 // Unit tests — run with `aiken check`.
 // ------------------------------------------------------------------
-
-use cardano/address.{Address}
-use cardano/assets
-use cardano/transaction.{NoDatum, placeholder}
 
 const owner_pkh: ByteArray = #"11111111111111111111111111111111111111111111111111111111"
 const other_pkh: ByteArray = #"22222222222222222222222222222222222222222222222222222222"
@@ -121,4 +118,3 @@ test withdraw_ok_when_owner_output_is_one_of_many() {
   vault.spend(Some(d), Withdraw, dummy_ref(), tx)
 }
 
-}
