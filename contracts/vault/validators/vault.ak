@@ -1,17 +1,15 @@
-//// Stellaris per-user vault — Phase 1.1 (hardened).
+//// Stellaris per-user vault — Phase 1.2 (owner-output enforcement).
 ////
 //// Datum pins the owner's payment key hash. Spending is authorized when:
 ////   1. The owner (datum.owner) signed the transaction (`extra_signatories`), AND
-////   2. The redeemer is a well-typed `VaultRedeemer` — future variants
-////      (e.g. `Upgrade`) can gate different logic without breaking old UTxOs.
-////
-//// Defense-in-depth: this validator only guards spend authorization. It does
-//// NOT enforce that value returns to the owner — a signed owner is trusted to
-//// direct their own funds. The value-preservation invariant lives in the
-//// Phase-2 shared asset vault, where the signer is not the value owner.
+////   2. At least one transaction output pays to an address whose payment
+////      credential IS the owner's PKH (defense-in-depth: a compromised or
+////      tricked signer cannot sweep the vault to a stranger's address), AND
+////   3. The redeemer is a well-typed `VaultRedeemer`.
 
 use aiken/collection/list
-use cardano/transaction.{OutputReference, Transaction}
+use cardano/address.{VerificationKey}
+use cardano/transaction.{Output, OutputReference, Transaction}
 
 pub type VaultDatum {
   owner: ByteArray,
@@ -23,6 +21,14 @@ pub type VaultRedeemer {
   Withdraw
 }
 
+/// True iff `output` pays to an address whose payment credential is `pkh`.
+fn output_pays_to(output: Output, pkh: ByteArray) -> Bool {
+  when output.address.payment_credential is {
+    VerificationKey(k) -> k == pkh
+    _ -> False
+  }
+}
+
 validator vault {
   spend(
     datum: Option<VaultDatum>,
@@ -32,7 +38,12 @@ validator vault {
   ) {
     expect Some(d) = datum
     when redeemer is {
-      Withdraw -> list.has(tx.extra_signatories, d.owner)
+      Withdraw -> {
+        let owner_signed = list.has(tx.extra_signatories, d.owner)
+        let owner_gets_output =
+          list.any(tx.outputs, fn(o) { output_pays_to(o, d.owner) })
+        owner_signed && owner_gets_output
+      }
     }
   }
 
