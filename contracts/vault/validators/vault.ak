@@ -118,4 +118,3 @@ test withdraw_ok_when_owner_output_is_one_of_many() {
   vault.spend(Some(d), Withdraw, dummy_ref(), tx)
 }
 
-}
