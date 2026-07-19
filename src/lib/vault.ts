@@ -16,11 +16,22 @@
 import { getWalletState } from "./wallet-store";
 import {
   APP_NETWORK,
-  BLOCKFROST_PROJECT_ID,
-  BLOCKFROST_URL,
   LUCID_NETWORK,
   assertWalletMatchesAppNetwork,
 } from "./network";
+import { getBlockfrostClientConfig } from "./blockfrost.functions";
+
+/** Cached Blockfrost client config fetched from the server function. */
+let blockfrostConfigPromise: Promise<{ projectId: string; url: string }> | null = null;
+async function getBlockfrostConfig() {
+  if (!blockfrostConfigPromise) {
+    blockfrostConfigPromise = getBlockfrostClientConfig().catch(e => {
+      blockfrostConfigPromise = null;
+      throw e;
+    });
+  }
+  return blockfrostConfigPromise;
+}
 
 // ---------------------------------------------------------------------------
 // Blueprint (unapplied) — pinned from contracts/vault/plutus.json.
