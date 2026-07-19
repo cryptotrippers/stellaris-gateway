@@ -261,10 +261,13 @@ export async function withdrawAdaFromVault(): Promise<WithdrawResult> {
   const script = await fetchVaultScript(scriptCred.hash);
   const totalLovelace = mine.reduce((n, u) => n + (u.assets.lovelace ?? 0n), 0n);
 
+  // Redeemer = VaultRedeemer::Withdraw (zero-arity constructor, index 0).
+  const withdrawRedeemer = Data.to(new lucidMod.Constr(0, []));
+
   try {
     const tx = await lucid
       .newTx()
-      .collectFrom(mine, Data.void())
+      .collectFrom(mine, withdrawRedeemer)
       .attach.SpendingValidator({ type: script.type, script: script.cbor })
       .addSignerKey(ownerHash)
       .complete();
