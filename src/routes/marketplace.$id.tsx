@@ -108,7 +108,7 @@ function AssetDetail() {
           <div className="flex flex-wrap items-center gap-2">
             <Badge tone="primary">{asset.category}</Badge>
             <Badge tone="accent">{asset.funding_status}</Badge>
-            <Badge tone="default">Source: {asset.data_source}</Badge>
+            <Badge>Source: {asset.data_source}</Badge>
           </div>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-foreground">
             {asset.name}
