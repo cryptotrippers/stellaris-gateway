@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, CheckCircle2, AlertCircle, ExternalLink, Unlock } from "lucide-react";
 import { Badge } from "@/components/ui/StatusBadge";
@@ -24,6 +24,7 @@ export function WithdrawVaultCard() {
   const [status, setStatus] = useState<"idle" | "signing" | "success" | "error">("idle");
   const [result, setResult] = useState<WithdrawResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const submissionInFlight = useRef(false);
 
   const pre = checkVaultPreconditions();
   const deployed = isVaultDeployedOnNetwork();
@@ -31,6 +32,8 @@ export function WithdrawVaultCard() {
   const canSubmit = pre.ok && status !== "signing";
 
   async function submit() {
+    if (submissionInFlight.current) return;
+    submissionInFlight.current = true;
     setStatus("signing");
     setError(null);
     setResult(null);
@@ -40,8 +43,14 @@ export function WithdrawVaultCard() {
       setStatus("success");
       setTimeout(() => queryClient.invalidateQueries({ queryKey: VAULT_HOLDINGS_KEY(wallet.address) }), 25_000);
     } catch (e) {
-      setError((e as Error).message || "Withdraw failed");
+      const message = (e as Error).message || "Withdraw failed";
+      setError(message);
       setStatus("error");
+      if (message.includes("already been spent")) {
+        void queryClient.invalidateQueries({ queryKey: VAULT_HOLDINGS_KEY(wallet.address) });
+      }
+    } finally {
+      submissionInFlight.current = false;
     }
   }
 
