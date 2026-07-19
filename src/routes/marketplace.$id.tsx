@@ -7,6 +7,7 @@ import { ShareRow } from "@/components/landing/ShareRow";
 import { DepositVaultCard } from "@/components/vault/DepositVaultCard";
 import { WithdrawVaultCard } from "@/components/vault/WithdrawVaultCard";
 import { MyVaultHoldingsCard } from "@/components/vault/MyVaultHoldingsCard";
+import { VaultTxHistoryCard } from "@/components/vault/VaultTxHistoryCard";
 import { supabase } from "@/integrations/supabase/client";
 import { formatAda, lovelaceToAda } from "@/lib/format";
 
@@ -199,8 +200,10 @@ function AssetDetail() {
           {asset.id === "sfm-01" ? (
             <>
               <MyVaultHoldingsCard />
-              <DepositVaultCard />
+              <DepositVaultCard assetId={asset.id} />
               <WithdrawVaultCard />
+              <VaultTxHistoryCard assetId={asset.id} />
+
             </>
           ) : (
             <div className="card-institutional p-6">
