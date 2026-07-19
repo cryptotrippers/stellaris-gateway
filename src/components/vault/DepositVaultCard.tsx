@@ -4,7 +4,7 @@ import { Loader2, CheckCircle2, AlertCircle, ExternalLink, Wallet, Shield } from
 import { Badge } from "@/components/ui/StatusBadge";
 import { useWallet } from "@/lib/wallet-store";
 import {
-  VAULT_SCRIPT_ADDRESS,
+  isVaultDeployedOnNetwork,
   checkVaultPreconditions,
   depositAdaToVault,
   type DepositResult,
