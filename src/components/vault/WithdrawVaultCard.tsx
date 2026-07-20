@@ -28,6 +28,7 @@ export function WithdrawVaultCard() {
   const [result, setResult] = useState<WithdrawResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const submissionInFlight = useRef(false);
+  const [confirmAllOpen, setConfirmAllOpen] = useState(false);
 
   const pre = checkVaultPreconditions();
   const deployed = isVaultDeployedOnNetwork();
