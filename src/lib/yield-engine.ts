@@ -53,6 +53,8 @@ export interface ChainAnchor {
  * so every row references a real point in the Cardano ledger.
  */
 export function generatePayoutHistory(count = 42, anchor?: ChainAnchor | null): Payout[] {
+export function generatePayoutHistory(count = 42, anchor?: ChainAnchor | null): Payout[] {
+  if (ASSETS.length === 0) return [];
   const tipEpoch = anchor?.epoch ?? FALLBACK_EPOCH;
   const tipBlock = anchor?.block ?? 10_842_113;
   const tipTime = anchor?.blockTime ?? NOW;
