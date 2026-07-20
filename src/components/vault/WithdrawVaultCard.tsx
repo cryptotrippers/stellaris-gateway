@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Loader2, CheckCircle2, AlertCircle, ExternalLink, Unlock } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, ExternalLink, Unlock, ListChecks } from "lucide-react";
 import { Badge } from "@/components/ui/StatusBadge";
 import { useWallet } from "@/lib/wallet-store";
 import {
@@ -14,6 +14,7 @@ import { VAULT_HOLDINGS_KEY } from "@/hooks/useVaultHoldings";
 import { NetworkSwitchHelp } from "@/components/wallet/NetworkSwitchHelp";
 import { recordVaultTx } from "@/lib/vault-tx-history";
 import { TxConfirmationBadge } from "@/components/vault/TxConfirmationBadge";
+import { ConfirmAllWithdrawDialog } from "@/components/vault/ConfirmAllWithdrawDialog";
 
 /**
  * Spend the caller's vault UTxOs back to their wallet. The validator only
