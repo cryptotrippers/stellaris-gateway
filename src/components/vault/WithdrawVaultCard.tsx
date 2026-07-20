@@ -93,19 +93,35 @@ export function WithdrawVaultCard() {
         </div>
       )}
 
-      <button
-        disabled={!canSubmit}
-        onClick={submit}
-        className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-primary/40 bg-surface py-3 text-sm font-semibold text-primary hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-      >
-        {status === "signing" ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin" /> Building spend tx…
-          </>
-        ) : (
-          <>Unlock my vault UTxOs</>
-        )}
-      </button>
+      <div className="mt-5 grid gap-2 sm:grid-cols-[1fr_auto]">
+        <button
+          disabled={!canSubmit}
+          onClick={submit}
+          aria-busy={status === "signing"}
+          aria-disabled={!canSubmit}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-primary/40 bg-surface py-3 text-sm font-semibold text-primary hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {status === "signing" ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Building spend tx…
+            </>
+          ) : (
+            <>Unlock my vault UTxOs</>
+          )}
+        </button>
+        <button
+          type="button"
+          onClick={() => setConfirmAllOpen(true)}
+          aria-haspopup="dialog"
+          aria-expanded={confirmAllOpen}
+          aria-controls="confirm-all-title"
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-border bg-surface px-4 py-3 text-sm font-semibold text-foreground hover:border-primary/40 hover:text-primary transition-colors"
+        >
+          <ListChecks className="h-4 w-4" aria-hidden="true" /> Confirm all
+        </button>
+      </div>
+
+      <ConfirmAllWithdrawDialog open={confirmAllOpen} onOpenChange={setConfirmAllOpen} />
 
       {status === "error" && error && (
         <div className="mt-4 flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
