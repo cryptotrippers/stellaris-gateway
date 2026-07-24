@@ -34,9 +34,14 @@ export interface WalletState {
   networkId: 0 | 1 | null; // 0 = testnet
   /** WalletConnect session topic (only set when provider === "WalletConnect"). */
   wcTopic?: string | null;
+  /** Read-only "view by address" mode — independent of `connected`. */
+  viewerAddress: string | null;
+  viewerKind: "payment" | "stake" | null;
+  viewerNetworkId: 0 | 1 | null;
 }
 
 const STORAGE_KEY = "stellaris:wallet:last-provider";
+const VIEWER_STORAGE_KEY = "stellaris:wallet:viewer-address";
 
 let state: WalletState = {
   connected: false,
@@ -46,6 +51,9 @@ let state: WalletState = {
   balanceAda: 0,
   networkId: null,
   wcTopic: null,
+  viewerAddress: null,
+  viewerKind: null,
+  viewerNetworkId: null,
 };
 
 const listeners = new Set<() => void>();
