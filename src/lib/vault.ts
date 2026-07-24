@@ -99,13 +99,23 @@ export async function initLucidWithWallet() {
   if (!walletEntry) throw new Error(`${wallet.provider} is no longer available in the browser.`);
   const walletApi = await walletEntry.enable();
 
+  const { lucid, lucidMod } = await initLucidReadOnly();
+  lucid.selectWallet.fromAPI(walletApi as Parameters<typeof lucid.selectWallet.fromAPI>[0]);
+  return { lucid, lucidMod };
+}
+
+/**
+ * Init a Lucid instance backed by Blockfrost only (no wallet). Used by the
+ * read-only "view by address" flow to query script UTxOs and derive PKHs
+ * without prompting the user to sign anything.
+ */
+export async function initLucidReadOnly() {
   const bf = await getBlockfrostConfig();
   const lucidMod = await import("@lucid-evolution/lucid");
   const lucid = await lucidMod.Lucid(
     new lucidMod.Blockfrost(bf.url, bf.projectId),
     LUCID_NETWORK,
   );
-  lucid.selectWallet.fromAPI(walletApi as Parameters<typeof lucid.selectWallet.fromAPI>[0]);
   return { lucid, lucidMod };
 }
 
