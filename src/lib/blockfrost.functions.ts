@@ -171,6 +171,28 @@ export const getPreprodAddress = createServerFn({ method: "GET" })
     };
   });
 
+/**
+ * Resolve the list of payment addresses associated with a bech32 stake
+ * address. Used by the "view by address" read-only mode so viewers can paste
+ * a `stake1…` / `stake_test1…` address and still see their vault UTxOs.
+ */
+export const getAddressesForStakeAddress = createServerFn({ method: "GET" })
+  .inputValidator((data: { stakeAddress: string }) => {
+    const stakeAddress = String(data?.stakeAddress ?? "").trim();
+    if (!/^stake(_test)?1[0-9a-z]{20,}$/i.test(stakeAddress)) {
+      throw new Error("Invalid stake address (must start with stake1 / stake_test1)");
+    }
+    return { stakeAddress };
+  })
+  .handler(async ({ data }): Promise<{ addresses: string[] }> => {
+    // Blockfrost paginates 100 at a time; a single page is more than enough for
+    // consumer-scale accounts, and the UI has an "add more" path if needed later.
+    const rows = await bf<Array<{ address: string }>>(
+      `/accounts/${data.stakeAddress}/addresses?count=100`,
+    );
+    return { addresses: rows.map(r => r.address) };
+  });
+
 export interface TxConfirmationResult {
   state: "pending" | "confirmed" | "not_found" | "error";
   confirmations: number;
