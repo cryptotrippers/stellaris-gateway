@@ -34,9 +34,14 @@ export interface WalletState {
   networkId: 0 | 1 | null; // 0 = testnet
   /** WalletConnect session topic (only set when provider === "WalletConnect"). */
   wcTopic?: string | null;
+  /** Read-only "view by address" mode — independent of `connected`. */
+  viewerAddress: string | null;
+  viewerKind: "payment" | "stake" | null;
+  viewerNetworkId: 0 | 1 | null;
 }
 
 const STORAGE_KEY = "stellaris:wallet:last-provider";
+const VIEWER_STORAGE_KEY = "stellaris:wallet:viewer-address";
 
 let state: WalletState = {
   connected: false,
@@ -46,6 +51,9 @@ let state: WalletState = {
   balanceAda: 0,
   networkId: null,
   wcTopic: null,
+  viewerAddress: null,
+  viewerKind: null,
+  viewerNetworkId: null,
 };
 
 const listeners = new Set<() => void>();
@@ -85,6 +93,7 @@ export async function connectWallet(
   try {
     const info = await enableWallet(id);
     state = {
+      ...state,
       connected: true,
       provider,
       address: info.changeAddressHex,
@@ -108,6 +117,7 @@ export async function connectWallet(
  */
 export async function restoreWallet(): Promise<void> {
   if (typeof window === "undefined") return;
+  restoreViewer();
   if (state.connected) return;
   let stored: string | null = null;
   try { stored = window.localStorage.getItem(STORAGE_KEY); } catch { return; }
@@ -121,6 +131,7 @@ export async function restoreWallet(): Promise<void> {
   try {
     const info = await enableWallet(id);
     state = {
+      ...state,
       connected: true,
       provider,
       address: info.changeAddressHex,
@@ -145,6 +156,7 @@ export async function connectWithWalletConnect(chain: Cip34Chain = "preprod"): P
   handle.approval
     .then((acct) => {
       state = {
+        ...state,
         connected: true,
         provider: "WalletConnect",
         address: acct.stakeAddress,
@@ -166,10 +178,88 @@ export { isWalletConnectConfigured };
 
 export async function disconnectWallet() {
   const topic = state.wcTopic;
-  state = { connected: false, provider: null, address: null, addressHex: null, balanceAda: 0, networkId: null, wcTopic: null };
+  state = {
+    ...state,
+    connected: false,
+    provider: null,
+    address: null,
+    addressHex: null,
+    balanceAda: 0,
+    networkId: null,
+    wcTopic: null,
+  };
   persist(null);
   emit();
   if (topic) await disconnectSession(topic);
+}
+
+// ---------------------------------------------------------------------------
+// Read-only "view by address" mode.
+// ---------------------------------------------------------------------------
+
+import type { ParsedCardanoAddress } from "./address";
+import { parseCardanoAddress } from "./address";
+
+export type SetViewerResult = { ok: true; parsed: ParsedCardanoAddress } | { ok: false; error: string };
+
+export function setViewerAddress(input: string): SetViewerResult {
+  const res = parseCardanoAddress(input);
+  if (!res.ok) return res;
+  state = {
+    ...state,
+    viewerAddress: res.value.bech32,
+    viewerKind: res.value.kind,
+    viewerNetworkId: res.value.networkId,
+  };
+  try { window.localStorage.setItem(VIEWER_STORAGE_KEY, res.value.bech32); } catch { /* ignore */ }
+  emit();
+  confirmReferral("wallet_connect");
+  return { ok: true, parsed: res.value };
+}
+
+export function clearViewer() {
+  state = { ...state, viewerAddress: null, viewerKind: null, viewerNetworkId: null };
+  try { window.localStorage.removeItem(VIEWER_STORAGE_KEY); } catch { /* ignore */ }
+  emit();
+}
+
+function restoreViewer() {
+  if (state.viewerAddress) return;
+  let stored: string | null = null;
+  try { stored = window.localStorage.getItem(VIEWER_STORAGE_KEY); } catch { return; }
+  if (!stored) return;
+  const res = parseCardanoAddress(stored);
+  if (!res.ok) {
+    try { window.localStorage.removeItem(VIEWER_STORAGE_KEY); } catch { /* ignore */ }
+    return;
+  }
+  state = {
+    ...state,
+    viewerAddress: res.value.bech32,
+    viewerKind: res.value.kind,
+    viewerNetworkId: res.value.networkId,
+  };
+  emit();
+}
+
+export interface EffectiveAddress {
+  address: string | null;
+  kind: "payment" | "stake" | null;
+  networkId: 0 | 1 | null;
+  mode: "signer" | "viewer" | null;
+  canSign: boolean;
+}
+
+/** Read-anywhere helper: prefer the signer session, fall back to the viewer address. */
+export function useEffectiveAddress(): EffectiveAddress {
+  const w = useWallet();
+  if (w.connected && w.address) {
+    return { address: w.address, kind: "payment", networkId: w.networkId, mode: "signer", canSign: true };
+  }
+  if (w.viewerAddress) {
+    return { address: w.viewerAddress, kind: w.viewerKind, networkId: w.viewerNetworkId, mode: "viewer", canSign: false };
+  }
+  return { address: null, kind: null, networkId: null, mode: null, canSign: false };
 }
 
 
@@ -190,3 +280,4 @@ export function shortAddr(addr: string | null) {
   if (addr.length <= 16) return addr;
   return `${addr.slice(0, 10)}…${addr.slice(-6)}`;
 }
+
