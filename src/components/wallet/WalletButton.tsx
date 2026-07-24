@@ -1,19 +1,23 @@
 import { useEffect, useRef, useState } from "react";
-import { Wallet, Check, X, QrCode, Loader2, Copy, AlertTriangle, DownloadCloud, Lock, Ban } from "lucide-react";
+import { Wallet, Check, X, QrCode, Loader2, Copy, AlertTriangle, DownloadCloud, Lock, Ban, Eye, ClipboardPaste } from "lucide-react";
 import QRCode from "qrcode";
 import {
+  clearViewer,
   connectWallet,
   connectWithWalletConnect,
   disconnectWallet,
   isWalletConnectConfigured,
   restoreWallet,
+  setViewerAddress,
   shortAddr,
   useWallet,
   type WalletProvider,
 } from "@/lib/wallet-store";
 import type { CIP30Error, CIP30ErrorKind } from "@/lib/cip30";
+import { EXPECTED_WALLET_NETWORK_ID, APP_NETWORK } from "@/lib/network";
 
 type BrowserProvider = Exclude<WalletProvider, "WalletConnect">;
+type Tab = "connect" | "view";
 
 const PROVIDERS: { id: WalletProvider; desc: string; color: string }[] = [
   { id: "Lace", desc: "Cardano native wallet by IOG", color: "from-sky-500/20 to-cyan-400/10" },
@@ -43,15 +47,19 @@ const ERROR_TITLE: Record<CIP30ErrorKind, string> = {
 export function WalletButton() {
   const wallet = useWallet();
   const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<Tab>("connect");
   const [showQR, setShowQR] = useState(false);
   const [wcUri, setWcUri] = useState<string | null>(null);
   const [wcStatus, setWcStatus] = useState<"idle" | "pairing" | "waiting" | "error">("idle");
   const [wcError, setWcError] = useState<string | null>(null);
   const [connectingId, setConnectingId] = useState<BrowserProvider | null>(null);
   const [connectError, setConnectError] = useState<{ provider: BrowserProvider; err: CIP30Error } | null>(null);
+  const [viewerInput, setViewerInput] = useState("");
+  const [viewerError, setViewerError] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const qrCanvas = useRef<HTMLCanvasElement | null>(null);
 
-  // Silently restore last-used wallet on mount (browser-only)
+  // Silently restore last-used wallet + viewer address on mount (browser-only)
   useEffect(() => { void restoreWallet(); }, []);
 
   useEffect(() => {
@@ -97,6 +105,31 @@ export function WalletButton() {
     }
   }
 
+  function submitViewer() {
+    setViewerError(null);
+    const res = setViewerAddress(viewerInput);
+    if (!res.ok) {
+      setViewerError(res.error);
+      return;
+    }
+    if (res.parsed.networkId !== EXPECTED_WALLET_NETWORK_ID) {
+      setViewerError(
+        `Address is for ${res.parsed.networkId === 1 ? "Mainnet" : "Testnet"} but this app is on ${APP_NETWORK === "mainnet" ? "Mainnet" : "Preprod testnet"}. Tracking anyway — vault UTxOs won't appear until networks match.`,
+      );
+    }
+    setViewerInput("");
+    setOpen(false);
+  }
+
+  async function pasteFromClipboard() {
+    try {
+      const text = await navigator.clipboard.readText();
+      setViewerInput(text.trim());
+    } catch {
+      /* clipboard blocked — user can still type */
+    }
+  }
+
   function closeModal() {
     setOpen(false);
     setShowQR(false);
@@ -105,20 +138,23 @@ export function WalletButton() {
     setWcError(null);
     setConnectError(null);
     setConnectingId(null);
+    setViewerError(null);
+    setViewerInput("");
   }
 
+  // ---- Signer connected header ---------------------------------------------
   if (wallet.connected) {
     return (
       <div className="relative">
         <button
-          onClick={() => setOpen(v => !v)}
+          onClick={() => setMenuOpen(v => !v)}
           className="flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-sm font-medium hover:bg-secondary transition-colors"
         >
           <span className="h-2 w-2 rounded-full bg-success" />
           <span className="hidden sm:inline text-foreground">{shortAddr(wallet.address)}</span>
           <span className="sm:hidden text-foreground">{wallet.provider}</span>
         </button>
-        {open && (
+        {menuOpen && (
           <div className="absolute right-0 mt-2 w-72 rounded-2xl border border-border bg-popover p-4 shadow-elevated">
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Connected · {wallet.provider}</div>
             <div className="mt-1 text-xs font-mono text-foreground break-all">{wallet.address}</div>
@@ -127,11 +163,59 @@ export function WalletButton() {
               <div className="number-display text-xl font-semibold text-foreground">₳ {wallet.balanceAda.toLocaleString()}</div>
             </div>
             <button
-              onClick={() => { void disconnectWallet(); setOpen(false); }}
+              onClick={() => { void disconnectWallet(); setMenuOpen(false); }}
               className="mt-3 w-full rounded-lg border border-border py-2 text-sm font-medium text-foreground hover:bg-secondary"
             >
               Disconnect
             </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ---- Viewer (read-only) header ------------------------------------------
+  if (wallet.viewerAddress) {
+    return (
+      <div className="relative">
+        <button
+          onClick={() => setMenuOpen(v => !v)}
+          className="flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-sm font-medium hover:bg-secondary transition-colors"
+        >
+          <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="hidden sm:inline text-foreground">{shortAddr(wallet.viewerAddress)}</span>
+          <span className="sm:hidden text-foreground">Read-only</span>
+          <span className="rounded-full bg-secondary px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">read-only</span>
+        </button>
+        {menuOpen && (
+          <div className="absolute right-0 mt-2 w-80 rounded-2xl border border-border bg-popover p-4 shadow-elevated">
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              Tracking · {wallet.viewerKind === "stake" ? "Stake address" : "Payment address"}
+            </div>
+            <div className="mt-1 text-xs font-mono text-foreground break-all">{wallet.viewerAddress}</div>
+            <p className="mt-2 text-[11px] text-muted-foreground">
+              Read-only view. Deposits, withdrawals, and governance votes require connecting a signing wallet.
+            </p>
+            <button
+              onClick={() => { setMenuOpen(false); setTab("connect"); setOpen(true); }}
+              className="mt-3 w-full rounded-lg bg-gradient-primary py-2 text-sm font-semibold text-primary-foreground shadow-glow"
+            >
+              Connect a signing wallet
+            </button>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <button
+                onClick={() => { setMenuOpen(false); setTab("view"); setOpen(true); }}
+                className="rounded-lg border border-border py-2 text-xs font-medium text-foreground hover:bg-secondary"
+              >
+                Change address
+              </button>
+              <button
+                onClick={() => { clearViewer(); setMenuOpen(false); }}
+                className="rounded-lg border border-border py-2 text-xs font-medium text-foreground hover:bg-secondary"
+              >
+                Stop tracking
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -159,12 +243,29 @@ export function WalletButton() {
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="text-lg font-semibold text-foreground">Connect a wallet</h3>
-                <p className="mt-1 text-sm text-muted-foreground">Cardano-native. ZK-verified. Non-custodial.</p>
+                <p className="mt-1 text-sm text-muted-foreground">Sign transactions, or view any address read-only.</p>
               </div>
-              <button onClick={closeModal} className="rounded-full p-1 hover:bg-secondary">
+              <button onClick={closeModal} className="rounded-full p-1 hover:bg-secondary" aria-label="Close">
                 <X className="h-4 w-4" />
               </button>
             </div>
+
+            {!showQR && (
+              <div className="mt-5 grid grid-cols-2 gap-1 rounded-xl border border-border bg-secondary/40 p-1 text-xs">
+                <button
+                  onClick={() => setTab("connect")}
+                  className={`rounded-lg px-3 py-2 font-medium transition-colors ${tab === "connect" ? "bg-surface text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  <Wallet className="mr-1 inline h-3.5 w-3.5" /> Connect wallet
+                </button>
+                <button
+                  onClick={() => setTab("view")}
+                  className={`rounded-lg px-3 py-2 font-medium transition-colors ${tab === "view" ? "bg-surface text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                >
+                  <Eye className="mr-1 inline h-3.5 w-3.5" /> View by address
+                </button>
+              </div>
+            )}
 
             {showQR ? (
               <div className="mt-6 flex flex-col items-center">
@@ -197,6 +298,47 @@ export function WalletButton() {
                 <button onClick={() => { setShowQR(false); setWcUri(null); setWcStatus("idle"); setWcError(null); }} className="mt-4 text-xs text-muted-foreground hover:text-foreground">
                   Back
                 </button>
+              </div>
+            ) : tab === "view" ? (
+              <div className="mt-5">
+                <label htmlFor="viewer-addr" className="text-xs font-medium text-muted-foreground">
+                  Payment or stake address
+                </label>
+                <div className="mt-1 flex items-stretch gap-1 rounded-xl border border-border bg-surface focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+                  <input
+                    id="viewer-addr"
+                    value={viewerInput}
+                    onChange={e => { setViewerInput(e.target.value); setViewerError(null); }}
+                    placeholder="addr1… / addr_test1… / stake1… / stake_test1…"
+                    autoComplete="off"
+                    spellCheck={false}
+                    className="w-full min-w-0 bg-transparent px-3 py-2.5 font-mono text-xs outline-none"
+                    onKeyDown={e => { if (e.key === "Enter") submitViewer(); }}
+                  />
+                  <button
+                    type="button"
+                    onClick={pasteFromClipboard}
+                    className="border-l border-border px-2 text-muted-foreground hover:text-foreground"
+                    aria-label="Paste from clipboard"
+                  >
+                    <ClipboardPaste className="h-4 w-4" />
+                  </button>
+                </div>
+                {viewerError && (
+                  <p className="mt-2 text-[11px] text-destructive">{viewerError}</p>
+                )}
+                <button
+                  onClick={submitViewer}
+                  disabled={!viewerInput.trim()}
+                  className="mt-3 w-full rounded-xl bg-gradient-primary py-2.5 text-sm font-semibold text-primary-foreground shadow-glow disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Track this address
+                </button>
+                <ul className="mt-4 space-y-1.5 text-[11px] text-muted-foreground">
+                  <li>· Read-only — no signatures required.</li>
+                  <li>· Stake addresses aggregate every payment address in the wallet.</li>
+                  <li>· Saved locally on this device; clear it any time.</li>
+                </ul>
               </div>
             ) : (
               <>

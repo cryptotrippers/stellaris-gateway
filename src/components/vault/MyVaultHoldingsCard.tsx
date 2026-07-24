@@ -1,29 +1,34 @@
-import { Loader2, RefreshCw, Coins, ExternalLink } from "lucide-react";
+import { Loader2, RefreshCw, Coins, ExternalLink, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/StatusBadge";
-import { useWallet } from "@/lib/wallet-store";
+import { useEffectiveAddress, useWallet } from "@/lib/wallet-store";
 import { useVaultHoldings } from "@/hooks/useVaultHoldings";
+import { EXPECTED_WALLET_NETWORK_ID } from "@/lib/network";
 
 /**
- * Live view of the connected wallet's on-chain vault UTxOs. Auto-refreshes
- * every 30s (Preprod block time ~20s) and can be manually refreshed after a
- * deposit or withdraw.
+ * Live view of the connected wallet's (or a tracked address's) on-chain vault
+ * UTxOs. Auto-refreshes every 30s.
  */
 export function MyVaultHoldingsCard() {
   const wallet = useWallet();
-  const { holdings, totalAda, isLoading, isFetching, error, refetch, enabled } =
+  const eff = useEffectiveAddress();
+  const { holdings, totalAda, isLoading, isFetching, error, refetch, enabled, mode } =
     useVaultHoldings();
+  const wrongNetwork = eff.address !== null && eff.networkId !== EXPECTED_WALLET_NETWORK_ID;
 
   return (
     <div className="card-institutional p-6">
       <div className="flex items-center justify-between">
         <div>
           <div className="text-[10px] uppercase tracking-widest text-primary">On-chain · Preprod</div>
-          <h3 className="mt-1 text-sm font-semibold text-foreground">Your on-chain position</h3>
+          <h3 className="mt-1 text-sm font-semibold text-foreground">
+            {mode === "viewer" ? "Tracked address · on-chain position" : "Your on-chain position"}
+          </h3>
         </div>
         <div className="flex items-center gap-2">
           {isFetching && enabled && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
-          <Badge tone="success">
-            <Coins className="h-3 w-3" /> Live
+          <Badge tone={mode === "viewer" ? "primary" : "success"}>
+            {mode === "viewer" ? <Eye className="h-3 w-3" /> : <Coins className="h-3 w-3" />}
+            {mode === "viewer" ? "Read-only" : "Live"}
           </Badge>
           <button
             onClick={() => refetch()}
@@ -38,11 +43,14 @@ export function MyVaultHoldingsCard() {
 
       {!enabled && (
         <p className="mt-4 text-xs text-muted-foreground">
-          {wallet.connected
+          {wrongNetwork
+            ? "This address is for a different network than the app is pointed at."
+            : wallet.connected
             ? "Switch your wallet to the Preprod testnet to see your on-chain position."
-            : "Connect a CIP-30 wallet to view your vault UTxOs."}
+            : "Connect a wallet, or paste a payment / stake address, to view vault UTxOs."}
         </p>
       )}
+
 
       {enabled && (
         <>
