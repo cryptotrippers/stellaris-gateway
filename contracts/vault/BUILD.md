@@ -10,7 +10,7 @@ Phase 1 script pinned in `src/lib/vault.ts`.
 ## Parameterization
 
 `validator vault(_version: Int)` takes one compile-time parameter. `aiken build`
-emits the **unapplied** blueprint — the CBOR still has the free `version` slot.
+emits the **unapplied** blueprint — the CBOR still has the free `version` and `asset_id` slots.
 
 The applied script (with `version = 1`) is derived on the JS side at module
 init using Lucid's `applyParamsToScript`. Bumping `VAULT_VERSION` in
@@ -32,7 +32,7 @@ Use the JS-derived `VAULT_SCRIPT_ADDRESS` (logged at app boot) instead.
 
 ```bash
 cd contracts/vault
-aiken check      # 5 unit tests should pass
+aiken check      # 6 unit tests should pass
 aiken build      # regenerates plutus.json (unapplied blueprint)
 node ../../scripts/verify-vault-hash.mjs
 ```
