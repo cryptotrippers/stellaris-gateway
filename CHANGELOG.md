@@ -25,5 +25,7 @@ This project is currently pre-1.0. The public API, on-chain contract addresses, 
 ## [0.0.0] — Preprod preview
 - Initial preprod deployment. Single per-user Aiken vault. Preview-only.
 - Stage 1 Step 2 verified: `VAULT_VERSION = 1` applied Preprod vault address is `addr_test1wp2s0pzntrc2g5vumu690f5ljjr6n9tk0ps8hdgs4kf2v3sqqsshx` (script hash `5507845358f0a4519cdf3457a69f9487a9957678607bb510ad92a646`).
+- Stage 1 Step 5 verified: withdrawal transaction `8b5aa72d08cd518e257d4d1a7fa7553686ff6b0cfe216bb181399ba03fa22947` confirmed on Preprod at block `5,025,492`; two vault UTxOs were spent successfully.
+- Stage 1 Step 6 deferred: second-wallet negative ownership test remains required before mainnet.
 
 [Unreleased]: about:blank
