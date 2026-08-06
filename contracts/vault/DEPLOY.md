@@ -59,14 +59,21 @@ Withdraw card → **Unlock my vault UTxOs** → sign → **Confirm all**.
 Pass condition: tx confirms, holdings return to zero, ADA lands back in the
 wallet minus fees.
 
-## Step 6 — Negative test (the security assertion)
+## Step 6 — Negative test (the security assertion) — deferred
 
-From a **second** wallet, deposit 2 ADA, then from the **first** wallet attempt
-a withdraw. Expected: the app filters the foreign UTxO out and reports
-"none are owned by this wallet". If you force the spend, the validator must
-fail with a script execution error.
+This test is required before mainnet, but is deferred because a second wallet
+is not currently available. Do not mark this security assertion as passed yet.
 
-Pass condition: no wallet can spend another wallet's vault UTxO.
+When a second Preprod wallet is available:
+
+1. From the second wallet, deposit 2 ADA.
+2. From the first wallet, verify the foreign UTxO is filtered out and the UI
+   reports that none are owned by this wallet.
+3. If the spend is forced for testing, the validator must reject it with a
+   script execution error.
+
+Pass condition: no wallet can spend another wallet's vault UTxO. Record the
+second-wallet deposit hash and the rejected-spend result here before mainnet.
 
 ## Step 7 — Freeze
 
@@ -74,7 +81,8 @@ Pass condition: no wallet can spend another wallet's vault UTxO.
   liquidity at the old one.
 - `VAULT_BLUEPRINT_HASH` / `VAULT_BLUEPRINT_CBOR` stay pinned.
 - Any change to `validators/vault.ak` requires: withdraw all live UTxOs →
-  rebuild → re-pin → bump `VAULT_VERSION` → redo Steps 1–6.
+  rebuild → re-pin → bump `VAULT_VERSION` → redo Steps 1–6, including the
+  deferred negative ownership test.
 
 ## Not in Stage 1
 
