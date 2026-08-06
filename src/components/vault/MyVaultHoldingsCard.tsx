@@ -4,16 +4,26 @@ import { useEffectiveAddress, useWallet } from "@/lib/wallet-store";
 import { useVaultHoldings } from "@/hooks/useVaultHoldings";
 import { EXPECTED_WALLET_NETWORK_ID } from "@/lib/network";
 
+interface Props {
+  /** Vaults to scan. Omit for the default pilot vault. */
+  assetIds?: string[];
+  /** Show the per-asset rollup (useful when scanning more than one vault). */
+  showAssetBreakdown?: boolean;
+  title?: string;
+}
+
 /**
  * Live view of the connected wallet's (or a tracked address's) on-chain vault
- * UTxOs. Auto-refreshes every 30s.
+ * UTxOs across one or more per-asset vaults. Auto-refreshes every 30s.
  */
-export function MyVaultHoldingsCard() {
+export function MyVaultHoldingsCard({ assetIds, showAssetBreakdown, title }: Props = {}) {
   const wallet = useWallet();
   const eff = useEffectiveAddress();
-  const { holdings, totalAda, isLoading, isFetching, error, refetch, enabled, mode } =
-    useVaultHoldings();
+  const { holdings, byAsset, totalAda, isLoading, isFetching, error, refetch, enabled, mode } =
+    useVaultHoldings(assetIds);
   const wrongNetwork = eff.address !== null && eff.networkId !== EXPECTED_WALLET_NETWORK_ID;
+  const funded = byAsset.filter(a => a.utxoCount > 0);
+  const breakdown = showAssetBreakdown ?? (assetIds ? assetIds.length > 1 : false);
 
   return (
     <div className="card-institutional p-6">
@@ -21,7 +31,7 @@ export function MyVaultHoldingsCard() {
         <div>
           <div className="text-[10px] uppercase tracking-widest text-primary">On-chain · Preprod</div>
           <h3 className="mt-1 text-sm font-semibold text-foreground">
-            {mode === "viewer" ? "Tracked address · on-chain position" : "Your on-chain position"}
+            {title ?? (mode === "viewer" ? "Tracked address · on-chain position" : "Your on-chain position")}
           </h3>
         </div>
         <div className="flex items-center gap-2">
@@ -51,7 +61,6 @@ export function MyVaultHoldingsCard() {
         </p>
       )}
 
-
       {enabled && (
         <>
           <div className="mt-5 rounded-xl bg-secondary/60 p-4">
@@ -62,8 +71,12 @@ export function MyVaultHoldingsCard() {
             </div>
             <div className="mt-1 text-[11px] text-muted-foreground">
               {isLoading
-                ? "Reading UTxOs at the vault script…"
-                : `${holdings.length} UTxO${holdings.length === 1 ? "" : "s"} owned by this wallet`}
+                ? `Reading UTxOs across ${byAsset.length || (assetIds?.length ?? 1)} vault script${
+                    (assetIds?.length ?? 1) === 1 ? "" : "s"
+                  }…`
+                : `${holdings.length} UTxO${holdings.length === 1 ? "" : "s"} across ${
+                    funded.length
+                  } vault${funded.length === 1 ? "" : "s"}`}
             </div>
           </div>
 
@@ -71,6 +84,23 @@ export function MyVaultHoldingsCard() {
             <div className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive break-words">
               {error.message}
             </div>
+          )}
+
+          {breakdown && !isLoading && !error && funded.length > 0 && (
+            <ul className="mt-4 space-y-1.5">
+              {funded.map(a => (
+                <li
+                  key={a.assetId}
+                  className="flex items-center justify-between rounded-lg border border-border bg-surface px-3 py-2 text-xs"
+                >
+                  <span className="font-medium text-foreground">{a.assetId}</span>
+                  <span className="number-display font-semibold text-foreground">
+                    {a.totalAda.toFixed(6)}{" "}
+                    <span className="font-normal text-muted-foreground">tADA</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
           )}
 
           {!isLoading && !error && holdings.length === 0 && (
@@ -82,7 +112,10 @@ export function MyVaultHoldingsCard() {
           {holdings.length > 0 && (
             <ul className="mt-4 divide-y divide-border rounded-xl border border-border bg-surface">
               {holdings.map(h => (
-                <li key={`${h.txHash}#${h.outputIndex}`} className="flex items-center justify-between px-3 py-2.5 text-xs">
+                <li
+                  key={`${h.assetId}:${h.txHash}#${h.outputIndex}`}
+                  className="flex items-center justify-between px-3 py-2.5 text-xs"
+                >
                   <div className="min-w-0">
                     <a
                       href={`https://preprod.cardanoscan.io/transaction/${h.txHash}`}
@@ -93,6 +126,11 @@ export function MyVaultHoldingsCard() {
                       {h.txHash.slice(0, 10)}…{h.txHash.slice(-6)}#{h.outputIndex}
                       <ExternalLink className="h-3 w-3" />
                     </a>
+                    {breakdown && (
+                      <div className="mt-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                        {h.assetId}
+                      </div>
+                    )}
                   </div>
                   <div className="number-display font-semibold text-foreground">
                     {h.ada.toFixed(6)} <span className="text-muted-foreground font-normal">tADA</span>
