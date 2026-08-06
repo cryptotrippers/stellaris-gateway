@@ -38,7 +38,7 @@ export function DepositVaultCard({ assetId }: { assetId?: string } = {}) {
     setError(null);
     setResult(null);
     try {
-      const r = await depositAdaToVault(n);
+      const r = await depositAdaToVault(n, assetId);
       setResult(r);
       setStatus("success");
       recordVaultTx({

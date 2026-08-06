@@ -122,7 +122,7 @@ interface Props {
  * browser has seen — with per-tx progress and an aggregate progress bar —
  * until they all reach the chain.
  */
-export function ConfirmAllWithdrawDialog({ open, onOpenChange }: Props) {
+export function ConfirmAllWithdrawDialog({ open, onOpenChange, assetId }: Props & { assetId?: string }) {
   const wallet = useWallet();
   const queryClient = useQueryClient();
   const history = useVaultTxHistory();
@@ -195,7 +195,7 @@ export function ConfirmAllWithdrawDialog({ open, onOpenChange }: Props) {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const r: WithdrawResult = await withdrawAdaFromVault();
+      const r: WithdrawResult = await withdrawAdaFromVault(assetId);
       const network = APP_NETWORK === "mainnet" ? "mainnet" : "preprod";
       recordVaultTx({
         txHash: r.txHash,
@@ -203,6 +203,7 @@ export function ConfirmAllWithdrawDialog({ open, onOpenChange }: Props) {
         amountAda: r.amountAda,
         utxoCount: r.utxoCount,
         address: wallet.address ?? "",
+        assetId,
         network,
       });
       setTrackedHashes((prev) => new Set(prev).add(r.txHash));

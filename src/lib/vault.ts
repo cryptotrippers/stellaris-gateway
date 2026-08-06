@@ -41,13 +41,21 @@ async function getBlockfrostConfig() {
 /** Bumping this value produces a fresh vault instance on-chain. */
 export const VAULT_VERSION = 1n;
 
+/**
+ * Stage 2: the validator is parameterized by `(version, asset_id)`, so every
+ * marketplace asset gets its own script hash + address (physical isolation —
+ * a bug or exploit in one asset's vault cannot touch another's).
+ */
+export const DEFAULT_VAULT_ASSET_ID = "sfm-01";
+
 /** Hash of the *unapplied* parameterized validator from plutus.json. */
 export const VAULT_BLUEPRINT_HASH =
-  "ae8cfbb91361a3c5a544ad3fd3212da939b043efae1969ea6606745f";
+  "f49b09a840b0e4421a0abe6b58c3b2f0731b6510c25156e2542bfb3a";
 
 /** Compiled CBOR of the *unapplied* parameterized validator (PlutusV3). */
 export const VAULT_BLUEPRINT_CBOR =
-  "590149010100229800aba2aba1aab9faab9eaab9dab9a9bad002488888896600264653001300800198041804800cc0200092225980099b8748008c020dd500144ca60026018003300c300d0019b874800122259800980098061baa0078acc004c034dd5003c566002600260186ea800a264b3001323322330020020012259800800c528456600266e3cdd71809800801c528c4cc008008c05000500f20243758602260246024602460246024602460246024601e6ea801cdd7180818071baa001899198008009bac301130123012300f375400e44b30010018a508acc004c966002600a60206ea8006266e3cdd7180998089baa001375c602660226ea8012294100f180918081baa301230103754602400314a313300200230130014038808a294100c180798069baa0028b20168b201c8b201618049baa0028b200e180400098021baa0088a4d1365640081";
+  "59014e0101002229800aba2aba1aab9faab9eaab9dab9a9bad0039bae0024888888896600264653001300900198049805000cc0240092225980099b8748008c024dd500144ca6002601a003300d300e0019b874800122259800980098069baa0078acc004c038dd5003c5660026002601a6ea800a264b3001323322330020020012259800800c528456600266e3cdd7180a000801c528c4cc008008c0540050102026375860246026602660266026602660266026602660206ea801cdd7180898079baa001899198008009bac3012301330133010375400e44b30010018a508acc004c966002600a60226ea8006266e3cdd7180a18091baa001375c602860246ea80122941010180998089baa301330113754602600314a31330020023014001403c8092294100d180818071baa0028b20188b201e8b201818051baa0028b2010180480098029baa0098a4d13656400c01";
+
 
 /** Whether the vault is available on the network the app is pointed at. */
 export function isVaultDeployedOnNetwork(): boolean {
@@ -133,55 +141,66 @@ export interface AppliedVault {
   scriptHash: string;
   /** Bech32 vault address for the active network. */
   address: string;
+  /** Marketplace asset this vault instance is bound to. */
+  assetId: string;
   /** Plutus language version — always V3 for this blueprint. */
   type: "PlutusV3";
 }
 
-let appliedCache: AppliedVault | null = null;
-let loggedOnce = false;
+const appliedCache = new Map<string, AppliedVault>();
+const logged = new Set<string>();
 
 /**
- * Apply `VAULT_VERSION` to the blueprint CBOR and return the applied script
- * + its address on the active network. Cached for the session.
+ * Apply `(VAULT_VERSION, assetId)` to the blueprint CBOR and return the applied
+ * script + its address on the active network. Each asset id derives a distinct
+ * script hash, so vaults are isolated per asset. Cached per asset for the session.
  */
 export async function getVaultScript(
   lucid: LucidInstance,
   lucidMod: LucidMod,
+  assetId: string = DEFAULT_VAULT_ASSET_ID,
 ): Promise<AppliedVault> {
-  if (appliedCache) return appliedCache;
+  const cached = appliedCache.get(assetId);
+  if (cached) return cached;
 
-  const { applyParamsToScript, validatorToAddress, validatorToScriptHash, Data } = lucidMod as unknown as {
+  const { applyParamsToScript, validatorToAddress, validatorToScriptHash, fromText } = lucidMod as unknown as {
     applyParamsToScript: (cbor: string, params: unknown[]) => string;
     validatorToAddress: (network: typeof LUCID_NETWORK, validator: { type: "PlutusV3"; script: string }) => string;
     validatorToScriptHash: (validator: { type: "PlutusV3"; script: string }) => string;
-    Data: LucidMod["Data"];
+    fromText: (s: string) => string;
   };
 
-  // Encode Int parameter as a plain bigint — Lucid serialises to Plutus Data.
-  const appliedCbor = applyParamsToScript(VAULT_BLUEPRINT_CBOR, [VAULT_VERSION]);
+  // Params: Int version + ByteArray asset id (UTF-8 → hex).
+  const appliedCbor = applyParamsToScript(VAULT_BLUEPRINT_CBOR, [
+    VAULT_VERSION,
+    fromText(assetId),
+  ]);
   const validator = { type: "PlutusV3" as const, script: appliedCbor };
   const scriptHash = validatorToScriptHash(validator);
   const address = validatorToAddress(LUCID_NETWORK, validator);
 
-  appliedCache = { cbor: appliedCbor, scriptHash, address, type: "PlutusV3" };
+  const applied: AppliedVault = { cbor: appliedCbor, scriptHash, address, assetId, type: "PlutusV3" };
+  appliedCache.set(assetId, applied);
 
-  if (!loggedOnce) {
-    loggedOnce = true;
+  if (!logged.has(assetId)) {
+    logged.add(assetId);
     // eslint-disable-next-line no-console
     console.info(
-      `[vault] applied version=${VAULT_VERSION} → hash=${scriptHash} address=${address}`,
+      `[vault] applied version=${VAULT_VERSION} asset=${assetId} → hash=${scriptHash} address=${address}`,
     );
   }
-  // Silence unused-var lints in strict builds.
-  void Data;
-  return appliedCache;
+  return applied;
 }
+
 
 /**
  * Lock `amountAda` in the vault script UTxO with an inline datum that pins
  * the current wallet's payment key hash as the owner.
  */
-export async function depositAdaToVault(amountAda: number): Promise<DepositResult> {
+export async function depositAdaToVault(
+  amountAda: number,
+  assetId: string = DEFAULT_VAULT_ASSET_ID,
+): Promise<DepositResult> {
   const pre = checkVaultPreconditions();
   if (!pre.ok) throw new Error(pre.reason);
   if (!(amountAda > 0)) throw new Error("Enter a positive ADA amount.");
@@ -189,7 +208,8 @@ export async function depositAdaToVault(amountAda: number): Promise<DepositResul
 
   const { lucid, lucidMod } = await initLucidWithWallet();
   const { Data, paymentCredentialOf } = lucidMod;
-  const script = await getVaultScript(lucid, lucidMod);
+  const script = await getVaultScript(lucid, lucidMod, assetId);
+
 
   const ownerAddress = await lucid.wallet().address();
   const paymentCred = paymentCredentialOf(ownerAddress);
@@ -295,13 +315,16 @@ export function decodeVaultError(err: unknown, ctx: { ownerHash?: string } = {})
  *   2. At least one output pays that same PKH.
  * The redeemer is the typed constructor `VaultRedeemer::Withdraw` (index 0).
  */
-export async function withdrawAdaFromVault(): Promise<WithdrawResult> {
+export async function withdrawAdaFromVault(
+  assetId: string = DEFAULT_VAULT_ASSET_ID,
+): Promise<WithdrawResult> {
   const pre = checkVaultPreconditions();
   if (!pre.ok) throw new Error(pre.reason);
 
   const { lucid, lucidMod } = await initLucidWithWallet();
   const { Data, paymentCredentialOf } = lucidMod;
-  const script = await getVaultScript(lucid, lucidMod);
+  const script = await getVaultScript(lucid, lucidMod, assetId);
+
 
   const ownerAddress = await lucid.wallet().address();
   const paymentCred = paymentCredentialOf(ownerAddress);
