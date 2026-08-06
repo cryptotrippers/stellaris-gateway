@@ -128,6 +128,11 @@ function PortfolioPage() {
 
         <div className="grid gap-4">
           <ChainStatusCard />
+          <MyVaultHoldingsCard
+            assetIds={vaultAssetIds}
+            showAssetBreakdown
+            title="On-chain vault positions"
+          />
           <div className="card-institutional p-5">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-foreground">Compliance Status</h3>
