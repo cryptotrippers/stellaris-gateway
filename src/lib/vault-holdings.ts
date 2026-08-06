@@ -20,12 +20,24 @@ export interface VaultHolding {
   lovelace: bigint;
   ada: number;
   ownerPkh: string;
+  /** Marketplace asset whose derived vault script holds this UTxO. */
+  assetId: string;
+}
+
+/** Per-asset rollup so the UI can show which vault each balance sits in. */
+export interface VaultAssetTotal {
+  assetId: string;
+  /** Applied script address for this asset's vault. */
+  address: string;
+  totalAda: number;
+  utxoCount: number;
 }
 
 export interface VaultHoldings {
   address: string;
   ownerPkh: string;
   holdings: VaultHolding[];
+  byAsset: VaultAssetTotal[];
   totalAda: number;
   mode: "signer" | "viewer";
 }
@@ -33,21 +45,21 @@ export interface VaultHoldings {
 /**
  * Signer flow — uses the connected CIP-30 wallet. Requires wallet preconditions.
  */
-async function fetchAsSigner(): Promise<VaultHoldings> {
+async function fetchAsSigner(assetIds: string[]): Promise<VaultHoldings> {
   const pre = checkVaultPreconditions();
   if (!pre.ok) throw new Error(pre.reason);
 
   const { lucid, lucidMod } = await initLucidWithWallet();
-  const { Data, paymentCredentialOf } = lucidMod;
+  const { paymentCredentialOf } = lucidMod;
 
   const address = await lucid.wallet().address();
   const cred = paymentCredentialOf(address);
   if (cred.type !== "Key") throw new Error("Wallet isn't a key-hash address.");
   const ownerPkh = cred.hash;
 
-  const holdings = await collectHoldings(lucid, lucidMod, new Set([ownerPkh]));
+  const { holdings, byAsset } = await collectHoldings(lucid, lucidMod, new Set([ownerPkh]), assetIds);
   const totalAda = holdings.reduce((n, h) => n + h.ada, 0);
-  return { address, ownerPkh, holdings, totalAda, mode: "signer" };
+  return { address, ownerPkh, holdings, byAsset, totalAda, mode: "signer" };
 }
 
 /**
