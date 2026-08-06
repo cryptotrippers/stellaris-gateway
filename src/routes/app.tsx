@@ -55,6 +55,7 @@ function usePortfolioData(walletAddress: string | null) {
 
 function PortfolioPage() {
   const wallet = useWallet();
+  const { assetIds: vaultAssetIds } = useVaultAssetIds();
   const { data, isLoading } = usePortfolioData(wallet.connected ? wallet.address : null);
 
   const positions = data?.positions ?? [];
