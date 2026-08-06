@@ -315,13 +315,16 @@ export function decodeVaultError(err: unknown, ctx: { ownerHash?: string } = {})
  *   2. At least one output pays that same PKH.
  * The redeemer is the typed constructor `VaultRedeemer::Withdraw` (index 0).
  */
-export async function withdrawAdaFromVault(): Promise<WithdrawResult> {
+export async function withdrawAdaFromVault(
+  assetId: string = DEFAULT_VAULT_ASSET_ID,
+): Promise<WithdrawResult> {
   const pre = checkVaultPreconditions();
   if (!pre.ok) throw new Error(pre.reason);
 
   const { lucid, lucidMod } = await initLucidWithWallet();
   const { Data, paymentCredentialOf } = lucidMod;
-  const script = await getVaultScript(lucid, lucidMod);
+  const script = await getVaultScript(lucid, lucidMod, assetId);
+
 
   const ownerAddress = await lucid.wallet().address();
   const paymentCred = paymentCredentialOf(ownerAddress);
