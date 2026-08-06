@@ -201,7 +201,7 @@ function AssetDetail() {
             <>
               <MyVaultHoldingsCard />
               <DepositVaultCard assetId={asset.id} />
-              <WithdrawVaultCard />
+              <WithdrawVaultCard assetId={asset.id} />
               <VaultTxHistoryCard assetId={asset.id} />
 
             </>

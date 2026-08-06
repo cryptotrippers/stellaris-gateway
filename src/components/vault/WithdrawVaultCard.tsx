@@ -21,7 +21,7 @@ import { ConfirmAllWithdrawDialog } from "@/components/vault/ConfirmAllWithdrawD
  * allows this when `tx.extra_signatories` contains the owner PKH from the
  * datum — proof the Aiken script actually enforces ownership.
  */
-export function WithdrawVaultCard() {
+export function WithdrawVaultCard({ assetId }: { assetId?: string } = {}) {
   const wallet = useWallet();
   const queryClient = useQueryClient();
   const [status, setStatus] = useState<"idle" | "signing" | "success" | "error">("idle");
@@ -42,7 +42,7 @@ export function WithdrawVaultCard() {
     setError(null);
     setResult(null);
     try {
-      const r = await withdrawAdaFromVault();
+      const r = await withdrawAdaFromVault(assetId);
       setResult(r);
       setStatus("success");
       recordVaultTx({
@@ -51,6 +51,7 @@ export function WithdrawVaultCard() {
         amountAda: r.amountAda,
         utxoCount: r.utxoCount,
         address: wallet.address ?? "",
+        assetId,
         network: APP_NETWORK === "mainnet" ? "mainnet" : "preprod",
       });
       setTimeout(() => queryClient.invalidateQueries({ queryKey: VAULT_HOLDINGS_KEY(wallet.address) }), 25_000);
@@ -121,7 +122,7 @@ export function WithdrawVaultCard() {
         </button>
       </div>
 
-      <ConfirmAllWithdrawDialog open={confirmAllOpen} onOpenChange={setConfirmAllOpen} />
+      <ConfirmAllWithdrawDialog open={confirmAllOpen} onOpenChange={setConfirmAllOpen} assetId={assetId} />
 
       {status === "error" && error && (
         <div className="mt-4 flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive">
