@@ -233,6 +233,14 @@ export function decodeVaultError(err: unknown, ctx: { ownerHash?: string } = {})
   if (!raw) return "Unknown error.";
   const s = raw.toLowerCase();
 
+  if (
+    s.includes("remoteapishutdownerror") ||
+    s.includes("cardano-wallet-api") ||
+    s.includes("object can no longer be used")
+  ) {
+    return "Your Lace wallet session expired while preparing the transaction. Disconnect Lace in the app, unlock it, reconnect on Preprod, refresh this page, and retry. Do not approve the same request again. No new on-chain transaction was confirmed by this error.";
+  }
+
   if (s.includes("user declined") || s.includes("user rejected") || /\bcode":?\s*-?2\b/.test(s)) {
     return "You declined the signature in your wallet.";
   }
