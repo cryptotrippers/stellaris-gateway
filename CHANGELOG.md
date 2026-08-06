@@ -24,5 +24,6 @@ This project is currently pre-1.0. The public API, on-chain contract addresses, 
 
 ## [0.0.0] — Preprod preview
 - Initial preprod deployment. Single per-user Aiken vault. Preview-only.
+- Stage 1 Step 2 verified: `VAULT_VERSION = 1` applied Preprod vault address is `addr_test1wp2s0pzntrc2g5vumu690f5ljjr6n9tk0ps8hdgs4kf2v3sqqsshx` (script hash `5507845358f0a4519cdf3457a69f9487a9957678607bb510ad92a646`).
 
 [Unreleased]: about:blank
