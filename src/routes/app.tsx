@@ -6,6 +6,8 @@ import { Sparkline } from "@/components/charts/Sparkline";
 import { RiskBadge, Badge } from "@/components/ui/StatusBadge";
 import { FundingBar, SectionHeader } from "@/components/ui/funding-bar";
 import { ChainStatusCard } from "@/components/chain/ChainStatusCard";
+import { MyVaultHoldingsCard } from "@/components/vault/MyVaultHoldingsCard";
+import { useVaultAssetIds } from "@/hooks/useVaultAssetIds";
 import { ASSETS, formatAda, formatUsd, sparkline } from "@/lib/mock-data";
 import { useWallet } from "@/lib/wallet-store";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,6 +55,7 @@ function usePortfolioData(walletAddress: string | null) {
 
 function PortfolioPage() {
   const wallet = useWallet();
+  const { assetIds: vaultAssetIds } = useVaultAssetIds();
   const { data, isLoading } = usePortfolioData(wallet.connected ? wallet.address : null);
 
   const positions = data?.positions ?? [];
@@ -128,6 +131,11 @@ function PortfolioPage() {
 
         <div className="grid gap-4">
           <ChainStatusCard />
+          <MyVaultHoldingsCard
+            assetIds={vaultAssetIds}
+            showAssetBreakdown
+            title="On-chain vault positions"
+          />
           <div className="card-institutional p-5">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold text-foreground">Compliance Status</h3>
