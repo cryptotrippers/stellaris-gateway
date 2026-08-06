@@ -6,6 +6,8 @@ import { Sparkline } from "@/components/charts/Sparkline";
 import { RiskBadge, Badge } from "@/components/ui/StatusBadge";
 import { FundingBar, SectionHeader } from "@/components/ui/funding-bar";
 import { ChainStatusCard } from "@/components/chain/ChainStatusCard";
+import { MyVaultHoldingsCard } from "@/components/vault/MyVaultHoldingsCard";
+import { useVaultAssetIds } from "@/hooks/useVaultAssetIds";
 import { ASSETS, formatAda, formatUsd, sparkline } from "@/lib/mock-data";
 import { useWallet } from "@/lib/wallet-store";
 import { supabase } from "@/integrations/supabase/client";
