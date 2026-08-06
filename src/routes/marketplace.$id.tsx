@@ -195,28 +195,12 @@ function AssetDetail() {
           </div>
         </div>
 
-        {/* Right rail — real vault cards only when a compiled validator is wired */}
+        {/* Right rail — every asset derives its own vault script from (version, asset_id) */}
         <aside className="h-fit space-y-4 lg:sticky lg:top-24">
-          {asset.id === "sfm-01" ? (
-            <>
-              <MyVaultHoldingsCard />
-              <DepositVaultCard assetId={asset.id} />
-              <WithdrawVaultCard assetId={asset.id} />
-              <VaultTxHistoryCard assetId={asset.id} />
-
-            </>
-          ) : (
-            <div className="card-institutional p-6">
-              <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                Investment
-              </div>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Deposits open once the issuer wires a compiled validator to this
-                vault. No transactions can be signed against a placeholder
-                address.
-              </p>
-            </div>
-          )}
+          <MyVaultHoldingsCard assetIds={[asset.id]} />
+          <DepositVaultCard assetId={asset.id} />
+          <WithdrawVaultCard assetId={asset.id} />
+          <VaultTxHistoryCard assetId={asset.id} />
         </aside>
       </div>
     </div>
