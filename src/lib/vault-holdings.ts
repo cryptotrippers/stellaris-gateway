@@ -185,5 +185,3 @@ export async function fetchMyVaultHoldings(assetIds: string[]): Promise<VaultHol
     throw new Error(decodeVaultError(e));
   }
 }
-  }
-}
