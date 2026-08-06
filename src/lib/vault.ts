@@ -141,49 +141,57 @@ export interface AppliedVault {
   scriptHash: string;
   /** Bech32 vault address for the active network. */
   address: string;
+  /** Marketplace asset this vault instance is bound to. */
+  assetId: string;
   /** Plutus language version — always V3 for this blueprint. */
   type: "PlutusV3";
 }
 
-let appliedCache: AppliedVault | null = null;
-let loggedOnce = false;
+const appliedCache = new Map<string, AppliedVault>();
+const logged = new Set<string>();
 
 /**
- * Apply `VAULT_VERSION` to the blueprint CBOR and return the applied script
- * + its address on the active network. Cached for the session.
+ * Apply `(VAULT_VERSION, assetId)` to the blueprint CBOR and return the applied
+ * script + its address on the active network. Each asset id derives a distinct
+ * script hash, so vaults are isolated per asset. Cached per asset for the session.
  */
 export async function getVaultScript(
   lucid: LucidInstance,
   lucidMod: LucidMod,
+  assetId: string = DEFAULT_VAULT_ASSET_ID,
 ): Promise<AppliedVault> {
-  if (appliedCache) return appliedCache;
+  const cached = appliedCache.get(assetId);
+  if (cached) return cached;
 
-  const { applyParamsToScript, validatorToAddress, validatorToScriptHash, Data } = lucidMod as unknown as {
+  const { applyParamsToScript, validatorToAddress, validatorToScriptHash, fromText } = lucidMod as unknown as {
     applyParamsToScript: (cbor: string, params: unknown[]) => string;
     validatorToAddress: (network: typeof LUCID_NETWORK, validator: { type: "PlutusV3"; script: string }) => string;
     validatorToScriptHash: (validator: { type: "PlutusV3"; script: string }) => string;
-    Data: LucidMod["Data"];
+    fromText: (s: string) => string;
   };
 
-  // Encode Int parameter as a plain bigint — Lucid serialises to Plutus Data.
-  const appliedCbor = applyParamsToScript(VAULT_BLUEPRINT_CBOR, [VAULT_VERSION]);
+  // Params: Int version + ByteArray asset id (UTF-8 → hex).
+  const appliedCbor = applyParamsToScript(VAULT_BLUEPRINT_CBOR, [
+    VAULT_VERSION,
+    fromText(assetId),
+  ]);
   const validator = { type: "PlutusV3" as const, script: appliedCbor };
   const scriptHash = validatorToScriptHash(validator);
   const address = validatorToAddress(LUCID_NETWORK, validator);
 
-  appliedCache = { cbor: appliedCbor, scriptHash, address, type: "PlutusV3" };
+  const applied: AppliedVault = { cbor: appliedCbor, scriptHash, address, assetId, type: "PlutusV3" };
+  appliedCache.set(assetId, applied);
 
-  if (!loggedOnce) {
-    loggedOnce = true;
+  if (!logged.has(assetId)) {
+    logged.add(assetId);
     // eslint-disable-next-line no-console
     console.info(
-      `[vault] applied version=${VAULT_VERSION} → hash=${scriptHash} address=${address}`,
+      `[vault] applied version=${VAULT_VERSION} asset=${assetId} → hash=${scriptHash} address=${address}`,
     );
   }
-  // Silence unused-var lints in strict builds.
-  void Data;
-  return appliedCache;
+  return applied;
 }
+
 
 /**
  * Lock `amountAda` in the vault script UTxO with an inline datum that pins
