@@ -16,7 +16,7 @@ const tipQuery = queryOptions({
   retry: 1,
 });
 
-const healthQuery = queryOptions({
+export const healthQuery = queryOptions({
   queryKey: ["preprod", "blockfrost-health"],
   queryFn: () => getBlockfrostHealth(),
   staleTime: 60_000,
