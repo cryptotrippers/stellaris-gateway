@@ -1,10 +1,16 @@
-//// Stellaris per-user vault — Phase 1.2 (owner-output enforcement).
+//// Stellaris vault — Stage 2.1 (per-asset shared vaults).
 ////
-//// Datum pins the owner's payment key hash. Spending is authorized when:
-////   1. The owner (datum.owner) signed the transaction (`extra_signatories`), AND
-////   2. At least one transaction output pays to an address whose payment
-////      credential IS the owner's PKH (defense-in-depth: a compromised or
-////      tricked signer cannot sweep the vault to a stranger's address), AND
+//// The validator is parameterized by (version, asset_id). Each marketplace
+//// asset therefore compiles to its *own* script hash and address, so
+//// deposits for one asset can never be spent by, mixed with, or accounted
+//// against another asset. Neither parameter is read by the logic: they exist
+//// purely to fork the applied UPLC.
+////
+//// Inside one asset vault, positions stay owner-scoped. The datum pins the
+//// depositor's payment key hash, and spending is authorized when:
+////   1. The owner (datum.owner) signed the transaction (`extra_signatories`),
+////   2. At least one output pays to an address whose payment credential IS
+////      the owner's PKH (a tricked signer cannot sweep funds to a stranger),
 ////   3. The redeemer is a well-typed `VaultRedeemer`.
 
 use aiken/collection/list
@@ -32,13 +38,10 @@ fn output_pays_to(output: Output, pkh: ByteArray) -> Bool {
 
 /// Parameterized validator.
 ///
-/// `version` is a compile-time parameter that is NOT read by the logic. Its
-/// only purpose is to change the applied UPLC — and therefore the on-chain
-/// script hash and address — whenever we mint a new deployment. This gives
-/// us a clean, source-diff-free upgrade path: bump the version constant on
-/// the app side, get a brand new script address, migrate liquidity, retire
-/// the old address. No validator rule ever changes silently.
-validator vault(_version: Int) {
+/// `version`  — bump to mint a fresh deployment of identical logic.
+/// `asset_id` — UTF-8 bytes of the marketplace asset id (e.g. "sfm-01").
+///              Isolates each asset into a distinct script address.
+validator vault(_version: Int, _asset_id: ByteArray) {
   spend(
     datum: Option<VaultDatum>,
     redeemer: VaultRedeemer,
@@ -90,41 +93,64 @@ fn tx_with(signers: List<ByteArray>, outs: List<Output>) -> Transaction {
   Transaction { ..placeholder, extra_signatories: signers, outputs: outs }
 }
 
-// The parameter (`version`) is the first argument to every handler when the
-// validator is parameterized. Tests exercise `version = 1`, which is the
-// version constant the app pins on the JS side (see src/lib/vault.ts).
+// Parameters are prepended to every handler's arguments when the validator
+// is parameterized. Tests exercise version = 1 and asset_id = "sfm-01",
+// matching the values the app pins on the JS side (see src/lib/vault.ts).
 const test_version: Int = 1
+
+// "sfm-01" as UTF-8 bytes.
+const test_asset_id: ByteArray = #"73666d2d3031"
+
+// A different asset id, used to document that the parameter is inert to the
+// spending rules (isolation comes from the distinct script hash, not logic).
+const other_asset_id: ByteArray = #"73666d2d3032"
 
 test withdraw_ok_when_owner_signs_and_gets_output() {
   let d = VaultDatum { owner: owner_pkh }
   let tx = tx_with([owner_pkh], [output_to(owner_pkh)])
-  vault.spend(test_version, Some(d), Withdraw, dummy_ref(), tx)
+  vault.spend(test_version, test_asset_id, Some(d), Withdraw, dummy_ref(), tx)
 }
 
 test withdraw_fails_when_wrong_signer() {
   let d = VaultDatum { owner: owner_pkh }
   let tx = tx_with([other_pkh], [output_to(owner_pkh)])
-  !vault.spend(test_version, Some(d), Withdraw, dummy_ref(), tx)
+  !vault.spend(test_version, test_asset_id, Some(d), Withdraw, dummy_ref(), tx)
 }
 
 test withdraw_fails_when_no_signers() {
   let d = VaultDatum { owner: owner_pkh }
   let tx = tx_with([], [output_to(owner_pkh)])
-  !vault.spend(test_version, Some(d), Withdraw, dummy_ref(), tx)
+  !vault.spend(test_version, test_asset_id, Some(d), Withdraw, dummy_ref(), tx)
 }
 
 test withdraw_fails_when_owner_signs_but_no_owner_output() {
   // Compromised/tricked signer: owner signature is on the tx but every
-  // output pays somewhere else. The new invariant must reject this.
+  // output pays somewhere else. The invariant must reject this.
   let d = VaultDatum { owner: owner_pkh }
   let tx = tx_with([owner_pkh], [output_to(other_pkh)])
-  !vault.spend(test_version, Some(d), Withdraw, dummy_ref(), tx)
+  !vault.spend(test_version, test_asset_id, Some(d), Withdraw, dummy_ref(), tx)
 }
 
 test withdraw_ok_when_owner_output_is_one_of_many() {
   let d = VaultDatum { owner: owner_pkh }
   let tx =
     tx_with([owner_pkh], [output_to(other_pkh), output_to(owner_pkh)])
-  vault.spend(test_version, Some(d), Withdraw, dummy_ref(), tx)
+  vault.spend(test_version, test_asset_id, Some(d), Withdraw, dummy_ref(), tx)
 }
 
+test rules_are_identical_under_a_different_asset_id() {
+  // Same rules apply per asset vault; isolation is enforced by the distinct
+  // applied script hash, so a UTxO at asset A's address is unreachable from
+  // asset B's address regardless of signatures.
+  let d = VaultDatum { owner: owner_pkh }
+  let ok_tx = tx_with([owner_pkh], [output_to(owner_pkh)])
+  let bad_tx = tx_with([other_pkh], [output_to(owner_pkh)])
+  vault.spend(test_version, other_asset_id, Some(d), Withdraw, dummy_ref(), ok_tx) && !vault.spend(
+    test_version,
+    other_asset_id,
+    Some(d),
+    Withdraw,
+    dummy_ref(),
+    bad_tx,
+  )
+}
