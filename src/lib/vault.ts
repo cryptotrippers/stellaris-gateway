@@ -197,7 +197,10 @@ export async function getVaultScript(
  * Lock `amountAda` in the vault script UTxO with an inline datum that pins
  * the current wallet's payment key hash as the owner.
  */
-export async function depositAdaToVault(amountAda: number): Promise<DepositResult> {
+export async function depositAdaToVault(
+  amountAda: number,
+  assetId: string = DEFAULT_VAULT_ASSET_ID,
+): Promise<DepositResult> {
   const pre = checkVaultPreconditions();
   if (!pre.ok) throw new Error(pre.reason);
   if (!(amountAda > 0)) throw new Error("Enter a positive ADA amount.");
@@ -205,7 +208,8 @@ export async function depositAdaToVault(amountAda: number): Promise<DepositResul
 
   const { lucid, lucidMod } = await initLucidWithWallet();
   const { Data, paymentCredentialOf } = lucidMod;
-  const script = await getVaultScript(lucid, lucidMod);
+  const script = await getVaultScript(lucid, lucidMod, assetId);
+
 
   const ownerAddress = await lucid.wallet().address();
   const paymentCred = paymentCredentialOf(ownerAddress);
