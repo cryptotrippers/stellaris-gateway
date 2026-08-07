@@ -8,6 +8,12 @@ This project is currently pre-1.0. The public API, on-chain contract addresses, 
 ## [Unreleased]
 
 ### Added
+- `contracts/vault/SPEC.md` defining the current Stage 3 state transitions, migration rules, shared-accounting invariants, and ordered contract test vectors.
+
+### Changed
+- Contract work now follows explicit evidence gates before any receipt-token or shared-vault rewrite.
+
+### Added (existing)
 - Public `SECURITY.md` with responsible-disclosure policy and safe-harbor language.
 - `NETWORK.md` documenting current testnet/mainnet status.
 - `/.well-known/security.txt` route (RFC 9116).

@@ -1,11 +1,14 @@
-# Stage 1 deployment checklist — Preprod vault v1
+# Contract deployment checklist — Cardano Preprod
 
-Stage 1 deploys the **parameterized vault** (`validator vault(_version: Int)`)
-with `VAULT_VERSION = 1` to **Cardano Preprod**. There is no on-chain "deploy"
-transaction for a spending validator: the script becomes live the moment the
-first UTxO is locked at its applied address. Stage 1 is therefore: verify the
-build is reproducible, verify the derived address, lock funds, unlock funds,
-and record the result.
+The sections below preserve the historical Stage 1 and Stage 2 evidence, followed
+by the active Stage 3 checklist. The current validator is parameterized by
+`(version: Int, asset_id: ByteArray)` with `VAULT_VERSION = 2`.
+
+The contract specification and test-vector matrix are recorded in `SPEC.md`.
+There is no on-chain "deploy" transaction for a spending validator: the script
+becomes live the moment the first UTxO is locked at its applied address. Every
+stage therefore requires a reproducible build, address verification, live
+transaction evidence, and a recorded pass condition before the next stage.
 
 ## Step 1 — Reproducible build (local, needs Aiken v1.1.23)
 
@@ -116,6 +119,16 @@ The validator now requires every output returned to the same script address to
 carry an inline `VaultDatum` with the same owner. This makes partial withdrawal
 safe in a shared vault: remainder cannot be re-datumed to another depositor or
 left with a missing datum.
+
+## Stage 3 — Step 0: specification gate
+
+Read `SPEC.md` before changing the validator. The current Stage 3 behavior,
+required evidence, migration rules, shared-accounting invariants, and test-vector
+matrix must remain aligned with the implementation and app integration.
+
+Pass condition: the contract scope and current test vectors are reviewed and no
+receipt-token/shared-vault rewrite begins before the legacy and adversarial gates
+are completed.
 
 ## Stage 3 — Step 1: reproducible build
 
