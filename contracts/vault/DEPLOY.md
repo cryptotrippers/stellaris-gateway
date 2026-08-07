@@ -120,6 +120,16 @@ carry an inline `VaultDatum` with the same owner. This makes partial withdrawal
 safe in a shared vault: remainder cannot be re-datumed to another depositor or
 left with a missing datum.
 
+## Stage 3 — Step 0: specification gate
+
+Read `SPEC.md` before changing the validator. The current Stage 3 behavior,
+required evidence, migration rules, shared-accounting invariants, and test-vector
+matrix must remain aligned with the implementation and app integration.
+
+Pass condition: the contract scope and current test vectors are reviewed and no
+receipt-token/shared-vault rewrite begins before the legacy and adversarial gates
+are completed.
+
 ## Stage 3 — Step 1: reproducible build
 
 ```bash
