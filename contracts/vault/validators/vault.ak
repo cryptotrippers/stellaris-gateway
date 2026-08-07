@@ -67,11 +67,10 @@ fn continues_owner(output: Output, script_hash: ByteArray, owner: ByteArray) -> 
     Script(h) ->
       if h == script_hash {
         when output.datum is {
-          InlineDatum(raw) ->
-            when raw is {
-              d: VaultDatum -> d.owner == owner
-              _ -> False
-            }
+          InlineDatum(raw) -> {
+            expect out_d: VaultDatum = raw
+            out_d.owner == owner
+          }
           _ -> False
         }
       } else {
@@ -139,8 +138,54 @@ fn output_to(pkh: ByteArray) -> Output {
   }
 }
 
+const script_hash: ByteArray = #"33333333333333333333333333333333333333333333333333333333"
+
+/// Address of this vault script.
+fn script_addr() -> Address {
+  Address { payment_credential: Script(script_hash), stake_credential: None }
+}
+
+/// The UTxO being spent: a locked position owned by `pkh`.
+fn vault_input(pkh: ByteArray) -> Input {
+  Input {
+    output_reference: dummy_ref(),
+    output: Output {
+      address: script_addr(),
+      value: assets.zero,
+      datum: InlineDatum(VaultDatum { owner: pkh }),
+      reference_script: None,
+    },
+  }
+}
+
+/// Change output returned to the vault, datum pinning `pkh`.
+fn vault_change(pkh: ByteArray) -> Output {
+  Output {
+    address: script_addr(),
+    value: assets.zero,
+    datum: InlineDatum(VaultDatum { owner: pkh }),
+    reference_script: None,
+  }
+}
+
+/// Change returned to the vault with no datum at all (would strand funds).
+fn vault_change_no_datum() -> Output {
+  Output {
+    address: script_addr(),
+    value: assets.zero,
+    datum: NoDatum,
+    reference_script: None,
+  }
+}
+
 fn tx_with(signers: List<ByteArray>, outs: List<Output>) -> Transaction {
-  Transaction { ..placeholder, extra_signatories: signers, outputs: outs }
+  Transaction {
+    ..placeholder,
+    inputs: [vault_input(owner_pkh)],
+    extra_signatories: signers,
+    outputs: outs,
+  }
+}
 }
 
 // Parameters are prepended to every handler's arguments when the validator
@@ -203,4 +248,37 @@ test rules_are_identical_under_a_different_asset_id() {
     dummy_ref(),
     bad_tx,
   )
+}
+
+// ------------------------------------------------------------------
+// Stage 3 — shared vault / partial withdrawal continuity.
+// ------------------------------------------------------------------
+
+test partial_withdraw_ok_when_change_keeps_owner_datum() {
+  // Owner takes part of the position; the remainder returns to the vault
+  // still pinned to them. This is the core shared-vault flow.
+  let d = VaultDatum { owner: owner_pkh }
+  let tx = tx_with([owner_pkh], [output_to(owner_pkh), vault_change(owner_pkh)])
+  vault.spend(test_version, test_asset_id, Some(d), Withdraw, dummy_ref(), tx)
+}
+
+test partial_withdraw_fails_when_change_is_redatumed_to_another_owner() {
+  // The attack Stage 3 closes: remainder left in the shared vault but
+  // re-assigned to somebody else's PKH.
+  let d = VaultDatum { owner: owner_pkh }
+  let tx = tx_with([owner_pkh], [output_to(owner_pkh), vault_change(other_pkh)])
+  !vault.spend(test_version, test_asset_id, Some(d), Withdraw, dummy_ref(), tx)
+}
+
+test partial_withdraw_fails_when_change_has_no_datum() {
+  let d = VaultDatum { owner: owner_pkh }
+  let tx =
+    tx_with([owner_pkh], [output_to(owner_pkh), vault_change_no_datum()])
+  !vault.spend(test_version, test_asset_id, Some(d), Withdraw, dummy_ref(), tx)
+}
+
+test full_withdraw_still_ok_with_no_change_output() {
+  let d = VaultDatum { owner: owner_pkh }
+  let tx = tx_with([owner_pkh], [output_to(owner_pkh)])
+  vault.spend(test_version, test_asset_id, Some(d), Withdraw, dummy_ref(), tx)
 }
