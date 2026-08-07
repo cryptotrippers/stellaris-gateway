@@ -32,11 +32,17 @@ Use the JS-derived `VAULT_SCRIPT_ADDRESS` (logged at app boot) instead.
 
 ```bash
 cd contracts/vault
-aiken check      # 6 unit tests should pass
+aiken check      # 10 unit tests should pass
 aiken build      # regenerates plutus.json (unapplied blueprint)
 node ../../scripts/verify-vault-hash.mjs
 ```
 
-The verify script fails if the unapplied blueprint hash drifts from
-`VAULT_BLUEPRINT_HASH` in `src/lib/vault.ts`. Never bump `VAULT_VERSION`
-without first withdrawing every live UTxO at the old applied address.
+The Stage 3 blueprint is pinned as:
+
+- Hash: `b582793a5e9bb3993ed68876ee017165808efb672e0d333e83975194`
+- Applied version: `2`
+
+The verify script fails if the unapplied blueprint hash or CBOR drifts from
+`VAULT_BLUEPRINT_HASH` / `VAULT_BLUEPRINT_CBOR` in `src/lib/vault.ts`. Never
+bump `VAULT_VERSION` without first withdrawing every live UTxO at the old
+applied address.

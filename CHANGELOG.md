@@ -35,4 +35,11 @@ This project is currently pre-1.0. The public API, on-chain contract addresses, 
 - Step 3 verified: withdrawal `9543b7e95b40a6140aa7217d104587e6c6e2704444497cb314abecaf1e630978` (block 5,025,589) spent the script UTxO with a redeemer, `valid_contract: true`.
 - Retired: Stage 1 address `addr_test1wp2s0pz…qsshx` still holds 7 tADA from txs `8d867bfd…` and `e76a7066…`; a legacy-unlock path is required to recover it.
 
+## [Stage 3] — Partial-withdrawal continuity (Preprod)
+- Added owner-preserving datum continuity for partial withdrawals in the shared vault validator.
+- Local Aiken validation completed: 10 checks, 0 errors, 0 warnings.
+- Stage 3 unapplied blueprint pinned in the app: `b582793a5e9bb3993ed68876ee017165808efb672e0d333e83975194`.
+- Active app derivation is now `VAULT_VERSION = 2`; version-1 and version-2 addresses are intentionally distinct.
+- Before any version-2 deposit, verify the derived per-asset address and complete a new deposit/withdrawal test. Existing version-1 UTxOs require a separate legacy-unlock path.
+
 [Unreleased]: about:blank
