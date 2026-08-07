@@ -186,7 +186,6 @@ fn tx_with(signers: List<ByteArray>, outs: List<Output>) -> Transaction {
     outputs: outs,
   }
 }
-}
 
 // Parameters are prepended to every handler's arguments when the validator
 // is parameterized. Tests exercise version = 1 and asset_id = "sfm-01",
