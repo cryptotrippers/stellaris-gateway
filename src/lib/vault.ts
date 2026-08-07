@@ -1,12 +1,11 @@
 /**
- * Phase-1 on-chain vault helpers (Step 4 — parameterized + versioned).
+ * Versioned on-chain vault helpers (Stage 3 — shared multi-depositor vaults).
  *
- * The Aiken validator now takes a single Int parameter (`_version`). The
- * blueprint in `contracts/vault/plutus.json` stores the *unapplied* script
- * — a pure hash of the logic. We derive the *applied* script hash and
- * bech32 address in the browser by calling Lucid's `applyParamsToScript`
- * with `VAULT_VERSION`. Bumping `VAULT_VERSION` mints a fresh vault
- * instance without editing Aiken source.
+ * The Aiken validator is parameterized by `(version, asset_id)`. The blueprint
+ * in `contracts/vault/plutus.json` is the *unapplied* script. We derive the
+ * applied script hash and bech32 address in the browser with Lucid's
+ * `applyParamsToScript`. Bumping `VAULT_VERSION` mints a fresh vault instance
+ * without editing the Aiken source.
  *
  * Lucid Evolution is dynamically imported inside each function so it never
  * ships into an SSR bundle. All calls must run in the browser after the
@@ -39,22 +38,22 @@ async function getBlockfrostConfig() {
 // ---------------------------------------------------------------------------
 
 /** Bumping this value produces a fresh vault instance on-chain. */
-export const VAULT_VERSION = 1n;
+export const VAULT_VERSION = 2n;
 
 /**
- * Stage 2: the validator is parameterized by `(version, asset_id)`, so every
- * marketplace asset gets its own script hash + address (physical isolation —
- * a bug or exploit in one asset's vault cannot touch another's).
+ * Stage 3: the validator is parameterized by `(version, asset_id)`, so every
+ * marketplace asset gets its own script hash + address. The validator now
+ * also enforces owner-preserving datum continuity for partial withdrawals.
  */
 export const DEFAULT_VAULT_ASSET_ID = "sfm-01";
 
-/** Hash of the *unapplied* parameterized validator from plutus.json. */
+/** Hash of the *unapplied* Stage 3 validator from plutus.json. */
 export const VAULT_BLUEPRINT_HASH =
-  "f49b09a840b0e4421a0abe6b58c3b2f0731b6510c25156e2542bfb3a";
+  "b582793a5e9bb3993ed68876ee017165808efb672e0d333e83975194";
 
-/** Compiled CBOR of the *unapplied* parameterized validator (PlutusV3). */
+/** Compiled CBOR of the *unapplied* Stage 3 validator (PlutusV3). */
 export const VAULT_BLUEPRINT_CBOR =
-  "59014e0101002229800aba2aba1aab9faab9eaab9dab9a9bad0039bae0024888888896600264653001300900198049805000cc0240092225980099b8748008c024dd500144ca6002601a003300d300e0019b874800122259800980098069baa0078acc004c038dd5003c5660026002601a6ea800a264b3001323322330020020012259800800c528456600266e3cdd7180a000801c528c4cc008008c0540050102026375860246026602660266026602660266026602660206ea801cdd7180898079baa001899198008009bac3012301330133010375400e44b30010018a508acc004c966002600a60226ea8006266e3cdd7180a18091baa001375c602860246ea80122941010180998089baa301330113754602600314a31330020023014001403c8092294100d180818071baa0028b20188b201e8b201818051baa0028b2010180480098029baa0098a4d13656400c01";
+  "5902ca0101002229800aba2aba1aba0aab9faab9eaab9dab9a9bad0039bae00248888888896600264653001300a00198051805800cdc3a4005300a0024888966002600460146ea800e2653001300f00198079808000cdc3a40009112cc004c004c038dd50044566002601e6ea80222b30013001300e3754005133225980099199119801001000912cc00400629422b30013371e6eb8c05c00400e2946266004004603000280910151bac301530163016301630163016301630163016301237540106eb8c050c044dd5001456600264660020026eb0c008c048dd5004112cc00400629422b30013259800980318099baa001899b8f375c602e60286ea8004dd7180b980a1baa0058a504048602c60266ea8c058c04cdd5180b000c528c4cc008008c05c00501120288992cc004c010c044dd5000c4c8c8cc004004dd61802180a1baa00a2259800800c528c5660026464b3001300e3016375400315980099b8f375c6034602e6ea8004016264b30013370e9002180b9baa0018992cc004c02cc060dd5000c4c8c966002603e00513371e6eb8c078c06cdd50019bae301e301b37540191640706eb8c074004c064dd5000c59017180d980c1baa0018a504058600e602e6ea800a29450154528a02a3019301637546032602c6ea8004c060006266004004603200314a080990161bae30153012375400314a08080c966002600860226ea8006264b3001300a3012375400313374a90001980a980b18099baa0014bd704530103d87a80004044602a60246ea8c054c048dd5180a980b18091baa30153012375400314c103d87a8000404064660020026eb0c054c048dd5004112cc0040062980103d87a80008992cc004cdd7980b980a1baa001008899ba548000cc0580052f5c113300300330180024048602c00280a2294100f4528201e3012300f37540044602660286028003164035164041164034300b3754007164024300a00130053754015149a26cac8019";
 
 
 /** Whether the vault is available on the network the app is pointed at. */

@@ -1,6 +1,6 @@
 # Vault validator — deterministic, parameterized build
 
-Phase 1 script pinned in `src/lib/vault.ts`.
+Stage 3 validator blueprint pinned in `src/lib/vault.ts`.
 
 ## Toolchain
 
@@ -9,13 +9,14 @@ Phase 1 script pinned in `src/lib/vault.ts`.
 
 ## Parameterization
 
-`validator vault(_version: Int)` takes one compile-time parameter. `aiken build`
-emits the **unapplied** blueprint — the CBOR still has the free `version` and `asset_id` slots.
+`validator vault(_version: Int, _asset_id: ByteArray)` takes two compile-time
+parameters. `aiken build` emits the **unapplied blueprint** — the CBOR still
+has the free `version` and `asset_id` slots.
 
-The applied script (with `version = 1`) is derived on the JS side at module
-init using Lucid's `applyParamsToScript`. Bumping `VAULT_VERSION` in
-`src/lib/vault.ts` mints a fresh script hash / address without editing this
-file. The validator's spending rules never change silently.
+The active applied script uses `version = 2` and is derived on the JS side with
+Lucid's `applyParamsToScript`. Each marketplace asset receives its own script
+hash and address. The Stage 3 validator also enforces owner-preserving datum
+continuity for partial withdrawals.
 
 ## Expected artifacts
 
@@ -26,17 +27,24 @@ drifts.
 
 `aiken address` is **not** meaningful for a parameterized validator — it
 would produce an address for the unapplied script, which is never deployed.
-Use the JS-derived `VAULT_SCRIPT_ADDRESS` (logged at app boot) instead.
+Use the JS-derived address logged by the app instead.
 
 ## Build steps
 
 ```bash
 cd contracts/vault
-aiken check      # 6 unit tests should pass
+aiken check      # 10 unit tests should pass
 aiken build      # regenerates plutus.json (unapplied blueprint)
-node ../../scripts/verify-vault-hash.mjs
+cd ../..
+node scripts/verify-vault-hash.mjs
 ```
 
-The verify script fails if the unapplied blueprint hash drifts from
-`VAULT_BLUEPRINT_HASH` in `src/lib/vault.ts`. Never bump `VAULT_VERSION`
-without first withdrawing every live UTxO at the old applied address.
+The Stage 3 blueprint is pinned as:
+
+- Hash: `b582793a5e9bb3993ed68876ee017165808efb672e0d333e83975194`
+- Applied version: `2`
+
+The verify script fails if the unapplied blueprint hash or CBOR drifts from
+`VAULT_BLUEPRINT_HASH` / `VAULT_BLUEPRINT_CBOR` in `src/lib/vault.ts`. Never
+bump `VAULT_VERSION` without first withdrawing every live UTxO at the old
+applied address.

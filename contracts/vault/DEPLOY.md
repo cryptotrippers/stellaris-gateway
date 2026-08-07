@@ -94,44 +94,58 @@ until every pass condition above is recorded.
 
 # Stage 2 — Per-asset shared vaults
 
-`validators/vault.ak` is now parameterized by `(version: Int, asset_id: ByteArray)`.
+`validators/vault.ak` is parameterized by `(version: Int, asset_id: ByteArray)`.
 Each marketplace asset id compiles to its own applied script hash and address,
 so one asset's deposits are physically unreachable from another asset's vault.
-Spending rules inside a vault are unchanged and remain owner-scoped.
 
-Because the parameter list changed, the **unapplied blueprint hash and CBOR
-change**. The old single-parameter deployment
-(`addr_test1wp2s0…qsshx`) is retired only after every UTxO there is withdrawn.
+The Stage 2 blueprint was applied with version `1` and is now retired for new
+deposits. Existing version-1 UTxOs remain at their original addresses and must
+be recovered with a version-1 legacy-unlock path.
 
-## Stage 2 — Step 1: rebuild and re-pin
+## Stage 2 — completed verification
+
+- Per-asset blueprint hash: `f49b09a840b0e4421a0abe6b58c3b2f0731b6510c25156e2542bfb3a`
+- `(1, "sfm-01")` deposit and withdrawal were verified on Preprod.
+- Per-asset isolation was verified with a separate asset vault.
+
+---
+
+# Stage 3 — Partial-withdrawal continuity
+
+The validator now requires every output returned to the same script address to
+carry an inline `VaultDatum` with the same owner. This makes partial withdrawal
+safe in a shared vault: remainder cannot be re-datumed to another depositor or
+left with a missing datum.
+
+## Stage 3 — Step 1: reproducible build
 
 ```bash
 cd contracts/vault
-aiken check      # 6 unit tests should pass
+aiken check      # expect 10 checks, 0 errors, 0 warnings
 aiken build      # regenerates plutus.json (unapplied blueprint, 2 params)
+cd ../..
+node scripts/verify-vault-hash.mjs
 ```
 
-Report back:
-- the `hash` field from `plutus.json`
-- the `compiledCode` field from `plutus.json`
+Pinned Stage 3 blueprint:
 
-Pass condition: `aiken check` is 0 errors, 0 warnings, and the new unapplied
-hash differs from `ae8cfbb91361…` (proof the parameter change took effect).
+- Hash: `b582793a5e9bb3993ed68876ee017165808efb672e0d333e83975194`
+- Applied version: `2`
 
-## Stage 2 — Step 2: pin and derive per-asset addresses
+## Stage 3 — Step 2: derive the new address
 
-Once the new blueprint is pinned, the app derives `getVaultScript(assetId)`
-per asset via `applyParamsToScript(cbor, [VAULT_VERSION, fromText(assetId)])`
-and logs each derived address at first use.
+After the app is refreshed, open a marketplace asset and record the console
+line showing `[vault] applied version=2`. Confirm the address differs from the
+version-1 address before funding it.
 
-## Stage 2 — Step 3: migrate liquidity
+## Stage 3 — Step 3: live Preprod test
 
-Before any deposit against the new addresses, withdraw all UTxOs from the
-Stage 1 address. Deposits at the retired address remain spendable by their
-owners but are no longer surfaced in the UI.
+1. Deposit at least 2 tADA into the version-2 `sfm-01` vault.
+2. Confirm the transaction and inline owner datum on Preprod.
+3. Withdraw and confirm the returned funds.
+4. Later, test a partial withdrawal and verify the remainder retains the same
+   owner datum.
 
-## Stage 2 — Step 4: per-asset live test
-
-Deposit 2 tADA against `sfm-01`, confirm it lands at the `sfm-01` address only,
-then withdraw. Repeat the deferred second-wallet negative test from Stage 1
-Step 6 against the per-asset address.
+Do not mark the deferred second-wallet negative test complete without a second
+wallet. Do not bump `VAULT_VERSION` again without withdrawing every live UTxO
+at the current applied address.
