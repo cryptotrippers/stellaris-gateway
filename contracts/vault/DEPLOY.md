@@ -1,9 +1,10 @@
 # Contract deployment checklist — Cardano Preprod
 
-The current active implementation is the Stage 3 parameterized vault
-(`validator vault(_version: Int, _asset_id: ByteArray)`) with `VAULT_VERSION = 2`.
-The contract specification and test-vector matrix are recorded in `SPEC.md`.
+The sections below preserve the historical Stage 1 and Stage 2 evidence, followed
+by the active Stage 3 checklist. The current validator is parameterized by
+`(version: Int, asset_id: ByteArray)` with `VAULT_VERSION = 2`.
 
+The contract specification and test-vector matrix are recorded in `SPEC.md`.
 There is no on-chain "deploy" transaction for a spending validator: the script
 becomes live the moment the first UTxO is locked at its applied address. Every
 stage therefore requires a reproducible build, address verification, live
