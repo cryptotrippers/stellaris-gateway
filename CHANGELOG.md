@@ -9,6 +9,8 @@ This project is currently pre-1.0. The public API, on-chain contract addresses, 
 
 ### Added
 - `contracts/vault/SPEC.md` defining the current Stage 3 state transitions, migration rules, shared-accounting invariants, and ordered contract test vectors.
+- `scripts/derive-vault-addresses.mjs`, which derives the applied version-2 script hash and Preprod address per asset directly from the pinned blueprint.
+- A version-2 address registry and a live Preprod proof table in `contracts/vault/DEPLOY.md`.
 
 ### Changed
 - Contract work now follows explicit evidence gates before any receipt-token or shared-vault rewrite.

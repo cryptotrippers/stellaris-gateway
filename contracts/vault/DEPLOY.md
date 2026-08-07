@@ -147,9 +147,26 @@ Pinned Stage 3 blueprint:
 
 ## Stage 3 — Step 2: derive the new address
 
-After the app is refreshed, open a marketplace asset and record the console
-line showing `[vault] applied version=2`. Confirm the address differs from the
-version-1 address before funding it.
+Regenerate the address registry from the pinned blueprint (no wallet needed):
+
+```bash
+node scripts/derive-vault-addresses.mjs sfm-01 sfm-02
+```
+
+Version-2 address registry (Preprod, `VAULT_VERSION = 2`):
+
+| Asset | Applied script hash | Preprod address |
+| --- | --- | --- |
+| `sfm-01` | `f2bdf2698e28980b6b49d302a78ab469db5e3b27a02af6d41300e8cf` | `addr_test1wretmunf3c5fszmtf8fs9fu2k35akh3my7sz4ak5zvqw3nczk6cc5` |
+| `sfm-02` | `0c55e92436ec3724e773706e74c6a2d2d7c73814f24dcfea072d3634` | `addr_test1wqx9t6fyxmkrwf88wdcxuaxx5tfd03eczneymnl2quknvdqtjfeda` |
+
+When the app is refreshed, the browser console line
+`[vault] applied version=2 asset=<id> → hash=… address=…` must match this table
+exactly. If it does not, the deployed bundle is stale — do not fund the address.
+
+Version-1 addresses are retired. No new deposit may target them; recovery of any
+remaining version-1 UTxO is handled separately in Step 2 of the readiness plan.
+
 
 ## Stage 3 — Step 3: live Preprod test
 
@@ -159,6 +176,16 @@ version-1 address before funding it.
 4. Later, test a partial withdrawal and verify the remainder retains the same
    owner datum.
 
+Record the evidence here as each transaction confirms (the gate for Step 1 of
+the readiness plan is all three rows filled with confirmed hashes):
+
+| Test | Asset | Tx hash | Confirmed | Notes |
+| --- | --- | --- | --- | --- |
+| Deposit | `sfm-01` | _pending_ | _pending_ | funds the version-2 address above |
+| Full withdrawal | `sfm-01` | _pending_ | _pending_ | script UTxO fully consumed |
+| Partial withdrawal | `sfm-01` | _pending_ | _pending_ | remainder keeps same owner datum |
+
 Do not mark the deferred second-wallet negative test complete without a second
 wallet. Do not bump `VAULT_VERSION` again without withdrawing every live UTxO
 at the current applied address.
+
