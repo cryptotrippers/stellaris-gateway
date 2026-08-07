@@ -1,22 +1,32 @@
-//// Stellaris vault — Stage 2.1 (per-asset shared vaults).
+//// Stellaris vault — Stage 3.1 (shared multi-depositor vaults).
 ////
 //// The validator is parameterized by (version, asset_id). Each marketplace
-//// asset therefore compiles to its *own* script hash and address, so
-//// deposits for one asset can never be spent by, mixed with, or accounted
-//// against another asset. Neither parameter is read by the logic: they exist
-//// purely to fork the applied UPLC.
+//// asset compiles to its *own* script hash and address, so one asset's
+//// deposits can never be spent by or accounted against another asset.
+//// Neither parameter is read by the logic: they exist purely to fork the
+//// applied UPLC.
 ////
-//// Inside one asset vault, positions stay owner-scoped. The datum pins the
-//// depositor's payment key hash, and spending is authorized when:
+//// One asset vault is SHARED: many depositors hold separate UTxOs at the
+//// same address, each pinning its depositor in the datum. Spending a
+//// position is authorized when:
 ////   1. The owner (datum.owner) signed the transaction (`extra_signatories`),
 ////   2. At least one output pays to an address whose payment credential IS
 ////      the owner's PKH (a tricked signer cannot sweep funds to a stranger),
-////   3. The redeemer is a well-typed `VaultRedeemer`.
+////   3. CONTINUITY: every output returned to this same script address
+////      carries an inline `VaultDatum` with the SAME owner. This is what
+////      makes partial withdrawals safe in a shared vault — change left
+////      behind cannot be re-datumed to a different depositor, and cannot be
+////      stranded with a missing or malformed datum.
+////
+//// (3) is the Stage 3 addition. Without it, a partial withdraw could hand
+//// the remainder of your position to an attacker's PKH in the same tx.
 
 use aiken/collection/list
-use cardano/address.{Address, VerificationKey}
+use cardano/address.{Address, Script, VerificationKey}
 use cardano/assets
-use cardano/transaction.{NoDatum, Output, OutputReference, Transaction, placeholder}
+use cardano/transaction.{
+  InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, placeholder,
+}
 
 pub type VaultDatum {
   owner: ByteArray,
@@ -36,6 +46,39 @@ fn output_pays_to(output: Output, pkh: ByteArray) -> Bool {
   }
 }
 
+/// Payment credential of the UTxO being spent, i.e. this script's own hash.
+/// Resolved from the tx inputs so the rule needs no extra parameter.
+fn own_script_hash(inputs: List<Input>, own_ref: OutputReference) -> Option<ByteArray> {
+  when list.find(inputs, fn(i) { i.output_reference == own_ref }) is {
+    Some(i) ->
+      when i.output.address.payment_credential is {
+        Script(h) -> Some(h)
+        _ -> None
+      }
+    None -> None
+  }
+}
+
+/// An output is acceptable iff it does NOT return to this script, or it does
+/// and carries an inline VaultDatum pinning the same owner.
+fn continues_owner(output: Output, script_hash: ByteArray, owner: ByteArray) -> Bool {
+  when output.address.payment_credential is {
+    Script(h) ->
+      if h == script_hash {
+        when output.datum is {
+          InlineDatum(raw) -> {
+            expect out_d: VaultDatum = raw
+            out_d.owner == owner
+          }
+          _ -> False
+        }
+      } else {
+        True
+      }
+    _ -> True
+  }
+}
+
 /// Parameterized validator.
 ///
 /// `version`  — bump to mint a fresh deployment of identical logic.
@@ -45,7 +88,7 @@ validator vault(_version: Int, _asset_id: ByteArray) {
   spend(
     datum: Option<VaultDatum>,
     redeemer: VaultRedeemer,
-    _own_ref: OutputReference,
+    own_ref: OutputReference,
     tx: Transaction,
   ) {
     expect Some(d) = datum
@@ -53,7 +96,12 @@ validator vault(_version: Int, _asset_id: ByteArray) {
     let owner_signed = list.has(tx.extra_signatories, d.owner)
     let owner_gets_output =
       list.any(tx.outputs, fn(o) { output_pays_to(o, d.owner) })
-    owner_signed && owner_gets_output
+    let continuity =
+      when own_script_hash(tx.inputs, own_ref) is {
+        Some(sh) -> list.all(tx.outputs, fn(o) { continues_owner(o, sh, d.owner) })
+        None -> False
+      }
+    owner_signed && owner_gets_output && continuity
   }
 
   else(_) {
@@ -89,8 +137,53 @@ fn output_to(pkh: ByteArray) -> Output {
   }
 }
 
+const script_hash: ByteArray = #"33333333333333333333333333333333333333333333333333333333"
+
+/// Address of this vault script.
+fn script_addr() -> Address {
+  Address { payment_credential: Script(script_hash), stake_credential: None }
+}
+
+/// The UTxO being spent: a locked position owned by `pkh`.
+fn vault_input(pkh: ByteArray) -> Input {
+  Input {
+    output_reference: dummy_ref(),
+    output: Output {
+      address: script_addr(),
+      value: assets.zero,
+      datum: InlineDatum(VaultDatum { owner: pkh }),
+      reference_script: None,
+    },
+  }
+}
+
+/// Change output returned to the vault, datum pinning `pkh`.
+fn vault_change(pkh: ByteArray) -> Output {
+  Output {
+    address: script_addr(),
+    value: assets.zero,
+    datum: InlineDatum(VaultDatum { owner: pkh }),
+    reference_script: None,
+  }
+}
+
+/// Change returned to the vault with no datum at all (would strand funds).
+fn vault_change_no_datum() -> Output {
+  Output {
+    address: script_addr(),
+    value: assets.zero,
+    datum: NoDatum,
+    reference_script: None,
+  }
+}
+
 fn tx_with(signers: List<ByteArray>, outs: List<Output>) -> Transaction {
-  Transaction { ..placeholder, extra_signatories: signers, outputs: outs }
+  Transaction {
+    ..placeholder,
+    inputs: [vault_input(owner_pkh)],
+    extra_signatories: signers,
+    outputs: outs,
+  }
 }
 
 // Parameters are prepended to every handler's arguments when the validator
@@ -153,4 +246,37 @@ test rules_are_identical_under_a_different_asset_id() {
     dummy_ref(),
     bad_tx,
   )
+}
+
+// ------------------------------------------------------------------
+// Stage 3 — shared vault / partial withdrawal continuity.
+// ------------------------------------------------------------------
+
+test partial_withdraw_ok_when_change_keeps_owner_datum() {
+  // Owner takes part of the position; the remainder returns to the vault
+  // still pinned to them. This is the core shared-vault flow.
+  let d = VaultDatum { owner: owner_pkh }
+  let tx = tx_with([owner_pkh], [output_to(owner_pkh), vault_change(owner_pkh)])
+  vault.spend(test_version, test_asset_id, Some(d), Withdraw, dummy_ref(), tx)
+}
+
+test partial_withdraw_fails_when_change_is_redatumed_to_another_owner() {
+  // The attack Stage 3 closes: remainder left in the shared vault but
+  // re-assigned to somebody else's PKH.
+  let d = VaultDatum { owner: owner_pkh }
+  let tx = tx_with([owner_pkh], [output_to(owner_pkh), vault_change(other_pkh)])
+  !vault.spend(test_version, test_asset_id, Some(d), Withdraw, dummy_ref(), tx)
+}
+
+test partial_withdraw_fails_when_change_has_no_datum() {
+  let d = VaultDatum { owner: owner_pkh }
+  let tx =
+    tx_with([owner_pkh], [output_to(owner_pkh), vault_change_no_datum()])
+  !vault.spend(test_version, test_asset_id, Some(d), Withdraw, dummy_ref(), tx)
+}
+
+test full_withdraw_still_ok_with_no_change_output() {
+  let d = VaultDatum { owner: owner_pkh }
+  let tx = tx_with([owner_pkh], [output_to(owner_pkh)])
+  vault.spend(test_version, test_asset_id, Some(d), Withdraw, dummy_ref(), tx)
 }
