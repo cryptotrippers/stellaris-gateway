@@ -22,9 +22,8 @@
 //// the remainder of your position to an attacker's PKH in the same tx.
 
 use aiken/collection/list
-use cardano/address.{Address, VerificationKey}
+use cardano/address.{Address, Script, VerificationKey}
 use cardano/assets
-use cardano/address.{Script}
 use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, placeholder,
 }
