@@ -1,11 +1,13 @@
-# Stage 1 deployment checklist — Preprod vault v1
+# Contract deployment checklist — Cardano Preprod
 
-Stage 1 deploys the **parameterized vault** (`validator vault(_version: Int)`)
-with `VAULT_VERSION = 1` to **Cardano Preprod**. There is no on-chain "deploy"
-transaction for a spending validator: the script becomes live the moment the
-first UTxO is locked at its applied address. Stage 1 is therefore: verify the
-build is reproducible, verify the derived address, lock funds, unlock funds,
-and record the result.
+The current active implementation is the Stage 3 parameterized vault
+(`validator vault(_version: Int, _asset_id: ByteArray)`) with `VAULT_VERSION = 2`.
+The contract specification and test-vector matrix are recorded in `SPEC.md`.
+
+There is no on-chain "deploy" transaction for a spending validator: the script
+becomes live the moment the first UTxO is locked at its applied address. Every
+stage therefore requires a reproducible build, address verification, live
+transaction evidence, and a recorded pass condition before the next stage.
 
 ## Step 1 — Reproducible build (local, needs Aiken v1.1.23)
 
