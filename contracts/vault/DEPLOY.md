@@ -176,6 +176,16 @@ remaining version-1 UTxO is handled separately in Step 2 of the readiness plan.
 4. Later, test a partial withdrawal and verify the remainder retains the same
    owner datum.
 
+Record the evidence here as each transaction confirms (the gate for Step 1 of
+the readiness plan is all three rows filled with confirmed hashes):
+
+| Test | Asset | Tx hash | Confirmed | Notes |
+| --- | --- | --- | --- | --- |
+| Deposit | `sfm-01` | _pending_ | _pending_ | funds the version-2 address above |
+| Full withdrawal | `sfm-01` | _pending_ | _pending_ | script UTxO fully consumed |
+| Partial withdrawal | `sfm-01` | _pending_ | _pending_ | remainder keeps same owner datum |
+
 Do not mark the deferred second-wallet negative test complete without a second
 wallet. Do not bump `VAULT_VERSION` again without withdrawing every live UTxO
 at the current applied address.
+
