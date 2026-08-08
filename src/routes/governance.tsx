@@ -8,6 +8,10 @@ import { Badge } from "@/components/ui/StatusBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { getProtocolStats } from "@/lib/governance.functions";
 import { listAssetVaults, type AssetVaultRow } from "@/lib/asset-vaults.functions";
+import { ProposalCard } from "@/components/governance/ProposalCard";
+import { VaultGovernanceCard } from "@/components/governance/VaultGovernanceCard";
+import { useGovernanceData } from "@/hooks/useGovernanceData";
+import { DERIVED_STATUS_LABEL, derivedStatus } from "@/lib/governance-votes.shared";
 import { formatAda } from "@/lib/format";
 import type { Database } from "@/integrations/supabase/types";
 
