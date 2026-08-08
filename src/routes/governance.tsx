@@ -113,39 +113,38 @@ function GovSidebar({ active }: { active: GovTab }) {
 
 function OverviewTab() {
   const fetchStats = useServerFn(getProtocolStats);
+  const gov = useGovernanceData();
   const [tvl, setTvl] = useState<number | null>(null);
-  const [proposals, setProposals] = useState<ProposalRow[]>([]);
   const [treasury, setTreasury] = useState<TreasuryConfigRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [statsRes, propRes, treasuryRes] = await Promise.all([
+      const [statsRes, treasuryRes] = await Promise.all([
         fetchStats().catch(() => ({ totalAda: 0, activeVaults: 0 })),
-        supabase
-          .from("governance_proposals")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(5),
         supabase.from("treasury_config").select("*"),
       ]);
       if (cancelled) return;
       setTvl(statsRes.totalAda);
-      setProposals((propRes.data as ProposalRow[]) ?? []);
       setTreasury((treasuryRes.data as TreasuryConfigRow[]) ?? []);
       setLoading(false);
     })();
     return () => { cancelled = true; };
   }, [fetchStats]);
 
-  const activeCount = proposals.filter(p => p.status === "active").length;
+  const recent = gov.proposals.slice(0, 5);
+  const openCount = gov.proposals.filter(p => derivedStatus(p) === "voting_open").length;
 
   return (
     <>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <KPI label="Total Value Locked" value={tvl === null ? "—" : formatAda(tvl)} delta={loading ? "Loading…" : "Live"} />
-        <KPI label="Active Proposals" value={loading ? "—" : String(activeCount)} delta={loading ? "Loading…" : "Live"} />
+        <KPI
+          label="Proposals Open for Voting"
+          value={gov.proposalsLoading ? "—" : String(openCount)}
+          delta={gov.proposalsLoading ? "Loading…" : "Derived from voting windows"}
+        />
         <KPI label="Vault Health" value="—" delta="Indexer not connected" />
         <KPI label="Treasury Runway" value="—" delta="Treasury not configured" />
       </div>
@@ -156,9 +155,9 @@ function OverviewTab() {
             <h2 className="text-sm font-semibold text-foreground">Recent Proposals</h2>
             <Link to="/governance" search={{ tab: "proposals" }} className="text-xs text-primary">View all</Link>
           </div>
-          {loading ? (
+          {gov.proposalsLoading ? (
             <div className="mt-6 text-center text-sm text-muted-foreground">Loading proposals…</div>
-          ) : proposals.length === 0 ? (
+          ) : recent.length === 0 ? (
             <div className="mt-6 rounded-lg border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
               No proposals yet.
             </div>
@@ -175,27 +174,37 @@ function OverviewTab() {
                   </tr>
                 </thead>
                 <tbody>
-                  {proposals.map(p => (
-                    <tr key={p.id} className="border-t border-border/70 hover:bg-secondary/40 cursor-pointer">
-                      <td className="py-3 pr-2 font-mono text-xs text-muted-foreground">{p.sip_number}</td>
-                      <td className="py-3 pr-2 font-medium text-foreground">{p.title}</td>
-                      <td className="py-3 pr-2"><ProposalStatus status={p.status} /></td>
-                      <td className="py-3 pr-2 text-right">
-                        <div className="inline-flex items-center gap-1">
-                          <div className="h-1.5 w-16 rounded-full bg-secondary">
-                            <div className="h-full rounded-full bg-success" style={{ width: `${p.votes_for_pct}%` }} />
-                          </div>
-                          <span className="number-display text-xs text-foreground">{Number(p.votes_for_pct).toFixed(0)}%</span>
-                        </div>
-                      </td>
-                      <td className="py-3 text-xs text-muted-foreground">{p.ends_at ? new Date(p.ends_at).toLocaleDateString() : "—"}</td>
-                    </tr>
-                  ))}
+                  {recent.map(p => {
+                    const forPct = gov.tallies[p.id]?.forPct ?? null;
+                    return (
+                      <tr key={p.id} className="border-t border-border/70 hover:bg-secondary/40">
+                        <td className="py-3 pr-2 font-mono text-xs text-muted-foreground">{p.sip_number}</td>
+                        <td className="py-3 pr-2 font-medium text-foreground">{p.title}</td>
+                        <td className="py-3 pr-2"><ProposalStatus status={derivedStatus(p)} /></td>
+                        <td className="py-3 pr-2 text-right">
+                          {forPct === null ? (
+                            <span className="text-xs text-muted-foreground">
+                              {gov.talliesLoading ? "…" : "No votes"}
+                            </span>
+                          ) : (
+                            <div className="inline-flex items-center gap-1">
+                              <div className="h-1.5 w-16 rounded-full bg-secondary">
+                                <div className="h-full rounded-full bg-success" style={{ width: `${forPct}%` }} />
+                              </div>
+                              <span className="number-display text-xs text-foreground">{forPct.toFixed(0)}%</span>
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 text-xs text-muted-foreground">{p.ends_at ? new Date(p.ends_at).toLocaleDateString() : "—"}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           )}
         </div>
+
 
         <div className="card-institutional p-5">
           <div className="flex items-center justify-between">
