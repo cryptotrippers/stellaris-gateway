@@ -5,7 +5,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { listFundingRequests } from "@/lib/funding-requests.functions";
 import { formatFeeBps } from "@/lib/vault-fees";
 
-export const Route = createFileRoute("/funding")({
+export const Route = createFileRoute("/funding/")({
   head: () => ({
     meta: [
       { title: "Funding Requests · Stellaris Asset Onboarding" },

@@ -20,13 +20,13 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MarketplaceRouteImport } from './routes/marketplace'
 import { Route as InviteRouteImport } from './routes/invite'
 import { Route as GovernanceRouteImport } from './routes/governance'
-import { Route as FundingRouteImport } from './routes/funding'
 import { Route as DevelopersRouteImport } from './routes/developers'
 import { Route as BlockfrostHealthRouteImport } from './routes/blockfrost-health'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UpgradeIndexRouteImport } from './routes/upgrade.index'
+import { Route as FundingIndexRouteImport } from './routes/funding.index'
 import { Route as UpgradeReturnRouteImport } from './routes/upgrade.return'
 import { Route as MarketplaceIdRouteImport } from './routes/marketplace.$id'
 import { Route as GovernanceNewRouteImport } from './routes/governance.new'
@@ -93,11 +93,6 @@ const GovernanceRoute = GovernanceRouteImport.update({
   path: '/governance',
   getParentRoute: () => rootRouteImport,
 } as any)
-const FundingRoute = FundingRouteImport.update({
-  id: '/funding',
-  path: '/funding',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DevelopersRoute = DevelopersRouteImport.update({
   id: '/developers',
   path: '/developers',
@@ -127,6 +122,11 @@ const UpgradeIndexRoute = UpgradeIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => UpgradeRoute,
+} as any)
+const FundingIndexRoute = FundingIndexRouteImport.update({
+  id: '/funding/',
+  path: '/funding/',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const UpgradeReturnRoute = UpgradeReturnRouteImport.update({
   id: '/return',
@@ -191,7 +191,6 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/blockfrost-health': typeof BlockfrostHealthRoute
   '/developers': typeof DevelopersRoute
-  '/funding': typeof FundingRoute
   '/governance': typeof GovernanceRouteWithChildren
   '/invite': typeof InviteRoute
   '/marketplace': typeof MarketplaceRouteWithChildren
@@ -210,6 +209,7 @@ export interface FileRoutesByFullPath {
   '/governance/new': typeof GovernanceNewRoute
   '/marketplace/$id': typeof MarketplaceIdRoute
   '/upgrade/return': typeof UpgradeReturnRoute
+  '/funding/': typeof FundingIndexRoute
   '/upgrade/': typeof UpgradeIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/blockfrost/webhook': typeof ApiPublicBlockfrostWebhookRoute
@@ -221,7 +221,6 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/blockfrost-health': typeof BlockfrostHealthRoute
   '/developers': typeof DevelopersRoute
-  '/funding': typeof FundingRoute
   '/governance': typeof GovernanceRouteWithChildren
   '/invite': typeof InviteRoute
   '/marketplace': typeof MarketplaceRouteWithChildren
@@ -239,6 +238,7 @@ export interface FileRoutesByTo {
   '/governance/new': typeof GovernanceNewRoute
   '/marketplace/$id': typeof MarketplaceIdRoute
   '/upgrade/return': typeof UpgradeReturnRoute
+  '/funding': typeof FundingIndexRoute
   '/upgrade': typeof UpgradeIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/blockfrost/webhook': typeof ApiPublicBlockfrostWebhookRoute
@@ -251,7 +251,6 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/blockfrost-health': typeof BlockfrostHealthRoute
   '/developers': typeof DevelopersRoute
-  '/funding': typeof FundingRoute
   '/governance': typeof GovernanceRouteWithChildren
   '/invite': typeof InviteRoute
   '/marketplace': typeof MarketplaceRouteWithChildren
@@ -270,6 +269,7 @@ export interface FileRoutesById {
   '/governance/new': typeof GovernanceNewRoute
   '/marketplace/$id': typeof MarketplaceIdRoute
   '/upgrade/return': typeof UpgradeReturnRoute
+  '/funding/': typeof FundingIndexRoute
   '/upgrade/': typeof UpgradeIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/blockfrost/webhook': typeof ApiPublicBlockfrostWebhookRoute
@@ -283,7 +283,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/blockfrost-health'
     | '/developers'
-    | '/funding'
     | '/governance'
     | '/invite'
     | '/marketplace'
@@ -302,6 +301,7 @@ export interface FileRouteTypes {
     | '/governance/new'
     | '/marketplace/$id'
     | '/upgrade/return'
+    | '/funding/'
     | '/upgrade/'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/blockfrost/webhook'
@@ -313,7 +313,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/blockfrost-health'
     | '/developers'
-    | '/funding'
     | '/governance'
     | '/invite'
     | '/marketplace'
@@ -331,6 +330,7 @@ export interface FileRouteTypes {
     | '/governance/new'
     | '/marketplace/$id'
     | '/upgrade/return'
+    | '/funding'
     | '/upgrade'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/blockfrost/webhook'
@@ -342,7 +342,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/blockfrost-health'
     | '/developers'
-    | '/funding'
     | '/governance'
     | '/invite'
     | '/marketplace'
@@ -361,6 +360,7 @@ export interface FileRouteTypes {
     | '/governance/new'
     | '/marketplace/$id'
     | '/upgrade/return'
+    | '/funding/'
     | '/upgrade/'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/blockfrost/webhook'
@@ -373,7 +373,6 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   BlockfrostHealthRoute: typeof BlockfrostHealthRoute
   DevelopersRoute: typeof DevelopersRoute
-  FundingRoute: typeof FundingRoute
   GovernanceRoute: typeof GovernanceRouteWithChildren
   InviteRoute: typeof InviteRoute
   MarketplaceRoute: typeof MarketplaceRouteWithChildren
@@ -388,6 +387,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute: typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
+  FundingIndexRoute: typeof FundingIndexRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicBlockfrostWebhookRoute: typeof ApiPublicBlockfrostWebhookRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -472,13 +472,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GovernanceRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/funding': {
-      id: '/funding'
-      path: '/funding'
-      fullPath: '/funding'
-      preLoaderRoute: typeof FundingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/developers': {
       id: '/developers'
       path: '/developers'
@@ -520,6 +513,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/upgrade/'
       preLoaderRoute: typeof UpgradeIndexRouteImport
       parentRoute: typeof UpgradeRoute
+    }
+    '/funding/': {
+      id: '/funding/'
+      path: '/funding'
+      fullPath: '/funding/'
+      preLoaderRoute: typeof FundingIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/upgrade/return': {
       id: '/upgrade/return'
@@ -639,7 +639,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   BlockfrostHealthRoute: BlockfrostHealthRoute,
   DevelopersRoute: DevelopersRoute,
-  FundingRoute: FundingRoute,
   GovernanceRoute: GovernanceRouteWithChildren,
   InviteRoute: InviteRoute,
   MarketplaceRoute: MarketplaceRouteWithChildren,
@@ -656,6 +655,7 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute:
     Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute,
+  FundingIndexRoute: FundingIndexRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicBlockfrostWebhookRoute: ApiPublicBlockfrostWebhookRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
