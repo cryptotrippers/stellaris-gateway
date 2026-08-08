@@ -47,16 +47,23 @@ const assetQuery = (id: string) =>
 export const Route = createFileRoute("/marketplace/$id")({
   loader: ({ params, context }) =>
     context.queryClient.ensureQueryData(assetQuery(params.id)),
-  head: ({ params }) => ({
-    meta: [
-      { title: `Vault ${params.id} · Stellaris Finance` },
-      {
-        name: "description",
-        content:
-          "On-chain vault detail. Live issuer, funding, and audit data pulled from the registry.",
-      },
-    ],
-  }),
+  head: ({ params, loaderData }) => {
+    const a = loaderData as AssetRow | undefined;
+    const title = a ? `${a.name} · On-chain vault · Stellaris` : `Vault ${params.id} · Stellaris`;
+    const description = a
+      ? `${a.name} by ${a.issuer}${a.location ? ` · ${a.location}` : ""}. Live funding, audit status, and on-chain vault activity.`
+      : "On-chain vault detail. Live issuer, funding, and audit data pulled from the registry.";
+    return {
+      meta: [
+        { title },
+        { name: "description", content: description },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:type", content: "website" },
+        { name: "twitter:card", content: "summary_large_image" },
+      ],
+    };
+  },
   notFoundComponent: () => (
     <div className="mx-auto max-w-md py-24 text-center">
       <h1 className="text-2xl font-semibold text-foreground">Vault not registered</h1>

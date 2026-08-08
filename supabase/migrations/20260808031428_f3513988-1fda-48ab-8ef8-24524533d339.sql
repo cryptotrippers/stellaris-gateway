@@ -1,0 +1,1 @@
+UPDATE public.assets SET description = 'Second Phase-3 pilot vault used to verify per-asset vault isolation. Its script address is derived from (version=2, asset_id="sfm-02"), so its UTxOs are separate from sfm-01. Not a real asset — Preprod tADA only. Owner PKH is enforced on withdraw.' WHERE id = 'sfm-02';

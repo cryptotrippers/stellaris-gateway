@@ -12,7 +12,9 @@ interface ShareRowProps {
 export function ShareRow({ url, text, eventName = "share_click", label = "Share" }: ShareRowProps) {
   const [copied, setCopied] = useState(false);
 
-  const shareUrl = url.startsWith("http") ? url : (typeof window !== "undefined" ? window.location.origin + url : url);
+  const origin =
+    typeof window !== "undefined" ? window.location.origin : "https://stellarischain.com";
+  const shareUrl = url.startsWith("http") ? url : origin + url;
   const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
   const redditUrl = `https://www.reddit.com/submit?url=${encodeURIComponent(shareUrl)}&title=${encodeURIComponent(text)}`;
 
