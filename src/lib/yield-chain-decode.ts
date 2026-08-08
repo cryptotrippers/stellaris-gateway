@@ -151,6 +151,8 @@ export interface ChainAccrual {
   totalSharesAfter: string;
   sharePriceBefore: number;
   sharePriceAfter: number;
+  /** Shares minted to the treasury as the management fee in this accrual. */
+  feeSharesMinted: string;
 }
 
 export interface VaultHistory {
@@ -175,10 +177,16 @@ export function deriveAccruals(
     const prev = sorted[i - 1]!;
     const curr = sorted[i]!;
     const assetsDelta = BigInt(curr.state.totalAssets) - BigInt(prev.state.totalAssets);
+    const sharesDelta = BigInt(curr.state.totalShares) - BigInt(prev.state.totalShares);
+    const treasuryDelta =
+      BigInt(curr.state.treasuryShares) - BigInt(prev.state.treasuryShares);
+    // An accrual bumps the epoch and adds lovelace. The only share supply
+    // movement it may cause is the management fee minted to the treasury.
     if (
-      curr.state.totalShares !== prev.state.totalShares ||
       curr.state.epoch <= prev.state.epoch ||
-      assetsDelta <= 0n
+      assetsDelta <= 0n ||
+      sharesDelta < 0n ||
+      sharesDelta !== treasuryDelta
     ) {
       continue;
     }
@@ -192,6 +200,7 @@ export function deriveAccruals(
       totalSharesAfter: curr.state.totalShares,
       sharePriceBefore: sharePriceOf(prev.state),
       sharePriceAfter: sharePriceOf(curr.state),
+      feeSharesMinted: treasuryDelta.toString(),
     });
   }
   return accruals;
