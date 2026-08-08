@@ -53,7 +53,12 @@ pub type YieldRedeemer {
   Accrue { amount: Int }
   /// Operators halt deposits and accruals. Withdrawals stay open.
   SetPaused { paused: Bool }
+  /// Operators replace the signing committee. Requires M-of-N of the OUTGOING
+  /// committee; the incoming committee must itself be valid. Nothing else
+  /// about the vault may move in the same transaction.
+  RotateCommittee { operators: List<ByteArray>, threshold: Int }
 }
+
 
 // ------------------------------------------------------------------
 // Helpers
@@ -134,6 +139,18 @@ fn positions_well_formed(outs: List<Output>) -> Bool {
     },
   )
 }
+
+/// Outputs returned to the vault must be pure lovelace. Without this an
+/// attacker can park arbitrary native tokens (or an NFT) in a Position or in
+/// the State UTxO, inflating its min-ADA requirement until the accounted
+/// lovelace can no longer be paid out — a permanent lock on real funds.
+fn values_pure(outs: List<Output>) -> Bool {
+  list.all(
+    outs,
+    fn(o) { assets.without_lovelace(o.value) == assets.zero },
+  )
+}
+
 
 /// The single State datum among `outs`, or None if there isn't exactly one.
 fn sole_state(outs: List<Output>) -> Option<YieldDatum> {
@@ -234,8 +251,9 @@ validator yield_vault(_version: Int, _asset_id: ByteArray) {
           total_shares: n_shares,
           total_assets: n_assets,
           epoch: n_epoch,
+          operators: n_operators,
+          threshold: n_threshold,
           paused: n_paused,
-          ..
         } = next
 
         let acc = VaultAccounting { total_shares, total_assets }
@@ -254,17 +272,25 @@ validator yield_vault(_version: Int, _asset_id: ByteArray) {
         // transition below ties `n_assets` to the exact on-chain value delta
         // at the script address, so accounted assets can never outrun the
         // value actually locked. What we can check locally is non-negativity.
+        //
+        // The OUTGOING committee must be well-formed and the returned state
+        // must be pure lovelace; committee immutability is asserted per-action
+        // below, because `RotateCommittee` is the one action allowed to change
+        // it.
         let structural =
-          committee_unchanged(d, next) && operators_valid(operators, threshold) && positions_well_formed(
-            outs,
-          ) && n_shares >= 0 && n_assets >= 0 && locked_out >= 0 && n_epoch >= epoch
+          operators_valid(operators, threshold) && operators_valid(
+            n_operators,
+            n_threshold,
+          ) && positions_well_formed(outs) && values_pure(outs) && n_shares >= 0 && n_assets >= 0 && locked_out >= 0 && n_epoch >= epoch
+
+        let same_committee = committee_unchanged(d, next)
 
         let transition =
           when redeemer is {
             Deposit -> {
               let deposit = value_delta
               let minted = mint_shares(acc, deposit)
-              !paused && n_paused == paused && n_epoch == epoch && deposit_ok(
+              same_committee && !paused && n_paused == paused && n_epoch == epoch && deposit_ok(
                 acc,
                 deposit,
               ) && shares_delta == minted && n_shares == total_shares + minted && n_assets == total_assets + deposit
@@ -273,19 +299,34 @@ validator yield_vault(_version: Int, _asset_id: ByteArray) {
             Withdraw { shares } -> {
               let paid = -value_delta
               // Withdrawals stay available while paused, at the last price.
-              n_paused == paused && n_epoch == epoch && shares > 0 && shares <= total_shares && shares_delta == -shares && paid > 0 && paid <= redeem_value(acc, shares) && n_shares == total_shares - shares && n_assets == total_assets - paid
+              same_committee && n_paused == paused && n_epoch == epoch && shares > 0 && shares <= total_shares && shares_delta == -shares && paid > 0 && paid <= redeem_value(acc, shares) && n_shares == total_shares - shares && n_assets == total_assets - paid
             }
 
             Accrue { amount } ->
-              !paused && n_paused == paused && amount > 0 && threshold_met(
+              same_committee && !paused && n_paused == paused && amount > 0 && threshold_met(
                 operators,
                 threshold,
                 tx.extra_signatories,
               ) && value_delta == amount && shares_delta == 0 && n_shares == total_shares && n_assets == total_assets + amount && n_epoch == epoch + 1
 
             SetPaused { paused: want } ->
-              threshold_met(operators, threshold, tx.extra_signatories) && n_paused == want && want != paused && n_epoch == epoch && n_shares == total_shares && n_assets == total_assets && value_delta == 0 && shares_delta == 0
+              same_committee && threshold_met(
+                operators,
+                threshold,
+                tx.extra_signatories,
+              ) && n_paused == want && want != paused && n_epoch == epoch && n_shares == total_shares && n_assets == total_assets && value_delta == 0 && shares_delta == 0
+
+            // Committee rotation: authorized by M-of-N of the OUTGOING
+            // committee, and the redeemer must match the committee actually
+            // written into the returned state. The vault's money and epoch
+            // stand still, so a rotation can never be bundled with an accrual
+            // or a withdrawal.
+            RotateCommittee { operators: want_ops, threshold: want_thr } ->
+              threshold_met(operators, threshold, tx.extra_signatories) && n_operators == want_ops && n_threshold == want_thr && !(
+                n_operators == operators && n_threshold == threshold
+              ) && n_paused == paused && n_epoch == epoch && n_shares == total_shares && n_assets == total_assets && value_delta == 0 && shares_delta == 0
           }
+
 
         structural && transition
       }
@@ -720,6 +761,149 @@ test state_must_be_recreated_exactly_once() fail {
         out(vault_addr(), 2_000_000, state(10_000_000, 10_000_000, 7, False)),
         out(vault_addr(), 2_000_000, state(10_000_000, 10_000_000, 7, False)),
         out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 }),
+      ],
+      [alice],
+    )
+  !yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+}
+
+// --- Committee rotation --------------------------------------------
+
+const op3: ByteArray = #"cc333333333333333333333333333333333333333333333333333333"
+
+fn state_with(
+  operators: List<ByteArray>,
+  threshold: Int,
+  total_shares: Int,
+  total_assets: Int,
+  epoch: Int,
+) -> YieldDatum {
+  State { total_shares, total_assets, epoch, operators, threshold, paused: False }
+}
+
+test committee_can_be_rotated_by_the_outgoing_quorum() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let s1 = state_with([op1, op3], 2, 10_000_000, 10_000_000, 7)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [out(vault_addr(), 2_000_000, s1)],
+      [op1, op2],
+    )
+  yield_vault.spend(
+    t_version,
+    t_asset,
+    Some(s0),
+    RotateCommittee { operators: [op1, op3], threshold: 2 },
+    state_ref,
+    t,
+  )
+}
+
+test rotation_needs_the_outgoing_threshold() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let s1 = state_with([mallory], 1, 10_000_000, 10_000_000, 7)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [out(vault_addr(), 2_000_000, s1)],
+      [op1],
+    )
+  !yield_vault.spend(
+    t_version,
+    t_asset,
+    Some(s0),
+    RotateCommittee { operators: [mallory], threshold: 1 },
+    state_ref,
+    t,
+  )
+}
+
+test rotation_redeemer_must_match_the_written_committee() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let s1 = state_with([mallory], 1, 10_000_000, 10_000_000, 7)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [out(vault_addr(), 2_000_000, s1)],
+      [op1, op2],
+    )
+  !yield_vault.spend(
+    t_version,
+    t_asset,
+    Some(s0),
+    RotateCommittee { operators: [op1, op3], threshold: 2 },
+    state_ref,
+    t,
+  )
+}
+
+test rotation_cannot_install_an_unsatisfiable_committee() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let s1 = state_with([op1, op3], 3, 10_000_000, 10_000_000, 7)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [out(vault_addr(), 2_000_000, s1)],
+      [op1, op2],
+    )
+  !yield_vault.spend(
+    t_version,
+    t_asset,
+    Some(s0),
+    RotateCommittee { operators: [op1, op3], threshold: 3 },
+    state_ref,
+    t,
+  )
+}
+
+test rotation_cannot_move_funds() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let s1 = state_with([op1, op3], 2, 10_000_000, 8_000_000, 7)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 4_000_000, s0))],
+      [out(vault_addr(), 2_000_000, s1)],
+      [op1, op2],
+    )
+  !yield_vault.spend(
+    t_version,
+    t_asset,
+    Some(s0),
+    RotateCommittee { operators: [op1, op3], threshold: 2 },
+    state_ref,
+    t,
+  )
+}
+
+// --- Value purity ----------------------------------------------------
+
+const junk_policy: ByteArray = #"99999999999999999999999999999999999999999999999999999999"
+
+fn out_with_token(addr: Address, lovelace: Int, datum: YieldDatum) -> Output {
+  Output {
+    address: addr,
+    value: assets.merge(
+      assets.from_lovelace(lovelace),
+      assets.from_asset(junk_policy, #"deadbeef", 1),
+    ),
+    datum: InlineDatum(datum),
+    reference_script: None,
+  }
+}
+
+test a_deposit_cannot_park_native_tokens_in_a_position() {
+  let s0 = state(0, 0, 7, False)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [
+        out(vault_addr(), 2_000_000, state(10_000_000, 10_000_000, 7, False)),
+        out_with_token(
+          vault_addr(),
+          10_000_000,
+          Position { owner: alice, shares: 10_000_000 },
+        ),
       ],
       [alice],
     )
