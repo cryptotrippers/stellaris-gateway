@@ -9,6 +9,8 @@ import { WithdrawVaultCard } from "@/components/vault/WithdrawVaultCard";
 import { MyVaultHoldingsCard } from "@/components/vault/MyVaultHoldingsCard";
 import { VaultTxHistoryCard } from "@/components/vault/VaultTxHistoryCard";
 import { AssetVaultPanel } from "@/components/vault/AssetVaultPanel";
+import { YieldVaultActionsCard } from "@/components/vault/YieldVaultActionsCard";
+
 import { supabase } from "@/integrations/supabase/client";
 import { formatAda, lovelaceToAda } from "@/lib/format";
 
@@ -219,6 +221,8 @@ function AssetDetail() {
         {/* Right rail — every asset derives its own vault script from (version, asset_id) */}
         <aside className="h-fit space-y-4 lg:sticky lg:top-24">
           <MyVaultHoldingsCard assetIds={[asset.id]} />
+          <YieldVaultActionsCard assetId={asset.id} />
+
           <DepositVaultCard assetId={asset.id} />
           <WithdrawVaultCard assetId={asset.id} />
           <VaultTxHistoryCard assetId={asset.id} />
