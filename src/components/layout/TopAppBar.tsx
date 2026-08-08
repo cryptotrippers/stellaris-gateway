@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Bell, Shield } from "lucide-react";
 import { StellarisWordmark } from "@/components/brand/Logo";
 import { WalletButton } from "@/components/wallet/WalletButton";
+import { AccountButton } from "@/components/layout/AccountButton";
 import { NetworkBadge } from "@/components/layout/NetworkBadge";
 
 export function TopAppBar() {
@@ -39,6 +40,7 @@ export function TopAppBar() {
             <Bell className="h-4 w-4 text-muted-foreground" />
             <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-accent" />
           </button>
+          <AccountButton />
           <WalletButton />
         </div>
       </div>
