@@ -8,6 +8,7 @@ import { DepositVaultCard } from "@/components/vault/DepositVaultCard";
 import { WithdrawVaultCard } from "@/components/vault/WithdrawVaultCard";
 import { MyVaultHoldingsCard } from "@/components/vault/MyVaultHoldingsCard";
 import { VaultTxHistoryCard } from "@/components/vault/VaultTxHistoryCard";
+import { AssetVaultPanel } from "@/components/vault/AssetVaultPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { formatAda, lovelaceToAda } from "@/lib/format";
 
