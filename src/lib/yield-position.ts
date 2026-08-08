@@ -151,6 +151,8 @@ function encodeState(
     Data: { to: (v: unknown) => string };
     Constr: new (index: number, fields: unknown[]) => unknown;
   };
+  // Deposits and redemptions never touch the fee terms; they are copied
+  // through unchanged so the validator's continuity check passes.
   return Data.to(
     new Constr(1, [
       next.shares,
@@ -159,6 +161,10 @@ function encodeState(
       state.operators.map((o) => o.toLowerCase()),
       BigInt(state.threshold),
       new Constr(state.paused ? 1 : 0, []),
+      BigInt(state.feeBps),
+      state.treasury,
+      BigInt(state.treasuryShares),
+      BigInt(state.lastFeeTime),
     ]),
   );
 }

@@ -135,3 +135,101 @@ export const registerAssetVault = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return row as AssetVaultRow;
   });
+
+// ---------------------------------------------------------------------------
+// Management fee schedule
+// ---------------------------------------------------------------------------
+
+export interface VaultFeeScheduleRow {
+  id: string;
+  asset_id: string;
+  vault_version: number;
+  network: string;
+  fee_bps: number;
+  treasury_address: string;
+  treasury_pkh: string | null;
+  set_tx_hash: string | null;
+  proposal_id: string | null;
+  created_at: string;
+}
+
+const FEE_COLS =
+  "id, asset_id, vault_version, network, fee_bps, treasury_address, treasury_pkh, set_tx_hash, proposal_id, created_at";
+
+/** Fee rate in force for an asset's vault, newest first. Public. */
+export const getVaultFeeSchedule = createServerFn({ method: "GET" })
+  .inputValidator((data: { assetId: string }) => {
+    if (!data?.assetId) throw new Error("assetId is required");
+    return { assetId: data.assetId };
+  })
+  .handler(async ({ data }): Promise<VaultFeeScheduleRow | null> => {
+    const supabase = publicSupabase();
+    const { data: rows, error } = await supabase
+      .from("vault_fee_schedules")
+      .select(FEE_COLS)
+      .eq("asset_id", data.assetId)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    if (error) throw new Error(error.message);
+    return ((rows ?? [])[0] as VaultFeeScheduleRow | undefined) ?? null;
+  });
+
+/**
+ * Record the fee terms written into a vault's on-chain state. Admin only.
+ * This is a mirror of chain facts for display; the datum remains the source
+ * of truth and the UI reads the live rate from it.
+ */
+export const recordVaultFeeSchedule = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data: {
+      assetId: string;
+      vaultVersion: number;
+      network?: string;
+      feeBps: number;
+      treasuryAddress: string;
+      treasuryPkh?: string;
+      setTxHash?: string;
+      proposalId?: string;
+    }) => {
+      if (!data?.assetId) throw new Error("assetId is required");
+      if (!Number.isInteger(data.feeBps) || data.feeBps < 0 || data.feeBps > 500) {
+        throw new Error("feeBps must be a whole number between 0 and 500");
+      }
+      if (data.setTxHash && !TX_HASH_RE.test(data.setTxHash)) {
+        throw new Error("Invalid transaction hash");
+      }
+      if (data.treasuryPkh && !/^[0-9a-f]{56}$/.test(data.treasuryPkh)) {
+        throw new Error("Invalid treasury key hash");
+      }
+      return {
+        assetId: data.assetId,
+        vaultVersion: data.vaultVersion,
+        network: data.network === "mainnet" ? "mainnet" : "preprod",
+        feeBps: data.feeBps,
+        treasuryAddress: data.treasuryAddress ?? "",
+        treasuryPkh: data.treasuryPkh ?? null,
+        setTxHash: data.setTxHash ?? null,
+        proposalId: data.proposalId ?? null,
+      };
+    },
+  )
+  .handler(async ({ data, context }): Promise<VaultFeeScheduleRow> => {
+    await assertRole(context.supabase, context.userId, "admin");
+    const { data: row, error } = await context.supabase
+      .from("vault_fee_schedules")
+      .insert({
+        asset_id: data.assetId,
+        vault_version: data.vaultVersion,
+        network: data.network,
+        fee_bps: data.feeBps,
+        treasury_address: data.treasuryAddress,
+        treasury_pkh: data.treasuryPkh,
+        set_tx_hash: data.setTxHash,
+        proposal_id: data.proposalId,
+      })
+      .select(FEE_COLS)
+      .single();
+    if (error) throw new Error(error.message);
+    return row as VaultFeeScheduleRow;
+  });

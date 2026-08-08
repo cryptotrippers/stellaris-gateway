@@ -46,7 +46,8 @@ export interface BfTxUtxos {
 // YieldDatum — mirrors contracts/vault/validators/yield_vault.ak
 //   Position { owner, shares }                                 -> constructor 0
 //   State { total_shares, total_assets, epoch, operators,
-//           threshold, paused }                                -> constructor 1
+//           threshold, paused, fee_bps, treasury,
+//           treasury_shares, last_fee_time }                   -> constructor 1
 // ---------------------------------------------------------------------------
 
 export interface VaultStateDatum {
@@ -56,6 +57,14 @@ export interface VaultStateDatum {
   operators: string[];
   threshold: number;
   paused: boolean;
+  /** Annual management fee in basis points, charged on accounted assets. */
+  feeBps: number;
+  /** Treasury payment key hash entitled to claim fee shares. */
+  treasury: string;
+  /** Unclaimed fee shares held by the treasury. */
+  treasuryShares: string;
+  /** POSIX milliseconds the fee was last settled to. */
+  lastFeeTime: string;
 }
 
 export interface VaultPositionDatum {
@@ -69,7 +78,7 @@ export function lovelaceOf(utxo: { amount: BfAmount[] }): bigint {
 }
 
 export function decodeState(d: PlutusData): VaultStateDatum | null {
-  if (d.kind !== "constr" || d.index !== 1 || d.fields.length !== 6) return null;
+  if (d.kind !== "constr" || d.index !== 1 || d.fields.length !== 10) return null;
   return {
     totalShares: asInt(d.fields[0]).toString(),
     totalAssets: asInt(d.fields[1]).toString(),
@@ -77,6 +86,10 @@ export function decodeState(d: PlutusData): VaultStateDatum | null {
     operators: asList(d.fields[3]).map((o) => asBytes(o)),
     threshold: Number(asInt(d.fields[4])),
     paused: asBool(d.fields[5]),
+    feeBps: Number(asInt(d.fields[6])),
+    treasury: asBytes(d.fields[7]),
+    treasuryShares: asInt(d.fields[8]).toString(),
+    lastFeeTime: asInt(d.fields[9]).toString(),
   };
 }
 
@@ -84,6 +97,7 @@ export function decodePosition(d: PlutusData): VaultPositionDatum | null {
   if (d.kind !== "constr" || d.index !== 0 || d.fields.length !== 2) return null;
   return { owner: asBytes(d.fields[0]), shares: asInt(d.fields[1]).toString() };
 }
+
 
 /** Safely read a State datum from an inline datum hex string. */
 export function readStateDatum(datumHex: string | null): VaultStateDatum | null {
@@ -137,6 +151,8 @@ export interface ChainAccrual {
   totalSharesAfter: string;
   sharePriceBefore: number;
   sharePriceAfter: number;
+  /** Shares minted to the treasury as the management fee in this accrual. */
+  feeSharesMinted: string;
 }
 
 export interface VaultHistory {
@@ -161,10 +177,16 @@ export function deriveAccruals(
     const prev = sorted[i - 1]!;
     const curr = sorted[i]!;
     const assetsDelta = BigInt(curr.state.totalAssets) - BigInt(prev.state.totalAssets);
+    const sharesDelta = BigInt(curr.state.totalShares) - BigInt(prev.state.totalShares);
+    const treasuryDelta =
+      BigInt(curr.state.treasuryShares) - BigInt(prev.state.treasuryShares);
+    // An accrual bumps the epoch and adds lovelace. The only share supply
+    // movement it may cause is the management fee minted to the treasury.
     if (
-      curr.state.totalShares !== prev.state.totalShares ||
       curr.state.epoch <= prev.state.epoch ||
-      assetsDelta <= 0n
+      assetsDelta <= 0n ||
+      sharesDelta < 0n ||
+      sharesDelta !== treasuryDelta
     ) {
       continue;
     }
@@ -178,6 +200,7 @@ export function deriveAccruals(
       totalSharesAfter: curr.state.totalShares,
       sharePriceBefore: sharePriceOf(prev.state),
       sharePriceAfter: sharePriceOf(curr.state),
+      feeSharesMinted: treasuryDelta.toString(),
     });
   }
   return accruals;

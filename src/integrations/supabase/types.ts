@@ -201,6 +201,90 @@ export type Database = {
         }
         Relationships: []
       }
+      funding_requests: {
+        Row: {
+          asset_id: string | null
+          asset_slug: string
+          category: string
+          created_at: string
+          description: string | null
+          evidence_urls: string[]
+          id: string
+          issuer: string
+          location: string | null
+          maturity_months: number | null
+          min_deposit_lovelace: number
+          name: string
+          proposal_id: string | null
+          proposed_fee_bps: number
+          reporting_cadence: string | null
+          status: string
+          submitted_by: string
+          target_lovelace: number
+          treasury_address: string | null
+          updated_at: string
+        }
+        Insert: {
+          asset_id?: string | null
+          asset_slug: string
+          category: string
+          created_at?: string
+          description?: string | null
+          evidence_urls?: string[]
+          id?: string
+          issuer: string
+          location?: string | null
+          maturity_months?: number | null
+          min_deposit_lovelace?: number
+          name: string
+          proposal_id?: string | null
+          proposed_fee_bps?: number
+          reporting_cadence?: string | null
+          status?: string
+          submitted_by: string
+          target_lovelace?: number
+          treasury_address?: string | null
+          updated_at?: string
+        }
+        Update: {
+          asset_id?: string | null
+          asset_slug?: string
+          category?: string
+          created_at?: string
+          description?: string | null
+          evidence_urls?: string[]
+          id?: string
+          issuer?: string
+          location?: string | null
+          maturity_months?: number | null
+          min_deposit_lovelace?: number
+          name?: string
+          proposal_id?: string | null
+          proposed_fee_bps?: number
+          reporting_cadence?: string | null
+          status?: string
+          submitted_by?: string
+          target_lovelace?: number
+          treasury_address?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funding_requests_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funding_requests_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "governance_proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       governance_proposals: {
         Row: {
           asset_id: string | null
@@ -619,6 +703,66 @@ export type Database = {
         }
         Relationships: []
       }
+      vault_fee_schedules: {
+        Row: {
+          asset_id: string
+          created_at: string
+          effective_from_slot: number | null
+          fee_bps: number
+          id: string
+          network: string
+          proposal_id: string | null
+          set_tx_hash: string | null
+          treasury_address: string
+          treasury_pkh: string | null
+          updated_at: string
+          vault_version: number
+        }
+        Insert: {
+          asset_id: string
+          created_at?: string
+          effective_from_slot?: number | null
+          fee_bps?: number
+          id?: string
+          network?: string
+          proposal_id?: string | null
+          set_tx_hash?: string | null
+          treasury_address: string
+          treasury_pkh?: string | null
+          updated_at?: string
+          vault_version: number
+        }
+        Update: {
+          asset_id?: string
+          created_at?: string
+          effective_from_slot?: number | null
+          fee_bps?: number
+          id?: string
+          network?: string
+          proposal_id?: string | null
+          set_tx_hash?: string | null
+          treasury_address?: string
+          treasury_pkh?: string | null
+          updated_at?: string
+          vault_version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vault_fee_schedules_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vault_fee_schedules_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "governance_proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vault_positions: {
         Row: {
           amount_ada: number
@@ -731,7 +875,14 @@ export type Database = {
     Enums: {
       app_role: "admin" | "operator" | "member"
       kyc_status: "unverified" | "pending" | "verified" | "rejected"
-      proposal_kind: "accrue" | "pause" | "unpause" | "set_committee" | "signal"
+      proposal_kind:
+        | "accrue"
+        | "pause"
+        | "unpause"
+        | "set_committee"
+        | "signal"
+        | "fund_asset"
+        | "set_fee"
       proposal_status: "draft" | "active" | "passed" | "rejected" | "executed"
       transaction_type: "deposit" | "withdraw" | "yield"
       vote_choice: "for" | "against" | "abstain"
@@ -864,7 +1015,15 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "operator", "member"],
       kyc_status: ["unverified", "pending", "verified", "rejected"],
-      proposal_kind: ["accrue", "pause", "unpause", "set_committee", "signal"],
+      proposal_kind: [
+        "accrue",
+        "pause",
+        "unpause",
+        "set_committee",
+        "signal",
+        "fund_asset",
+        "set_fee",
+      ],
       proposal_status: ["draft", "active", "passed", "rejected", "executed"],
       transaction_type: ["deposit", "withdraw", "yield"],
       vote_choice: ["for", "against", "abstain"],

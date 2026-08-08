@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatFeeBps } from "@/lib/vault-fees";
 import { useQuery } from "@tanstack/react-query";
 import { AlertCircle, CheckCircle2, ExternalLink, Loader2, PieChart, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/StatusBadge";
@@ -102,6 +103,16 @@ export function YieldVaultActionsCard({ assetId }: { assetId: string }) {
             <Stat label="Your shares" value={totalShares.toString()} />
             <Stat label="Redeemable" value={`${lovelaceToAda(totalRedeemable.toString())} ₳`} />
           </div>
+
+          <div className="mt-3 rounded-md border border-border bg-secondary/20 p-3 text-[11px] text-muted-foreground">
+            Management fee <span className="text-foreground">{formatFeeBps(view.state.feeBps)}</span>{" "}
+            on accounted assets, settled at each accrual by minting shares to the treasury. Unclaimed
+            treasury shares:{" "}
+            <span className="tabular-nums text-foreground">{view.state.treasuryShares}</span>. Your
+            redeemable value already reflects the fee settled so far; fee accrued since the last
+            settlement is charged at the next accrual.
+          </div>
+
 
           <div className="mt-5 space-y-2">
             <label className="text-[11px] uppercase tracking-widest text-muted-foreground">

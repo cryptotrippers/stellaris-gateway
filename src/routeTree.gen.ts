@@ -26,10 +26,12 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UpgradeIndexRouteImport } from './routes/upgrade.index'
+import { Route as FundingIndexRouteImport } from './routes/funding.index'
 import { Route as UpgradeReturnRouteImport } from './routes/upgrade.return'
 import { Route as MarketplaceIdRouteImport } from './routes/marketplace.$id'
 import { Route as GovernanceNewRouteImport } from './routes/governance.new'
 import { Route as GovernanceSipRouteImport } from './routes/governance.$sip'
+import { Route as FundingNewRouteImport } from './routes/funding.new'
 import { Route as Char91DotwellKnownChar93SecurityChar91DotChar93txtRouteImport } from './routes/[.well-known]/security[.]txt'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
@@ -122,6 +124,11 @@ const UpgradeIndexRoute = UpgradeIndexRouteImport.update({
   path: '/',
   getParentRoute: () => UpgradeRoute,
 } as any)
+const FundingIndexRoute = FundingIndexRouteImport.update({
+  id: '/funding/',
+  path: '/funding/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UpgradeReturnRoute = UpgradeReturnRouteImport.update({
   id: '/return',
   path: '/return',
@@ -141,6 +148,11 @@ const GovernanceSipRoute = GovernanceSipRouteImport.update({
   id: '/$sip',
   path: '/$sip',
   getParentRoute: () => GovernanceRoute,
+} as any)
+const FundingNewRoute = FundingNewRouteImport.update({
+  id: '/funding/new',
+  path: '/funding/new',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute =
   Char91DotwellKnownChar93SecurityChar91DotChar93txtRouteImport.update({
@@ -199,10 +211,12 @@ export interface FileRoutesByFullPath {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.well-known/security.txt': typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
+  '/funding/new': typeof FundingNewRoute
   '/governance/$sip': typeof GovernanceSipRoute
   '/governance/new': typeof GovernanceNewRoute
   '/marketplace/$id': typeof MarketplaceIdRoute
   '/upgrade/return': typeof UpgradeReturnRoute
+  '/funding/': typeof FundingIndexRoute
   '/upgrade/': typeof UpgradeIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/blockfrost/webhook': typeof ApiPublicBlockfrostWebhookRoute
@@ -227,10 +241,12 @@ export interface FileRoutesByTo {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.well-known/security.txt': typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
+  '/funding/new': typeof FundingNewRoute
   '/governance/$sip': typeof GovernanceSipRoute
   '/governance/new': typeof GovernanceNewRoute
   '/marketplace/$id': typeof MarketplaceIdRoute
   '/upgrade/return': typeof UpgradeReturnRoute
+  '/funding': typeof FundingIndexRoute
   '/upgrade': typeof UpgradeIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/blockfrost/webhook': typeof ApiPublicBlockfrostWebhookRoute
@@ -257,10 +273,12 @@ export interface FileRoutesById {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.well-known/security.txt': typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
+  '/funding/new': typeof FundingNewRoute
   '/governance/$sip': typeof GovernanceSipRoute
   '/governance/new': typeof GovernanceNewRoute
   '/marketplace/$id': typeof MarketplaceIdRoute
   '/upgrade/return': typeof UpgradeReturnRoute
+  '/funding/': typeof FundingIndexRoute
   '/upgrade/': typeof UpgradeIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/blockfrost/webhook': typeof ApiPublicBlockfrostWebhookRoute
@@ -288,10 +306,12 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/.well-known/security.txt'
+    | '/funding/new'
     | '/governance/$sip'
     | '/governance/new'
     | '/marketplace/$id'
     | '/upgrade/return'
+    | '/funding/'
     | '/upgrade/'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/blockfrost/webhook'
@@ -316,10 +336,12 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/.well-known/security.txt'
+    | '/funding/new'
     | '/governance/$sip'
     | '/governance/new'
     | '/marketplace/$id'
     | '/upgrade/return'
+    | '/funding'
     | '/upgrade'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/blockfrost/webhook'
@@ -345,10 +367,12 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/.well-known/security.txt'
+    | '/funding/new'
     | '/governance/$sip'
     | '/governance/new'
     | '/marketplace/$id'
     | '/upgrade/return'
+    | '/funding/'
     | '/upgrade/'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/blockfrost/webhook'
@@ -375,6 +399,8 @@ export interface RootRouteChildren {
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute: typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
+  FundingNewRoute: typeof FundingNewRoute
+  FundingIndexRoute: typeof FundingIndexRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicBlockfrostWebhookRoute: typeof ApiPublicBlockfrostWebhookRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -501,6 +527,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UpgradeIndexRouteImport
       parentRoute: typeof UpgradeRoute
     }
+    '/funding/': {
+      id: '/funding/'
+      path: '/funding'
+      fullPath: '/funding/'
+      preLoaderRoute: typeof FundingIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/upgrade/return': {
       id: '/upgrade/return'
       path: '/return'
@@ -528,6 +561,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/governance/$sip'
       preLoaderRoute: typeof GovernanceSipRouteImport
       parentRoute: typeof GovernanceRoute
+    }
+    '/funding/new': {
+      id: '/funding/new'
+      path: '/funding/new'
+      fullPath: '/funding/new'
+      preLoaderRoute: typeof FundingNewRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/.well-known/security.txt': {
       id: '/.well-known/security.txt'
@@ -635,6 +675,8 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute:
     Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute,
+  FundingNewRoute: FundingNewRoute,
+  FundingIndexRoute: FundingIndexRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicBlockfrostWebhookRoute: ApiPublicBlockfrostWebhookRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,

@@ -6,6 +6,8 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/StatusBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyRoles, listAssetVaults, registerAssetVault } from "@/lib/asset-vaults.functions";
+import { MAX_FEE_BPS, formatFeeBps } from "@/lib/vault-fees";
+import { recordVaultFeeSchedule } from "@/lib/asset-vaults.functions";
 import {
   bootstrapYieldVault,
   deriveYieldVaultAddress,
@@ -205,6 +207,9 @@ function BootstrapForm({
   const [assetId, setAssetId] = useState("");
   const [operatorsText, setOperatorsText] = useState("");
   const [threshold, setThreshold] = useState(1);
+  const [feeBps, setFeeBps] = useState(0);
+  const [treasuryPkh, setTreasuryPkh] = useState("");
+
   const [address, setAddress] = useState<string | null>(null);
   const [busy, setBusy] = useState<null | "derive" | "wallet" | "submit">(null);
   const [error, setError] = useState<string | null>(null);
@@ -259,7 +264,13 @@ function BootstrapForm({
     }
     setBusy("submit");
     try {
-      const res = await bootstrapYieldVault({ assetId, operators, threshold });
+      const res = await bootstrapYieldVault({
+        assetId,
+        operators,
+        threshold,
+        feeBps,
+        treasuryPkh: treasuryPkh.trim().toLowerCase() || undefined,
+      });
       await registerAssetVault({
         data: {
           assetId: res.assetId,
@@ -269,6 +280,16 @@ function BootstrapForm({
           operators: res.operators,
           threshold: res.threshold,
           bootstrapTxHash: res.txHash,
+        },
+      });
+      await recordVaultFeeSchedule({
+        data: {
+          assetId: res.assetId,
+          vaultVersion: res.vaultVersion,
+          feeBps: res.feeBps,
+          treasuryAddress: res.treasuryPkh,
+          treasuryPkh: res.treasuryPkh || undefined,
+          setTxHash: res.txHash,
         },
       });
       setResult({ txHash: res.txHash, address: res.address });
@@ -322,6 +343,36 @@ function BootstrapForm({
           />
           <span className="mt-1 block text-[11px] text-muted-foreground">
             {threshold}-of-{operators.length || "?"} operators must sign each accrual.
+          </span>
+        </label>
+
+        <label className="text-sm">
+          <span className="text-muted-foreground">Management fee (basis points / yr)</span>
+          <input
+            type="number"
+            min={0}
+            max={MAX_FEE_BPS}
+            step={1}
+            value={feeBps}
+            onChange={(e) => setFeeBps(Number(e.target.value))}
+            className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm tabular-nums"
+          />
+          <span className="mt-1 block text-[11px] text-muted-foreground">
+            {formatFeeBps(feeBps)} — charged on accounted assets, prorated by time and settled by
+            minting shares to the treasury. Contract cap {formatFeeBps(MAX_FEE_BPS)}.
+          </span>
+        </label>
+
+        <label className="text-sm">
+          <span className="text-muted-foreground">Treasury payment key hash</span>
+          <input
+            value={treasuryPkh}
+            onChange={(e) => setTreasuryPkh(e.target.value)}
+            placeholder="56-character hex, required when the fee is above zero"
+            className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 font-mono text-xs"
+          />
+          <span className="mt-1 block text-[11px] text-muted-foreground">
+            Only this key can claim accrued fee shares out of the vault.
           </span>
         </label>
       </div>

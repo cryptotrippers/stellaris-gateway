@@ -21,19 +21,28 @@
 //// All share arithmetic lives in `stellaris/shares` and is tested there.
 
 use aiken/collection/list
+use aiken/interval.{Finite}
 use cardano/address.{Address, Script, VerificationKey}
 use cardano/assets
 use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, placeholder,
 }
 use stellaris/shares.{
-  VaultAccounting, deposit_ok, min_position_value, mint_shares, redeem_value,
+  VaultAccounting, deposit_ok, fee_assets_for, fee_bps_ok, fee_shares_for,
+  min_position_value, mint_shares, ms_per_year, redeem_value,
 }
 
 pub type YieldDatum {
   /// A single depositor's stake.
   Position { owner: ByteArray, shares: Int }
   /// The vault's aggregate ledger. Exactly one per vault.
+  ///
+  /// Fee fields (Stage 5): the management fee is an annual rate in basis
+  /// points charged on accounted assets, prorated by wall-clock time and
+  /// settled by MINTING shares to the treasury rather than paying lovelace
+  /// out. `treasury_shares` is the treasury's unclaimed slice of
+  /// `total_shares`; `last_fee_time` is the POSIX ms up to which fee has
+  /// already been charged.
   State {
     total_shares: Int,
     total_assets: Int,
@@ -41,6 +50,10 @@ pub type YieldDatum {
     operators: List<ByteArray>,
     threshold: Int,
     paused: Bool,
+    fee_bps: Int,
+    treasury: ByteArray,
+    treasury_shares: Int,
+    last_fee_time: Int,
   }
 }
 
@@ -49,7 +62,9 @@ pub type YieldRedeemer {
   Deposit
   /// Burn `shares` from a position, take at most `redeem_value(shares)`.
   Withdraw { shares: Int }
-  /// Operators add `amount` lovelace of yield; share count untouched.
+  /// Operators add `amount` lovelace of yield; depositor share count
+  /// untouched, but the accrued management fee is minted to the treasury
+  /// first, so the fee is never charged on yield that has not landed yet.
   Accrue { amount: Int }
   /// Operators halt deposits and accruals. Withdrawals stay open.
   SetPaused { paused: Bool }
@@ -57,7 +72,13 @@ pub type YieldRedeemer {
   /// committee; the incoming committee must itself be valid. Nothing else
   /// about the vault may move in the same transaction.
   RotateCommittee { operators: List<ByteArray>, threshold: Int }
+  /// Governance-executed fee change. Settles the fee accrued under the OLD
+  /// rate first, then writes the new rate. Capped by `shares.max_fee_bps`.
+  SetFee { fee_bps: Int }
+  /// Treasury cashes out part of its accrued fee shares at the current price.
+  ClaimFee { shares: Int }
 }
+
 
 
 // ------------------------------------------------------------------
@@ -199,6 +220,18 @@ fn committee_unchanged(before: YieldDatum, after: YieldDatum) -> Bool {
   }
 }
 
+/// The earliest time this transaction can be on chain, in POSIX ms. Fee
+/// proration is anchored here, so an unbounded validity range (which would
+/// let an operator claim arbitrary elapsed time) makes fee actions fail.
+fn lower_bound_time(tx: Transaction) -> Option<Int> {
+  when tx.validity_range.lower_bound.bound_type is {
+    Finite(t) -> Some(t)
+    _ -> None
+  }
+}
+
+
+
 // ------------------------------------------------------------------
 // Validator
 // ------------------------------------------------------------------
@@ -245,7 +278,18 @@ validator yield_vault(_version: Int, _asset_id: ByteArray) {
       // ----------------------------------------------------------
       // Spending the aggregate state: enforce the accounting transition.
       // ----------------------------------------------------------
-      State { total_shares, total_assets, epoch, operators, threshold, paused } -> {
+      State {
+        total_shares,
+        total_assets,
+        epoch,
+        operators,
+        threshold,
+        paused,
+        fee_bps,
+        treasury,
+        treasury_shares,
+        last_fee_time,
+      } -> {
         expect Some(next) = sole_state(outs)
         expect State {
           total_shares: n_shares,
@@ -254,6 +298,10 @@ validator yield_vault(_version: Int, _asset_id: ByteArray) {
           operators: n_operators,
           threshold: n_threshold,
           paused: n_paused,
+          fee_bps: n_fee_bps,
+          treasury: n_treasury,
+          treasury_shares: n_treasury_shares,
+          last_fee_time: n_last_fee_time,
         } = next
 
         let acc = VaultAccounting { total_shares, total_assets }
@@ -276,21 +324,40 @@ validator yield_vault(_version: Int, _asset_id: ByteArray) {
         // The OUTGOING committee must be well-formed and the returned state
         // must be pure lovelace; committee immutability is asserted per-action
         // below, because `RotateCommittee` is the one action allowed to change
-        // it.
+        // it. The fee rate must always sit inside the protocol cap, the
+        // treasury's unclaimed shares can never exceed the total supply, and
+        // the fee clock can only move forward.
         let structural =
           operators_valid(operators, threshold) && operators_valid(
             n_operators,
             n_threshold,
-          ) && positions_well_formed(outs) && values_pure(outs) && n_shares >= 0 && n_assets >= 0 && locked_out >= 0 && n_epoch >= epoch
+          ) && positions_well_formed(outs) && values_pure(outs) && n_shares >= 0 && n_assets >= 0 && locked_out >= 0 && n_epoch >= epoch && fee_bps_ok(
+            n_fee_bps,
+          ) && n_treasury_shares >= 0 && n_treasury_shares <= n_shares && n_last_fee_time >= last_fee_time && n_treasury == treasury
 
         let same_committee = committee_unchanged(d, next)
+
+        // Fee terms may only move through `SetFee`; the fee clock and the
+        // treasury's balance may only move through `Accrue`, `SetFee`, and
+        // `ClaimFee`.
+        let fee_frozen =
+          n_fee_bps == fee_bps && n_last_fee_time == last_fee_time && n_treasury_shares == treasury_shares
+
+        // Fee owed since `last_fee_time`, and the shares that settle it.
+        // `now` is the transaction's validity lower bound: the fee can never
+        // be charged against a time the chain has not reached.
+        let settle =
+          fn(now: Int) -> (Int, Int) {
+            let owed = fee_assets_for(acc, fee_bps, now - last_fee_time)
+            (owed, fee_shares_for(acc, owed))
+          }
 
         let transition =
           when redeemer is {
             Deposit -> {
               let deposit = value_delta
               let minted = mint_shares(acc, deposit)
-              same_committee && !paused && n_paused == paused && n_epoch == epoch && deposit_ok(
+              same_committee && fee_frozen && !paused && n_paused == paused && n_epoch == epoch && deposit_ok(
                 acc,
                 deposit,
               ) && shares_delta == minted && n_shares == total_shares + minted && n_assets == total_assets + deposit
@@ -299,18 +366,28 @@ validator yield_vault(_version: Int, _asset_id: ByteArray) {
             Withdraw { shares } -> {
               let paid = -value_delta
               // Withdrawals stay available while paused, at the last price.
-              same_committee && n_paused == paused && n_epoch == epoch && shares > 0 && shares <= total_shares && shares_delta == -shares && paid > 0 && paid <= redeem_value(acc, shares) && n_shares == total_shares - shares && n_assets == total_assets - paid
+              same_committee && fee_frozen && n_paused == paused && n_epoch == epoch && shares > 0 && shares <= total_shares - treasury_shares && shares_delta == -shares && paid > 0 && paid <= redeem_value(
+                acc,
+                shares,
+              ) && n_shares == total_shares - shares && n_assets == total_assets - paid
             }
 
-            Accrue { amount } ->
-              same_committee && !paused && n_paused == paused && amount > 0 && threshold_met(
+            // Accrual settles the management fee accrued under the current
+            // rate FIRST (minting treasury shares against the pre-yield
+            // assets), then books the yield. Requires a finite validity
+            // lower bound so the elapsed time is real.
+            Accrue { amount } -> {
+              expect Some(now) = lower_bound_time(tx)
+              let (_owed, fee_shares) = settle(now)
+              same_committee && n_fee_bps == fee_bps && !paused && n_paused == paused && amount > 0 && threshold_met(
                 operators,
                 threshold,
                 tx.extra_signatories,
-              ) && value_delta == amount && shares_delta == 0 && n_shares == total_shares && n_assets == total_assets + amount && n_epoch == epoch + 1
+              ) && now >= last_fee_time && n_last_fee_time == now && value_delta == amount && shares_delta == 0 && n_shares == total_shares + fee_shares && n_treasury_shares == treasury_shares + fee_shares && n_assets == total_assets + amount && n_epoch == epoch + 1
+            }
 
             SetPaused { paused: want } ->
-              same_committee && threshold_met(
+              same_committee && fee_frozen && threshold_met(
                 operators,
                 threshold,
                 tx.extra_signatories,
@@ -322,10 +399,52 @@ validator yield_vault(_version: Int, _asset_id: ByteArray) {
             // stand still, so a rotation can never be bundled with an accrual
             // or a withdrawal.
             RotateCommittee { operators: want_ops, threshold: want_thr } ->
-              threshold_met(operators, threshold, tx.extra_signatories) && n_operators == want_ops && n_threshold == want_thr && !(
+              fee_frozen && threshold_met(
+                operators,
+                threshold,
+                tx.extra_signatories,
+              ) && n_operators == want_ops && n_threshold == want_thr && !(
                 n_operators == operators && n_threshold == threshold
               ) && n_paused == paused && n_epoch == epoch && n_shares == total_shares && n_assets == total_assets && value_delta == 0 && shares_delta == 0
+
+            // Fee change. The fee owed under the OLD rate is settled in the
+            // same transaction, so a rate change can never be applied
+            // retroactively in either direction. No money moves.
+            SetFee { fee_bps: want } -> {
+              expect Some(now) = lower_bound_time(tx)
+              let (_owed, fee_shares) = settle(now)
+              same_committee && threshold_met(
+                operators,
+                threshold,
+                tx.extra_signatories,
+              ) && fee_bps_ok(want) && want != fee_bps && n_fee_bps == want && now >= last_fee_time && n_last_fee_time == now && n_paused == paused && n_epoch == epoch && n_shares == total_shares + fee_shares && n_treasury_shares == treasury_shares + fee_shares && n_assets == total_assets && value_delta == 0 && shares_delta == 0
+            }
+
+            // Treasury cashes out accrued fee shares at the current price.
+            // Payment must land at the treasury key recorded in the datum.
+            ClaimFee { shares } -> {
+              let paid = -value_delta
+              let treasury_paid =
+                list.any(
+                  tx.outputs,
+                  fn(o) {
+                    when o.address.payment_credential is {
+                      VerificationKey(k) -> k == treasury
+                      _ -> False
+                    }
+                  },
+                )
+              same_committee && n_fee_bps == fee_bps && n_last_fee_time == last_fee_time && threshold_met(
+                operators,
+                threshold,
+                tx.extra_signatories,
+              ) && treasury_paid && shares > 0 && shares <= treasury_shares && paid > 0 && paid <= redeem_value(
+                acc,
+                shares,
+              ) && shares_delta == 0 && n_paused == paused && n_epoch == epoch && n_shares == total_shares - shares && n_treasury_shares == treasury_shares - shares && n_assets == total_assets - paid
+            }
           }
+
 
 
         structural && transition
@@ -383,6 +502,14 @@ fn plain_out(pkh: ByteArray, lovelace: Int) -> Output {
   }
 }
 
+/// Treasury key used across the fixtures.
+const treas: ByteArray = #"deadbeef00000000000000000000000000000000000000000000dead"
+
+/// Fixture wall clock (POSIX ms). Every fixture transaction is valid from
+/// exactly this instant, so a fee is only charged when a test deliberately
+/// moves the vault's `last_fee_time` into the past.
+const t0: Int = 1_700_000_000_000
+
 fn state(
   total_shares: Int,
   total_assets: Int,
@@ -396,6 +523,10 @@ fn state(
     operators: [op1, op2],
     threshold: 2,
     paused,
+    fee_bps: 0,
+    treasury: treas,
+    treasury_shares: 0,
+    last_fee_time: t0,
   }
 }
 
@@ -418,8 +549,15 @@ const state_ref: OutputReference =
   }
 
 fn tx(ins: List<Input>, outs: List<Output>, signers: List<ByteArray>) -> Transaction {
-  Transaction { ..placeholder, inputs: ins, outputs: outs, extra_signatories: signers }
+  Transaction {
+    ..placeholder,
+    inputs: ins,
+    outputs: outs,
+    extra_signatories: signers,
+    validity_range: interval.after(t0),
+  }
 }
+
 
 // --- Deposit -------------------------------------------------------
 
@@ -737,6 +875,10 @@ test committee_cannot_be_swapped_during_a_deposit() {
       operators: [mallory],
       threshold: 1,
       paused: False,
+      fee_bps: 0,
+      treasury: treas,
+      treasury_shares: 0,
+      last_fee_time: t0,
     }
   let t =
     tx(
@@ -778,7 +920,18 @@ fn state_with(
   total_assets: Int,
   epoch: Int,
 ) -> YieldDatum {
-  State { total_shares, total_assets, epoch, operators, threshold, paused: False }
+  State {
+    total_shares,
+    total_assets,
+    epoch,
+    operators,
+    threshold,
+    paused: False,
+    fee_bps: 0,
+    treasury: treas,
+    treasury_shares: 0,
+    last_fee_time: t0,
+  }
 }
 
 test committee_can_be_rotated_by_the_outgoing_quorum() {
@@ -909,3 +1062,224 @@ test a_deposit_cannot_park_native_tokens_in_a_position() {
     )
   !yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
 }
+
+// --- Management fee --------------------------------------------------
+
+/// A vault carrying a live fee rate. `owed_since` is how long ago the fee
+/// was last settled, in milliseconds.
+fn fee_state(
+  total_shares: Int,
+  total_assets: Int,
+  epoch: Int,
+  fee_bps: Int,
+  treasury_shares: Int,
+  owed_since: Int,
+) -> YieldDatum {
+  State {
+    total_shares,
+    total_assets,
+    epoch,
+    operators: [op1, op2],
+    threshold: 2,
+    paused: False,
+    fee_bps,
+    treasury: treas,
+    treasury_shares,
+    last_fee_time: t0 - owed_since,
+  }
+}
+
+// 1_000 ADA at price 1, one full year at 100 bps => 10 ADA of fee, settled
+// as floor(10_000_000 * 1_000_000_000 / 990_000_000) treasury shares.
+const fee_year_shares: Int = 10_101_010
+
+test accrue_settles_the_management_fee_in_shares() {
+  let s0 = fee_state(1_000_000_000, 1_000_000_000, 7, 100, 0, ms_per_year)
+  let s1 =
+    fee_state(1_000_000_000 + fee_year_shares, 1_002_000_000, 8, 100, fee_year_shares, 0)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 1_000_000_000, s0))],
+      [out(vault_addr(), 1_002_000_000, s1)],
+      [op1, op2],
+    )
+  yield_vault.spend(t_version, t_asset, Some(s0), Accrue { amount: 2_000_000 }, state_ref, t)
+}
+
+test accrue_cannot_skip_the_fee() {
+  let s0 = fee_state(1_000_000_000, 1_000_000_000, 7, 100, 0, ms_per_year)
+  let s1 = fee_state(1_000_000_000, 1_002_000_000, 8, 100, 0, 0)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 1_000_000_000, s0))],
+      [out(vault_addr(), 1_002_000_000, s1)],
+      [op1, op2],
+    )
+  !yield_vault.spend(t_version, t_asset, Some(s0), Accrue { amount: 2_000_000 }, state_ref, t)
+}
+
+test accrue_cannot_overcharge_the_fee() {
+  let s0 = fee_state(1_000_000_000, 1_000_000_000, 7, 100, 0, ms_per_year)
+  let s1 =
+    fee_state(1_000_000_000 + fee_year_shares * 2, 1_002_000_000, 8, 100, fee_year_shares * 2, 0)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 1_000_000_000, s0))],
+      [out(vault_addr(), 1_002_000_000, s1)],
+      [op1, op2],
+    )
+  !yield_vault.spend(t_version, t_asset, Some(s0), Accrue { amount: 2_000_000 }, state_ref, t)
+}
+
+test accrue_needs_a_bounded_validity_range() {
+  // An unbounded lower bound would let operators claim arbitrary elapsed time.
+  let s0 = fee_state(1_000_000_000, 1_000_000_000, 7, 100, 0, ms_per_year)
+  let s1 =
+    fee_state(1_000_000_000 + fee_year_shares, 1_002_000_000, 8, 100, fee_year_shares, 0)
+  let t =
+    Transaction {
+      ..placeholder,
+      inputs: [input_at(0, out(vault_addr(), 1_000_000_000, s0))],
+      outputs: [out(vault_addr(), 1_002_000_000, s1)],
+      extra_signatories: [op1, op2],
+    }
+  !yield_vault.spend(t_version, t_asset, Some(s0), Accrue { amount: 2_000_000 }, state_ref, t)
+}
+
+test fee_rate_can_be_set_within_the_cap() {
+  let s0 = fee_state(1_000_000_000, 1_000_000_000, 7, 100, 0, ms_per_year)
+  let s1 =
+    fee_state(1_000_000_000 + fee_year_shares, 1_000_000_000, 7, 250, fee_year_shares, 0)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 1_000_000_000, s0))],
+      [out(vault_addr(), 1_000_000_000, s1)],
+      [op1, op2],
+    )
+  yield_vault.spend(t_version, t_asset, Some(s0), SetFee { fee_bps: 250 }, state_ref, t)
+}
+
+test fee_rate_above_the_cap_is_rejected() {
+  let s0 = fee_state(1_000_000_000, 1_000_000_000, 7, 100, 0, 0)
+  let s1 = fee_state(1_000_000_000, 1_000_000_000, 7, 900, 0, 0)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 1_000_000_000, s0))],
+      [out(vault_addr(), 1_000_000_000, s1)],
+      [op1, op2],
+    )
+  !yield_vault.spend(t_version, t_asset, Some(s0), SetFee { fee_bps: 900 }, state_ref, t)
+}
+
+test fee_rate_needs_the_operator_threshold() {
+  let s0 = fee_state(1_000_000_000, 1_000_000_000, 7, 100, 0, 0)
+  let s1 = fee_state(1_000_000_000, 1_000_000_000, 7, 250, 0, 0)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 1_000_000_000, s0))],
+      [out(vault_addr(), 1_000_000_000, s1)],
+      [op1],
+    )
+  !yield_vault.spend(t_version, t_asset, Some(s0), SetFee { fee_bps: 250 }, state_ref, t)
+}
+
+test fee_rate_cannot_be_changed_during_a_deposit() {
+  let s0 = fee_state(0, 0, 7, 100, 0, 0)
+  let s1 = fee_state(10_000_000, 10_000_000, 7, 500, 0, 0)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [
+        out(vault_addr(), 2_000_000, s1),
+        out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 }),
+      ],
+      [alice],
+    )
+  !yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+}
+
+// --- Fee claims -------------------------------------------------------
+
+// Redeeming the year's fee shares at the post-mint price returns the fee,
+// floored: 10_101_010 * 1_000_000_000 / 1_010_101_010 = 9_999_999.
+const fee_year_payout: Int = 9_999_999
+
+fn claimable() -> YieldDatum {
+  fee_state(1_000_000_000 + fee_year_shares, 1_000_000_000, 8, 100, fee_year_shares, 0)
+}
+
+test treasury_can_claim_its_fee_shares() {
+  let s0 = claimable()
+  let s1 = fee_state(1_000_000_000, 1_000_000_000 - fee_year_payout, 8, 100, 0, 0)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 1_000_000_000, s0))],
+      [
+        out(vault_addr(), 1_000_000_000 - fee_year_payout, s1),
+        plain_out(treas, fee_year_payout),
+      ],
+      [op1, op2],
+    )
+  yield_vault.spend(t_version, t_asset, Some(s0), ClaimFee { shares: fee_year_shares }, state_ref, t)
+}
+
+test fee_claim_must_pay_the_recorded_treasury() {
+  let s0 = claimable()
+  let s1 = fee_state(1_000_000_000, 1_000_000_000 - fee_year_payout, 8, 100, 0, 0)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 1_000_000_000, s0))],
+      [
+        out(vault_addr(), 1_000_000_000 - fee_year_payout, s1),
+        plain_out(mallory, fee_year_payout),
+      ],
+      [op1, op2],
+    )
+  !yield_vault.spend(t_version, t_asset, Some(s0), ClaimFee { shares: fee_year_shares }, state_ref, t)
+}
+
+test fee_claim_cannot_exceed_the_accrued_fee_shares() {
+  let s0 = claimable()
+  let s1 = fee_state(1_000_000_000 - 1, 1_000_000_000 - fee_year_payout - 1, 8, 100, 0, 0)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 1_000_000_000, s0))],
+      [
+        out(vault_addr(), 1_000_000_000 - fee_year_payout - 1, s1),
+        plain_out(treas, fee_year_payout + 1),
+      ],
+      [op1, op2],
+    )
+  !yield_vault.spend(
+    t_version,
+    t_asset,
+    Some(s0),
+    ClaimFee { shares: fee_year_shares + 1 },
+    state_ref,
+    t,
+  )
+}
+
+test depositors_cannot_withdraw_against_treasury_shares() {
+  // Only 1_000_000_000 of the 1_010_101_010 shares belong to depositors.
+  let s0 = claimable()
+  let s1 = fee_state(fee_year_shares, 1_000_000_000 - 999_000_000, 8, 100, fee_year_shares, 0)
+  let t =
+    tx(
+      [
+        input_at(0, out(vault_addr(), 1_000_000_000, s0)),
+        input_at(1, out(vault_addr(), 10_000_000, Position { owner: alice, shares: 1_010_101_010 })),
+      ],
+      [out(vault_addr(), 11_000_000, s1), plain_out(alice, 999_000_000)],
+      [alice],
+    )
+  !yield_vault.spend(
+    t_version,
+    t_asset,
+    Some(s0),
+    Withdraw { shares: 1_010_101_010 },
+    state_ref,
+    t,
+  )
+}
+

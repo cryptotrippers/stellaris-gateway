@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatFeeBps } from "@/lib/vault-fees";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -282,6 +283,20 @@ export function AccrueYieldCard({
               value={`${lovelaceToAda(draft.totalAssetsBefore)} → ${lovelaceToAda(draft.totalAssetsAfter)} ₳`}
             />
           </div>
+          <div className="mt-3 grid gap-3 border-t border-border pt-3 sm:grid-cols-3">
+            <Stat label="Management fee" value={formatFeeBps(draft.feeBps)} />
+            <Stat label="Fee settled" value={`${lovelaceToAda(draft.feeAssets)} ₳`} />
+            <Stat
+              label="Treasury shares minted"
+              value={draft.feeSharesMinted}
+            />
+          </div>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            The fee accrued up to {new Date(draft.settledAt).toLocaleString()} is settled first, by
+            minting shares to the treasury. No lovelace leaves the vault; depositors are diluted by
+            exactly the fee owed.
+          </p>
+
           <div className="mt-3 text-muted-foreground">
             Signatures {signed} of {needed}
             {draft.requiredSigners.length > 0 && (
