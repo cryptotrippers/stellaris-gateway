@@ -15,6 +15,7 @@ import {
 import { cardanoscanAddress, cardanoscanTx, short } from "@/lib/chain-format";
 import { MasterWalletGate, useMasterWallet } from "@/components/admin/MasterWalletGate";
 import { AccrueYieldCard } from "@/components/operators/AccrueYieldCard";
+import { RebootstrapVaultCard } from "@/components/operators/RebootstrapVaultCard";
 
 
 
@@ -171,6 +172,14 @@ function OperatorConsole() {
         }}
       />
 
+      <RebootstrapVaultCard
+        vaults={vaultsQ.data ?? []}
+        disabled={!canBootstrap}
+        onDone={() => {
+          vaultsQ.refetch();
+        }}
+      />
+
       <AccrueYieldCard
         vaults={vaultsQ.data ?? []}
         disabled={!canBootstrap}
@@ -179,6 +188,7 @@ function OperatorConsole() {
         }}
       />
     </AppShell>
+
 
   );
 }
