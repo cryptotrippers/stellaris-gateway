@@ -168,7 +168,16 @@ function OperatorConsole() {
           vaultsQ.refetch();
         }}
       />
+
+      <AccrueYieldCard
+        vaults={vaultsQ.data ?? []}
+        disabled={!canBootstrap}
+        onDone={() => {
+          vaultsQ.refetch();
+        }}
+      />
     </AppShell>
+
   );
 }
 
