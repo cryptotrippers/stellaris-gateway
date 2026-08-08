@@ -352,3 +352,5 @@ test empty_vault_accrues_no_fee() {
   fee_assets_for(empty(), max_fee_bps, ms_per_year) == 0 && fee_shares_for(empty(), 1) == 0
 }
 
+
+// stage5: management-fee math (fee_assets_for / fee_shares_for / after_fee)

@@ -1283,3 +1283,5 @@ test depositors_cannot_withdraw_against_treasury_shares() {
   )
 }
 
+
+// stage5: fee-aware yield vault (SetFee / ClaimFee / prorated Accrue)
