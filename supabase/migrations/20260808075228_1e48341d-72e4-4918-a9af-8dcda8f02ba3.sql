@@ -1,0 +1,2 @@
+CREATE POLICY "Admins record accruals" ON public.yield_accruals FOR INSERT TO authenticated WITH CHECK (has_role(auth.uid(), 'admin'::app_role));
+CREATE UNIQUE INDEX IF NOT EXISTS yield_accruals_tx_hash_key ON public.yield_accruals (tx_hash);
