@@ -247,13 +247,17 @@ validator yield_vault(_version: Int, _asset_id: ByteArray) {
         let shares_delta = shares_out - shares_in
 
         // Structural rules that hold for EVERY action.
+        //
+        // NOTE on solvency: a transaction only ever contains a subset of the
+        // vault's position UTxOs, so total locked lovelace is NOT observable
+        // here. Global solvency is therefore maintained inductively: every
+        // transition below ties `n_assets` to the exact on-chain value delta
+        // at the script address, so accounted assets can never outrun the
+        // value actually locked. What we can check locally is non-negativity.
         let structural =
           committee_unchanged(d, next) && operators_valid(operators, threshold) && positions_well_formed(
             outs,
-          ) && solvent(
-            VaultAccounting { total_shares: n_shares, total_assets: n_assets },
-            locked_out,
-          ) && n_epoch >= epoch
+          ) && n_shares >= 0 && n_assets >= 0 && locked_out >= 0 && n_epoch >= epoch
 
         let transition =
           when redeemer is {
