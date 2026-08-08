@@ -1,14 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowUpRight, TrendingUp, Leaf, Sun, Building2, Wind, Wallet } from "lucide-react";
+import { ArrowUpRight, TrendingUp, Leaf, Sun, Building2, Wind, Wallet, Landmark } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/layout/AppShell";
 import { Sparkline } from "@/components/charts/Sparkline";
-import { RiskBadge, Badge } from "@/components/ui/StatusBadge";
+import { Badge } from "@/components/ui/StatusBadge";
 import { FundingBar, SectionHeader } from "@/components/ui/funding-bar";
 import { ChainStatusCard } from "@/components/chain/ChainStatusCard";
 import { MyVaultHoldingsCard } from "@/components/vault/MyVaultHoldingsCard";
 import { useVaultAssetIds } from "@/hooks/useVaultAssetIds";
-import { ASSETS, formatAda, formatUsd, sparkline } from "@/lib/mock-data";
+import { formatAda, formatUsd, lovelaceToAda } from "@/lib/format";
+import { assetsQueryOptions, fundedPct, type AssetRow } from "@/lib/assets-query";
+import { APP_NETWORK } from "@/lib/network";
 import { useWallet } from "@/lib/wallet-store";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -17,7 +19,7 @@ export const Route = createFileRoute("/app")({
   head: () => ({
     meta: [
       { title: "Your Portfolio · Stellaris Finance" },
-      { name: "description", content: "Live view of your fractional real-world asset positions on Cardano — yield, ESG ratings, and compliance status at a glance." },
+      { name: "description", content: "Live view of your fractional real-world asset positions on Cardano — deposits, yield, and compliance status at a glance." },
       { property: "og:title", content: "Your Portfolio · Stellaris" },
       { property: "og:description", content: "Track your RealFi positions, yield, and impact on Cardano." },
       { name: "robots", content: "noindex" },
@@ -34,6 +36,10 @@ const categoryIcon = {
   "Infrastructure": Sun,
 } as const;
 
+function iconFor(category: string) {
+  return (categoryIcon as Record<string, typeof Leaf>)[category] ?? Landmark;
+}
+
 type Position = { vault_id: string; amount_ada: number; opened_at: string; tx_hash: string };
 type Txn = { type: "deposit" | "withdraw" | "yield"; amount_ada: number; created_at: string; vault_id: string };
 
@@ -46,10 +52,24 @@ function usePortfolioData(walletAddress: string | null) {
       if (!auth.user) return { positions: [] as Position[], txns: [] as Txn[] };
       const [{ data: positions }, { data: txns }] = await Promise.all([
         supabase.from("vault_positions").select("vault_id,amount_ada,opened_at,tx_hash").eq("user_id", auth.user.id),
-        supabase.from("transactions").select("type,amount_ada,created_at,vault_id").eq("user_id", auth.user.id),
+        supabase
+          .from("transactions")
+          .select("type,amount_ada,created_at,vault_id")
+          .eq("user_id", auth.user.id)
+          .order("created_at", { ascending: true }),
       ]);
       return { positions: (positions ?? []) as Position[], txns: (txns ?? []) as Txn[] };
     },
+  });
+}
+
+/** Cumulative net value over time, derived only from recorded transactions. */
+function valueSeries(txns: Txn[]): number[] {
+  let running = 0;
+  return txns.map(t => {
+    const amt = Number(t.amount_ada);
+    running += t.type === "withdraw" ? -amt : amt;
+    return running;
   });
 }
 
@@ -57,6 +77,9 @@ function PortfolioPage() {
   const wallet = useWallet();
   const { assetIds: vaultAssetIds } = useVaultAssetIds();
   const { data, isLoading } = usePortfolioData(wallet.connected ? wallet.address : null);
+  const { data: assetRows } = useQuery(assetsQueryOptions());
+  const assets: AssetRow[] = assetRows ?? [];
+  const assetById = (id: string) => assets.find(a => a.id === id) ?? null;
 
   const positions = data?.positions ?? [];
   const txns = data?.txns ?? [];
@@ -70,14 +93,8 @@ function PortfolioPage() {
   const yield24h = yieldTxns
     .filter(t => new Date(t.created_at).getTime() >= cutoff)
     .reduce((s, t) => s + Number(t.amount_ada), 0);
+  const series = valueSeries(txns);
 
-  // Blended APY: sum(position.amount * asset.apy) / totalAda
-  const blendedApy = totalAda > 0
-    ? positions.reduce((s, p) => {
-        const asset = ASSETS.find(a => a.id === p.vault_id);
-        return s + Number(p.amount_ada) * (asset?.apy ?? 0);
-      }, 0) / totalAda
-    : 0;
 
   return (
     <AppShell>
