@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 /**
- * Step 4 drift guard.
+ * Blueprint drift guard.
  *
- * Fails if `contracts/vault/plutus.json` drifts from the *unapplied* blueprint
- * pinned in `src/lib/vault.ts` (VAULT_BLUEPRINT_HASH + VAULT_BLUEPRINT_CBOR).
- * The applied script hash + address are derived at runtime by Lucid via
- * `applyParamsToScript(cbor, [VAULT_VERSION])`, so we only pin the blueprint
- * here — bumping VAULT_VERSION does NOT change these values.
+ * Fails if `contracts/vault/plutus.json` drifts from the *unapplied* blueprints
+ * pinned in the app:
+ *   - `vault.vault.spend`             → VAULT_BLUEPRINT_* in src/lib/vault.ts
+ *   - `yield_vault.yield_vault.spend` → YIELD_BLUEPRINT_* in src/lib/yield-vault.ts
+ *
+ * Applied script hashes + addresses are derived at runtime by Lucid via
+ * `applyParamsToScript(cbor, [version, assetId])`, so only the blueprints are
+ * pinned here — bumping a version does NOT change these values.
  *
  * Skips silently if plutus.json is absent (contributors without Aiken installed
  * can still `bun run build`).
@@ -29,7 +32,9 @@ const blueprint = JSON.parse(readFileSync(PLUTUS_PATH, "utf8"));
 const validators = blueprint?.validators ?? [];
 
 function findValidator(titlePrefix) {
-  const v = validators.find((x) => typeof x?.title === "string" && x.title.startsWith(titlePrefix) && x.title.includes(".spend"));
+  const v = validators.find(
+    (x) => typeof x?.title === "string" && x.title.startsWith(titlePrefix) && x.title.includes(".spend"),
+  );
   if (!v?.hash || !v?.compiledCode) {
     console.error(`[verify-vault-hash] plutus.json has no '${titlePrefix}' spend validator with hash + compiledCode`);
     process.exit(1);
@@ -95,4 +100,5 @@ if (drift) {
 }
 
 for (const t of targets) {
-  
+  console.log(`[verify-vault-hash] OK — ${t.label} matches (hash=${t.hash.slice(0, 12)}…, cbor=${t.cbor.length} chars).`);
+}
