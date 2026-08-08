@@ -1,14 +1,32 @@
-import { useState } from "react";
-import { AlertTriangle, CheckCircle2, Loader2, PenLine, Send, TrendingUp } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ClipboardCopy,
+  Link2,
+  Loader2,
+  PenLine,
+  Send,
+  TrendingUp,
+  Users,
+} from "lucide-react";
 import { cardanoscanTx, formatSharePrice, lovelaceToAda, short } from "@/lib/chain-format";
 import { buildAccrual, coSignAccrual, submitAccrual, type AccrualDraft } from "@/lib/vault-accrual";
+import {
+  addWitnessToDraft,
+  decodeDraft,
+  draftShareLink,
+  encodeDraft,
+  mergeDrafts,
+  readDraftFromLocation,
+} from "@/lib/accrual-share";
 import { recordYieldAccrual } from "@/lib/yield-accruals.functions";
 import type { AssetVaultRow } from "@/lib/asset-vaults.shared";
 
 /**
  * Operator surface for moving a vault's share price: build the accrual, gather
- * M-of-N operator signatures, submit, then record the transaction only after
- * the server has re-verified it on chain.
+ * M-of-N operator signatures — in person, by pasted witness, or over a shared
+ * link — submit, then record it only after the server re-verifies it on chain.
  */
 export function AccrueYieldCard({
   vaults,
@@ -27,6 +45,18 @@ export function AccrueYieldCard({
   const [recorded, setRecorded] = useState(false);
   const [busy, setBusy] = useState<null | "build" | "sign" | "submit">(null);
   const [error, setError] = useState<string | null>(null);
+  const [importText, setImportText] = useState("");
+  const [notice, setNotice] = useState<string | null>(null);
+
+  // A co-signer arriving from a shared link starts with the draft already loaded.
+  useEffect(() => {
+    const shared = readDraftFromLocation();
+    if (!shared) return;
+    setDraft(shared);
+    setAssetId(shared.assetId);
+    setAmountAda((Number(shared.amountLovelace) / 1_000_000).toString());
+    setNotice("Loaded a shared accrual draft from the link. Co-sign it with your wallet below.");
+  }, []);
 
   const vault = vaults.find((v) => v.asset_id === assetId) ?? null;
   const extraSigners = signersText
@@ -39,7 +69,46 @@ export function AccrueYieldCard({
     setTxHash(null);
     setRecorded(false);
     setError(null);
+    setNotice(null);
   };
+
+  const copy = async (text: string, message: string) => {
+    setError(null);
+    try {
+      await navigator.clipboard.writeText(text);
+      setNotice(message);
+    } catch {
+      setError("Couldn't reach the clipboard — select the text and copy it manually.");
+    }
+  };
+
+  /** Accepts either a full draft blob or a bare witness hex string. */
+  const importSignature = () => {
+    setError(null);
+    setNotice(null);
+    const value = importText.trim().replace(/\s+/g, "");
+    if (!value) return setError("Paste a witness or a draft first.");
+    try {
+      if (/^[0-9a-f]+$/i.test(value)) {
+        if (!draft) throw new Error("Build or load a draft before pasting a witness.");
+        const next = addWitnessToDraft(draft, value);
+        setDraft(next);
+        setNotice(
+          `Added a signature from ${short(next.witnesses[next.witnesses.length - 1]!.keyHash, 8, 4)}.`,
+        );
+      } else {
+        const incoming = decodeDraft(value);
+        const next = draft ? mergeDrafts(draft, incoming) : incoming;
+        setDraft(next);
+        setAssetId(next.assetId);
+        setNotice(`Draft loaded — ${next.witnesses.length} of ${next.requiredSigners.length} signed.`);
+      }
+      setImportText("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
 
   const build = async () => {
     setError(null);
@@ -228,6 +297,78 @@ export function AccrueYieldCard({
           </div>
         </div>
       )}
+
+      {draft && !txHash && (
+        <div className="mt-5 rounded-md border border-border p-4">
+          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+            <Users className="h-4 w-4 text-primary" />
+            Signature collection
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Co-signers can sign here with their own wallet, open a shared link, or send back just
+            their witness. A witness is only counted once its public key matches an operator this
+            transaction requires.
+          </p>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => copy(draftShareLink(draft), "Share link copied — send it to a co-signer.")}
+              className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-xs font-medium"
+            >
+              <Link2 className="h-3.5 w-3.5" /> Copy share link
+            </button>
+            <button
+              type="button"
+              onClick={() => copy(encodeDraft(draft), "Draft copied to the clipboard.")}
+              className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-xs font-medium"
+            >
+              <ClipboardCopy className="h-3.5 w-3.5" /> Copy draft
+            </button>
+            {draft.witnesses.length > 0 && (
+              <button
+                type="button"
+                onClick={() =>
+                  copy(
+                    draft.witnesses[draft.witnesses.length - 1]!.witness,
+                    "Your witness copied — send it back to the coordinator.",
+                  )
+                }
+                className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-xs font-medium"
+              >
+                <ClipboardCopy className="h-3.5 w-3.5" /> Copy my witness
+              </button>
+            )}
+          </div>
+
+          <label className="mt-4 block text-xs">
+            <span className="text-muted-foreground">Paste a witness or a shared draft</span>
+            <textarea
+              value={importText}
+              onChange={(e) => setImportText(e.target.value)}
+              rows={3}
+              placeholder="Witness CBOR hex, or an encoded draft from another operator"
+              className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 font-mono text-[11px]"
+            />
+          </label>
+          <button
+            type="button"
+            onClick={importSignature}
+            disabled={!importText.trim()}
+            className="mt-2 inline-flex items-center gap-2 rounded-md border border-border px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+          >
+            <PenLine className="h-3.5 w-3.5" /> Add signature
+          </button>
+        </div>
+      )}
+
+      {notice && (
+        <div className="mt-4 rounded-md border border-primary/40 bg-primary/10 p-3 text-sm text-foreground">
+          {notice}
+        </div>
+      )}
+
+
 
       {error && (
         <div className="mt-4 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
