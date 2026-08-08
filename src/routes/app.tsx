@@ -132,15 +132,22 @@ function PortfolioPage() {
                   <span className="text-primary-foreground/60">lifetime yield · {formatAda(totalYield)} earned</span>
                 </div>
 
-                <div className="mt-6 -mx-1">
-                  <Sparkline data={sparkline(3, 40)} stroke="oklch(0.85 0.12 200)" fill="oklch(0.85 0.12 200)" height={72} />
-                </div>
+                {series.length > 1 ? (
+                  <div className="mt-6 -mx-1">
+                    <Sparkline data={series} stroke="oklch(0.85 0.12 200)" fill="oklch(0.85 0.12 200)" height={72} />
+                  </div>
+                ) : (
+                  <div className="mt-6 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-primary-foreground/60">
+                    A value chart appears once at least two settled transactions are recorded.
+                  </div>
+                )}
 
                 <div className="mt-6 grid grid-cols-3 gap-3">
                   <MiniStat label="Active Vaults" value={String(activeVaults)} />
                   <MiniStat label="24h Yield" value={`+${formatAda(yield24h)}`} />
-                  <MiniStat label="APY (blended)" value={`${blendedApy.toFixed(1)}%`} />
+                  <MiniStat label="Lifetime Yield" value={formatAda(totalYield)} />
                 </div>
+
               </>
             )}
           </div>
