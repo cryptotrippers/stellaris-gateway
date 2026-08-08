@@ -48,3 +48,22 @@ The verify script fails if the unapplied blueprint hash or CBOR drifts from
 `VAULT_BLUEPRINT_HASH` / `VAULT_BLUEPRINT_CBOR` in `src/lib/vault.ts`. Never
 bump `VAULT_VERSION` without first withdrawing every live UTxO at the old
 applied address.
+
+## CI
+
+`.github/workflows/contracts.yml` runs on every push and pull request:
+
+1. installs the Aiken version pinned in `aiken.toml`;
+2. runs `aiken check` (all validator + share-math tests);
+3. runs `aiken build` to regenerate `plutus.json`;
+4. runs `node scripts/verify-vault-hash.mjs --strict`.
+
+Strict mode fails when `plutus.json` is missing instead of skipping, so CI can
+never pass silently without actually comparing the compiled validators. Both
+blueprints are checked by validator title:
+
+- `vault.vault.spend` → `VAULT_BLUEPRINT_HASH` / `VAULT_BLUEPRINT_CBOR` in `src/lib/vault.ts`
+- `yield_vault.yield_vault.spend` → `YIELD_BLUEPRINT_HASH` / `YIELD_BLUEPRINT_CBOR` in `src/lib/yield-vault.ts`
+
+Locally: `bun run verify:contracts` (skips if you haven't built) or
+`bun run verify:contracts:strict`.

@@ -1,0 +1,48 @@
+name: Contracts
+
+# Compiles the Aiken validators from source on every push/PR and fails the build
+# if either compiled blueprint drifts from the hash + CBOR pinned in the app
+# (src/lib/vault.ts and src/lib/yield-vault.ts).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verify-blueprints:
+    name: aiken check + blueprint drift guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read Aiken version from aiken.toml
+        id: aiken
+        run: |
+          version=$(grep -E '^compiler\s*=' contracts/vault/aiken.toml | sed -E 's/.*"(.*)".*/\1/')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Using Aiken $version"
+
+      - name: Install Aiken
+        run: |
+          curl -sSfL https://install.aiken-lang.org | bash
+          echo "$HOME/.aiken/bin" >> "$GITHUB_PATH"
+
+      - name: Pin Aiken toolchain
+        run: aikup install ${{ steps.aiken.outputs.version }}
+
+      - name: Run validator tests
+        working-directory: contracts/vault
+        run: aiken check
+
+      - name: Build blueprint
+        working-directory: contracts/vault
+        run: aiken build
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Verify pinned blueprints match plutus.json
+        run: node scripts/verify-vault-hash.mjs --strict
