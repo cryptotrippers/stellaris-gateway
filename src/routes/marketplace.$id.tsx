@@ -8,6 +8,7 @@ import { DepositVaultCard } from "@/components/vault/DepositVaultCard";
 import { WithdrawVaultCard } from "@/components/vault/WithdrawVaultCard";
 import { MyVaultHoldingsCard } from "@/components/vault/MyVaultHoldingsCard";
 import { VaultTxHistoryCard } from "@/components/vault/VaultTxHistoryCard";
+import { AssetVaultPanel } from "@/components/vault/AssetVaultPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { formatAda, lovelaceToAda } from "@/lib/format";
 
@@ -49,10 +50,18 @@ export const Route = createFileRoute("/marketplace/$id")({
     context.queryClient.ensureQueryData(assetQuery(params.id)),
   head: ({ params, loaderData }) => {
     const a = loaderData as AssetRow | undefined;
-    const title = a ? `${a.name} · On-chain vault · Stellaris` : `Vault ${params.id} · Stellaris`;
-    const description = a
-      ? `${a.name} by ${a.issuer}${a.location ? ` · ${a.location}` : ""}. Live funding, audit status, and on-chain vault activity.`
-      : "On-chain vault detail. Live issuer, funding, and audit data pulled from the registry.";
+    if (!a) {
+      // No loader data means the vault is missing or the load failed — never index it.
+      return {
+        meta: [
+          { title: `Vault ${params.id} · Unavailable · Stellaris` },
+          { name: "description", content: "This vault is not available in the registry." },
+          { name: "robots", content: "noindex" },
+        ],
+      };
+    }
+    const title = `${a.name} · On-chain vault · Stellaris`;
+    const description = `${a.name} by ${a.issuer}${a.location ? ` · ${a.location}` : ""}. Live funding, audit status, and on-chain vault activity.`;
     return {
       meta: [
         { title },
@@ -200,7 +209,12 @@ function AssetDetail() {
               </p>
             )}
           </div>
+
+          <div className="mt-6">
+            <AssetVaultPanel assetId={asset.id} />
+          </div>
         </div>
+
 
         {/* Right rail — every asset derives its own vault script from (version, asset_id) */}
         <aside className="h-fit space-y-4 lg:sticky lg:top-24">

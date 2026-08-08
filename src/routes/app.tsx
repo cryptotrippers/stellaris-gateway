@@ -1,14 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowUpRight, TrendingUp, Leaf, Sun, Building2, Wind, Wallet } from "lucide-react";
+import { ArrowUpRight, TrendingUp, Leaf, Sun, Building2, Wind, Wallet, Landmark } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { AppShell } from "@/components/layout/AppShell";
 import { Sparkline } from "@/components/charts/Sparkline";
-import { RiskBadge, Badge } from "@/components/ui/StatusBadge";
+import { Badge } from "@/components/ui/StatusBadge";
 import { FundingBar, SectionHeader } from "@/components/ui/funding-bar";
 import { ChainStatusCard } from "@/components/chain/ChainStatusCard";
 import { MyVaultHoldingsCard } from "@/components/vault/MyVaultHoldingsCard";
 import { useVaultAssetIds } from "@/hooks/useVaultAssetIds";
-import { ASSETS, formatAda, formatUsd, sparkline } from "@/lib/mock-data";
+import { formatAda, formatUsd, lovelaceToAda } from "@/lib/format";
+import { assetsQueryOptions, fundedPct, type AssetRow } from "@/lib/assets-query";
+import { APP_NETWORK } from "@/lib/network";
 import { useWallet } from "@/lib/wallet-store";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -17,7 +19,7 @@ export const Route = createFileRoute("/app")({
   head: () => ({
     meta: [
       { title: "Your Portfolio · Stellaris Finance" },
-      { name: "description", content: "Live view of your fractional real-world asset positions on Cardano — yield, ESG ratings, and compliance status at a glance." },
+      { name: "description", content: "Live view of your fractional real-world asset positions on Cardano — deposits, yield, and compliance status at a glance." },
       { property: "og:title", content: "Your Portfolio · Stellaris" },
       { property: "og:description", content: "Track your RealFi positions, yield, and impact on Cardano." },
       { name: "robots", content: "noindex" },
@@ -34,6 +36,10 @@ const categoryIcon = {
   "Infrastructure": Sun,
 } as const;
 
+function iconFor(category: string) {
+  return (categoryIcon as Record<string, typeof Leaf>)[category] ?? Landmark;
+}
+
 type Position = { vault_id: string; amount_ada: number; opened_at: string; tx_hash: string };
 type Txn = { type: "deposit" | "withdraw" | "yield"; amount_ada: number; created_at: string; vault_id: string };
 
@@ -46,10 +52,24 @@ function usePortfolioData(walletAddress: string | null) {
       if (!auth.user) return { positions: [] as Position[], txns: [] as Txn[] };
       const [{ data: positions }, { data: txns }] = await Promise.all([
         supabase.from("vault_positions").select("vault_id,amount_ada,opened_at,tx_hash").eq("user_id", auth.user.id),
-        supabase.from("transactions").select("type,amount_ada,created_at,vault_id").eq("user_id", auth.user.id),
+        supabase
+          .from("transactions")
+          .select("type,amount_ada,created_at,vault_id")
+          .eq("user_id", auth.user.id)
+          .order("created_at", { ascending: true }),
       ]);
       return { positions: (positions ?? []) as Position[], txns: (txns ?? []) as Txn[] };
     },
+  });
+}
+
+/** Cumulative net value over time, derived only from recorded transactions. */
+function valueSeries(txns: Txn[]): number[] {
+  let running = 0;
+  return txns.map(t => {
+    const amt = Number(t.amount_ada);
+    running += t.type === "withdraw" ? -amt : amt;
+    return running;
   });
 }
 
@@ -57,6 +77,9 @@ function PortfolioPage() {
   const wallet = useWallet();
   const { assetIds: vaultAssetIds } = useVaultAssetIds();
   const { data, isLoading } = usePortfolioData(wallet.connected ? wallet.address : null);
+  const { data: assetRows } = useQuery(assetsQueryOptions());
+  const assets: AssetRow[] = assetRows ?? [];
+  const assetById = (id: string) => assets.find(a => a.id === id) ?? null;
 
   const positions = data?.positions ?? [];
   const txns = data?.txns ?? [];
@@ -70,14 +93,8 @@ function PortfolioPage() {
   const yield24h = yieldTxns
     .filter(t => new Date(t.created_at).getTime() >= cutoff)
     .reduce((s, t) => s + Number(t.amount_ada), 0);
+  const series = valueSeries(txns);
 
-  // Blended APY: sum(position.amount * asset.apy) / totalAda
-  const blendedApy = totalAda > 0
-    ? positions.reduce((s, p) => {
-        const asset = ASSETS.find(a => a.id === p.vault_id);
-        return s + Number(p.amount_ada) * (asset?.apy ?? 0);
-      }, 0) / totalAda
-    : 0;
 
   return (
     <AppShell>
@@ -87,7 +104,7 @@ function PortfolioPage() {
           <div className="relative">
             <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-primary-foreground/70">
               <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-              Total Portfolio Value · Cardano Mainnet
+              Total Portfolio Value · Cardano {APP_NETWORK === "mainnet" ? "Mainnet" : "Preprod"}
             </div>
 
             {!wallet.connected ? (
@@ -115,15 +132,22 @@ function PortfolioPage() {
                   <span className="text-primary-foreground/60">lifetime yield · {formatAda(totalYield)} earned</span>
                 </div>
 
-                <div className="mt-6 -mx-1">
-                  <Sparkline data={sparkline(3, 40)} stroke="oklch(0.85 0.12 200)" fill="oklch(0.85 0.12 200)" height={72} />
-                </div>
+                {series.length > 1 ? (
+                  <div className="mt-6 -mx-1">
+                    <Sparkline data={series} stroke="oklch(0.85 0.12 200)" fill="oklch(0.85 0.12 200)" height={72} />
+                  </div>
+                ) : (
+                  <div className="mt-6 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-primary-foreground/60">
+                    A value chart appears once at least two settled transactions are recorded.
+                  </div>
+                )}
 
                 <div className="mt-6 grid grid-cols-3 gap-3">
                   <MiniStat label="Active Vaults" value={String(activeVaults)} />
                   <MiniStat label="24h Yield" value={`+${formatAda(yield24h)}`} />
-                  <MiniStat label="APY (blended)" value={`${blendedApy.toFixed(1)}%`} />
+                  <MiniStat label="Lifetime Yield" value={formatAda(totalYield)} />
                 </div>
+
               </>
             )}
           </div>
@@ -181,24 +205,26 @@ function PortfolioPage() {
           </div>
         ) : (
           <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {positions.map((inv, i) => {
-              const asset = ASSETS.find(a => a.id === inv.vault_id);
-              if (!asset) return null;
-              const Icon = categoryIcon[asset.category];
+            {positions.map((inv) => {
+              const asset = assetById(inv.vault_id);
+              const Icon = iconFor(asset?.category ?? "");
               const amount = Number(inv.amount_ada);
-              return (
-                <Link key={`${inv.vault_id}-${inv.tx_hash}`} to="/marketplace/$id" params={{ id: asset.id }} className="card-institutional card-institutional-hover p-5 group">
+              const body = (
+                <>
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
                         <Icon className="h-5 w-5" />
                       </div>
                       <div>
-                        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{asset.category}</div>
-                        <div className="text-sm font-semibold text-foreground line-clamp-1">{asset.name}</div>
+                        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                          {asset?.category ?? "Unlisted vault"}
+                        </div>
+                        <div className="text-sm font-semibold text-foreground line-clamp-1">
+                          {asset?.name ?? inv.vault_id}
+                        </div>
                       </div>
                     </div>
-                    <RiskBadge risk={asset.risk} />
                   </div>
 
                   <div className="mt-5 flex items-end justify-between">
@@ -206,20 +232,32 @@ function PortfolioPage() {
                       <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Position</div>
                       <div className="number-display text-xl font-semibold text-foreground">{formatAda(amount)}</div>
                     </div>
-                    <div className="text-sm font-semibold text-success">APY {asset.apy}%</div>
-                  </div>
-
-                  <div className="mt-3">
-                    <Sparkline data={sparkline(i * 7 + 2, 28)} stroke="var(--color-primary)" fill="var(--color-primary)" height={38} />
+                    <div className="text-right text-xs text-muted-foreground">
+                      Opened {new Date(inv.opened_at).toLocaleDateString()}
+                    </div>
                   </div>
 
                   <div className="mt-4 flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">ESG {asset.esgRating}</span>
-                    <span className="inline-flex items-center gap-1 text-primary font-medium">
-                      View <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                    </span>
+                    <span className="font-mono text-muted-foreground">{inv.tx_hash.slice(0, 12)}…</span>
+                    {asset && (
+                      <span className="inline-flex items-center gap-1 text-primary font-medium">
+                        View <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                      </span>
+                    )}
                   </div>
+                </>
+              );
+              return asset ? (
+                <Link
+                  key={`${inv.vault_id}-${inv.tx_hash}`}
+                  to="/marketplace/$id"
+                  params={{ id: asset.id }}
+                  className="card-institutional card-institutional-hover p-5 group"
+                >
+                  {body}
                 </Link>
+              ) : (
+                <div key={`${inv.vault_id}-${inv.tx_hash}`} className="card-institutional p-5">{body}</div>
               );
             })}
           </div>
@@ -227,38 +265,48 @@ function PortfolioPage() {
       </section>
 
       <section className="mt-10">
-        <SectionHeader title="Featured Opportunities" href="/marketplace" hrefLabel="See all" />
-        <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {ASSETS.slice(0, 3).map(asset => {
+        <SectionHeader title="Open Vaults" href="/marketplace" hrefLabel="See all" />
+        {assets.length === 0 ? (
+          <div className="mt-4 card-institutional p-8 text-center text-sm text-muted-foreground">
+            No vaults are registered yet.
+          </div>
+        ) : (
+          <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {assets.slice(0, 3).map(asset => {
+              const Icon = iconFor(asset.category);
+              return (
+                <Link key={asset.id} to="/marketplace/$id" params={{ id: asset.id }} className="card-institutional card-institutional-hover p-5 flex flex-col">
+                  <div className="flex items-center justify-between">
+                    <Badge tone="primary">{asset.category}</Badge>
+                    <span className="text-xs text-muted-foreground uppercase tracking-widest">{asset.funding_status}</span>
+                  </div>
+                  <div className="mt-4 flex items-center gap-3">
+                    <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-primary text-primary-foreground">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-foreground truncate">{asset.name}</div>
+                      <div className="text-xs text-muted-foreground">{asset.location ?? asset.issuer}</div>
+                    </div>
+                  </div>
+                  <div className="mt-5 flex items-end justify-between">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Raised</div>
+                      <div className="number-display text-2xl font-semibold text-primary">
+                        {formatAda(lovelaceToAda(asset.raised_lovelace))}
+                      </div>
+                    </div>
+                    <div className="text-right text-xs text-muted-foreground">
+                      Target {formatAda(lovelaceToAda(asset.target_lovelace))}
+                    </div>
+                  </div>
+                  <FundingBar pct={fundedPct(asset)} />
+                </Link>
+              );
+            })}
+          </div>
+        )}
 
-            const Icon = categoryIcon[asset.category];
-            return (
-              <Link key={asset.id} to="/marketplace/$id" params={{ id: asset.id }} className="card-institutional card-institutional-hover p-5 flex flex-col">
-                <div className="flex items-center justify-between">
-                  <Badge tone="primary">{asset.category}</Badge>
-                  <span className="text-xs text-muted-foreground">ESG {asset.esgRating}</span>
-                </div>
-                <div className="mt-4 flex items-center gap-3">
-                  <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-primary text-primary-foreground">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-foreground truncate">{asset.name}</div>
-                    <div className="text-xs text-muted-foreground">{asset.location}</div>
-                  </div>
-                </div>
-                <div className="mt-5 flex items-end justify-between">
-                  <div>
-                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Target APY</div>
-                    <div className="number-display text-2xl font-semibold text-primary">{asset.apy}%</div>
-                  </div>
-                  <RiskBadge risk={asset.risk} />
-                </div>
-                <FundingBar pct={asset.fundedPct} />
-              </Link>
-            );
-          })}
-        </div>
       </section>
     </AppShell>
   );

@@ -1,24 +1,13 @@
 import { createFileRoute, Link, Outlet, useMatchRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Search, Filter, Leaf, Wind, Building2, Sun, Landmark } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/StatusBadge";
 import { FundingBar } from "@/components/ui/funding-bar";
 import { formatAda, lovelaceToAda } from "@/lib/format";
-import { supabase } from "@/integrations/supabase/client";
+import { assetsQueryOptions, fundedPct, type AssetRow } from "@/lib/assets-query";
 
-type AssetRow = {
-  id: string;
-  name: string;
-  category: string;
-  issuer: string;
-  location: string | null;
-  description: string | null;
-  target_lovelace: number;
-  raised_lovelace: number;
-  maturity_months: number | null;
-  funding_status: string;
-};
 
 
 export const Route = createFileRoute("/marketplace")({
@@ -60,29 +49,26 @@ function MarketplaceLayout() {
 
 function MarketplaceIndex() {
   const [query, setQuery] = useState("");
-  const [assets, setAssets] = useState<AssetRow[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [category, setCategory] = useState<string>("all");
+  const { data, isLoading, error } = useQuery(assetsQueryOptions());
+  const assets: AssetRow[] = data ?? [];
 
-  useEffect(() => {
-    let alive = true;
-    supabase
-      .from("assets")
-      .select("id,name,category,issuer,location,description,target_lovelace,raised_lovelace,maturity_months,funding_status")
-      .order("created_at", { ascending: false })
-      .then(({ data, error }) => {
-        if (!alive) return;
-        if (error) { setError(error.message); setAssets([]); return; }
-        setAssets((data ?? []) as AssetRow[]);
-      });
-    return () => { alive = false; };
-  }, []);
-
-  const filtered = (assets ?? []).filter(a =>
-    query === "" ||
-    a.name.toLowerCase().includes(query.toLowerCase()) ||
-    a.category.toLowerCase().includes(query.toLowerCase()) ||
-    a.issuer.toLowerCase().includes(query.toLowerCase())
+  const categories = useMemo(
+    () => Array.from(new Set(assets.map(a => a.category))).sort(),
+    [assets],
   );
+
+  const filtered = assets.filter(a => {
+    const q = query.trim().toLowerCase();
+    const matchesQuery =
+      q === "" ||
+      a.name.toLowerCase().includes(q) ||
+      a.category.toLowerCase().includes(q) ||
+      a.issuer.toLowerCase().includes(q) ||
+      (a.location ?? "").toLowerCase().includes(q);
+    const matchesCategory = category === "all" || a.category === category;
+    return matchesQuery && matchesCategory;
+  });
 
   return (
     <>
@@ -93,7 +79,7 @@ function MarketplaceIndex() {
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Fractionalised, transparent, on-chain settlement in ADA. Assets appear here once issuers register and pass verification.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge tone="accent">{(assets ?? []).length} live vault{(assets ?? []).length === 1 ? "" : "s"}</Badge>
+          <Badge tone="accent">{assets.length} live vault{assets.length === 1 ? "" : "s"}</Badge>
         </div>
       </div>
 
@@ -104,34 +90,52 @@ function MarketplaceIndex() {
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Search by asset, issuer, or category…"
+            placeholder="Search by asset, issuer, location, or category…"
             className="w-full rounded-lg border border-border bg-surface pl-9 pr-3 py-2 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Filter className="h-4 w-4" />
-          Live from on-chain registry
+          Live from the on-chain registry
         </div>
       </div>
 
-      {assets === null && (
-        <div className="mt-6 card-institutional p-6 text-sm text-muted-foreground">Loading assets…</div>
-      )}
-      {error && (
-        <div className="mt-6 card-institutional p-6 text-sm text-destructive">Failed to load assets: {error}</div>
-      )}
-      {assets && filtered.length === 0 && !error && (
-        <div className="mt-6 card-institutional p-6 text-sm text-muted-foreground">
-          No assets are registered yet. Issuers must complete on-chain verification before their vaults appear here.
+      {categories.length > 1 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          <CategoryChip label="All" active={category === "all"} onClick={() => setCategory("all")} />
+          {categories.map(c => (
+            <CategoryChip key={c} label={c} active={category === c} onClick={() => setCategory(c)} />
+          ))}
         </div>
       )}
+
+      {isLoading && (
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {[0, 1, 2].map(i => (
+            <div key={i} className="card-institutional h-64 animate-pulse bg-secondary/40" />
+          ))}
+        </div>
+      )}
+      {error && (
+        <div className="mt-6 card-institutional p-6 text-sm text-destructive">
+          Failed to load assets: {(error as Error).message}
+        </div>
+      )}
+      {!isLoading && !error && filtered.length === 0 && (
+        <div className="mt-6 card-institutional p-6 text-sm text-muted-foreground">
+          {assets.length === 0
+            ? "No assets are registered yet. Issuers must complete on-chain verification before their vaults appear here."
+            : "No vaults match those filters."}
+        </div>
+      )}
+
 
       <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {filtered.map(asset => {
           const Icon = (categoryIcon as Record<string, typeof Leaf>)[asset.category] ?? Landmark;
           const target = Number(asset.target_lovelace);
           const raised = Number(asset.raised_lovelace);
-          const fundedPct = target > 0 ? Math.min(100, (raised / target) * 100) : 0;
+          const pct = fundedPct(asset);
           return (
             <Link
               key={asset.id}
@@ -162,10 +166,10 @@ function MarketplaceIndex() {
                 <Metric label="Term" value={asset.maturity_months ? `${asset.maturity_months}mo` : "—"} />
               </div>
 
-              <FundingBar pct={fundedPct} />
+              <FundingBar pct={pct} />
               <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
                 <span>Funded</span>
-                <span className="number-display text-foreground">{fundedPct.toFixed(1)}%</span>
+                <span className="number-display text-foreground">{pct.toFixed(1)}%</span>
               </div>
             </Link>
           );
@@ -174,6 +178,22 @@ function MarketplaceIndex() {
     </>
   );
 
+}
+
+function CategoryChip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+        active
+          ? "border-primary bg-primary/10 text-primary"
+          : "border-border text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      {label}
+    </button>
+  );
 }
 
 function Metric({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
