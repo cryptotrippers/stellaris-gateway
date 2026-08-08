@@ -38,14 +38,16 @@ export const Route = createFileRoute("/invite")({
 
 const REWARD_PER_SIGNUP = 25; // ADA
 
-// Mock leaderboard — swap for real data once Cloud is wired.
-const LEADERBOARD = [
-  { rank: 1, handle: "0xluna.ada", invites: 148, earned: 3700 },
-  { rank: 2, handle: "solstice", invites: 92, earned: 2300 },
-  { rank: 3, handle: "farmshares", invites: 71, earned: 1775 },
-  { rank: 4, handle: "adawhale", invites: 54, earned: 1350 },
-  { rank: 5, handle: "greenyield", invites: 38, earned: 950 },
-];
+function VerifiedStat({ label, value, note }: { label: string; value: string; note: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-surface px-4 py-3">
+      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</div>
+      <div className="mt-1 text-lg font-semibold text-foreground tabular-nums">{value}</div>
+      <div className="mt-0.5 text-[11px] text-muted-foreground">{note}</div>
+    </div>
+  );
+}
+
 
 function InvitePage() {
   const [code, setCode] = useState("STELLAR");
@@ -271,32 +273,34 @@ function InvitePage() {
         </div>
       </section>
 
-      {/* Leaderboard */}
+      {/* Leaderboard — only shown when server-side attribution can source it honestly */}
       <section className="mt-10">
         <div className="flex items-center gap-2">
           <Trophy className="h-4 w-4 text-accent" />
-          <h2 className="text-lg font-semibold text-foreground">Top inviters this month</h2>
+          <h2 className="text-lg font-semibold text-foreground">Inviter leaderboard</h2>
+          <span className="rounded-full border border-border bg-secondary/60 px-2 py-0.5 text-[10px] uppercase tracking-widest text-muted-foreground">
+            Unavailable
+          </span>
         </div>
-        <div className="mt-4 card-institutional overflow-hidden">
-          <div className="grid grid-cols-[auto_1fr_auto_auto] gap-4 px-5 py-3 border-b border-border bg-secondary/40 text-[10px] uppercase tracking-widest text-muted-foreground">
-            <span>#</span>
-            <span>Investor</span>
-            <span className="text-right">Invites</span>
-            <span className="text-right">Earned</span>
+        <div className="mt-4 card-institutional p-5">
+          <p className="text-sm text-muted-foreground">
+            A ranked leaderboard requires server-side referral attribution across accounts. Referral
+            confirmations are currently recorded per device only, so cross-user totals cannot be
+            sourced. Rather than show estimated or placeholder rankings, this table stays empty until
+            attribution is verified on the server.
+          </p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <VerifiedStat label="Your invites sent" value={stats.count.toLocaleString()} note="This device" />
+            <VerifiedStat
+              label="Your attribution"
+              value={confirmation ? "Confirmed" : referredBy ? "Pending" : "None"}
+              note={confirmation ? `Code ${confirmation.code}` : referredBy ? `Code ${referredBy}` : "No invite code captured"}
+            />
+            <VerifiedStat label="Verified rewards" value="—" note="Pending server attribution" />
           </div>
-          {LEADERBOARD.map(row => (
-            <div key={row.rank} className="grid grid-cols-[auto_1fr_auto_auto] gap-4 px-5 py-3.5 border-b border-border/60 last:border-0 items-center text-sm">
-              <span className={`font-mono font-semibold w-6 ${row.rank <= 3 ? "text-accent" : "text-muted-foreground"}`}>{row.rank}</span>
-              <span className="text-foreground truncate">{row.handle}</span>
-              <span className="text-right text-foreground tabular-nums">{row.invites}</span>
-              <span className="text-right text-primary font-semibold tabular-nums">₳{row.earned.toLocaleString()}</span>
-            </div>
-          ))}
         </div>
-        <p className="mt-3 text-xs text-muted-foreground">
-          Top 10 inviters at month end split a bonus pool of ₳10,000 in addition to per-signup rewards.
-        </p>
       </section>
+
 
       {/* Audit log — transparent record of every referral event on this device */}
       <section className="mt-10">
