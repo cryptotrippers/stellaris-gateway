@@ -1,0 +1,198 @@
+/**
+ * Governance ↔ vault link (Step 5).
+ *
+ * A proposal is not just a title any more: it names the asset it concerns, the
+ * action it authorises, and the exact parameters of that action. It reaches
+ * `executed` only when a real Cardano transaction is verified server-side
+ * against the vault's on-chain state — the browser never asserts execution.
+ */
+
+import { createServerFn } from "@tanstack/react-start";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { publicSupabase } from "./asset-vaults.shared";
+import { BECH32_ADDRESS_RE, TX_HASH_RE } from "./yield-chain-decode";
+import {
+  PROPOSAL_COLUMNS,
+  PROPOSAL_KINDS,
+  nextSipNumber,
+  requireRole,
+  validateProposalParams,
+  type ProposalKind,
+  type ProposalRow,
+  type ProposalParams,
+} from "./governance-vault.shared";
+
+export type { ProposalRow, ProposalKind } from "./governance-vault.shared";
+
+/** Public proposal list, newest first. */
+export const listVaultProposals = createServerFn({ method: "GET" })
+  .inputValidator((data?: { assetId?: string }) => ({ assetId: data?.assetId ?? null }))
+  .handler(async ({ data }): Promise<ProposalRow[]> => {
+    const supabase = publicSupabase();
+    let query = supabase
+      .from("governance_proposals")
+      .select(PROPOSAL_COLUMNS)
+      .order("created_at", { ascending: false });
+    if (data.assetId) query = query.eq("asset_id", data.assetId);
+    const { data: rows, error } = await query;
+    if (error) throw new Error(error.message);
+    return (rows ?? []) as unknown as ProposalRow[];
+  });
+
+/** Create a proposal that names a concrete vault action. Signed-in users only. */
+export const createVaultProposal = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data: {
+      title: string;
+      body: string;
+      kind: ProposalKind;
+      assetId?: string | null;
+      params?: Record<string, unknown>;
+      votingDays?: number;
+    }) => {
+      const title = (data?.title ?? "").trim();
+      const body = (data?.body ?? "").trim();
+      if (title.length < 6 || title.length > 160) {
+        throw new Error("The title must be between 6 and 160 characters.");
+      }
+      if (body.length < 40) {
+        throw new Error("Write at least 40 characters explaining what this proposal does and why.");
+      }
+      if (!PROPOSAL_KINDS.includes(data?.kind)) throw new Error("Unknown proposal type.");
+      const assetId = data.assetId?.trim() || null;
+      const params = validateProposalParams(data.kind, assetId, data.params ?? {});
+      const votingDays = Math.min(Math.max(Math.round(data.votingDays ?? 7), 1), 30);
+      return { title, body: body.slice(0, 20000), kind: data.kind, assetId, params, votingDays };
+    },
+  )
+  .handler(async ({ data, context }): Promise<{ id: string; sipNumber: string }> => {
+    const { data: existing, error: listErr } = await context.supabase
+      .from("governance_proposals")
+      .select("sip_number");
+    if (listErr) throw new Error(listErr.message);
+
+    const now = new Date();
+    const endsAt = new Date(now.getTime() + data.votingDays * 24 * 60 * 60 * 1000);
+
+    const { data: inserted, error } = await context.supabase
+      .from("governance_proposals")
+      .insert({
+        sip_number: nextSipNumber(existing ?? []),
+        title: data.title,
+        body: data.body,
+        kind: data.kind,
+        asset_id: data.assetId,
+        params: data.params as never,
+        author_user_id: context.userId,
+        status: "active",
+        votes_for_pct: 0,
+        starts_at: now.toISOString(),
+        ends_at: endsAt.toISOString(),
+      })
+      .select("id, sip_number")
+      .single();
+    if (error) throw new Error(error.message);
+
+    return { id: inserted.id as string, sipNumber: inserted.sip_number as string };
+  });
+
+/**
+ * Record that a passed proposal was executed on chain.
+ *
+ * The transaction is verified against the vault address before anything is
+ * written: it must spend and recreate the vault state, bump the epoch, leave
+ * the share supply untouched, and accrue exactly the approved amount. A
+ * transaction that fails any of those checks cannot mark a proposal executed.
+ */
+export const recordProposalExecution = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { proposalId: string; txHash: string }) => {
+    if (!data?.proposalId) throw new Error("proposalId is required");
+    if (!TX_HASH_RE.test(data?.txHash ?? "")) throw new Error("Invalid transaction hash.");
+    return { proposalId: data.proposalId, txHash: data.txHash.toLowerCase() };
+  })
+  .handler(async ({ data, context }): Promise<{ ok: boolean; reason: string }> => {
+    await requireRole(context.supabase, context.userId, "operator");
+
+    const { data: proposal, error: pErr } = await context.supabase
+      .from("governance_proposals")
+      .select(PROPOSAL_COLUMNS)
+      .eq("id", data.proposalId)
+      .maybeSingle();
+    if (pErr) throw new Error(pErr.message);
+    if (!proposal) return { ok: false, reason: "Proposal not found." };
+
+    const row = proposal as unknown as ProposalRow;
+    if (row.status !== "passed") {
+      return { ok: false, reason: "Only a proposal that has passed can be executed." };
+    }
+    if (row.executed_tx_hash) {
+      return { ok: false, reason: "This proposal already has an execution transaction recorded." };
+    }
+    if (row.kind !== "accrue") {
+      return {
+        ok: false,
+        reason: "Only accrual proposals can be verified automatically right now.",
+      };
+    }
+    if (!row.asset_id) return { ok: false, reason: "This proposal names no asset." };
+
+    const { data: vault, error: vErr } = await context.supabase
+      .from("asset_vaults")
+      .select("script_address, vault_version, network")
+      .eq("asset_id", row.asset_id)
+      .order("vault_version", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (vErr) throw new Error(vErr.message);
+    if (!vault || !BECH32_ADDRESS_RE.test(vault.script_address as string)) {
+      return { ok: false, reason: "No bootstrapped vault is registered for this asset." };
+    }
+
+    const expected = String(row.params?.["amount_lovelace"] ?? "");
+    const { verifyAccrualTx } = await import("./yield-chain.functions");
+    const check = await verifyAccrualTx({
+      data: {
+        txHash: data.txHash,
+        address: vault.script_address as string,
+        expectedLovelace: expected || undefined,
+      },
+    });
+    if (!check.ok) return { ok: false, reason: check.reason };
+
+    const blockTimeIso = check.blockTime
+      ? new Date(check.blockTime * 1000).toISOString()
+      : new Date().toISOString();
+
+    const { error: aErr } = await context.supabase.from("yield_accruals").insert({
+      asset_id: row.asset_id,
+      vault_version: vault.vault_version as number,
+      network: (vault.network as string) ?? "preprod",
+      tx_hash: data.txHash,
+      epoch: check.epoch ?? 0,
+      amount_lovelace: check.amountLovelace ?? "0",
+      total_assets_after: "0",
+      total_shares_after: "0",
+      block_time: blockTimeIso,
+      proposal_id: row.id,
+    } as never);
+    // A duplicate accrual row is not a failure — the chain is the source of
+    // truth and this table is only a cache.
+    if (aErr && !aErr.message.toLowerCase().includes("duplicate")) {
+      throw new Error(aErr.message);
+    }
+
+    const { error: uErr } = await context.supabase
+      .from("governance_proposals")
+      .update({
+        status: "executed",
+        executed_tx_hash: data.txHash,
+        executed_at: blockTimeIso,
+        executed_epoch: check.epoch,
+      })
+      .eq("id", row.id);
+    if (uErr) throw new Error(uErr.message);
+
+    return { ok: true, reason: "Execution verified on chain and recorded." };
+  });

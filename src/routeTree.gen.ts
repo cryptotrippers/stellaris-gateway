@@ -15,6 +15,7 @@ import { Route as TestnetRouteImport } from './routes/testnet'
 import { Route as StewardshipRouteImport } from './routes/stewardship'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SecurityRouteImport } from './routes/security'
+import { Route as OperatorsRouteImport } from './routes/operators'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MarketplaceRouteImport } from './routes/marketplace'
 import { Route as InviteRouteImport } from './routes/invite'
@@ -62,6 +63,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const SecurityRoute = SecurityRouteImport.update({
   id: '/security',
   path: '/security',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OperatorsRoute = OperatorsRouteImport.update({
+  id: '/operators',
+  path: '/operators',
   getParentRoute: () => rootRouteImport,
 } as any)
 const McpRoute = McpRouteImport.update({
@@ -170,6 +176,7 @@ export interface FileRoutesByFullPath {
   '/invite': typeof InviteRoute
   '/marketplace': typeof MarketplaceRouteWithChildren
   '/mcp': typeof McpRoute
+  '/operators': typeof OperatorsRoute
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stewardship': typeof StewardshipRoute
@@ -196,6 +203,7 @@ export interface FileRoutesByTo {
   '/invite': typeof InviteRoute
   '/marketplace': typeof MarketplaceRouteWithChildren
   '/mcp': typeof McpRoute
+  '/operators': typeof OperatorsRoute
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stewardship': typeof StewardshipRoute
@@ -222,6 +230,7 @@ export interface FileRoutesById {
   '/invite': typeof InviteRoute
   '/marketplace': typeof MarketplaceRouteWithChildren
   '/mcp': typeof McpRoute
+  '/operators': typeof OperatorsRoute
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stewardship': typeof StewardshipRoute
@@ -250,6 +259,7 @@ export interface FileRouteTypes {
     | '/invite'
     | '/marketplace'
     | '/mcp'
+    | '/operators'
     | '/security'
     | '/sitemap.xml'
     | '/stewardship'
@@ -276,6 +286,7 @@ export interface FileRouteTypes {
     | '/invite'
     | '/marketplace'
     | '/mcp'
+    | '/operators'
     | '/security'
     | '/sitemap.xml'
     | '/stewardship'
@@ -301,6 +312,7 @@ export interface FileRouteTypes {
     | '/invite'
     | '/marketplace'
     | '/mcp'
+    | '/operators'
     | '/security'
     | '/sitemap.xml'
     | '/stewardship'
@@ -328,6 +340,7 @@ export interface RootRouteChildren {
   InviteRoute: typeof InviteRoute
   MarketplaceRoute: typeof MarketplaceRouteWithChildren
   McpRoute: typeof McpRoute
+  OperatorsRoute: typeof OperatorsRoute
   SecurityRoute: typeof SecurityRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StewardshipRoute: typeof StewardshipRoute
@@ -384,6 +397,13 @@ declare module '@tanstack/react-router' {
       path: '/security'
       fullPath: '/security'
       preLoaderRoute: typeof SecurityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/operators': {
+      id: '/operators'
+      path: '/operators'
+      fullPath: '/operators'
+      preLoaderRoute: typeof OperatorsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mcp': {
@@ -561,6 +581,7 @@ const rootRouteChildren: RootRouteChildren = {
   InviteRoute: InviteRoute,
   MarketplaceRoute: MarketplaceRouteWithChildren,
   McpRoute: McpRoute,
+  OperatorsRoute: OperatorsRoute,
   SecurityRoute: SecurityRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StewardshipRoute: StewardshipRoute,
