@@ -15,6 +15,7 @@ import { getBlockfrostHealth, getPreprodTip } from "@/lib/blockfrost.functions";
 import { listAssetVaults, type AssetVaultRow } from "@/lib/asset-vaults.functions";
 import { getVaultChainHistory, getVaultChainState } from "@/lib/yield-chain.functions";
 import { listVaultProposals } from "@/lib/governance-vault.functions";
+import { assetsQueryOptions, type AssetRow } from "@/lib/assets-query";
 import {
   cardanoscanAddress,
   cardanoscanTx,
@@ -31,12 +32,12 @@ export const Route = createFileRoute("/yield")({
       {
         name: "description",
         content:
-          "Share price, epoch and every yield accrual for each Stellaris vault, read directly from the Cardano ledger. No estimates, no simulations.",
+          "Share price, epoch and every verified yield accrual for each Stellaris vault, read directly from the Cardano ledger.",
       },
       { property: "og:title", content: "Stellaris · Vault Yield Ledger" },
       {
         property: "og:description",
-        content: "Every yield figure traced to the Cardano transaction that produced it.",
+        content: "Trace observed sUSDR accruals to the Cardano transactions that produced them.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -46,13 +47,13 @@ export const Route = createFileRoute("/yield")({
 });
 
 function YieldLedger() {
+  const [selectedAssetId, setSelectedAssetId] = useState<string>("all");
   const healthQ = useQuery({
     queryKey: ["preprod", "blockfrost-health"],
     queryFn: () => getBlockfrostHealth(),
     refetchInterval: 60_000,
     retry: 0,
   });
-
   const tipQ = useQuery({
     queryKey: ["preprod", "tip"],
     queryFn: () => getPreprodTip(),
@@ -60,13 +61,12 @@ function YieldLedger() {
     retry: 0,
     enabled: healthQ.data?.status === "ok",
   });
-
   const vaultsQ = useQuery({
     queryKey: ["asset-vaults"],
     queryFn: () => listAssetVaults(),
     staleTime: 60_000,
   });
-
+  const assetsQ = useQuery(assetsQueryOptions());
   const proposalsQ = useQuery({
     queryKey: ["vault-proposals", "all"],
     queryFn: () => listVaultProposals({ data: {} }),
@@ -75,7 +75,12 @@ function YieldLedger() {
 
   const tip = tipQ.data ?? null;
   const vaults = vaultsQ.data ?? [];
+  const visibleVaults = selectedAssetId === "all"
+    ? vaults
+    : vaults.filter((vault) => vault.asset_id === selectedAssetId);
   const chainDown = healthQ.data && healthQ.data.status !== "ok";
+  const assetName = (assetId: string) =>
+    (assetsQ.data ?? []).find((asset) => asset.id === assetId)?.name ?? assetId;
 
   return (
     <AppShell>
@@ -83,11 +88,12 @@ function YieldLedger() {
         <div>
           <div className="text-[11px] uppercase tracking-[0.22em] text-primary">Yield ledger</div>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground">
-            Share price &amp; accruals, read from chain
+            USDR stays stable. sUSDR earns from the portfolio.
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Every number here is decoded from a vault&apos;s state UTxO on Cardano Preprod. A vault
-            with no accruals says so — nothing is projected, estimated, or filled in.
+            USDR is the dollar-referenced holding and does not accrue yield. sUSDR represents the
+            yield-bearing position. Every observed accrual below is decoded from a vault state UTxO;
+            nothing is projected or filled in.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -111,6 +117,7 @@ function YieldLedger() {
             type="button"
             onClick={() => {
               vaultsQ.refetch();
+              assetsQ.refetch();
               tipQ.refetch();
             }}
             className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-[11px] text-muted-foreground hover:text-foreground"
@@ -119,6 +126,28 @@ function YieldLedger() {
           </button>
         </div>
       </div>
+
+      <section className="mt-6 grid gap-4 lg:grid-cols-[1fr_1.2fr]">
+        <div className="card-institutional p-5">
+          <div className="text-[10px] uppercase tracking-widest text-primary">Token model</div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+            <TokenRow token="USDR" description="Dollar-referenced. Holding USDR alone does not accrue yield." />
+            <TokenRow token="sUSDR" description="Yield-bearing position. Share price changes only after a verified portfolio accrual." accent />
+          </div>
+        </div>
+        <div className="card-institutional p-5">
+          <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Data controls</div>
+          <div className="mt-3 grid gap-2 text-sm sm:grid-cols-3">
+            <DataState label="Portfolio source" value="Vault ledger" />
+            <DataState label="Attestation" value="Not connected" />
+            <DataState label="Oracle freshness" value="Not available" />
+          </div>
+          <p className="mt-3 text-xs text-muted-foreground">
+            Independent valuation, fund administration, weekly attestations, and oracle freshness
+            will remain pending until their records are wired to this vault.
+          </p>
+        </div>
+      </section>
 
       {chainDown && (
         <div className="mt-6 flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
@@ -145,7 +174,7 @@ function YieldLedger() {
           <div className="text-sm font-medium text-foreground">No vault has been bootstrapped yet</div>
           <p className="max-w-xl text-sm text-muted-foreground">
             A yield vault only exists once its ledger UTxO is created on chain. Until then there is
-            no share price to report. Admins can create one from the operator console.
+            no share price or sUSDR accrual to report. Admins can create one from the operator console.
           </p>
           <Link
             to="/operators"
@@ -156,16 +185,63 @@ function YieldLedger() {
         </div>
       )}
 
+      {vaults.length > 0 && (
+        <div className="mt-6 card-institutional flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="text-sm font-medium text-foreground">Choose an asset vault</div>
+            <div className="text-xs text-muted-foreground">Each selection reads its own state UTxO and accrual history.</div>
+          </div>
+          <select
+            value={selectedAssetId}
+            onChange={(event) => setSelectedAssetId(event.target.value)}
+            className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
+            aria-label="Choose an asset vault"
+          >
+            <option value="all">All bootstrapped vaults</option>
+            {vaults.map((vault) => (
+              <option key={vault.id} value={vault.asset_id}>
+                {assetName(vault.asset_id)} ({vault.asset_id})
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {vaultsQ.data && vaults.length > 0 && visibleVaults.length === 0 && (
+        <div className="mt-6 card-institutional p-6 text-sm text-muted-foreground">
+          No vault is registered for this asset.
+        </div>
+      )}
+
       <div className="mt-6 flex flex-col gap-6">
-        {vaults.map((vault) => (
+        {visibleVaults.map((vault) => (
           <VaultLedgerCard
             key={vault.id}
             vault={vault}
+            assetName={assetName(vault.asset_id)}
             proposals={(proposalsQ.data ?? []).filter((p) => p.asset_id === vault.asset_id)}
           />
         ))}
       </div>
     </AppShell>
+  );
+}
+
+function TokenRow({ token, description, accent = false }: { token: string; description: string; accent?: boolean }) {
+  return (
+    <div className="rounded-lg border border-border bg-secondary/30 p-3">
+      <div className={`text-sm font-semibold ${accent ? "text-primary" : "text-foreground"}`}>{token}</div>
+      <div className="mt-1 text-xs text-muted-foreground">{description}</div>
+    </div>
+  );
+}
+
+function DataState({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-dashed border-border px-3 py-2">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="mt-1 text-xs font-medium text-foreground">{value}</div>
+    </div>
   );
 }
 
@@ -178,9 +254,11 @@ interface ProposalLite {
 
 function VaultLedgerCard({
   vault,
+  assetName,
   proposals,
 }: {
   vault: AssetVaultRow;
+  assetName: string;
   proposals: ProposalLite[];
 }) {
   const stateQ = useQuery({
@@ -189,7 +267,6 @@ function VaultLedgerCard({
     refetchInterval: 60_000,
     retry: 0,
   });
-
   const historyQ = useQuery({
     queryKey: ["vault-history", vault.script_address],
     queryFn: () => getVaultChainHistory({ data: { address: vault.script_address, max: 50 } }),
@@ -200,7 +277,6 @@ function VaultLedgerCard({
   const state = stateQ.data;
   const history = historyQ.data;
   const accruals = [...(history?.accruals ?? [])].reverse();
-
   const proposalFor = (txHash: string) =>
     proposals.find((p) => p.executed_tx_hash?.toLowerCase() === txHash.toLowerCase()) ?? null;
 
@@ -209,12 +285,11 @@ function VaultLedgerCard({
       <header className="flex flex-wrap items-start justify-between gap-3 border-b border-border p-5">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-foreground">{vault.asset_id}</h2>
+            <h2 className="text-lg font-semibold text-foreground">{assetName}</h2>
+            <span className="font-mono text-xs text-muted-foreground">{vault.asset_id}</span>
             <Badge tone="accent">v{vault.vault_version}</Badge>
             {state?.state?.paused && (
-              <Badge tone="warning">
-                <PauseCircle className="h-3 w-3" /> paused
-              </Badge>
+              <Badge tone="warning"><PauseCircle className="h-3 w-3" /> paused</Badge>
             )}
           </div>
           <a
@@ -227,9 +302,7 @@ function VaultLedgerCard({
           </a>
         </div>
         <div className="text-right text-[11px] text-muted-foreground">
-          <div>
-            {vault.signature_threshold}-of-{vault.operator_key_hashes.length} operator signatures
-          </div>
+          <div>{vault.signature_threshold}-of-{vault.operator_key_hashes.length} operator signatures</div>
           {vault.bootstrap_tx_hash && (
             <a
               href={cardanoscanTx(vault.bootstrap_tx_hash)}
@@ -243,68 +316,43 @@ function VaultLedgerCard({
         </div>
       </header>
 
-      {stateQ.isLoading && (
-        <div className="p-5 text-sm text-muted-foreground">Reading vault state from chain…</div>
-      )}
-
-      {stateQ.error && (
-        <div className="p-5 text-sm text-destructive">
-          Could not read this vault: {(stateQ.error as Error).message}
-        </div>
-      )}
+      {stateQ.isLoading && <div className="p-5 text-sm text-muted-foreground">Reading vault state from chain…</div>}
+      {stateQ.error && <div className="p-5 text-sm text-destructive">Could not read this vault: {(stateQ.error as Error).message}</div>}
 
       {state && !state.found && (
         <div className="flex items-start gap-3 p-5 text-sm text-muted-foreground">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-          <div>
-            No state UTxO found at this address. The vault is registered but its on-chain ledger has
-            not been created yet, so it has no share price and cannot accept deposits.
-          </div>
+          <div>No state UTxO found at this address. The vault is registered but has no share price or sUSDR accrual yet.</div>
         </div>
       )}
 
       {state?.found && state.state && (
         <>
           <div className="grid grid-cols-2 gap-px bg-border md:grid-cols-5">
-            <Metric label="Share price" value={formatSharePrice(state.sharePrice)} />
+            <Metric label="sUSDR share price" value={formatSharePrice(state.sharePrice)} />
             <Metric label="Epoch" value={String(state.state.epoch)} />
             <Metric label="Total assets" value={`${lovelaceToAda(state.state.totalAssets)} ADA`} />
             <Metric label="Shares issued" value={Number(state.state.totalShares).toLocaleString()} />
             <Metric
-              label="Annualised"
-              value={
-                history?.apyPct !== null && history?.apyPct !== undefined
-                  ? `${history.apyPct.toFixed(2)}%`
-                  : "—"
-              }
-              hint={
-                history?.apyPct === null || history?.apyPct === undefined
-                  ? "needs 2 accruals"
-                  : "from real accruals"
-              }
+              label="Observed annualised"
+              value={history?.apyPct !== null && history?.apyPct !== undefined ? `${history.apyPct.toFixed(2)}%` : "—"}
+              hint={history?.apyPct === null || history?.apyPct === undefined ? "needs 2 accruals" : "from verified accruals"}
             />
           </div>
 
           <div className="border-t border-border p-5">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-medium text-foreground">Accrual history</h3>
+              <h3 className="text-sm font-medium text-foreground">Verified sUSDR accrual history</h3>
               <span className="text-[11px] text-muted-foreground">
-                {state.positions.length} open position{state.positions.length === 1 ? "" : "s"} ·{" "}
-                {lovelaceToAda(state.lockedLovelace)} ADA locked
+                {state.positions.length} open position{state.positions.length === 1 ? "" : "s"} · {lovelaceToAda(state.lockedLovelace)} ADA locked
               </span>
             </div>
-
-            {historyQ.isLoading && (
-              <div className="text-sm text-muted-foreground">Scanning vault transactions…</div>
-            )}
-
+            {historyQ.isLoading && <div className="text-sm text-muted-foreground">Scanning vault transactions…</div>}
             {history && accruals.length === 0 && (
               <div className="rounded-md border border-dashed border-border p-4 text-sm text-muted-foreground">
-                No accruals yet — share price {formatSharePrice(state.sharePrice)}. Yield appears
-                here only after operators execute an approved accrual on chain.
+                No verified accruals yet — share price {formatSharePrice(state.sharePrice)}. USDR remains non-yield-bearing; sUSDR yield appears only after an approved on-chain accrual.
               </div>
             )}
-
             {accruals.length > 0 && (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
@@ -324,37 +372,14 @@ function VaultLedgerCard({
                       return (
                         <tr key={a.txHash} className="border-b border-border/50 last:border-0">
                           <td className="py-2 pr-4 tabular-nums">{a.epoch}</td>
-                          <td className="py-2 pr-4 tabular-nums text-success">
-                            +{lovelaceToAda(a.amountLovelace)} ADA
-                          </td>
-                          <td className="py-2 pr-4 font-mono text-xs">
-                            {formatSharePrice(a.sharePriceBefore)} →{" "}
-                            <span className="text-foreground">
-                              {formatSharePrice(a.sharePriceAfter)}
-                            </span>
-                          </td>
+                          <td className="py-2 pr-4 tabular-nums text-success">+{lovelaceToAda(a.amountLovelace)} ADA</td>
+                          <td className="py-2 pr-4 font-mono text-xs">{formatSharePrice(a.sharePriceBefore)} → <span className="text-foreground">{formatSharePrice(a.sharePriceAfter)}</span></td>
                           <td className="py-2 pr-4 text-xs">
-                            {proposal ? (
-                              <Link
-                                to="/governance"
-                                className="text-primary hover:underline"
-                              >
-                                {proposal.sip_number}
-                              </Link>
-                            ) : (
-                              <span className="text-muted-foreground">unlinked</span>
-                            )}
+                            {proposal ? <Link to="/governance" className="text-primary hover:underline">{proposal.sip_number}</Link> : <span className="text-muted-foreground">unlinked</span>}
                           </td>
-                          <td className="py-2 pr-4 text-xs text-muted-foreground">
-                            {timeAgo(a.blockTime * 1000)}
-                          </td>
+                          <td className="py-2 pr-4 text-xs text-muted-foreground">{timeAgo(a.blockTime * 1000)}</td>
                           <td className="py-2">
-                            <a
-                              href={cardanoscanTx(a.txHash)}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground hover:text-primary"
-                            >
+                            <a href={cardanoscanTx(a.txHash)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground hover:text-primary">
                               {short(a.txHash)} <ExternalLink className="h-3 w-3" />
                             </a>
                           </td>
@@ -365,19 +390,13 @@ function VaultLedgerCard({
                 </table>
               </div>
             )}
-
-            {history?.truncated && (
-              <p className="mt-3 text-[11px] text-muted-foreground">
-                Showing the most recent {history.scanned} transactions at this address.
-              </p>
-            )}
+            {history?.truncated && <p className="mt-3 text-[11px] text-muted-foreground">Showing the most recent {history.scanned} transactions at this address.</p>}
           </div>
         </>
       )}
 
       <footer className="flex items-center gap-2 border-t border-border bg-secondary/20 px-5 py-2 text-[11px] text-muted-foreground">
-        <ShieldCheck className="h-3 w-3" /> Decoded from the vault state UTxO. Verify any figure by
-        opening its transaction.
+        <ShieldCheck className="h-3 w-3" /> Decoded from the vault state UTxO. Verify any figure by opening its transaction.
       </footer>
     </section>
   );
@@ -392,3 +411,5 @@ function Metric({ label, value, hint }: { label: string; value: string; hint?: s
     </div>
   );
 }
+
+import { useState } from "react";
