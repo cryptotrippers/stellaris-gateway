@@ -14,7 +14,7 @@ import {
   ChevronDown,
   Sparkles,
 } from "lucide-react";
-import { Badge, RiskBadge } from "@/components/ui/StatusBadge";
+import { Badge } from "@/components/ui/StatusBadge";
 import { StellarisWordmark } from "@/components/brand/Logo";
 import { ShareRow } from "@/components/landing/ShareRow";
 import { useQuery } from "@tanstack/react-query";
