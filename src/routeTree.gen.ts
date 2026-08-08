@@ -29,6 +29,7 @@ import { Route as UpgradeIndexRouteImport } from './routes/upgrade.index'
 import { Route as UpgradeReturnRouteImport } from './routes/upgrade.return'
 import { Route as MarketplaceIdRouteImport } from './routes/marketplace.$id'
 import { Route as GovernanceNewRouteImport } from './routes/governance.new'
+import { Route as GovernanceSipRouteImport } from './routes/governance.$sip'
 import { Route as Char91DotwellKnownChar93SecurityChar91DotChar93txtRouteImport } from './routes/[.well-known]/security[.]txt'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
@@ -136,6 +137,11 @@ const GovernanceNewRoute = GovernanceNewRouteImport.update({
   path: '/new',
   getParentRoute: () => GovernanceRoute,
 } as any)
+const GovernanceSipRoute = GovernanceSipRouteImport.update({
+  id: '/$sip',
+  path: '/$sip',
+  getParentRoute: () => GovernanceRoute,
+} as any)
 const Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute =
   Char91DotwellKnownChar93SecurityChar91DotChar93txtRouteImport.update({
     id: '/.well-known/security.txt',
@@ -193,6 +199,7 @@ export interface FileRoutesByFullPath {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.well-known/security.txt': typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
+  '/governance/$sip': typeof GovernanceSipRoute
   '/governance/new': typeof GovernanceNewRoute
   '/marketplace/$id': typeof MarketplaceIdRoute
   '/upgrade/return': typeof UpgradeReturnRoute
@@ -220,6 +227,7 @@ export interface FileRoutesByTo {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.well-known/security.txt': typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
+  '/governance/$sip': typeof GovernanceSipRoute
   '/governance/new': typeof GovernanceNewRoute
   '/marketplace/$id': typeof MarketplaceIdRoute
   '/upgrade/return': typeof UpgradeReturnRoute
@@ -249,6 +257,7 @@ export interface FileRoutesById {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.well-known/security.txt': typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
+  '/governance/$sip': typeof GovernanceSipRoute
   '/governance/new': typeof GovernanceNewRoute
   '/marketplace/$id': typeof MarketplaceIdRoute
   '/upgrade/return': typeof UpgradeReturnRoute
@@ -279,6 +288,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/.well-known/security.txt'
+    | '/governance/$sip'
     | '/governance/new'
     | '/marketplace/$id'
     | '/upgrade/return'
@@ -306,6 +316,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/.well-known/security.txt'
+    | '/governance/$sip'
     | '/governance/new'
     | '/marketplace/$id'
     | '/upgrade/return'
@@ -334,6 +345,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/.well-known/security.txt'
+    | '/governance/$sip'
     | '/governance/new'
     | '/marketplace/$id'
     | '/upgrade/return'
@@ -510,6 +522,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GovernanceNewRouteImport
       parentRoute: typeof GovernanceRoute
     }
+    '/governance/$sip': {
+      id: '/governance/$sip'
+      path: '/$sip'
+      fullPath: '/governance/$sip'
+      preLoaderRoute: typeof GovernanceSipRouteImport
+      parentRoute: typeof GovernanceRoute
+    }
     '/.well-known/security.txt': {
       id: '/.well-known/security.txt'
       path: '/.well-known/security.txt'
@@ -556,10 +575,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface GovernanceRouteChildren {
+  GovernanceSipRoute: typeof GovernanceSipRoute
   GovernanceNewRoute: typeof GovernanceNewRoute
 }
 
 const GovernanceRouteChildren: GovernanceRouteChildren = {
+  GovernanceSipRoute: GovernanceSipRoute,
   GovernanceNewRoute: GovernanceNewRoute,
 }
 

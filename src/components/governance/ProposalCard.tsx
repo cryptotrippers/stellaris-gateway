@@ -142,6 +142,14 @@ export function ProposalCard(props: ProposalCardProps) {
             onVote={props.onVote}
           />
 
+          <Link
+            to="/governance/$sip"
+            params={{ sip: p.sip_number }}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+          >
+            Open full detail — quorum, threshold and execution
+          </Link>
+
           {p.asset_id && (
             <Link
               to="/marketplace/$id"
