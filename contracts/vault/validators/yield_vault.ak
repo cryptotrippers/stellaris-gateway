@@ -766,3 +766,146 @@ test state_must_be_recreated_exactly_once() fail {
     )
   !yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
 }
+
+// --- Committee rotation --------------------------------------------
+
+const op3: ByteArray = #"cc333333333333333333333333333333333333333333333333333333"
+
+fn state_with(
+  operators: List<ByteArray>,
+  threshold: Int,
+  total_shares: Int,
+  total_assets: Int,
+  epoch: Int,
+) -> YieldDatum {
+  State { total_shares, total_assets, epoch, operators, threshold, paused: False }
+}
+
+test committee_can_be_rotated_by_the_outgoing_quorum() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let s1 = state_with([op1, op3], 2, 10_000_000, 10_000_000, 7)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [out(vault_addr(), 2_000_000, s1)],
+      [op1, op2],
+    )
+  yield_vault.spend(
+    t_version,
+    t_asset,
+    Some(s0),
+    RotateCommittee { operators: [op1, op3], threshold: 2 },
+    state_ref,
+    t,
+  )
+}
+
+test rotation_needs_the_outgoing_threshold() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let s1 = state_with([mallory], 1, 10_000_000, 10_000_000, 7)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [out(vault_addr(), 2_000_000, s1)],
+      [op1],
+    )
+  !yield_vault.spend(
+    t_version,
+    t_asset,
+    Some(s0),
+    RotateCommittee { operators: [mallory], threshold: 1 },
+    state_ref,
+    t,
+  )
+}
+
+test rotation_redeemer_must_match_the_written_committee() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let s1 = state_with([mallory], 1, 10_000_000, 10_000_000, 7)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [out(vault_addr(), 2_000_000, s1)],
+      [op1, op2],
+    )
+  !yield_vault.spend(
+    t_version,
+    t_asset,
+    Some(s0),
+    RotateCommittee { operators: [op1, op3], threshold: 2 },
+    state_ref,
+    t,
+  )
+}
+
+test rotation_cannot_install_an_unsatisfiable_committee() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let s1 = state_with([op1, op3], 3, 10_000_000, 10_000_000, 7)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [out(vault_addr(), 2_000_000, s1)],
+      [op1, op2],
+    )
+  !yield_vault.spend(
+    t_version,
+    t_asset,
+    Some(s0),
+    RotateCommittee { operators: [op1, op3], threshold: 3 },
+    state_ref,
+    t,
+  )
+}
+
+test rotation_cannot_move_funds() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let s1 = state_with([op1, op3], 2, 10_000_000, 8_000_000, 7)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 4_000_000, s0))],
+      [out(vault_addr(), 2_000_000, s1)],
+      [op1, op2],
+    )
+  !yield_vault.spend(
+    t_version,
+    t_asset,
+    Some(s0),
+    RotateCommittee { operators: [op1, op3], threshold: 2 },
+    state_ref,
+    t,
+  )
+}
+
+// --- Value purity ----------------------------------------------------
+
+const junk_policy: ByteArray = #"99999999999999999999999999999999999999999999999999999999"
+
+fn out_with_token(addr: Address, lovelace: Int, datum: YieldDatum) -> Output {
+  Output {
+    address: addr,
+    value: assets.merge(
+      assets.from_lovelace(lovelace),
+      assets.from_asset(junk_policy, #"deadbeef", 1),
+    ),
+    datum: InlineDatum(datum),
+    reference_script: None,
+  }
+}
+
+test a_deposit_cannot_park_native_tokens_in_a_position() {
+  let s0 = state(0, 0, 7, False)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [
+        out(vault_addr(), 2_000_000, state(10_000_000, 10_000_000, 7, False)),
+        out_with_token(
+          vault_addr(),
+          10_000_000,
+          Position { owner: alice, shares: 10_000_000 },
+        ),
+      ],
+      [alice],
+    )
+  !yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+}
