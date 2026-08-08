@@ -205,24 +205,26 @@ function PortfolioPage() {
           </div>
         ) : (
           <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {positions.map((inv, i) => {
-              const asset = ASSETS.find(a => a.id === inv.vault_id);
-              if (!asset) return null;
-              const Icon = categoryIcon[asset.category];
+            {positions.map((inv) => {
+              const asset = assetById(inv.vault_id);
+              const Icon = iconFor(asset?.category ?? "");
               const amount = Number(inv.amount_ada);
-              return (
-                <Link key={`${inv.vault_id}-${inv.tx_hash}`} to="/marketplace/$id" params={{ id: asset.id }} className="card-institutional card-institutional-hover p-5 group">
+              const body = (
+                <>
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-3">
                       <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
                         <Icon className="h-5 w-5" />
                       </div>
                       <div>
-                        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{asset.category}</div>
-                        <div className="text-sm font-semibold text-foreground line-clamp-1">{asset.name}</div>
+                        <div className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                          {asset?.category ?? "Unlisted vault"}
+                        </div>
+                        <div className="text-sm font-semibold text-foreground line-clamp-1">
+                          {asset?.name ?? inv.vault_id}
+                        </div>
                       </div>
                     </div>
-                    <RiskBadge risk={asset.risk} />
                   </div>
 
                   <div className="mt-5 flex items-end justify-between">
@@ -230,20 +232,32 @@ function PortfolioPage() {
                       <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Position</div>
                       <div className="number-display text-xl font-semibold text-foreground">{formatAda(amount)}</div>
                     </div>
-                    <div className="text-sm font-semibold text-success">APY {asset.apy}%</div>
-                  </div>
-
-                  <div className="mt-3">
-                    <Sparkline data={sparkline(i * 7 + 2, 28)} stroke="var(--color-primary)" fill="var(--color-primary)" height={38} />
+                    <div className="text-right text-xs text-muted-foreground">
+                      Opened {new Date(inv.opened_at).toLocaleDateString()}
+                    </div>
                   </div>
 
                   <div className="mt-4 flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">ESG {asset.esgRating}</span>
-                    <span className="inline-flex items-center gap-1 text-primary font-medium">
-                      View <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
-                    </span>
+                    <span className="font-mono text-muted-foreground">{inv.tx_hash.slice(0, 12)}…</span>
+                    {asset && (
+                      <span className="inline-flex items-center gap-1 text-primary font-medium">
+                        View <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                      </span>
+                    )}
                   </div>
+                </>
+              );
+              return asset ? (
+                <Link
+                  key={`${inv.vault_id}-${inv.tx_hash}`}
+                  to="/marketplace/$id"
+                  params={{ id: asset.id }}
+                  className="card-institutional card-institutional-hover p-5 group"
+                >
+                  {body}
                 </Link>
+              ) : (
+                <div key={`${inv.vault_id}-${inv.tx_hash}`} className="card-institutional p-5">{body}</div>
               );
             })}
           </div>
@@ -251,38 +265,48 @@ function PortfolioPage() {
       </section>
 
       <section className="mt-10">
-        <SectionHeader title="Featured Opportunities" href="/marketplace" hrefLabel="See all" />
-        <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {ASSETS.slice(0, 3).map(asset => {
+        <SectionHeader title="Open Vaults" href="/marketplace" hrefLabel="See all" />
+        {assets.length === 0 ? (
+          <div className="mt-4 card-institutional p-8 text-center text-sm text-muted-foreground">
+            No vaults are registered yet.
+          </div>
+        ) : (
+          <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {assets.slice(0, 3).map(asset => {
+              const Icon = iconFor(asset.category);
+              return (
+                <Link key={asset.id} to="/marketplace/$id" params={{ id: asset.id }} className="card-institutional card-institutional-hover p-5 flex flex-col">
+                  <div className="flex items-center justify-between">
+                    <Badge tone="primary">{asset.category}</Badge>
+                    <span className="text-xs text-muted-foreground uppercase tracking-widest">{asset.funding_status}</span>
+                  </div>
+                  <div className="mt-4 flex items-center gap-3">
+                    <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-primary text-primary-foreground">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-foreground truncate">{asset.name}</div>
+                      <div className="text-xs text-muted-foreground">{asset.location ?? asset.issuer}</div>
+                    </div>
+                  </div>
+                  <div className="mt-5 flex items-end justify-between">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Raised</div>
+                      <div className="number-display text-2xl font-semibold text-primary">
+                        {formatAda(lovelaceToAda(asset.raised_lovelace))}
+                      </div>
+                    </div>
+                    <div className="text-right text-xs text-muted-foreground">
+                      Target {formatAda(lovelaceToAda(asset.target_lovelace))}
+                    </div>
+                  </div>
+                  <FundingBar pct={fundedPct(asset)} />
+                </Link>
+              );
+            })}
+          </div>
+        )}
 
-            const Icon = categoryIcon[asset.category];
-            return (
-              <Link key={asset.id} to="/marketplace/$id" params={{ id: asset.id }} className="card-institutional card-institutional-hover p-5 flex flex-col">
-                <div className="flex items-center justify-between">
-                  <Badge tone="primary">{asset.category}</Badge>
-                  <span className="text-xs text-muted-foreground">ESG {asset.esgRating}</span>
-                </div>
-                <div className="mt-4 flex items-center gap-3">
-                  <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-primary text-primary-foreground">
-                    <Icon className="h-5 w-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-foreground truncate">{asset.name}</div>
-                    <div className="text-xs text-muted-foreground">{asset.location}</div>
-                  </div>
-                </div>
-                <div className="mt-5 flex items-end justify-between">
-                  <div>
-                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Target APY</div>
-                    <div className="number-display text-2xl font-semibold text-primary">{asset.apy}%</div>
-                  </div>
-                  <RiskBadge risk={asset.risk} />
-                </div>
-                <FundingBar pct={asset.fundedPct} />
-              </Link>
-            );
-          })}
-        </div>
       </section>
     </AppShell>
   );
