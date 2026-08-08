@@ -11,7 +11,7 @@ import { listAssetVaults, type AssetVaultRow } from "@/lib/asset-vaults.function
 import { ProposalCard } from "@/components/governance/ProposalCard";
 import { VaultGovernanceCard } from "@/components/governance/VaultGovernanceCard";
 import { useGovernanceData } from "@/hooks/useGovernanceData";
-import { DERIVED_STATUS_LABEL, derivedStatus } from "@/lib/governance-votes.shared";
+import { DERIVED_STATUS_LABEL, derivedStatus, type DerivedStatus } from "@/lib/governance-votes.shared";
 import { formatAda } from "@/lib/format";
 import type { Database } from "@/integrations/supabase/types";
 
