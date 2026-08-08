@@ -8,6 +8,10 @@ import { Badge } from "@/components/ui/StatusBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { getProtocolStats } from "@/lib/governance.functions";
 import { listAssetVaults, type AssetVaultRow } from "@/lib/asset-vaults.functions";
+import { ProposalCard } from "@/components/governance/ProposalCard";
+import { VaultGovernanceCard } from "@/components/governance/VaultGovernanceCard";
+import { useGovernanceData } from "@/hooks/useGovernanceData";
+import { DERIVED_STATUS_LABEL, derivedStatus, type DerivedStatus } from "@/lib/governance-votes.shared";
 import { formatAda } from "@/lib/format";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -109,39 +113,38 @@ function GovSidebar({ active }: { active: GovTab }) {
 
 function OverviewTab() {
   const fetchStats = useServerFn(getProtocolStats);
+  const gov = useGovernanceData();
   const [tvl, setTvl] = useState<number | null>(null);
-  const [proposals, setProposals] = useState<ProposalRow[]>([]);
   const [treasury, setTreasury] = useState<TreasuryConfigRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [statsRes, propRes, treasuryRes] = await Promise.all([
+      const [statsRes, treasuryRes] = await Promise.all([
         fetchStats().catch(() => ({ totalAda: 0, activeVaults: 0 })),
-        supabase
-          .from("governance_proposals")
-          .select("*")
-          .order("created_at", { ascending: false })
-          .limit(5),
         supabase.from("treasury_config").select("*"),
       ]);
       if (cancelled) return;
       setTvl(statsRes.totalAda);
-      setProposals((propRes.data as ProposalRow[]) ?? []);
       setTreasury((treasuryRes.data as TreasuryConfigRow[]) ?? []);
       setLoading(false);
     })();
     return () => { cancelled = true; };
   }, [fetchStats]);
 
-  const activeCount = proposals.filter(p => p.status === "active").length;
+  const recent = gov.proposals.slice(0, 5);
+  const openCount = gov.proposals.filter(p => derivedStatus(p) === "voting_open").length;
 
   return (
     <>
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <KPI label="Total Value Locked" value={tvl === null ? "—" : formatAda(tvl)} delta={loading ? "Loading…" : "Live"} />
-        <KPI label="Active Proposals" value={loading ? "—" : String(activeCount)} delta={loading ? "Loading…" : "Live"} />
+        <KPI
+          label="Proposals Open for Voting"
+          value={gov.proposalsLoading ? "—" : String(openCount)}
+          delta={gov.proposalsLoading ? "Loading…" : "Derived from voting windows"}
+        />
         <KPI label="Vault Health" value="—" delta="Indexer not connected" />
         <KPI label="Treasury Runway" value="—" delta="Treasury not configured" />
       </div>
@@ -152,9 +155,9 @@ function OverviewTab() {
             <h2 className="text-sm font-semibold text-foreground">Recent Proposals</h2>
             <Link to="/governance" search={{ tab: "proposals" }} className="text-xs text-primary">View all</Link>
           </div>
-          {loading ? (
+          {gov.proposalsLoading ? (
             <div className="mt-6 text-center text-sm text-muted-foreground">Loading proposals…</div>
-          ) : proposals.length === 0 ? (
+          ) : recent.length === 0 ? (
             <div className="mt-6 rounded-lg border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
               No proposals yet.
             </div>
@@ -171,27 +174,37 @@ function OverviewTab() {
                   </tr>
                 </thead>
                 <tbody>
-                  {proposals.map(p => (
-                    <tr key={p.id} className="border-t border-border/70 hover:bg-secondary/40 cursor-pointer">
-                      <td className="py-3 pr-2 font-mono text-xs text-muted-foreground">{p.sip_number}</td>
-                      <td className="py-3 pr-2 font-medium text-foreground">{p.title}</td>
-                      <td className="py-3 pr-2"><ProposalStatus status={p.status} /></td>
-                      <td className="py-3 pr-2 text-right">
-                        <div className="inline-flex items-center gap-1">
-                          <div className="h-1.5 w-16 rounded-full bg-secondary">
-                            <div className="h-full rounded-full bg-success" style={{ width: `${p.votes_for_pct}%` }} />
-                          </div>
-                          <span className="number-display text-xs text-foreground">{Number(p.votes_for_pct).toFixed(0)}%</span>
-                        </div>
-                      </td>
-                      <td className="py-3 text-xs text-muted-foreground">{p.ends_at ? new Date(p.ends_at).toLocaleDateString() : "—"}</td>
-                    </tr>
-                  ))}
+                  {recent.map(p => {
+                    const forPct = gov.tallies[p.id]?.forPct ?? null;
+                    return (
+                      <tr key={p.id} className="border-t border-border/70 hover:bg-secondary/40">
+                        <td className="py-3 pr-2 font-mono text-xs text-muted-foreground">{p.sip_number}</td>
+                        <td className="py-3 pr-2 font-medium text-foreground">{p.title}</td>
+                        <td className="py-3 pr-2"><ProposalStatus status={derivedStatus(p)} /></td>
+                        <td className="py-3 pr-2 text-right">
+                          {forPct === null ? (
+                            <span className="text-xs text-muted-foreground">
+                              {gov.talliesLoading ? "…" : "No votes"}
+                            </span>
+                          ) : (
+                            <div className="inline-flex items-center gap-1">
+                              <div className="h-1.5 w-16 rounded-full bg-secondary">
+                                <div className="h-full rounded-full bg-success" style={{ width: `${forPct}%` }} />
+                              </div>
+                              <span className="number-display text-xs text-foreground">{forPct.toFixed(0)}%</span>
+                            </div>
+                          )}
+                        </td>
+                        <td className="py-3 text-xs text-muted-foreground">{p.ends_at ? new Date(p.ends_at).toLocaleDateString() : "—"}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           )}
         </div>
+
 
         <div className="card-institutional p-5">
           <div className="flex items-center justify-between">
@@ -232,37 +245,23 @@ function OverviewTab() {
 
 /* ---------------- Proposals ---------------- */
 
-const STATUS_FILTERS = ["All", "active", "passed", "rejected", "executed", "draft"] as const;
+const STATUS_FILTERS = ["All", "voting_open", "awaiting_finalisation", "passed", "rejected", "executed", "draft"] as const;
 type StatusFilter = typeof STATUS_FILTERS[number];
 
 function ProposalsTab() {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<StatusFilter>("All");
-  const [proposals, setProposals] = useState<ProposalRow[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const { data } = await supabase
-        .from("governance_proposals")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (cancelled) return;
-      setProposals((data as ProposalRow[]) ?? []);
-      setLoading(false);
-    })();
-    return () => { cancelled = true; };
-  }, []);
+  const gov = useGovernanceData();
 
   const filtered = useMemo(() => {
-    return proposals.filter(p =>
-      (status === "All" || p.status === status) &&
+    return gov.proposals.filter(p =>
+      (status === "All" || derivedStatus(p) === status) &&
       (q === "" ||
         p.title.toLowerCase().includes(q.toLowerCase()) ||
-        p.sip_number.toLowerCase().includes(q.toLowerCase()))
+        p.sip_number.toLowerCase().includes(q.toLowerCase()) ||
+        (p.asset_id ?? "").toLowerCase().includes(q.toLowerCase()))
     );
-  }, [q, status, proposals]);
+  }, [q, status, gov.proposals]);
 
   return (
     <>
@@ -272,7 +271,7 @@ function ProposalsTab() {
           <input
             value={q}
             onChange={e => setQ(e.target.value)}
-            placeholder="Search SIP or title…"
+            placeholder="Search SIP, title or asset…"
             className="w-full rounded-lg border border-border bg-background pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
@@ -281,48 +280,42 @@ function ProposalsTab() {
             <button
               key={s}
               onClick={() => setStatus(s)}
-              className={`rounded-full px-3 py-1 text-xs font-medium capitalize transition-colors ${status === s ? "bg-primary text-primary-foreground" : "border border-border text-muted-foreground hover:text-foreground hover:bg-secondary"}`}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${status === s ? "bg-primary text-primary-foreground" : "border border-border text-muted-foreground hover:text-foreground hover:bg-secondary"}`}
             >
-              {s}
+              {s === "All" ? "All" : DERIVED_STATUS_LABEL[s]}
             </button>
           ))}
         </div>
       </div>
 
       <div className="mt-4 grid gap-3">
-        {loading ? (
+        {gov.proposalsLoading ? (
           <div className="card-institutional p-10 text-center text-sm text-muted-foreground">Loading proposals…</div>
+        ) : gov.proposalsError ? (
+          <div className="card-institutional p-6 text-sm text-destructive">
+            Could not load proposals: {gov.proposalsError.message}
+          </div>
         ) : filtered.length === 0 ? (
           <div className="card-institutional p-10 text-center text-sm text-muted-foreground">
-            {proposals.length === 0
+            {gov.proposals.length === 0
               ? "No proposals have been submitted yet. Use New Proposal to create the first SIP."
               : "No proposals match your filters."}
           </div>
         ) : (
           filtered.map(p => (
-            <div key={p.id} className="card-institutional card-institutional-hover p-5">
-              <div className="flex flex-wrap items-start gap-3 justify-between">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                    <span className="font-mono">{p.sip_number}</span>
-                  </div>
-                  <h3 className="mt-1 text-base font-semibold text-foreground">{p.title}</h3>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <ProposalStatus status={p.status} />
-                  {p.ends_at && (
-                    <span className="text-xs text-muted-foreground">
-                      Ends {new Date(p.ends_at).toLocaleDateString()}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
-                <VoteBar label="For" pct={Number(p.votes_for_pct ?? 0)} tone="success" />
-                <VoteBar label="Against" pct={Math.max(0, 100 - Number(p.votes_for_pct ?? 0))} tone="destructive" />
-              </div>
-            </div>
+            <ProposalCard
+              key={p.id}
+              proposal={p}
+              tally={gov.tallies[p.id]}
+              talliesLoading={gov.talliesLoading}
+              myVote={gov.myVotes[p.id]}
+              myWeightAda={gov.weightFor(p.asset_id)}
+              signedIn={gov.signedIn}
+              chainTime={p.executed_tx_hash ? gov.chainTimes[p.executed_tx_hash] : undefined}
+              voting={gov.votingId === p.id}
+              voteError={gov.votingId === p.id || gov.myVotes[p.id] ? gov.voteError : null}
+              onVote={(choice) => gov.vote(p.id, choice)}
+            />
           ))
         )}
       </div>
@@ -330,25 +323,10 @@ function ProposalsTab() {
   );
 }
 
-function VoteBar({ label, pct, tone }: { label: string; pct: number; tone: "success" | "destructive" }) {
-  const bar = tone === "success" ? "bg-success" : "bg-destructive";
-  const text = tone === "success" ? "text-success" : "text-destructive";
-  return (
-    <div className="rounded-lg border border-border p-3">
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</span>
-        <span className={`number-display text-sm font-semibold ${text}`}>{pct.toFixed(0)}%</span>
-      </div>
-      <div className="mt-2 h-1.5 rounded-full bg-secondary overflow-hidden">
-        <div className={`h-full rounded-full ${bar}`} style={{ width: `${pct}%` }} />
-      </div>
-    </div>
-  );
-}
-
 /* ---------------- Vaults ---------------- */
 
 function VaultsTab() {
+  const gov = useGovernanceData();
   const vaultsQ = useQuery({
     queryKey: ["governance", "asset-vaults"],
     queryFn: () => listAssetVaults(),
@@ -380,37 +358,8 @@ function VaultsTab() {
   return (
     <div className="space-y-3">
       {(vaultsQ.data ?? []).map((vault: AssetVaultRow) => (
-        <div key={vault.id} className="card-institutional p-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-semibold text-foreground">{vault.asset_id}</h2>
-                <Badge tone="accent">{vault.network}</Badge>
-                <Badge tone="primary">v{vault.vault_version}</Badge>
-              </div>
-              <div className="mt-2 break-all font-mono text-xs text-muted-foreground">{vault.script_address}</div>
-            </div>
-            <div className="text-right text-xs text-muted-foreground">
-              <div>{vault.signature_threshold}-of-{vault.operator_key_hashes.length} committee</div>
-              <div className="mt-1">Reporting: {vault.reporting_cadence ?? "not set"}</div>
-            </div>
-          </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            <GovernanceFact label="Bootstrap transaction" value={vault.bootstrap_tx_hash ? "Recorded" : "Not recorded"} />
-            <GovernanceFact label="Independent valuation" value="Not attested" />
-            <GovernanceFact label="Liquidity coverage" value="Not reported" />
-          </div>
-        </div>
+        <VaultGovernanceCard key={vault.id} vault={vault} proposals={gov.proposals} />
       ))}
-    </div>
-  );
-}
-
-function GovernanceFact({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-dashed border-border bg-secondary/20 px-3 py-2">
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className="mt-1 text-xs font-medium text-foreground">{value}</div>
     </div>
   );
 }
@@ -458,15 +407,14 @@ function KPI({ label, value, delta, tone = "primary" }: { label: string; value: 
   );
 }
 
-function ProposalStatus({ status }: { status: string }) {
-  const map: Record<string, "accent" | "success" | "destructive" | "primary"> = {
-    active: "accent",
-    executed: "success",
-    rejected: "destructive",
-    passed: "success",
+function ProposalStatus({ status }: { status: DerivedStatus }) {
+  const map: Record<DerivedStatus, "accent" | "success" | "destructive" | "primary"> = {
     draft: "primary",
+    voting_open: "accent",
+    awaiting_finalisation: "primary",
+    passed: "success",
+    rejected: "destructive",
+    executed: "success",
   };
-  const tone = map[status] ?? "primary";
-  const label = status.charAt(0).toUpperCase() + status.slice(1);
-  return <Badge tone={tone}>{label}</Badge>;
+  return <Badge tone={map[status]}>{DERIVED_STATUS_LABEL[status]}</Badge>;
 }

@@ -344,6 +344,47 @@ export type Database = {
         }
         Relationships: []
       }
+      proposal_votes: {
+        Row: {
+          asset_id: string | null
+          choice: Database["public"]["Enums"]["vote_choice"]
+          created_at: string
+          id: string
+          proposal_id: string
+          updated_at: string
+          voter_user_id: string
+          weight_ada: number
+        }
+        Insert: {
+          asset_id?: string | null
+          choice: Database["public"]["Enums"]["vote_choice"]
+          created_at?: string
+          id?: string
+          proposal_id: string
+          updated_at?: string
+          voter_user_id: string
+          weight_ada?: number
+        }
+        Update: {
+          asset_id?: string | null
+          choice?: Database["public"]["Enums"]["vote_choice"]
+          created_at?: string
+          id?: string
+          proposal_id?: string
+          updated_at?: string
+          voter_user_id?: string
+          weight_ada?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_votes_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "governance_proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       security_audit_log: {
         Row: {
           action: string
@@ -693,6 +734,7 @@ export type Database = {
       proposal_kind: "accrue" | "pause" | "unpause" | "set_committee" | "signal"
       proposal_status: "draft" | "active" | "passed" | "rejected" | "executed"
       transaction_type: "deposit" | "withdraw" | "yield"
+      vote_choice: "for" | "against" | "abstain"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -825,6 +867,7 @@ export const Constants = {
       proposal_kind: ["accrue", "pause", "unpause", "set_committee", "signal"],
       proposal_status: ["draft", "active", "passed", "rejected", "executed"],
       transaction_type: ["deposit", "withdraw", "yield"],
+      vote_choice: ["for", "against", "abstain"],
     },
   },
 } as const
