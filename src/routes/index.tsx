@@ -279,7 +279,8 @@ function HowItWorks() {
 }
 
 function FeaturedAssets() {
-  const featured = ASSETS.slice(0, 6);
+  const { data: assets, isLoading, error } = useQuery(assetsQueryOptions());
+  const featured = (assets ?? []).slice(0, 6);
   return (
     <section className="relative bg-surface/40 border-y border-border/60">
       <div className="mx-auto max-w-[1400px] px-4 md:px-6 py-16 md:py-24">
@@ -292,9 +293,29 @@ function FeaturedAssets() {
             All vaults <ArrowUpRight className="h-4 w-4" />
           </Link>
         </div>
+
+        {isLoading && (
+          <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {[0, 1, 2].map(i => (
+              <div key={i} className="card-institutional h-56 animate-pulse bg-secondary/40" />
+            ))}
+          </div>
+        )}
+        {error && (
+          <div className="mt-8 card-institutional p-6 text-sm text-destructive">
+            Vault registry unavailable right now. Please try again shortly.
+          </div>
+        )}
+        {!isLoading && !error && featured.length === 0 && (
+          <div className="mt-8 card-institutional p-6 text-sm text-muted-foreground">
+            No vaults are open yet. Issuers must complete on-chain verification before their vaults appear here.
+          </div>
+        )}
+
         <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {featured.map(asset => {
-            const Icon = categoryIcon[asset.category];
+            const Icon = (categoryIcon as Record<string, typeof Leaf>)[asset.category] ?? Building2;
+            const pct = fundedPct(asset);
             return (
               <Link
                 key={asset.id}
@@ -305,7 +326,7 @@ function FeaturedAssets() {
               >
                 <div className="flex items-center justify-between">
                   <Badge tone="primary">{asset.category}</Badge>
-                  <RiskBadge risk={asset.risk} />
+                  <Badge tone="accent">{asset.funding_status}</Badge>
                 </div>
                 <div className="mt-4 flex items-center gap-3">
                   <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-primary text-primary-foreground">
@@ -313,18 +334,22 @@ function FeaturedAssets() {
                   </div>
                   <div className="min-w-0">
                     <div className="text-sm font-semibold text-foreground truncate">{asset.name}</div>
-                    <div className="text-xs text-muted-foreground">{asset.location}</div>
+                    <div className="text-xs text-muted-foreground">{asset.location ?? asset.issuer}</div>
                   </div>
                 </div>
-                <p className="mt-3 text-xs text-muted-foreground line-clamp-2">{asset.description}</p>
+                {asset.description && (
+                  <p className="mt-3 text-xs text-muted-foreground line-clamp-2">{asset.description}</p>
+                )}
                 <div className="mt-4 flex items-end justify-between">
                   <div>
-                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Target APY</div>
-                    <div className="number-display text-2xl font-semibold text-accent">{asset.apy}%</div>
+                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Raised</div>
+                    <div className="number-display text-2xl font-semibold text-accent">
+                      {formatAda(lovelaceToAda(Number(asset.raised_lovelace)))}
+                    </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground">ESG</div>
-                    <div className="text-sm font-semibold text-foreground">{asset.esgRating}</div>
+                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Funded</div>
+                    <div className="number-display text-sm font-semibold text-foreground">{pct.toFixed(1)}%</div>
                   </div>
                 </div>
               </Link>
@@ -337,30 +362,24 @@ function FeaturedAssets() {
 }
 
 function ImpactStrip() {
-  const impacts = [
-    { k: "Tonnes CO₂ offset", v: "48,200" },
-    { k: "Households powered", v: "62,000" },
-    { k: "Hectares protected", v: "12,340" },
-    { k: "Farmers financed", v: "1,890" },
-  ];
   return (
     <section className="mx-auto max-w-[1400px] px-4 md:px-6 py-16 md:py-24">
       <div className="grid gap-8 lg:grid-cols-[1fr_1.4fr] items-center">
         <div>
           <div className="text-[11px] uppercase tracking-[0.22em] text-success">Verifiable impact</div>
           <h2 className="mt-2 text-3xl md:text-4xl font-semibold tracking-tight">Every ₳ has a footprint you can check.</h2>
-          <p className="mt-3 text-muted-foreground">Every impact metric is anchored on-chain and independently attested. No greenwashing, no marketing math.</p>
+          <p className="mt-3 text-muted-foreground">Impact metrics are published only once they are anchored on-chain and independently attested. Nothing is estimated here.</p>
           <Link to="/stewardship" className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80">
             See the impact ledger <ArrowUpRight className="h-4 w-4" />
           </Link>
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          {impacts.map(i => (
-            <div key={i.k} className="card-institutional p-6">
-              <div className="number-display text-3xl md:text-4xl font-semibold text-success">{i.v}</div>
-              <div className="mt-1 text-xs uppercase tracking-widest text-muted-foreground">{i.k}</div>
-            </div>
-          ))}
+        <div className="card-institutional p-8">
+          <div className="text-sm font-semibold text-foreground">No attested impact metrics published yet</div>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Attestations are recorded against each vault as reporting periods close. Once the first period is attested,
+            tonnes of CO₂ offset, households powered, hectares protected, and producers financed appear here with a link
+            to the on-chain record.
+          </p>
         </div>
       </div>
     </section>
