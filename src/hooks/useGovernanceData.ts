@@ -40,6 +40,31 @@ export function useGovernanceData() {
     staleTime: 15_000,
   });
 
+  const myWeightsQ = useQuery({
+    queryKey: ["governance", "my-weights", user?.id ?? null],
+    queryFn: async (): Promise<{ byAsset: Record<string, number>; total: number }> => {
+      const { data, error } = await supabase.from("vault_positions").select("vault_id, amount_ada");
+      if (error) throw new Error(error.message);
+      const byAsset: Record<string, number> = {};
+      let total = 0;
+      for (const row of data ?? []) {
+        const amount = Number(row.amount_ada) || 0;
+        byAsset[row.vault_id] = (byAsset[row.vault_id] ?? 0) + amount;
+        total += amount;
+      }
+      return { byAsset, total };
+    },
+    enabled: Boolean(user),
+    staleTime: 30_000,
+  });
+
+  /** Weight the caller would carry on a proposal for `assetId`. */
+  const weightFor = (assetId: string | null): number | null => {
+    if (!user) return null;
+    if (!myWeightsQ.data) return null;
+    return assetId ? (myWeightsQ.data.byAsset[assetId] ?? 0) : myWeightsQ.data.total;
+  };
+
   const executedHashes = useMemo(
     () => (proposalsQ.data ?? []).map((p) => p.executed_tx_hash).filter((h): h is string => Boolean(h)),
     [proposalsQ.data],
@@ -83,6 +108,7 @@ export function useGovernanceData() {
     talliesLoading: talliesQ.isLoading,
     myVotes: myVotesQ.data ?? {},
     chainTimes,
+    weightFor,
     votingId,
     voteError,
     vote: (proposalId: string, choice: VoteChoice) => voteMutation.mutate({ proposalId, choice }),
