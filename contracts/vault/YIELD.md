@@ -119,3 +119,40 @@ must be specified before mainnet.
 5. Rebuild blueprint → `VAULT_VERSION = 3`, derive per-asset addresses.
 6. Preprod proof matrix: deposit, accrue, partial redeem, full redeem, second wallet rejection.
 7. Replace `src/lib/yield-engine.ts` simulation with reads of real share price and epoch.
+
+## 8. Stage 5 — committee rotation and value purity
+
+Two validator changes, both breaking (the blueprint hash moves, so the vault
+address changes and must be re-derived).
+
+### 8.1 `RotateCommittee { operators, threshold }`
+
+Previously the operator set was immutable for the life of a vault: a lost or
+compromised operator key permanently disabled `Accrue` and `SetPaused`, and the
+only remaining exit was for every depositor to withdraw. Rotation closes that.
+
+Rules:
+
+* authorized by **M-of-N of the OUTGOING committee** (the incoming one has no
+  say — it does not exist yet on-chain);
+* the incoming committee must satisfy `operators_valid` (no duplicates,
+  `1 <= threshold <= N`), so an unsatisfiable committee can never be installed;
+* the redeemer's `(operators, threshold)` must equal what is actually written
+  into the returned `State`, so the witness set proves intent over the exact
+  new committee;
+* the rotation must be a **no-op for money**: `value_delta == 0`,
+  `shares_delta == 0`, epoch, assets, shares and the pause flag all unchanged.
+  A rotation can therefore never be bundled with an accrual or a withdrawal;
+* rotating to the same committee is rejected.
+
+Every other action still asserts `committee_unchanged`, so rotation is the only
+path by which the committee can move.
+
+### 8.2 Lovelace-only outputs
+
+Every output returned to the vault address must now be pure lovelace
+(`values_pure`). Without this, anyone could attach arbitrary native tokens — or
+a large batch of them — to a Position or to the State UTxO. That raises the
+min-ADA requirement of that UTxO above its accounted lovelace, at which point
+the funds it holds can no longer be paid out: a permanent lock on real money
+placed by a third party at negligible cost.
