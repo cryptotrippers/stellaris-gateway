@@ -120,6 +120,64 @@ pub fn solvent(acc: VaultAccounting, locked_lovelace: Int) -> Bool {
 }
 
 // ------------------------------------------------------------------
+// Management fee — annualised, settled in shares.
+// ------------------------------------------------------------------
+
+/// Milliseconds in a 365-day fee year. Fees are prorated against this.
+pub const ms_per_year: Int = 31_536_000_000
+
+/// Hard cap on the annual management fee, in basis points (5.00%/yr).
+/// Governance can move the fee only within this bound; the validator
+/// rejects any datum outside it, so no committee can silently levy more.
+pub const max_fee_bps: Int = 500
+
+/// Is this fee setting acceptable?
+pub fn fee_bps_ok(fee_bps: Int) -> Bool {
+  fee_bps >= 0 && fee_bps <= max_fee_bps
+}
+
+/// Lovelace of management fee owed for `elapsed_ms` at `fee_bps` per year,
+/// charged on accounted assets. Floored, so rounding favours depositors.
+pub fn fee_assets_for(
+  acc: VaultAccounting,
+  fee_bps: Int,
+  elapsed_ms: Int,
+) -> Int {
+  if elapsed_ms <= 0 || fee_bps <= 0 || acc.total_assets <= 0 || acc.total_shares <= 0 {
+    0
+  } else {
+    let raw = acc.total_assets * fee_bps * elapsed_ms / ( 10_000 * ms_per_year )
+    // Never let a single charge take the whole vault, even after a very long
+    // gap between accruals: the share-mint denominator must stay positive.
+    if raw >= acc.total_assets {
+      acc.total_assets - 1
+    } else {
+      raw
+    }
+  }
+}
+
+/// Shares minted to the treasury so that its redeemable value equals
+/// `fee_assets`. Derived from
+///   fee_assets = fee_shares * total_assets / (total_shares + fee_shares)
+/// which rearranges to the expression below. Floored: the treasury is never
+/// over-paid, and the residue stays with depositors.
+pub fn fee_shares_for(acc: VaultAccounting, fee_assets: Int) -> Int {
+  if fee_assets <= 0 || acc.total_shares <= 0 || acc.total_assets <= fee_assets {
+    0
+  } else {
+    fee_assets * acc.total_shares / ( acc.total_assets - fee_assets )
+  }
+}
+
+/// Accounting after the fee mint. Assets are untouched — the fee is paid by
+/// dilution, so every lovelace of capital stays working in the vault.
+pub fn after_fee(acc: VaultAccounting, fee_shares: Int) -> VaultAccounting {
+  VaultAccounting { ..acc, total_shares: acc.total_shares + fee_shares }
+}
+
+
+// ------------------------------------------------------------------
 // Tests — `aiken check`.
 // ------------------------------------------------------------------
 
@@ -223,3 +281,74 @@ test deposit_then_immediate_withdraw_never_profits() {
   let next = after_deposit(acc, 6_000_000, minted)
   redeem_value(next, minted) <= 6_000_000
 }
+
+// --- Management fee -------------------------------------------------
+
+fn funded() -> VaultAccounting {
+  // 1_000 ADA at a share price of exactly 1.
+  VaultAccounting { total_shares: 1_000_000_000, total_assets: 1_000_000_000 }
+}
+
+test fee_cap_is_enforced() {
+  fee_bps_ok(0) && fee_bps_ok(max_fee_bps) && !fee_bps_ok(max_fee_bps + 1) && !fee_bps_ok(-1)
+}
+
+test no_fee_when_no_time_has_passed() {
+  fee_assets_for(funded(), 100, 0) == 0 && fee_assets_for(funded(), 100, -1) == 0
+}
+
+test no_fee_when_the_rate_is_zero() {
+  fee_assets_for(funded(), 0, ms_per_year) == 0
+}
+
+test a_full_year_at_100_bps_charges_one_percent() {
+  fee_assets_for(funded(), 100, ms_per_year) == 10_000_000
+}
+
+test the_fee_is_prorated_by_elapsed_time() {
+  // A quarter of a year at 100 bps is a quarter of the annual charge.
+  fee_assets_for(funded(), 100, ms_per_year / 4) == 2_500_000
+}
+
+test fee_rounds_down_never_up() {
+  let acc = VaultAccounting { total_shares: 3, total_assets: 3 }
+  fee_assets_for(acc, 500, ms_per_year) == 0
+}
+
+test fee_can_never_consume_the_whole_vault() {
+  // Absurd elapsed time: the charge is clamped below total assets so the
+  // share-mint denominator stays positive and depositors keep a claim.
+  let charged = fee_assets_for(funded(), max_fee_bps, ms_per_year * 10_000)
+  charged < 1_000_000_000 && charged > 0
+}
+
+test fee_shares_redeem_to_the_fee_amount() {
+  let acc = funded()
+  let fee = fee_assets_for(acc, 100, ms_per_year)
+  let minted = fee_shares_for(acc, fee)
+  let next = after_fee(acc, minted)
+  // Treasury's redeemable value equals the fee, up to floor dust.
+  let value = redeem_value(next, minted)
+  value <= fee && value >= fee - 1
+}
+
+test fee_mint_does_not_change_accounted_assets() {
+  let acc = funded()
+  let minted = fee_shares_for(acc, fee_assets_for(acc, 100, ms_per_year))
+  after_fee(acc, minted).total_assets == acc.total_assets
+}
+
+test fee_dilutes_holders_by_exactly_the_fee() {
+  let acc = funded()
+  let fee = fee_assets_for(acc, 100, ms_per_year)
+  let minted = fee_shares_for(acc, fee)
+  let next = after_fee(acc, minted)
+  // A holder of the whole original supply now redeems assets minus the fee.
+  let held = redeem_value(next, acc.total_shares)
+  held <= acc.total_assets - fee + 1 && held >= acc.total_assets - fee - 1
+}
+
+test empty_vault_accrues_no_fee() {
+  fee_assets_for(empty(), max_fee_bps, ms_per_year) == 0 && fee_shares_for(empty(), 1) == 0
+}
+
