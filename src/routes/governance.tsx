@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { LayoutDashboard, FileText, Vault, Users, Activity, PlusCircle, ChevronRight, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -6,6 +7,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/StatusBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { getProtocolStats } from "@/lib/governance.functions";
+import { listAssetVaults, type AssetVaultRow } from "@/lib/asset-vaults.functions";
 import { formatAda } from "@/lib/format";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -347,21 +349,68 @@ function VoteBar({ label, pct, tone }: { label: string; pct: number; tone: "succ
 /* ---------------- Vaults ---------------- */
 
 function VaultsTab() {
+  const vaultsQ = useQuery({
+    queryKey: ["governance", "asset-vaults"],
+    queryFn: () => listAssetVaults(),
+    staleTime: 60_000,
+  });
+
+  if (vaultsQ.isLoading) {
+    return <div className="card-institutional p-10 text-center text-sm text-muted-foreground">Loading registered vaults…</div>;
+  }
+  if (vaultsQ.error) {
+    return <div className="card-institutional p-6 text-sm text-destructive">Could not load vault registry: {(vaultsQ.error as Error).message}</div>;
+  }
+  if ((vaultsQ.data ?? []).length === 0) {
+    return (
+      <div className="card-institutional p-10 text-center">
+        <Vault className="mx-auto h-8 w-8 text-muted-foreground" />
+        <h2 className="mt-3 text-base font-semibold text-foreground">No vaults registered</h2>
+        <p className="mt-2 text-sm text-muted-foreground max-w-md mx-auto">
+          Vault governance controls remain inactive until an asset vault is bootstrapped and its
+          script address, committee, and bootstrap transaction are recorded.
+        </p>
+        <Link to="/blockfrost-health" className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-secondary">
+          View indexer status
+        </Link>
+      </div>
+    );
+  }
+
   return (
-    <div className="card-institutional p-10 text-center">
-      <Vault className="mx-auto h-8 w-8 text-muted-foreground" />
-      <h2 className="mt-3 text-base font-semibold text-foreground">No vaults deployed</h2>
-      <p className="mt-2 text-sm text-muted-foreground max-w-md mx-auto">
-        Vault contracts are pre-audit on testnet. Once vault script hashes are registered and the
-        Blockfrost indexer is wired, live TVL, utilisation and health will appear here — sourced directly
-        from on-chain UTxOs.
-      </p>
-      <Link
-        to="/blockfrost-health"
-        className="mt-4 inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-secondary"
-      >
-        View indexer status
-      </Link>
+    <div className="space-y-3">
+      {(vaultsQ.data ?? []).map((vault: AssetVaultRow) => (
+        <div key={vault.id} className="card-institutional p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-semibold text-foreground">{vault.asset_id}</h2>
+                <Badge tone="accent">{vault.network}</Badge>
+                <Badge tone="primary">v{vault.vault_version}</Badge>
+              </div>
+              <div className="mt-2 break-all font-mono text-xs text-muted-foreground">{vault.script_address}</div>
+            </div>
+            <div className="text-right text-xs text-muted-foreground">
+              <div>{vault.signature_threshold}-of-{vault.operator_key_hashes.length} committee</div>
+              <div className="mt-1">Reporting: {vault.reporting_cadence ?? "not set"}</div>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <GovernanceFact label="Bootstrap transaction" value={vault.bootstrap_tx_hash ? "Recorded" : "Not recorded"} />
+            <GovernanceFact label="Independent valuation" value="Not attested" />
+            <GovernanceFact label="Liquidity coverage" value="Not reported" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function GovernanceFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-dashed border-border bg-secondary/20 px-3 py-2">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="mt-1 text-xs font-medium text-foreground">{value}</div>
     </div>
   );
 }
