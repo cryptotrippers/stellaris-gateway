@@ -110,9 +110,14 @@ export const recordYieldAccrual = createServerFn({ method: "POST" })
     }
     const amount = BigInt(after.totalAssets) - BigInt(before.totalAssets);
     if (after.epoch !== before.epoch + 1) throw new Error("The vault epoch did not advance by one.");
-    if (after.totalShares !== before.totalShares) {
-      throw new Error("Share supply changed — this is not an accrual.");
+    // The only share supply movement an accrual may cause is the management
+    // fee minted to the treasury.
+    const sharesDelta = BigInt(after.totalShares) - BigInt(before.totalShares);
+    const treasuryDelta = BigInt(after.treasuryShares) - BigInt(before.treasuryShares);
+    if (sharesDelta < 0n || sharesDelta !== treasuryDelta) {
+      throw new Error("Depositor share supply changed — this is not an accrual.");
     }
+
     if (amount <= 0n) throw new Error("No yield was added in this transaction.");
 
     const tx = await bfGet<{ block_time: number; block_height: number }>(`/txs/${data.txHash}`);
