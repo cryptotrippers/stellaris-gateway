@@ -11,6 +11,7 @@
 
 import { checkVaultPreconditions, initLucidWithWallet } from "./vault";
 import { getYieldVaultScript, YIELD_VAULT_VERSION } from "./yield-vault";
+import { feeBpsOk, MAX_FEE_BPS } from "./vault-fees";
 
 export interface BootstrapParams {
   assetId: string;
@@ -20,6 +21,10 @@ export interface BootstrapParams {
   threshold: number;
   /** Lovelace to place on the state UTxO to satisfy Cardano's min-ADA rule. */
   lovelace?: bigint;
+  /** Annual management fee in basis points (0–500). */
+  feeBps?: number;
+  /** Treasury payment key hash (28-byte hex) entitled to claim fee shares. */
+  treasuryPkh?: string;
 }
 
 export interface BootstrapResult {
@@ -30,6 +35,9 @@ export interface BootstrapResult {
   vaultVersion: number;
   operators: string[];
   threshold: number;
+  feeBps: number;
+  treasuryPkh: string;
+  lastFeeTime: number;
 }
 
 const HEX28 = /^[0-9a-f]{56}$/;
@@ -102,10 +110,42 @@ export async function bootstrapYieldVault(params: BootstrapParams): Promise<Boot
     Constr: new (index: number, fields: unknown[]) => unknown;
   };
 
-  // State { total_shares, total_assets, epoch, operators, threshold, paused }
+  const feeBps = params.feeBps ?? 0;
+  if (!feeBpsOk(feeBps)) {
+    throw new Error(
+      `The management fee must be a whole number of basis points between 0 and ${MAX_FEE_BPS} (${(MAX_FEE_BPS / 100).toFixed(2)}%/yr).`,
+    );
+  }
+  const treasuryPkh = (params.treasuryPkh ?? "").trim().toLowerCase();
+  if (feeBps > 0 && !HEX28.test(treasuryPkh)) {
+    throw new Error(
+      "A treasury payment key hash (56 hex characters) is required when the management fee is above zero.",
+    );
+  }
+  if (treasuryPkh && !HEX28.test(treasuryPkh)) {
+    throw new Error("The treasury payment key hash must be 56 hex characters.");
+  }
+
+  // The fee clock starts now: the validator prorates from `last_fee_time`, so
+  // seeding it with the current time means no fee is owed for the past.
+  const lastFeeTime = Date.now();
+
+  // State { total_shares, total_assets, epoch, operators, threshold, paused,
+  //         fee_bps, treasury, treasury_shares, last_fee_time }
   // is constructor index 1 of YieldDatum.
   const datum = Data.to(
-    new Constr(1, [0n, 0n, 0n, operators, BigInt(params.threshold), new Constr(0, [])]),
+    new Constr(1, [
+      0n,
+      0n,
+      0n,
+      operators,
+      BigInt(params.threshold),
+      new Constr(0, []),
+      BigInt(feeBps),
+      treasuryPkh,
+      0n,
+      BigInt(lastFeeTime),
+    ]),
   );
 
   const lovelace = params.lovelace ?? 5_000_000n;
@@ -125,5 +165,8 @@ export async function bootstrapYieldVault(params: BootstrapParams): Promise<Boot
     vaultVersion: Number(YIELD_VAULT_VERSION),
     operators,
     threshold: params.threshold,
+    feeBps,
+    treasuryPkh,
+    lastFeeTime,
   };
 }
