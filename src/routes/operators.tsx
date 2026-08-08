@@ -207,6 +207,9 @@ function BootstrapForm({
   const [assetId, setAssetId] = useState("");
   const [operatorsText, setOperatorsText] = useState("");
   const [threshold, setThreshold] = useState(1);
+  const [feeBps, setFeeBps] = useState(0);
+  const [treasuryPkh, setTreasuryPkh] = useState("");
+
   const [address, setAddress] = useState<string | null>(null);
   const [busy, setBusy] = useState<null | "derive" | "wallet" | "submit">(null);
   const [error, setError] = useState<string | null>(null);
