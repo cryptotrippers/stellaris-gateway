@@ -1,577 +1,394 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { Activity, ArrowUpRight, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ChevronsUpDown, ChevronUp, ExternalLink, Inbox, Radio, RefreshCw, Search, ShieldCheck, TrendingUp, Zap, Copy, Check, AlertTriangle, X } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import {
+  AlertTriangle,
+  ExternalLink,
+  Inbox,
+  PauseCircle,
+  Radio,
+  RefreshCw,
+  ShieldCheck,
+} from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/StatusBadge";
-import { Sparkline } from "@/components/charts/Sparkline";
-import { ASSETS, formatAda } from "@/lib/mock-data";
-import { useLiveYields, usePayoutHistory, short, timeAgo, cardanoscanTx, cardanoscanBlock, type Payout } from "@/lib/yield-engine";
-import { useQuery } from "@tanstack/react-query";
 import { getBlockfrostHealth, getPreprodTip } from "@/lib/blockfrost.functions";
+import { listAssetVaults, type AssetVaultRow } from "@/lib/asset-vaults.functions";
+import { getVaultChainHistory, getVaultChainState } from "@/lib/yield-chain.functions";
+import { listVaultProposals } from "@/lib/governance-vault.functions";
+import {
+  cardanoscanAddress,
+  cardanoscanTx,
+  formatSharePrice,
+  lovelaceToAda,
+  short,
+  timeAgo,
+} from "@/lib/chain-format";
 
 export const Route = createFileRoute("/yield")({
   head: () => ({
     meta: [
-      { title: "Real-time Yield Engine · Stellaris Finance" },
-      { name: "description", content: "Live APY streaming for every RealFi vault on Cardano, with an on-chain verifiable audit trail for every payout. ZK-attested, Merkle-rooted, epoch-anchored." },
-      { property: "og:title", content: "Stellaris · Real-time Yield Engine" },
-      { property: "og:description", content: "APY streams and payout ledger with on-chain verification for every datapoint." },
+      { title: "Vault Yield Ledger · Stellaris Finance" },
+      {
+        name: "description",
+        content:
+          "Share price, epoch and every yield accrual for each Stellaris vault, read directly from the Cardano ledger. No estimates, no simulations.",
+      },
+      { property: "og:title", content: "Stellaris · Vault Yield Ledger" },
+      {
+        property: "og:description",
+        content: "Every yield figure traced to the Cardano transaction that produced it.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: YieldEngine,
+  component: YieldLedger,
 });
 
-function YieldEngine() {
-  const live = useLiveYields(2000);
+function YieldLedger() {
   const healthQ = useQuery({
     queryKey: ["preprod", "blockfrost-health"],
     queryFn: () => getBlockfrostHealth(),
-    refetchInterval: 30_000,
-    staleTime: 15_000,
+    refetchInterval: 60_000,
     retry: 0,
   });
-  const configured = healthQ.data ? healthQ.data.status !== "missing" : true;
-  const network: "preprod" = "preprod";
+
   const tipQ = useQuery({
     queryKey: ["preprod", "tip"],
     queryFn: () => getPreprodTip(),
-    refetchInterval: 20_000,
-    staleTime: 10_000,
+    refetchInterval: 30_000,
     retry: 0,
     enabled: healthQ.data?.status === "ok",
   });
+
+  const vaultsQ = useQuery({
+    queryKey: ["asset-vaults"],
+    queryFn: () => listAssetVaults(),
+    staleTime: 60_000,
+  });
+
+  const proposalsQ = useQuery({
+    queryKey: ["vault-proposals", "all"],
+    queryFn: () => listVaultProposals({ data: {} }),
+    staleTime: 60_000,
+  });
+
   const tip = tipQ.data ?? null;
-  const tipError = (tipQ.error as Error | null) ?? (healthQ.data && healthQ.data.status !== "ok" ? new Error(healthQ.data.detail) : null);
-  const tipLoading = tipQ.isFetching || healthQ.isFetching;
-  const refetchTip = () => { healthQ.refetch(); tipQ.refetch(); };
-  const anchor = tip
-    ? { epoch: tip.epoch, slot: tip.slot, block: tip.block, blockTime: tip.blockTime }
-    : null;
-  const payouts = usePayoutHistory(anchor);
-  const [filter, setFilter] = useState<string>("all");
-  const [selected, setSelected] = useState<Payout | null>(null);
-  const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "timestamp", dir: "desc" });
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    let rows = filter === "all" ? payouts : payouts.filter(p => p.assetId === filter);
-    if (q) {
-      rows = rows.filter(p => {
-        const a = ASSETS.find(x => x.id === p.assetId);
-        return (
-          p.txHash.toLowerCase().includes(q) ||
-          String(p.block).includes(q) ||
-          String(p.epoch).includes(q) ||
-          (a?.name.toLowerCase().includes(q) ?? false) ||
-          (a?.category.toLowerCase().includes(q) ?? false)
-        );
-      });
-    }
-    const dir = sort.dir === "asc" ? 1 : -1;
-    return [...rows].sort((a, b) => {
-      switch (sort.key) {
-        case "vault": {
-          const an = ASSETS.find(x => x.id === a.assetId)?.name ?? "";
-          const bn = ASSETS.find(x => x.id === b.assetId)?.name ?? "";
-          return an.localeCompare(bn) * dir;
-        }
-        case "amount": return (a.amountAda - b.amountAda) * dir;
-        case "apy": return (a.apyAtPayout - b.apyAtPayout) * dir;
-        case "epoch": return ((a.epoch - b.epoch) || (a.slot - b.slot)) * dir;
-        case "timestamp":
-        default: return (a.timestamp - b.timestamp) * dir;
-      }
-    });
-  }, [payouts, filter, query, sort]);
-
-  // Reset to first page when filter/query/sort/pageSize change
-  useEffect(() => { setPage(1); }, [filter, query, sort, pageSize]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const currentPage = Math.min(page, totalPages);
-  const pageStart = (currentPage - 1) * pageSize;
-  const pageRows = filtered.slice(pageStart, pageStart + pageSize);
-  const isLoading = tipLoading && payouts.length === 0;
-  const activeAsset = filter === "all" ? null : ASSETS.find(a => a.id === filter);
-
-  const totals = useMemo(() => {
-    const agg = live.reduce((acc, y) => {
-      const a = ASSETS.find(x => x.id === y.assetId)!;
-      const w = a.targetAda * (a.fundedPct / 100);
-      return { sumW: acc.sumW + w, sumApy: acc.sumApy + y.apy * w };
-    }, { sumW: 0, sumApy: 0 });
-    const netApy = agg.sumW ? agg.sumApy / agg.sumW : 0;
-    const streamed = live.reduce((s, y) => s + y.streamedAda, 0);
-    const distributed30d = payouts.filter(p => Date.now() - p.timestamp < 30 * 86_400_000)
-      .reduce((s, p) => s + p.amountAda, 0);
-    const verifiedPct = payouts.length > 0 ? 100 : 0;
-    return { netApy, streamed, distributed30d, verifiedPct };
-  }, [live, payouts]);
+  const vaults = vaultsQ.data ?? [];
+  const chainDown = healthQ.data && healthQ.data.status !== "ok";
 
   return (
     <AppShell>
       <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
         <div>
-          <div className="text-[11px] uppercase tracking-[0.22em] text-primary">Real-time Yield Engine</div>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground">Live APY & Verifiable Payouts</h1>
+          <div className="text-[11px] uppercase tracking-[0.22em] text-primary">Yield ledger</div>
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground">
+            Share price &amp; accruals, read from chain
+          </h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Streaming APY per vault. Every payout will be anchored to a Cardano block once vaults
-            and oracle feeds are wired to the on-chain indexer — until then, this view shows real
-            chain tip data only.
+            Every number here is decoded from a vault&apos;s state UTxO on Cardano Preprod. A vault
+            with no accruals says so — nothing is projected, estimated, or filled in.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${tip ? "border-success/30 bg-success/10 text-success" : tipError ? "border-destructive/40 bg-destructive/10 text-destructive" : "border-border bg-secondary/30 text-muted-foreground"}`}>
-            <span className="relative flex h-1.5 w-1.5">
-              {tip && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-70" />}
-              <span className={`relative inline-flex rounded-full h-1.5 w-1.5 ${tip ? "bg-success" : tipError ? "bg-destructive" : "bg-muted-foreground"}`} />
-            </span>
-            {tip
-              ? `${network[0].toUpperCase()}${network.slice(1)} · epoch ${tip.epoch} · slot ${tip.epochSlot.toLocaleString()}`
-              : tipError
-              ? "Indexer offline"
-              : configured ? "Connecting to Blockfrost…" : "Blockfrost not configured"}
-          </span>
-          <Badge tone="accent"><Radio className="h-3 w-3" /> streaming</Badge>
-        </div>
-      </div>
-
-      {!configured && (
-        <div className="mt-4 flex items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-[12px] text-amber-200">
-          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-          <div>
-            <div className="font-semibold">Live Cardano indexer disabled</div>
-            <div className="opacity-80">
-              Set the <code className="font-mono">BLOCKFROST_PREPROD_PROJECT_ID</code> server secret to pull real epoch, slot, block and active-stake data from Cardano Preprod via Blockfrost.
-            </div>
-          </div>
-        </div>
-      )}
-      {tipError && (
-        <div className="mt-4 flex flex-wrap items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-[12px] text-destructive">
-          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-          <div className="min-w-0 flex-1">
-            <div className="font-semibold">Blockfrost request failed</div>
-            <div className="opacity-90 mt-0.5 break-words">
-              <span className="font-mono">{tipError.message}</span>
-              {tip && <span className="ml-1 text-muted-foreground">· showing last known tip from epoch {tip.epoch}</span>}
-            </div>
-          </div>
-          <button
-            onClick={refetchTip}
-            disabled={tipLoading}
-            className="inline-flex items-center gap-1.5 rounded-md border border-destructive/40 bg-destructive/10 px-2.5 py-1 text-[11px] font-semibold text-destructive hover:bg-destructive/20 disabled:opacity-60 disabled:cursor-not-allowed"
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${
+              tip
+                ? "border-success/30 bg-success/10 text-success"
+                : chainDown
+                  ? "border-destructive/40 bg-destructive/10 text-destructive"
+                  : "border-border bg-secondary/30 text-muted-foreground"
+            }`}
           >
-            <RefreshCw className={`h-3 w-3 ${tipLoading ? "animate-spin" : ""}`} />
-            {tipLoading ? "Retrying…" : "Retry"}
+            <Radio className="h-3 w-3" />
+            {tip
+              ? `Preprod · epoch ${tip.epoch} · slot ${tip.epochSlot.toLocaleString()}`
+              : chainDown
+                ? "Chain indexer unavailable"
+                : "Connecting…"}
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              vaultsQ.refetch();
+              tipQ.refetch();
+            }}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-[11px] text-muted-foreground hover:text-foreground"
+          >
+            <RefreshCw className={`h-3 w-3 ${vaultsQ.isFetching ? "animate-spin" : ""}`} /> Refresh
           </button>
         </div>
-      )}
-
-
-      <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <KpiTile icon={<TrendingUp className="h-3.5 w-3.5" />} label="Blended Net APY" value={live.length === 0 ? "—" : `${totals.netApy.toFixed(2)}%`} delta={live.length === 0 ? "No live vaults" : "Live"} tone="success" />
-        <KpiTile icon={<Zap className="h-3.5 w-3.5" />} label="Yield streaming now" value={live.length === 0 ? "—" : `₳ ${totals.streamed.toFixed(2)}`} delta={live.length === 0 ? "No live vaults" : "live"} tone="primary" ticking={live.length > 0} />
-        <KpiTile icon={<Activity className="h-3.5 w-3.5" />} label="Distributed · 30d" value={payouts.length === 0 ? "—" : formatAda(totals.distributed30d)} delta={payouts.length === 0 ? "No payouts yet" : `${payouts.length} tx${tip ? ` · block #${tip.block.toLocaleString()}` : ""}`} tone="primary" />
-        <KpiTile icon={<ShieldCheck className="h-3.5 w-3.5" />} label="ZK-verified" value={payouts.length === 0 ? "—" : `${totals.verifiedPct}%`} delta={payouts.length === 0 ? "Pending indexer" : "every payout"} tone="success" />
       </div>
 
-      <section className="mt-6">
-        <div className="flex items-end justify-between">
-          <h2 className="text-sm font-semibold text-foreground">Vault APY streams</h2>
-          <span className="text-[11px] text-muted-foreground">Updates every 2s · Halborn-audited oracle</span>
+      {chainDown && (
+        <div className="mt-6 flex items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <div>{healthQ.data?.detail}</div>
         </div>
-        <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {live.map(y => {
-            const asset = ASSETS.find(a => a.id === y.assetId)!;
-            const up = y.apy24h >= 0;
-            return (
-              <div key={y.assetId} className="card-institutional card-institutional-hover p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{asset.category}</div>
-                    <div className="mt-0.5 text-sm font-semibold text-foreground truncate">{asset.name}</div>
-                  </div>
-                  <Badge tone="success"><ShieldCheck className="h-3 w-3" /> ZK</Badge>
-                </div>
-                <div className="mt-3 flex items-baseline gap-2">
-                  <div className="number-display text-2xl font-semibold text-foreground tabular-nums">{y.apy.toFixed(3)}%</div>
-                  <div className={`text-xs font-medium ${up ? "text-success" : "text-destructive"}`}>{up ? "+" : ""}{y.apy24h.toFixed(2)}pp</div>
-                </div>
-                <div className="mt-2">
-                  <Sparkline data={y.history} stroke="var(--color-primary)" fill="var(--color-primary)" height={40} />
-                </div>
-                <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
-                  <span>Streamed epoch: <span className="number-display text-foreground">₳ {y.streamedAda.toFixed(2)}</span></span>
-                  <button
-                    onClick={() => setFilter(y.assetId)}
-                    className="inline-flex items-center gap-0.5 text-primary hover:underline"
-                  >
-                    Audit trail <ArrowUpRight className="h-3 w-3" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+      )}
+
+      {vaultsQ.isLoading && (
+        <div className="mt-6 card-institutional p-6 text-sm text-muted-foreground">
+          Loading registered vaults…
         </div>
-      </section>
+      )}
 
-      <section className="mt-8">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-semibold text-foreground">Payout ledger</h2>
-            <p className="text-[11px] text-muted-foreground">
-              Every row links to its Cardano transaction, block, and ZK proof.
-              {filtered.length > 0 && (
-                <> · <span className="text-foreground">{filtered.length.toLocaleString()}</span> payout{filtered.length === 1 ? "" : "s"}</>
-              )}
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-              <input
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                placeholder="Search tx, block, vault…"
-                className="h-8 w-56 rounded-md border border-border bg-surface pl-8 pr-7 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
-              />
-              {query && (
-                <button
-                  onClick={() => setQuery("")}
-                  aria-label="Clear search"
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:text-foreground"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              )}
-            </div>
-            <div className="relative">
-              <select
-                value={filter}
-                onChange={e => setFilter(e.target.value)}
-                className="h-8 appearance-none rounded-md border border-border bg-surface pl-3 pr-7 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
-              >
-                <option value="all">All vaults ({payouts.length})</option>
-                {ASSETS.map(a => {
-                  const count = payouts.filter(p => p.assetId === a.id).length;
-                  return <option key={a.id} value={a.id}>{a.name} ({count})</option>;
-                })}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
-            </div>
-          </div>
+      {vaultsQ.error && (
+        <div className="mt-6 card-institutional p-6 text-sm text-destructive">
+          Failed to load vaults: {(vaultsQ.error as Error).message}
         </div>
+      )}
 
-        {activeAsset && (
-          <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] text-primary">
-            Filtered: {activeAsset.name}
-            <button onClick={() => setFilter("all")} aria-label="Clear filter" className="hover:text-foreground">
-              <X className="h-3 w-3" />
-            </button>
-          </div>
-        )}
-
-        <div className="mt-3 card-institutional overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-secondary/30 text-left text-[10px] uppercase tracking-widest text-muted-foreground">
-                  <SortableTh sortKey="timestamp" current={sort} onSort={setSort}>Time</SortableTh>
-                  <SortableTh sortKey="vault" current={sort} onSort={setSort}>Vault</SortableTh>
-                  <SortableTh sortKey="amount" current={sort} onSort={setSort} align="right">Amount</SortableTh>
-                  <SortableTh sortKey="apy" current={sort} onSort={setSort} align="right">APY</SortableTh>
-                  <SortableTh sortKey="epoch" current={sort} onSort={setSort}>Epoch / Block</SortableTh>
-                  <th className="px-4 py-3 font-medium">Tx hash</th>
-                  <th className="px-4 py-3 font-medium">Audit</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading && (
-                  Array.from({ length: 6 }).map((_, i) => (
-                    <tr key={`sk-${i}`} className="border-b border-border/60 last:border-0">
-                      {Array.from({ length: 7 }).map((__, j) => (
-                        <td key={j} className="px-4 py-3">
-                          <div className="h-3 w-full max-w-[140px] animate-pulse rounded bg-secondary/60" />
-                        </td>
-                      ))}
-                    </tr>
-                  ))
-                )}
-                {!isLoading && pageRows.map(p => {
-                  const asset = ASSETS.find(a => a.id === p.assetId)!;
-                  return (
-                    <tr key={p.txHash} className="border-b border-border/60 last:border-0 hover:bg-secondary/30">
-                      <td className="px-4 py-3 whitespace-nowrap text-muted-foreground text-xs">{timeAgo(p.timestamp)}</td>
-                      <td className="px-4 py-3">
-                        <div className="text-foreground font-medium truncate max-w-[220px]">{asset.name}</div>
-                        <div className="text-[11px] text-muted-foreground">{p.holders.toLocaleString()} holders</div>
-                      </td>
-                      <td className="px-4 py-3 text-right number-display font-semibold text-foreground tabular-nums">{formatAda(p.amountAda)}</td>
-                      <td className="px-4 py-3 text-right number-display text-success tabular-nums">{p.apyAtPayout.toFixed(2)}%</td>
-                      <td className="px-4 py-3 text-xs">
-                        <div className="text-foreground">e{p.epoch} · slot {p.slot.toLocaleString()}</div>
-                        <a href={cardanoscanBlock(p.block)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 text-primary hover:underline">
-                          #{p.block.toLocaleString()} <ExternalLink className="h-2.5 w-2.5" />
-                        </a>
-                      </td>
-                      <td className="px-4 py-3">
-                        <a href={cardanoscanTx(p.txHash)} target="_blank" rel="noopener noreferrer" className="font-mono text-xs text-primary hover:underline inline-flex items-center gap-1">
-                          {short(p.txHash)} <ExternalLink className="h-3 w-3" />
-                        </a>
-                      </td>
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() => setSelected(p)}
-                          className="inline-flex items-center gap-1 rounded-md border border-success/30 bg-success/5 px-2 py-1 text-[10.5px] font-medium text-success hover:bg-success/10"
-                        >
-                          <ShieldCheck className="h-3 w-3" /> verify
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {!isLoading && tipError && filtered.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-14">
-                      <div className="flex flex-col items-center text-center">
-                        <div className="rounded-full border border-destructive/40 bg-destructive/10 p-3 text-destructive">
-                          <AlertTriangle className="h-5 w-5" />
-                        </div>
-                        <div className="mt-3 text-sm font-semibold text-foreground">Couldn't load payouts from the indexer</div>
-                        <div className="mt-1 text-[12px] text-muted-foreground max-w-md break-words">
-                          Blockfrost returned an error: <span className="font-mono text-foreground/80">{tipError.message}</span>
-                        </div>
-                        <button
-                          onClick={refetchTip}
-                          disabled={tipLoading}
-                          className="mt-3 inline-flex items-center gap-1.5 rounded-md bg-gradient-primary px-3 py-1.5 text-[11px] font-semibold text-primary-foreground shadow-glow disabled:opacity-60 disabled:cursor-not-allowed"
-                        >
-                          <RefreshCw className={`h-3 w-3 ${tipLoading ? "animate-spin" : ""}`} />
-                          {tipLoading ? "Retrying…" : "Retry"}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-                {!isLoading && !tipError && filtered.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-14">
-                      <div className="flex flex-col items-center text-center">
-                        <div className="rounded-full border border-border bg-secondary/40 p-3 text-muted-foreground">
-                          <Inbox className="h-5 w-5" />
-                        </div>
-                        <div className="mt-3 text-sm font-medium text-foreground">
-                          {query ? "No payouts match your search" : "No payouts recorded for this vault yet"}
-                        </div>
-                        <div className="mt-1 text-[12px] text-muted-foreground max-w-sm">
-                          {query
-                            ? "Try a different transaction hash, block number, or vault name."
-                            : "Once this vault distributes yield, every payout will appear here with a full on-chain audit trail."}
-                        </div>
-                        {(query || filter !== "all") && (
-                          <button
-                            onClick={() => { setQuery(""); setFilter("all"); }}
-                            className="mt-3 rounded-md border border-border bg-surface px-3 py-1.5 text-[11px] font-medium text-foreground hover:bg-secondary/40"
-                          >
-                            Reset filters
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {!isLoading && filtered.length > 0 && (
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border bg-secondary/20 px-4 py-2.5 text-[11px] text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <span>Rows</span>
-                <div className="relative">
-                  <select
-                    value={pageSize}
-                    onChange={e => setPageSize(Number(e.target.value))}
-                    className="h-7 appearance-none rounded border border-border bg-surface pl-2 pr-6 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary/50"
-                  >
-                    {[10, 25, 50, 100].map(n => <option key={n} value={n}>{n}</option>)}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-1.5 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
-                </div>
-                <span className="tabular-nums">
-                  {(pageStart + 1).toLocaleString()}–{Math.min(pageStart + pageSize, filtered.length).toLocaleString()} of {filtered.length.toLocaleString()}
-                </span>
-              </div>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="inline-flex h-7 items-center gap-1 rounded border border-border bg-surface px-2 text-foreground hover:bg-secondary/40 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  <ChevronLeft className="h-3.5 w-3.5" /> Prev
-                </button>
-                <span className="px-2 tabular-nums text-foreground">Page {currentPage} / {totalPages}</span>
-                <button
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="inline-flex h-7 items-center gap-1 rounded border border-border bg-surface px-2 text-foreground hover:bg-secondary/40 disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Next <ChevronRight className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
-          )}
+      {vaultsQ.data && vaults.length === 0 && (
+        <div className="mt-6 card-institutional flex flex-col items-start gap-3 p-8">
+          <Inbox className="h-6 w-6 text-muted-foreground" />
+          <div className="text-sm font-medium text-foreground">No vault has been bootstrapped yet</div>
+          <p className="max-w-xl text-sm text-muted-foreground">
+            A yield vault only exists once its ledger UTxO is created on chain. Until then there is
+            no share price to report. Admins can create one from the operator console.
+          </p>
+          <Link
+            to="/operators"
+            className="rounded-md border border-border px-3 py-1.5 text-xs text-foreground hover:bg-secondary/40"
+          >
+            Open operator console
+          </Link>
         </div>
-      </section>
+      )}
 
-
-      {selected && <AuditDrawer payout={selected} onClose={() => setSelected(null)} />}
+      <div className="mt-6 flex flex-col gap-6">
+        {vaults.map((vault) => (
+          <VaultLedgerCard
+            key={vault.id}
+            vault={vault}
+            proposals={(proposalsQ.data ?? []).filter((p) => p.asset_id === vault.asset_id)}
+          />
+        ))}
+      </div>
     </AppShell>
   );
 }
 
-function KpiTile({ icon, label, value, delta, tone = "primary", ticking }: { icon: React.ReactNode; label: string; value: string; delta: string; tone?: "primary" | "success"; ticking?: boolean }) {
-  return (
-    <div className="card-institutional card-institutional-hover p-5">
-      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-muted-foreground">{icon}{label}</div>
-      <div className="mt-1 flex items-baseline gap-2">
-        <div className="number-display text-2xl font-semibold text-foreground tabular-nums">{value}</div>
-        {ticking && <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />}
-      </div>
-      <div className={`text-xs font-medium ${tone === "success" ? "text-success" : "text-primary"}`}>{delta}</div>
-    </div>
-  );
+interface ProposalLite {
+  id: string;
+  sip_number: string;
+  title: string;
+  executed_tx_hash: string | null;
 }
 
-type SortKey = "timestamp" | "vault" | "amount" | "apy" | "epoch";
-type SortState = { key: SortKey; dir: "asc" | "desc" };
-
-function SortableTh({
-  sortKey,
-  current,
-  onSort,
-  align = "left",
-  children,
+function VaultLedgerCard({
+  vault,
+  proposals,
 }: {
-  sortKey: SortKey;
-  current: SortState;
-  onSort: (s: SortState) => void;
-  align?: "left" | "right";
-  children: React.ReactNode;
+  vault: AssetVaultRow;
+  proposals: ProposalLite[];
 }) {
-  const active = current.key === sortKey;
-  const dir = active ? current.dir : undefined;
-  const Icon = !active ? ChevronsUpDown : dir === "asc" ? ChevronUp : ChevronDown;
+  const stateQ = useQuery({
+    queryKey: ["vault-state", vault.script_address],
+    queryFn: () => getVaultChainState({ data: { address: vault.script_address } }),
+    refetchInterval: 60_000,
+    retry: 0,
+  });
+
+  const historyQ = useQuery({
+    queryKey: ["vault-history", vault.script_address],
+    queryFn: () => getVaultChainHistory({ data: { address: vault.script_address, max: 50 } }),
+    staleTime: 60_000,
+    retry: 0,
+  });
+
+  const state = stateQ.data;
+  const history = historyQ.data;
+  const accruals = [...(history?.accruals ?? [])].reverse();
+
+  const proposalFor = (txHash: string) =>
+    proposals.find((p) => p.executed_tx_hash?.toLowerCase() === txHash.toLowerCase()) ?? null;
+
   return (
-    <th className={`px-4 py-3 font-medium ${align === "right" ? "text-right" : "text-left"}`}>
-      <button
-        onClick={() => onSort({ key: sortKey, dir: active && dir === "desc" ? "asc" : "desc" })}
-        className={`inline-flex items-center gap-1 uppercase tracking-widest ${align === "right" ? "flex-row-reverse" : ""} ${active ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-        aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : "none"}
-      >
-        {children}
-        <Icon className="h-3 w-3" />
-      </button>
-    </th>
-  );
-}
-
-
-function AuditDrawer({ payout, onClose }: { payout: Payout; onClose: () => void }) {
-  const asset = ASSETS.find(a => a.id === payout.assetId)!;
-  const [copied, setCopied] = useState<string | null>(null);
-  const copy = (val: string, key: string) => {
-    navigator.clipboard?.writeText(val);
-    setCopied(key);
-    setTimeout(() => setCopied(null), 1200);
-  };
-  const rows: Array<{ k: string; v: string; href?: string; copyKey?: string }> = [
-    { k: "Vault", v: asset.name },
-    { k: "Issuer", v: asset.issuer },
-    { k: "Amount distributed", v: `${formatAda(payout.amountAda)} · to ${payout.holders.toLocaleString()} holders` },
-    { k: "APY at payout", v: `${payout.apyAtPayout.toFixed(2)} %` },
-    { k: "Epoch", v: `e${payout.epoch}` },
-    { k: "Slot", v: payout.slot.toLocaleString() },
-    { k: "Block", v: `#${payout.block.toLocaleString()}`, href: cardanoscanBlock(payout.block) },
-    { k: "Tx hash", v: payout.txHash, href: cardanoscanTx(payout.txHash), copyKey: "tx" },
-    { k: "Merkle root", v: payout.merkleRoot, copyKey: "merkle" },
-    { k: "ZK proof (Plonk)", v: payout.zkProof, copyKey: "zk" },
-    { k: "Oracle attestor", v: "Halborn Node · steward.eth" },
-  ];
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-background/70 backdrop-blur-sm" onClick={onClose}>
-      <aside
-        className="w-full max-w-lg h-full overflow-y-auto border-l border-border bg-surface shadow-2xl"
-        onClick={e => e.stopPropagation()}
-        role="dialog"
-        aria-label="Payout audit trail"
-      >
-        <div className="sticky top-0 z-10 border-b border-border bg-surface/95 backdrop-blur px-6 py-4 flex items-start justify-between">
-          <div>
-            <div className="text-[10px] uppercase tracking-widest text-primary">On-chain audit trail</div>
-            <h3 className="mt-0.5 text-lg font-semibold text-foreground">Verified payout</h3>
-            <p className="text-xs text-muted-foreground">{new Date(payout.timestamp).toUTCString()}</p>
+    <section className="card-institutional overflow-hidden">
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-border p-5">
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold text-foreground">{vault.asset_id}</h2>
+            <Badge tone="accent">v{vault.vault_version}</Badge>
+            {state?.state?.paused && (
+              <Badge tone="warning">
+                <PauseCircle className="h-3 w-3" /> paused
+              </Badge>
+            )}
           </div>
-          <button onClick={onClose} aria-label="Close" className="text-muted-foreground hover:text-foreground">✕</button>
-        </div>
-
-        <div className="p-6 space-y-4">
-          <div className="rounded-xl border border-success/30 bg-success/5 p-4 flex items-start gap-3">
-            <CheckCircle2 className="h-5 w-5 text-success shrink-0 mt-0.5" />
-            <div className="text-sm">
-              <div className="font-semibold text-foreground">Signature verified against Cardano ledger</div>
-              <div className="text-muted-foreground text-[12px] mt-0.5">Merkle root reproduces from vault UTxO set. ZK proof accepted by protocol validator.</div>
-            </div>
-          </div>
-
-          <dl className="divide-y divide-border rounded-xl border border-border overflow-hidden">
-            {rows.map(r => (
-              <div key={r.k} className="grid grid-cols-[130px_1fr] items-start gap-3 px-4 py-3 text-sm">
-                <dt className="text-[11px] uppercase tracking-widest text-muted-foreground pt-0.5">{r.k}</dt>
-                <dd className="min-w-0 flex items-center gap-2 justify-between">
-                  {r.href ? (
-                    <a href={r.href} target="_blank" rel="noopener noreferrer" className="font-mono text-xs text-primary hover:underline break-all inline-flex items-center gap-1">
-                      {r.v.length > 40 ? short(r.v, 10, 8) : r.v} <ExternalLink className="h-3 w-3 shrink-0" />
-                    </a>
-                  ) : (
-                    <span className={`text-foreground break-all ${r.v.length > 30 ? "font-mono text-xs" : ""}`}>
-                      {r.v.length > 46 ? short(r.v, 12, 8) : r.v}
-                    </span>
-                  )}
-                  {r.copyKey && (
-                    <button onClick={() => copy(r.v, r.copyKey!)} className="shrink-0 text-muted-foreground hover:text-foreground" aria-label="Copy">
-                      {copied === r.copyKey ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
-                    </button>
-                  )}
-                </dd>
-              </div>
-            ))}
-          </dl>
-
-          <div className="rounded-xl bg-[oklch(0.16_0.04_265)] p-4 text-[12px] leading-relaxed text-[oklch(0.9_0.02_285)] overflow-x-auto font-mono">
-            <div className="text-[10px] uppercase tracking-widest text-primary mb-2">verify locally</div>
-{`stellaris-cli verify \\
-  --tx ${short(payout.txHash, 10, 6)} \\
-  --epoch ${payout.epoch} \\
-  --merkle-root ${short(payout.merkleRoot, 10, 6)} \\
-  --zk-proof ${short(payout.zkProof, 8, 6)}
-# → OK · signature valid · leaf ∈ merkle root · Plonk π accepted`}
-          </div>
-
           <a
-            href={cardanoscanTx(payout.txHash)}
+            href={cardanoscanAddress(vault.script_address)}
             target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-glow"
+            rel="noreferrer"
+            className="mt-1 inline-flex items-center gap-1 font-mono text-[11px] text-muted-foreground hover:text-primary"
           >
-            Open on Cardanoscan <ExternalLink className="h-4 w-4" />
+            {short(vault.script_address, 16, 10)} <ExternalLink className="h-3 w-3" />
           </a>
         </div>
-      </aside>
+        <div className="text-right text-[11px] text-muted-foreground">
+          <div>
+            {vault.signature_threshold}-of-{vault.operator_key_hashes.length} operator signatures
+          </div>
+          {vault.bootstrap_tx_hash && (
+            <a
+              href={cardanoscanTx(vault.bootstrap_tx_hash)}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 font-mono hover:text-primary"
+            >
+              bootstrap {short(vault.bootstrap_tx_hash, 6, 4)} <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
+        </div>
+      </header>
+
+      {stateQ.isLoading && (
+        <div className="p-5 text-sm text-muted-foreground">Reading vault state from chain…</div>
+      )}
+
+      {stateQ.error && (
+        <div className="p-5 text-sm text-destructive">
+          Could not read this vault: {(stateQ.error as Error).message}
+        </div>
+      )}
+
+      {state && !state.found && (
+        <div className="flex items-start gap-3 p-5 text-sm text-muted-foreground">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+          <div>
+            No state UTxO found at this address. The vault is registered but its on-chain ledger has
+            not been created yet, so it has no share price and cannot accept deposits.
+          </div>
+        </div>
+      )}
+
+      {state?.found && state.state && (
+        <>
+          <div className="grid grid-cols-2 gap-px bg-border md:grid-cols-5">
+            <Metric label="Share price" value={formatSharePrice(state.sharePrice)} />
+            <Metric label="Epoch" value={String(state.state.epoch)} />
+            <Metric label="Total assets" value={`${lovelaceToAda(state.state.totalAssets)} ADA`} />
+            <Metric label="Shares issued" value={Number(state.state.totalShares).toLocaleString()} />
+            <Metric
+              label="Annualised"
+              value={
+                history?.apyPct !== null && history?.apyPct !== undefined
+                  ? `${history.apyPct.toFixed(2)}%`
+                  : "—"
+              }
+              hint={
+                history?.apyPct === null || history?.apyPct === undefined
+                  ? "needs 2 accruals"
+                  : "from real accruals"
+              }
+            />
+          </div>
+
+          <div className="border-t border-border p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-sm font-medium text-foreground">Accrual history</h3>
+              <span className="text-[11px] text-muted-foreground">
+                {state.positions.length} open position{state.positions.length === 1 ? "" : "s"} ·{" "}
+                {lovelaceToAda(state.lockedLovelace)} ADA locked
+              </span>
+            </div>
+
+            {historyQ.isLoading && (
+              <div className="text-sm text-muted-foreground">Scanning vault transactions…</div>
+            )}
+
+            {history && accruals.length === 0 && (
+              <div className="rounded-md border border-dashed border-border p-4 text-sm text-muted-foreground">
+                No accruals yet — share price {formatSharePrice(state.sharePrice)}. Yield appears
+                here only after operators execute an approved accrual on chain.
+              </div>
+            )}
+
+            {accruals.length > 0 && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-[11px] uppercase tracking-wider text-muted-foreground">
+                      <th className="py-2 pr-4 font-medium">Epoch</th>
+                      <th className="py-2 pr-4 font-medium">Accrued</th>
+                      <th className="py-2 pr-4 font-medium">Share price</th>
+                      <th className="py-2 pr-4 font-medium">Authorised by</th>
+                      <th className="py-2 pr-4 font-medium">When</th>
+                      <th className="py-2 font-medium">Transaction</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {accruals.map((a) => {
+                      const proposal = proposalFor(a.txHash);
+                      return (
+                        <tr key={a.txHash} className="border-b border-border/50 last:border-0">
+                          <td className="py-2 pr-4 tabular-nums">{a.epoch}</td>
+                          <td className="py-2 pr-4 tabular-nums text-success">
+                            +{lovelaceToAda(a.amountLovelace)} ADA
+                          </td>
+                          <td className="py-2 pr-4 font-mono text-xs">
+                            {formatSharePrice(a.sharePriceBefore)} →{" "}
+                            <span className="text-foreground">
+                              {formatSharePrice(a.sharePriceAfter)}
+                            </span>
+                          </td>
+                          <td className="py-2 pr-4 text-xs">
+                            {proposal ? (
+                              <Link
+                                to="/governance"
+                                className="text-primary hover:underline"
+                              >
+                                {proposal.sip_number}
+                              </Link>
+                            ) : (
+                              <span className="text-muted-foreground">unlinked</span>
+                            )}
+                          </td>
+                          <td className="py-2 pr-4 text-xs text-muted-foreground">
+                            {timeAgo(a.blockTime * 1000)}
+                          </td>
+                          <td className="py-2">
+                            <a
+                              href={cardanoscanTx(a.txHash)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 font-mono text-xs text-muted-foreground hover:text-primary"
+                            >
+                              {short(a.txHash)} <ExternalLink className="h-3 w-3" />
+                            </a>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {history?.truncated && (
+              <p className="mt-3 text-[11px] text-muted-foreground">
+                Showing the most recent {history.scanned} transactions at this address.
+              </p>
+            )}
+          </div>
+        </>
+      )}
+
+      <footer className="flex items-center gap-2 border-t border-border bg-secondary/20 px-5 py-2 text-[11px] text-muted-foreground">
+        <ShieldCheck className="h-3 w-3" /> Decoded from the vault state UTxO. Verify any figure by
+        opening its transaction.
+      </footer>
+    </section>
+  );
+}
+
+function Metric({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="bg-card p-4">
+      <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="mt-1 text-lg font-semibold tabular-nums text-foreground">{value}</div>
+      {hint && <div className="text-[10px] text-muted-foreground">{hint}</div>}
     </div>
   );
 }

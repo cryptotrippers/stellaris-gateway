@@ -14,6 +14,62 @@ export type Database = {
   }
   public: {
     Tables: {
+      asset_vaults: {
+        Row: {
+          asset_id: string
+          bootstrap_tx_hash: string | null
+          bootstrapped_at: string | null
+          created_at: string
+          id: string
+          network: string
+          operator_key_hashes: string[]
+          reporting_cadence: string | null
+          script_address: string
+          script_hash: string
+          signature_threshold: number
+          updated_at: string
+          vault_version: number
+        }
+        Insert: {
+          asset_id: string
+          bootstrap_tx_hash?: string | null
+          bootstrapped_at?: string | null
+          created_at?: string
+          id?: string
+          network?: string
+          operator_key_hashes?: string[]
+          reporting_cadence?: string | null
+          script_address: string
+          script_hash: string
+          signature_threshold?: number
+          updated_at?: string
+          vault_version: number
+        }
+        Update: {
+          asset_id?: string
+          bootstrap_tx_hash?: string | null
+          bootstrapped_at?: string | null
+          created_at?: string
+          id?: string
+          network?: string
+          operator_key_hashes?: string[]
+          reporting_cadence?: string | null
+          script_address?: string
+          script_hash?: string
+          signature_threshold?: number
+          updated_at?: string
+          vault_version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_vaults_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assets: {
         Row: {
           audit_report_url: string | null
@@ -120,36 +176,71 @@ export type Database = {
       }
       governance_proposals: {
         Row: {
+          asset_id: string | null
+          author_user_id: string | null
+          body: string | null
           created_at: string
           ends_at: string | null
+          executed_at: string | null
+          executed_epoch: number | null
+          executed_tx_hash: string | null
           id: string
+          kind: Database["public"]["Enums"]["proposal_kind"]
+          params: Json
           sip_number: string
+          starts_at: string | null
           status: Database["public"]["Enums"]["proposal_status"]
           title: string
           updated_at: string
           votes_for_pct: number
         }
         Insert: {
+          asset_id?: string | null
+          author_user_id?: string | null
+          body?: string | null
           created_at?: string
           ends_at?: string | null
+          executed_at?: string | null
+          executed_epoch?: number | null
+          executed_tx_hash?: string | null
           id?: string
+          kind?: Database["public"]["Enums"]["proposal_kind"]
+          params?: Json
           sip_number: string
+          starts_at?: string | null
           status?: Database["public"]["Enums"]["proposal_status"]
           title: string
           updated_at?: string
           votes_for_pct?: number
         }
         Update: {
+          asset_id?: string | null
+          author_user_id?: string | null
+          body?: string | null
           created_at?: string
           ends_at?: string | null
+          executed_at?: string | null
+          executed_epoch?: number | null
+          executed_tx_hash?: string | null
           id?: string
+          kind?: Database["public"]["Enums"]["proposal_kind"]
+          params?: Json
           sip_number?: string
+          starts_at?: string | null
           status?: Database["public"]["Enums"]["proposal_status"]
           title?: string
           updated_at?: string
           votes_for_pct?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "governance_proposals_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       kyc_attestations: {
         Row: {
@@ -406,6 +497,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_security_settings: {
         Row: {
           created_at: string
@@ -466,15 +578,92 @@ export type Database = {
         }
         Relationships: []
       }
+      yield_accruals: {
+        Row: {
+          amount_lovelace: number
+          asset_id: string
+          block_height: number | null
+          block_time: string
+          created_at: string
+          epoch: number
+          id: string
+          network: string
+          proposal_id: string | null
+          share_price_after: number | null
+          share_price_before: number | null
+          total_assets_after: number
+          total_shares_after: number
+          tx_hash: string
+          vault_version: number
+        }
+        Insert: {
+          amount_lovelace: number
+          asset_id: string
+          block_height?: number | null
+          block_time: string
+          created_at?: string
+          epoch: number
+          id?: string
+          network?: string
+          proposal_id?: string | null
+          share_price_after?: number | null
+          share_price_before?: number | null
+          total_assets_after: number
+          total_shares_after: number
+          tx_hash: string
+          vault_version: number
+        }
+        Update: {
+          amount_lovelace?: number
+          asset_id?: string
+          block_height?: number | null
+          block_time?: string
+          created_at?: string
+          epoch?: number
+          id?: string
+          network?: string
+          proposal_id?: string | null
+          share_price_after?: number | null
+          share_price_before?: number | null
+          total_assets_after?: number
+          total_shares_after?: number
+          tx_hash?: string
+          vault_version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "yield_accruals_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "yield_accruals_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "governance_proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
+      app_role: "admin" | "operator" | "member"
       kyc_status: "unverified" | "pending" | "verified" | "rejected"
+      proposal_kind: "accrue" | "pause" | "unpause" | "set_committee" | "signal"
       proposal_status: "draft" | "active" | "passed" | "rejected" | "executed"
       transaction_type: "deposit" | "withdraw" | "yield"
     }
@@ -604,7 +793,9 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "operator", "member"],
       kyc_status: ["unverified", "pending", "verified", "rejected"],
+      proposal_kind: ["accrue", "pause", "unpause", "set_committee", "signal"],
       proposal_status: ["draft", "active", "passed", "rejected", "executed"],
       transaction_type: ["deposit", "withdraw", "yield"],
     },
