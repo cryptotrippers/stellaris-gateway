@@ -49,29 +49,26 @@ function MarketplaceLayout() {
 
 function MarketplaceIndex() {
   const [query, setQuery] = useState("");
-  const [assets, setAssets] = useState<AssetRow[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [category, setCategory] = useState<string>("all");
+  const { data, isLoading, error } = useQuery(assetsQueryOptions());
+  const assets: AssetRow[] = data ?? [];
 
-  useEffect(() => {
-    let alive = true;
-    supabase
-      .from("assets")
-      .select("id,name,category,issuer,location,description,target_lovelace,raised_lovelace,maturity_months,funding_status")
-      .order("created_at", { ascending: false })
-      .then(({ data, error }) => {
-        if (!alive) return;
-        if (error) { setError(error.message); setAssets([]); return; }
-        setAssets((data ?? []) as AssetRow[]);
-      });
-    return () => { alive = false; };
-  }, []);
-
-  const filtered = (assets ?? []).filter(a =>
-    query === "" ||
-    a.name.toLowerCase().includes(query.toLowerCase()) ||
-    a.category.toLowerCase().includes(query.toLowerCase()) ||
-    a.issuer.toLowerCase().includes(query.toLowerCase())
+  const categories = useMemo(
+    () => Array.from(new Set(assets.map(a => a.category))).sort(),
+    [assets],
   );
+
+  const filtered = assets.filter(a => {
+    const q = query.trim().toLowerCase();
+    const matchesQuery =
+      q === "" ||
+      a.name.toLowerCase().includes(q) ||
+      a.category.toLowerCase().includes(q) ||
+      a.issuer.toLowerCase().includes(q) ||
+      (a.location ?? "").toLowerCase().includes(q);
+    const matchesCategory = category === "all" || a.category === category;
+    return matchesQuery && matchesCategory;
+  });
 
   return (
     <>
@@ -82,7 +79,7 @@ function MarketplaceIndex() {
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Fractionalised, transparent, on-chain settlement in ADA. Assets appear here once issuers register and pass verification.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge tone="accent">{(assets ?? []).length} live vault{(assets ?? []).length === 1 ? "" : "s"}</Badge>
+          <Badge tone="accent">{assets.length} live vault{assets.length === 1 ? "" : "s"}</Badge>
         </div>
       </div>
 
@@ -93,27 +90,45 @@ function MarketplaceIndex() {
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Search by asset, issuer, or category…"
+            placeholder="Search by asset, issuer, location, or category…"
             className="w-full rounded-lg border border-border bg-surface pl-9 pr-3 py-2 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Filter className="h-4 w-4" />
-          Live from on-chain registry
+          Live from the on-chain registry
         </div>
       </div>
 
-      {assets === null && (
-        <div className="mt-6 card-institutional p-6 text-sm text-muted-foreground">Loading assets…</div>
-      )}
-      {error && (
-        <div className="mt-6 card-institutional p-6 text-sm text-destructive">Failed to load assets: {error}</div>
-      )}
-      {assets && filtered.length === 0 && !error && (
-        <div className="mt-6 card-institutional p-6 text-sm text-muted-foreground">
-          No assets are registered yet. Issuers must complete on-chain verification before their vaults appear here.
+      {categories.length > 1 && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          <CategoryChip label="All" active={category === "all"} onClick={() => setCategory("all")} />
+          {categories.map(c => (
+            <CategoryChip key={c} label={c} active={category === c} onClick={() => setCategory(c)} />
+          ))}
         </div>
       )}
+
+      {isLoading && (
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {[0, 1, 2].map(i => (
+            <div key={i} className="card-institutional h-64 animate-pulse bg-secondary/40" />
+          ))}
+        </div>
+      )}
+      {error && (
+        <div className="mt-6 card-institutional p-6 text-sm text-destructive">
+          Failed to load assets: {(error as Error).message}
+        </div>
+      )}
+      {!isLoading && !error && filtered.length === 0 && (
+        <div className="mt-6 card-institutional p-6 text-sm text-muted-foreground">
+          {assets.length === 0
+            ? "No assets are registered yet. Issuers must complete on-chain verification before their vaults appear here."
+            : "No vaults match those filters."}
+        </div>
+      )}
+
 
       <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {filtered.map(asset => {
