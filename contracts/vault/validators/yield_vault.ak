@@ -140,6 +140,18 @@ fn positions_well_formed(outs: List<Output>) -> Bool {
   )
 }
 
+/// Outputs returned to the vault must be pure lovelace. Without this an
+/// attacker can park arbitrary native tokens (or an NFT) in a Position or in
+/// the State UTxO, inflating its min-ADA requirement until the accounted
+/// lovelace can no longer be paid out — a permanent lock on real funds.
+fn values_pure(outs: List<Output>) -> Bool {
+  list.all(
+    outs,
+    fn(o) { assets.without_lovelace(o.value) == assets.zero },
+  )
+}
+
+
 /// The single State datum among `outs`, or None if there isn't exactly one.
 fn sole_state(outs: List<Output>) -> Option<YieldDatum> {
   let states =
