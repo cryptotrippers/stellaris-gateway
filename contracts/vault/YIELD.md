@@ -36,7 +36,8 @@ VaultState {
   total_shares:  Int,   -- sum of all outstanding position shares
   total_assets:  Int,   -- lovelace accounted as backing (excludes min-ADA)
   epoch:         Int,   -- monotonic; increments on each yield settlement
-  operator:      ByteArray, -- key allowed to submit Accrue, nothing else
+  operators:     List<ByteArray>, -- authorized signer key hashes
+  threshold:     Int,             -- M of N required for Accrue / Pause / Unpause
   paused:        Bool,
 }
 ```
@@ -70,7 +71,7 @@ VaultRedeemer =
   | Deposit                 -- create/extend a position, mint shares
   | Withdraw { shares: Int }-- burn shares, take redeem_value(shares)
   | Accrue   { amount: Int }-- operator adds yield: total_assets += amount, epoch += 1
-  | Pause | Unpause         -- operator only
+  | Pause | Unpause         -- M-of-N operators only
 ```
 
 `Accrue` never changes `total_shares`; it is the only path that raises share
@@ -81,16 +82,18 @@ must be specified before mainnet.
 
 1. `total_shares == Σ position.shares` across all vault UTxOs.
 2. `total_assets <= lovelace actually held at the script address` (minus min-ADA).
-3. `Accrue` requires the operator signature **and** an on-chain value increase
-   at the script address of exactly `amount`.
+3. `Accrue` requires at least `threshold` distinct signatures from `operators`
+   **and** an on-chain value increase at the script address of exactly `amount`.
 4. `Withdraw` requires the owner signature, an owner-paid output, and
    owner-preserving datum continuity (Stage 3 rule, retained).
 5. `epoch` is strictly monotonic. No transition may decrease it.
 6. Exactly one `VaultState` output is returned per tx; it cannot be duplicated,
-   destroyed, or re-datumed to a different operator.
+   destroyed, or re-datumed to a different operator set or a lower threshold.
 7. While `paused`, only `Withdraw` at the last settled share price is allowed;
    `Deposit` and `Accrue` fail.
-8. The operator can never direct value to an address it controls.
+8. Operators can never direct value to an address they control.
+9. `threshold >= 1`, `threshold <= length(operators)`, and `operators` contains
+   no duplicates — enforced on every returned state output.
 
 ## 6. Attack surface to test
 
@@ -100,16 +103,19 @@ must be specified before mainnet.
 | First depositor share-price manipulation (`S == 0` grief) | Reject via minimum initial deposit |
 | Two withdrawals satisfied by one state output | Reject (double satisfaction) |
 | `Accrue` without matching value increase | Reject |
+| `Accrue` signed by fewer than `threshold` operators | Reject |
+| Duplicate operator key counted twice toward threshold | Reject |
+| State re-datumed to `threshold = 1` or an attacker operator set | Reject |
 | State UTxO spent without being recreated | Reject |
 | Withdraw with `shares > position.shares` | Reject |
 | Rounding drain loop (many 1-share redeems) | Bounded: each loses dust to the vault, never gains |
 
 ## 7. Build order
 
-1. **This spec** — approve model, formulas, rounding, operator role.
+1. **This spec** — approved: share accrual, M-of-N operator authority.
 2. Aiken types + pure share-math functions with property tests (no validator wiring).
 3. `Deposit` / `Withdraw` with the state UTxO, unit + negative tests.
-4. `Accrue`, pause/unpause, operator tests.
+4. `Accrue`, pause/unpause, M-of-N threshold tests.
 5. Rebuild blueprint → `VAULT_VERSION = 3`, derive per-asset addresses.
 6. Preprod proof matrix: deposit, accrue, partial redeem, full redeem, second wallet rejection.
 7. Replace `src/lib/yield-engine.ts` simulation with reads of real share price and epoch.
