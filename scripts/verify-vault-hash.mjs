@@ -23,7 +23,13 @@ const PLUTUS_PATH = resolve("contracts/vault/plutus.json");
 const VAULT_TS_PATH = resolve("src/lib/vault.ts");
 const YIELD_TS_PATH = resolve("src/lib/yield-vault.ts");
 
+const STRICT = process.env.VERIFY_VAULT_STRICT === "1" || process.argv.includes("--strict");
+
 if (!existsSync(PLUTUS_PATH)) {
+  if (STRICT) {
+    console.error("[verify-vault-hash] STRICT mode: contracts/vault/plutus.json is missing — run `aiken build` before verifying.");
+    process.exit(1);
+  }
   console.log("[verify-vault-hash] contracts/vault/plutus.json not present — skipping (run `aiken build` locally to generate it).");
   process.exit(0);
 }
