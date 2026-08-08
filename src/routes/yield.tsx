@@ -413,4 +413,3 @@ function Metric({ label, value, hint }: { label: string; value: string; hint?: s
   );
 }
 
-import { useState } from "react";
