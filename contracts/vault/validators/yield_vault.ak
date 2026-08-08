@@ -53,7 +53,12 @@ pub type YieldRedeemer {
   Accrue { amount: Int }
   /// Operators halt deposits and accruals. Withdrawals stay open.
   SetPaused { paused: Bool }
+  /// Operators replace the signing committee. Requires M-of-N of the OUTGOING
+  /// committee; the incoming committee must itself be valid. Nothing else
+  /// about the vault may move in the same transaction.
+  RotateCommittee { operators: List<ByteArray>, threshold: Int }
 }
+
 
 // ------------------------------------------------------------------
 // Helpers
