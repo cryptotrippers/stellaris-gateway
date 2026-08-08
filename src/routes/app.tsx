@@ -104,7 +104,7 @@ function PortfolioPage() {
           <div className="relative">
             <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.22em] text-primary-foreground/70">
               <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-              Total Portfolio Value · Cardano Mainnet
+              Total Portfolio Value · Cardano {APP_NETWORK === "mainnet" ? "Mainnet" : "Preprod"}
             </div>
 
             {!wallet.connected ? (
