@@ -27,7 +27,8 @@ use cardano/transaction.{
   InlineDatum, Input, Output, OutputReference, Transaction,
 }
 use stellaris/shares.{
-  VaultAccounting, deposit_ok, mint_shares, redeem_value, solvent, withdraw_ok,
+  VaultAccounting, deposit_ok, min_position_value, mint_shares, redeem_value,
+  solvent,
 }
 
 pub type YieldDatum {
@@ -117,14 +118,17 @@ fn position_shares(outs: List<Output>) -> Int {
   )
 }
 
-/// Every Position in `outs` must carry a strictly positive share count, so a
-/// zero/negative "ghost" position can never be parked in the vault.
+/// Every Position returned to the vault must carry a strictly positive share
+/// count AND enough lovelace to satisfy min-ADA, so neither a zero-share
+/// "ghost" position nor an unspendable dust remainder can be parked here.
+/// Every output at this address must also carry a readable datum.
 fn positions_well_formed(outs: List<Output>) -> Bool {
   list.all(
     outs,
     fn(o) {
       when datum_of(o) is {
-        Some(Position { shares, .. }) -> shares > 0
+        Some(Position { shares, .. }) ->
+          shares > 0 && assets.lovelace_of(o.value) >= min_position_value
         Some(State { .. }) -> True
         None -> False
       }
@@ -214,7 +218,11 @@ validator yield_vault(_version: Int, _asset_id: ByteArray) {
           )
         // The State UTxO must be spent in the same tx, which is what forces
         // the accounting branch below to run and balance the books.
-        let state_present = sole_state(ins) != None
+        let state_present =
+          when sole_state(ins) is {
+            Some(_) -> True
+            None -> False
+          }
         owner_signed && owner_paid && state_present
       }
 
@@ -262,11 +270,7 @@ validator yield_vault(_version: Int, _asset_id: ByteArray) {
             Withdraw { shares } -> {
               let paid = -value_delta
               // Withdrawals stay available while paused, at the last price.
-              n_paused == paused && n_epoch == epoch && shares > 0 && shares_delta == -shares && withdraw_ok(
-                acc,
-                shares,
-                shares,
-              ) && paid > 0 && paid <= redeem_value(acc, shares) && n_shares == total_shares - shares && n_assets == total_assets - paid
+              n_paused == paused && n_epoch == epoch && shares > 0 && shares <= total_shares && shares_delta == -shares && paid > 0 && paid <= redeem_value(acc, shares) && n_shares == total_shares - shares && n_assets == total_assets - paid
             }
 
             Accrue { amount } ->
