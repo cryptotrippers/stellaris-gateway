@@ -17,7 +17,9 @@ import {
 import { Badge, RiskBadge } from "@/components/ui/StatusBadge";
 import { StellarisWordmark } from "@/components/brand/Logo";
 import { ShareRow } from "@/components/landing/ShareRow";
-import { ASSETS } from "@/lib/mock-data";
+import { useQuery } from "@tanstack/react-query";
+import { assetsQueryOptions, fundedPct } from "@/lib/assets-query";
+import { formatAda, lovelaceToAda } from "@/lib/format";
 import { trackEvent } from "@/lib/analytics";
 import ogAsset from "@/assets/og-landing.jpg.asset.json";
 
