@@ -1,24 +1,13 @@
 import { createFileRoute, Link, Outlet, useMatchRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Search, Filter, Leaf, Wind, Building2, Sun, Landmark } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/StatusBadge";
 import { FundingBar } from "@/components/ui/funding-bar";
 import { formatAda, lovelaceToAda } from "@/lib/format";
-import { supabase } from "@/integrations/supabase/client";
+import { assetsQueryOptions, fundedPct, type AssetRow } from "@/lib/assets-query";
 
-type AssetRow = {
-  id: string;
-  name: string;
-  category: string;
-  issuer: string;
-  location: string | null;
-  description: string | null;
-  target_lovelace: number;
-  raised_lovelace: number;
-  maturity_months: number | null;
-  funding_status: string;
-};
 
 
 export const Route = createFileRoute("/marketplace")({
