@@ -64,9 +64,12 @@ function OperatorConsole() {
   const roles = rolesQ.data?.roles ?? [];
   const isAdmin = roles.includes("admin");
   const signedOut = Boolean(rolesQ.error);
+  const master = useMasterWallet();
+  const canBootstrap = isAdmin && master.ok;
 
   const registered = new Set((vaultsQ.data ?? []).map((v) => v.asset_id));
   const unbootstrapped = (assets ?? []).filter((a) => !registered.has(a.id));
+
 
   return (
     <AppShell>
