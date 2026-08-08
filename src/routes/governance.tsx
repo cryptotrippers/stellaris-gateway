@@ -407,15 +407,14 @@ function KPI({ label, value, delta, tone = "primary" }: { label: string; value: 
   );
 }
 
-function ProposalStatus({ status }: { status: string }) {
-  const map: Record<string, "accent" | "success" | "destructive" | "primary"> = {
-    active: "accent",
-    executed: "success",
-    rejected: "destructive",
-    passed: "success",
+function ProposalStatus({ status }: { status: DerivedStatus }) {
+  const map: Record<DerivedStatus, "accent" | "success" | "destructive" | "primary"> = {
     draft: "primary",
+    voting_open: "accent",
+    awaiting_finalisation: "primary",
+    passed: "success",
+    rejected: "destructive",
+    executed: "success",
   };
-  const tone = map[status] ?? "primary";
-  const label = status.charAt(0).toUpperCase() + status.slice(1);
-  return <Badge tone={tone}>{label}</Badge>;
+  return <Badge tone={map[status]}>{DERIVED_STATUS_LABEL[status]}</Badge>;
 }
