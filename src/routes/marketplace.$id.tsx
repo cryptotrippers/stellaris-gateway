@@ -219,6 +219,8 @@ function AssetDetail() {
         {/* Right rail — every asset derives its own vault script from (version, asset_id) */}
         <aside className="h-fit space-y-4 lg:sticky lg:top-24">
           <MyVaultHoldingsCard assetIds={[asset.id]} />
+          <YieldVaultActionsCard assetId={asset.id} />
+
           <DepositVaultCard assetId={asset.id} />
           <WithdrawVaultCard assetId={asset.id} />
           <VaultTxHistoryCard assetId={asset.id} />
