@@ -77,9 +77,11 @@ function AuthPage() {
         {mode === "signin" ? "Sign in" : "Create an account"}
       </h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Accounts are used for governance, security settings and operator roles. Wallet connection is
-        separate.
+        Anyone can register an account. To deposit, withdraw or sign anything on chain you also need
+        to connect a Cardano wallet — the account and the wallet stay separate. Admin actions are
+        authorised by the master wallet, not by an email login.
       </p>
+
 
       <form onSubmit={submit} className="mt-6 space-y-3">
         <input

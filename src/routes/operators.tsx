@@ -13,6 +13,8 @@ import {
   validateCommittee,
 } from "@/lib/vault-bootstrap";
 import { cardanoscanAddress, cardanoscanTx, short } from "@/lib/chain-format";
+import { MasterWalletGate, useMasterWallet } from "@/components/admin/MasterWalletGate";
+
 
 export const Route = createFileRoute("/operators")({
   head: () => ({
@@ -64,9 +66,12 @@ function OperatorConsole() {
   const roles = rolesQ.data?.roles ?? [];
   const isAdmin = roles.includes("admin");
   const signedOut = Boolean(rolesQ.error);
+  const master = useMasterWallet();
+  const canBootstrap = isAdmin && master.ok;
 
   const registered = new Set((vaultsQ.data ?? []).map((v) => v.asset_id));
   const unbootstrapped = (assets ?? []).filter((a) => !registered.has(a.id));
+
 
   return (
     <AppShell>
@@ -107,6 +112,9 @@ function OperatorConsole() {
           </div>
         </div>
       )}
+
+      {!signedOut && isAdmin && <MasterWalletGate status={master} />}
+
 
       <section className="mt-8">
         <h2 className="text-sm font-medium text-foreground">Registered vaults</h2>
@@ -155,7 +163,7 @@ function OperatorConsole() {
 
       <BootstrapForm
         assets={unbootstrapped}
-        disabled={!isAdmin}
+        disabled={!canBootstrap}
         onDone={() => {
           vaultsQ.refetch();
         }}
