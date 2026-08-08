@@ -14,6 +14,7 @@
 import { checkVaultPreconditions, initLucidWithWallet } from "./vault";
 import { getYieldVaultScript } from "./yield-vault";
 import { readStateDatum, type VaultStateDatum } from "./yield-chain-decode";
+import { settleFee } from "./vault-fees";
 
 /** YieldRedeemer constructor indices — mirrors yield_vault.ak. */
 const REDEEMER_ACCRUE = 2;
@@ -37,6 +38,16 @@ export interface AccrualDraft {
   requiredSigners: string[];
   threshold: number;
   committee: string[];
+  /** Management fee settled by this accrual, in basis points per year. */
+  feeBps: number;
+  /** Lovelace of management fee owed at settlement time. */
+  feeAssets: string;
+  /** Shares minted to the treasury to settle that fee. */
+  feeSharesMinted: string;
+  /** Total share supply after the fee mint. */
+  totalSharesAfter: string;
+  /** POSIX ms the fee clock is advanced to; also the tx validity lower bound. */
+  settledAt: number;
 }
 
 function price(assets: bigint, shares: bigint): number {
@@ -102,10 +113,25 @@ export async function buildAccrual(params: {
     throw new Error("The connected wallet must be one of the signing operators.");
   }
 
+  // --- fee settlement ----------------------------------------------------
+  // The validator anchors fee proration to the transaction's validity lower
+  // bound, so we choose that instant explicitly. It is aligned to a whole
+  // second (slots are one second on Cardano, so the on-chain POSIX time round
+  // trips exactly) and set slightly in the past so the tx is valid on arrival.
+  const settledAt = Math.floor((Date.now() - 60_000) / 1000) * 1000;
+  const lastFeeTime = BigInt(state.lastFeeTime);
+  if (BigInt(settledAt) < lastFeeTime) {
+    throw new Error(
+      "This vault's fee clock is ahead of the current time; wait a moment and rebuild the accrual.",
+    );
+  }
+  const fee = settleFee(state, BigInt(settledAt));
+
   // --- next state --------------------------------------------------------
   const totalAssetsBefore = BigInt(state.totalAssets);
   const totalShares = BigInt(state.totalShares);
   const totalAssetsAfter = totalAssetsBefore + params.amountLovelace;
+  const totalSharesAfter = totalShares + fee.feeShares;
 
   const { Data, Constr } = lucidMod as unknown as {
     Data: { to: (v: unknown) => string };
@@ -114,12 +140,16 @@ export async function buildAccrual(params: {
 
   const nextDatum = Data.to(
     new Constr(1, [
-      totalShares,
+      totalSharesAfter,
       totalAssetsAfter,
       BigInt(state.epoch + 1),
       committee,
       BigInt(state.threshold),
       new Constr(state.paused ? 1 : 0, []),
+      BigInt(state.feeBps),
+      state.treasury,
+      fee.treasurySharesAfter,
+      BigInt(settledAt),
     ]),
   );
   const redeemer = Data.to(new Constr(REDEEMER_ACCRUE, [params.amountLovelace]));
@@ -134,7 +164,9 @@ export async function buildAccrual(params: {
       script.address,
       { kind: "inline", value: nextDatum },
       { lovelace: currentLovelace + params.amountLovelace },
-    );
+    )
+    // Required: the fee branch rejects an accrual without a finite lower bound.
+    .validFrom(settledAt);
   for (const s of signers) builder = builder.addSignerKey(s);
 
   const completed = await builder.complete();
@@ -152,7 +184,12 @@ export async function buildAccrual(params: {
     totalAssetsAfter: totalAssetsAfter.toString(),
     totalShares: totalShares.toString(),
     sharePriceBefore: price(totalAssetsBefore, totalShares),
-    sharePriceAfter: price(totalAssetsAfter, totalShares),
+    sharePriceAfter: price(totalAssetsAfter, totalSharesAfter),
+    feeBps: state.feeBps,
+    feeAssets: fee.feeAssets.toString(),
+    feeSharesMinted: fee.feeShares.toString(),
+    totalSharesAfter: totalSharesAfter.toString(),
+    settledAt,
     requiredSigners: signers,
     threshold: state.threshold,
     committee,
