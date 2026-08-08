@@ -16,7 +16,7 @@ import { getBlockfrostHealth, getPreprodTip } from "@/lib/blockfrost.functions";
 import { listAssetVaults, type AssetVaultRow } from "@/lib/asset-vaults.functions";
 import { getVaultChainHistory, getVaultChainState } from "@/lib/yield-chain.functions";
 import { listVaultProposals } from "@/lib/governance-vault.functions";
-import { assetsQueryOptions, type AssetRow } from "@/lib/assets-query";
+import { assetsQueryOptions } from "@/lib/assets-query";
 import {
   cardanoscanAddress,
   cardanoscanTx,
