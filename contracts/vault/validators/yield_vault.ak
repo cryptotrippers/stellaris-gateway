@@ -28,7 +28,6 @@ use cardano/transaction.{
 }
 use stellaris/shares.{
   VaultAccounting, deposit_ok, min_position_value, mint_shares, redeem_value,
-  solvent,
 }
 
 pub type YieldDatum {
