@@ -91,7 +91,7 @@ function OperatorConsole() {
         <div className="mt-6 flex flex-wrap items-center gap-2 text-sm">
           <span className="text-muted-foreground">Your roles:</span>
           {roles.length === 0 ? (
-            <Badge tone="neutral">none</Badge>
+            <Badge tone="muted">none</Badge>
           ) : (
             roles.map((r) => <Badge key={r} tone="accent">{r}</Badge>)
           )}
