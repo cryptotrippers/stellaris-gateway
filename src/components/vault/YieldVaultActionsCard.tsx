@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formatFeeBps } from "@/lib/vault-fees";
 import { useQuery } from "@tanstack/react-query";
 import { AlertCircle, CheckCircle2, ExternalLink, Loader2, PieChart, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/StatusBadge";
