@@ -15,6 +15,7 @@ import {
 import { cardanoscanAddress, cardanoscanTx, short } from "@/lib/chain-format";
 import { MasterWalletGate, useMasterWallet } from "@/components/admin/MasterWalletGate";
 import { AccrueYieldCard } from "@/components/operators/AccrueYieldCard";
+import { RebootstrapVaultCard } from "@/components/operators/RebootstrapVaultCard";
 
 
 
