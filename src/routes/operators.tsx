@@ -172,6 +172,14 @@ function OperatorConsole() {
         }}
       />
 
+      <RebootstrapVaultCard
+        vaults={vaultsQ.data ?? []}
+        disabled={!canBootstrap}
+        onDone={() => {
+          vaultsQ.refetch();
+        }}
+      />
+
       <AccrueYieldCard
         vaults={vaultsQ.data ?? []}
         disabled={!canBootstrap}
@@ -180,6 +188,7 @@ function OperatorConsole() {
         }}
       />
     </AppShell>
+
 
   );
 }
