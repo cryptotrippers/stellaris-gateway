@@ -72,7 +72,7 @@ export function YieldVaultActionsCard({ assetId }: { assetId: string }) {
           </div>
           <h3 className="mt-1 text-sm font-semibold text-foreground">Deposit &amp; redeem shares</h3>
         </div>
-        <Badge tone={view?.state.paused ? "warning" : view ? "success" : "neutral"}>
+        <Badge tone={view?.state.paused ? "warning" : view ? "success" : "muted"}>
           <PieChart className="h-3 w-3" />
           {view ? (view.state.paused ? "Paused" : `Epoch ${view.state.epoch}`) : "Not loaded"}
         </Badge>
