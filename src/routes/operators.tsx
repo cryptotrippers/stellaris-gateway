@@ -13,6 +13,8 @@ import {
   validateCommittee,
 } from "@/lib/vault-bootstrap";
 import { cardanoscanAddress, cardanoscanTx, short } from "@/lib/chain-format";
+import { MasterWalletGate, useMasterWallet } from "@/components/admin/MasterWalletGate";
+
 
 export const Route = createFileRoute("/operators")({
   head: () => ({
