@@ -38,14 +38,16 @@ export const Route = createFileRoute("/invite")({
 
 const REWARD_PER_SIGNUP = 25; // ADA
 
-// Mock leaderboard — swap for real data once Cloud is wired.
-const LEADERBOARD = [
-  { rank: 1, handle: "0xluna.ada", invites: 148, earned: 3700 },
-  { rank: 2, handle: "solstice", invites: 92, earned: 2300 },
-  { rank: 3, handle: "farmshares", invites: 71, earned: 1775 },
-  { rank: 4, handle: "adawhale", invites: 54, earned: 1350 },
-  { rank: 5, handle: "greenyield", invites: 38, earned: 950 },
-];
+function VerifiedStat({ label, value, note }: { label: string; value: string; note: string }) {
+  return (
+    <div className="rounded-lg border border-border bg-surface px-4 py-3">
+      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</div>
+      <div className="mt-1 text-lg font-semibold text-foreground tabular-nums">{value}</div>
+      <div className="mt-0.5 text-[11px] text-muted-foreground">{note}</div>
+    </div>
+  );
+}
+
 
 function InvitePage() {
   const [code, setCode] = useState("STELLAR");
