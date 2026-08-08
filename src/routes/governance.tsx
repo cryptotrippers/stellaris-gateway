@@ -6,6 +6,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/StatusBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { getProtocolStats } from "@/lib/governance.functions";
+import { listAssetVaults, type AssetVaultRow } from "@/lib/asset-vaults.functions";
 import { formatAda } from "@/lib/format";
 import type { Database } from "@/integrations/supabase/types";
 
