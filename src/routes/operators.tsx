@@ -163,7 +163,7 @@ function OperatorConsole() {
 
       <BootstrapForm
         assets={unbootstrapped}
-        disabled={!isAdmin}
+        disabled={!canBootstrap}
         onDone={() => {
           vaultsQ.refetch();
         }}
