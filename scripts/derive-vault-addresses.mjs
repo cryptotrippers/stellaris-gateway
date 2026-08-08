@@ -40,9 +40,32 @@ console.log(`[derive-vault-addresses] blueprint cbor=${CBOR.length} chars\n`);
 for (const assetId of assetIds) {
   const script = applyParamsToScript(CBOR, [VERSION, fromText(assetId)]);
   const validator = { type: "PlutusV3", script };
-  const scriptHash = validatorToScriptHash(validator);
-  const address = validatorToAddress("Preprod", validator);
   console.log(`asset=${assetId}`);
-  console.log(`  scriptHash: ${scriptHash}`);
-  console.log(`  preprod:    ${address}\n`);
+  console.log(`  scriptHash: ${validatorToScriptHash(validator)}`);
+  console.log(`  preprod:    ${validatorToAddress("Preprod", validator)}\n`);
+}
+
+// --- Stage 4: yield vault -------------------------------------------------
+const ysrc = readFileSync(new URL("../src/lib/yield-vault.ts", import.meta.url), "utf8");
+function ypin(name) {
+  const m = ysrc.match(new RegExp(`${name}\\s*=\\s*\\n?\\s*"([0-9a-fA-F]+)"`));
+  if (!m) throw new Error(`Could not read ${name} from src/lib/yield-vault.ts`);
+  return m[1];
+}
+const yVersionMatch = ysrc.match(/YIELD_VAULT_VERSION\s*=\s*(\d+)n/);
+if (!yVersionMatch) throw new Error("Could not read YIELD_VAULT_VERSION");
+const Y_VERSION = BigInt(yVersionMatch[1]);
+const Y_HASH = ypin("YIELD_BLUEPRINT_HASH");
+const Y_CBOR = ypin("YIELD_BLUEPRINT_CBOR");
+
+console.log(`[derive-yield-addresses] version=${Y_VERSION}`);
+console.log(`[derive-yield-addresses] blueprint hash=${Y_HASH}`);
+console.log(`[derive-yield-addresses] blueprint cbor=${Y_CBOR.length} chars\n`);
+
+for (const assetId of assetIds) {
+  const script = applyParamsToScript(Y_CBOR, [Y_VERSION, fromText(assetId)]);
+  const validator = { type: "PlutusV3", script };
+  console.log(`yield asset=${assetId}`);
+  console.log(`  scriptHash: ${validatorToScriptHash(validator)}`);
+  console.log(`  preprod:    ${validatorToAddress("Preprod", validator)}\n`);
 }

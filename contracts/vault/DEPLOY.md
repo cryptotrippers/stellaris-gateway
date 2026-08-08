@@ -189,3 +189,23 @@ Do not mark the deferred second-wallet negative test complete without a second
 wallet. Do not bump `VAULT_VERSION` again without withdrawing every live UTxO
 at the current applied address.
 
+
+## Stage 4 — Yield vault (share accrual), version 3
+
+Blueprint (unapplied `yield_vault.yield_vault.spend`), pinned in `src/lib/yield-vault.ts`:
+
+- hash: `42cde4d68c0ae2670d814d9040d2affadd2fb460482edc0e0b4ac0cd`
+- cbor: 6120 chars
+- applied version: `3`
+
+Derived Preprod addresses (`node scripts/derive-vault-addresses.mjs`):
+
+| Asset | Script hash | Preprod address |
+| --- | --- | --- |
+| sfm-01 | `0db6dfabb0d76e4c497660f8ad863f5923e93dc67617dfe18caaa312` | `addr_test1wqxmdhatkrtkunzfwes03tvx8avj86facemp0hlp3j42xysvpaxn7` |
+| sfm-02 | `6606b080b7821de61c7019ecbbf0d167fa2eca73867460ac65bfe053` | `addr_test1wpnqdvyqk7ppmesuwqv7ewls69nl5tk2wwr8gc9vvkl7q5ckanhzd` |
+
+Stage 3 (`version = 2`) vaults stay live and spendable; nothing migrates
+automatically. The Stage 4 Preprod proof matrix (bootstrap state UTxO, deposit,
+accrue with M-of-N, partial redeem, full redeem, second-wallet rejection) must
+pass before any UI is pointed at these addresses.
