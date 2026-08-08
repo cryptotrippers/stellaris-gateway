@@ -113,6 +113,9 @@ function OperatorConsole() {
         </div>
       )}
 
+      {!signedOut && isAdmin && <MasterWalletGate status={master} />}
+
+
       <section className="mt-8">
         <h2 className="text-sm font-medium text-foreground">Registered vaults</h2>
         {vaultsQ.isLoading && (
