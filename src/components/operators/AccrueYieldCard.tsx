@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { formatFeeBps } from "@/lib/vault-fees";
 import {
   AlertTriangle,
   CheckCircle2,
