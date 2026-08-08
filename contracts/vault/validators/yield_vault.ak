@@ -251,8 +251,9 @@ validator yield_vault(_version: Int, _asset_id: ByteArray) {
           total_shares: n_shares,
           total_assets: n_assets,
           epoch: n_epoch,
+          operators: n_operators,
+          threshold: n_threshold,
           paused: n_paused,
-          ..
         } = next
 
         let acc = VaultAccounting { total_shares, total_assets }
@@ -271,17 +272,25 @@ validator yield_vault(_version: Int, _asset_id: ByteArray) {
         // transition below ties `n_assets` to the exact on-chain value delta
         // at the script address, so accounted assets can never outrun the
         // value actually locked. What we can check locally is non-negativity.
+        //
+        // The OUTGOING committee must be well-formed and the returned state
+        // must be pure lovelace; committee immutability is asserted per-action
+        // below, because `RotateCommittee` is the one action allowed to change
+        // it.
         let structural =
-          committee_unchanged(d, next) && operators_valid(operators, threshold) && positions_well_formed(
-            outs,
-          ) && n_shares >= 0 && n_assets >= 0 && locked_out >= 0 && n_epoch >= epoch
+          operators_valid(operators, threshold) && operators_valid(
+            n_operators,
+            n_threshold,
+          ) && positions_well_formed(outs) && values_pure(outs) && n_shares >= 0 && n_assets >= 0 && locked_out >= 0 && n_epoch >= epoch
+
+        let same_committee = committee_unchanged(d, next)
 
         let transition =
           when redeemer is {
             Deposit -> {
               let deposit = value_delta
               let minted = mint_shares(acc, deposit)
-              !paused && n_paused == paused && n_epoch == epoch && deposit_ok(
+              same_committee && !paused && n_paused == paused && n_epoch == epoch && deposit_ok(
                 acc,
                 deposit,
               ) && shares_delta == minted && n_shares == total_shares + minted && n_assets == total_assets + deposit
@@ -290,19 +299,34 @@ validator yield_vault(_version: Int, _asset_id: ByteArray) {
             Withdraw { shares } -> {
               let paid = -value_delta
               // Withdrawals stay available while paused, at the last price.
-              n_paused == paused && n_epoch == epoch && shares > 0 && shares <= total_shares && shares_delta == -shares && paid > 0 && paid <= redeem_value(acc, shares) && n_shares == total_shares - shares && n_assets == total_assets - paid
+              same_committee && n_paused == paused && n_epoch == epoch && shares > 0 && shares <= total_shares && shares_delta == -shares && paid > 0 && paid <= redeem_value(acc, shares) && n_shares == total_shares - shares && n_assets == total_assets - paid
             }
 
             Accrue { amount } ->
-              !paused && n_paused == paused && amount > 0 && threshold_met(
+              same_committee && !paused && n_paused == paused && amount > 0 && threshold_met(
                 operators,
                 threshold,
                 tx.extra_signatories,
               ) && value_delta == amount && shares_delta == 0 && n_shares == total_shares && n_assets == total_assets + amount && n_epoch == epoch + 1
 
             SetPaused { paused: want } ->
-              threshold_met(operators, threshold, tx.extra_signatories) && n_paused == want && want != paused && n_epoch == epoch && n_shares == total_shares && n_assets == total_assets && value_delta == 0 && shares_delta == 0
+              same_committee && threshold_met(
+                operators,
+                threshold,
+                tx.extra_signatories,
+              ) && n_paused == want && want != paused && n_epoch == epoch && n_shares == total_shares && n_assets == total_assets && value_delta == 0 && shares_delta == 0
+
+            // Committee rotation: authorized by M-of-N of the OUTGOING
+            // committee, and the redeemer must match the committee actually
+            // written into the returned state. The vault's money and epoch
+            // stand still, so a rotation can never be bundled with an accrual
+            // or a withdrawal.
+            RotateCommittee { operators: want_ops, threshold: want_thr } ->
+              threshold_met(operators, threshold, tx.extra_signatories) && n_operators == want_ops && n_threshold == want_thr && !(
+                n_operators == operators && n_threshold == threshold
+              ) && n_paused == paused && n_epoch == epoch && n_shares == total_shares && n_assets == total_assets && value_delta == 0 && shares_delta == 0
           }
+
 
         structural && transition
       }
