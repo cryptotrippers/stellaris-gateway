@@ -21,10 +21,10 @@
 //// All share arithmetic lives in `stellaris/shares` and is tested there.
 
 use aiken/collection/list
-use cardano/address.{Script, VerificationKey}
+use cardano/address.{Address, Script, VerificationKey}
 use cardano/assets
 use cardano/transaction.{
-  InlineDatum, Input, Output, OutputReference, Transaction,
+  InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, placeholder,
 }
 use stellaris/shares.{
   VaultAccounting, deposit_ok, min_position_value, mint_shares, redeem_value,
@@ -292,4 +292,431 @@ validator yield_vault(_version: Int, _asset_id: ByteArray) {
   else(_) {
     fail
   }
+}
+
+// ------------------------------------------------------------------
+// Tests — `aiken check`.
+// ------------------------------------------------------------------
+
+const vhash: ByteArray = #"44444444444444444444444444444444444444444444444444444444"
+
+const alice: ByteArray = #"11111111111111111111111111111111111111111111111111111111"
+
+const mallory: ByteArray = #"22222222222222222222222222222222222222222222222222222222"
+
+const op1: ByteArray = #"aa111111111111111111111111111111111111111111111111111111"
+
+const op2: ByteArray = #"bb222222222222222222222222222222222222222222222222222222"
+
+const t_version: Int = 1
+
+// "sfm-01"
+const t_asset: ByteArray = #"73666d2d3031"
+
+fn vault_addr() -> Address {
+  Address { payment_credential: Script(vhash), stake_credential: None }
+}
+
+fn user_addr(pkh: ByteArray) -> Address {
+  Address { payment_credential: VerificationKey(pkh), stake_credential: None }
+}
+
+fn out(addr: Address, lovelace: Int, datum: YieldDatum) -> Output {
+  Output {
+    address: addr,
+    value: assets.from_lovelace(lovelace),
+    datum: InlineDatum(datum),
+    reference_script: None,
+  }
+}
+
+fn plain_out(pkh: ByteArray, lovelace: Int) -> Output {
+  Output {
+    address: user_addr(pkh),
+    value: assets.from_lovelace(lovelace),
+    datum: NoDatum,
+    reference_script: None,
+  }
+}
+
+fn state(
+  total_shares: Int,
+  total_assets: Int,
+  epoch: Int,
+  paused: Bool,
+) -> YieldDatum {
+  State {
+    total_shares,
+    total_assets,
+    epoch,
+    operators: [op1, op2],
+    threshold: 2,
+    paused,
+  }
+}
+
+fn ref_at(ix: Int) -> OutputReference {
+  OutputReference {
+    transaction_id: #"0000000000000000000000000000000000000000000000000000000000000000",
+    output_index: ix,
+  }
+}
+
+fn input_at(ix: Int, o: Output) -> Input {
+  Input { output_reference: ref_at(ix), output: o }
+}
+
+/// The state UTxO always sits at input index 0 in these fixtures.
+const state_ref: OutputReference =
+  OutputReference {
+    transaction_id: #"0000000000000000000000000000000000000000000000000000000000000000",
+    output_index: 0,
+  }
+
+fn tx(ins: List<Input>, outs: List<Output>, signers: List<ByteArray>) -> Transaction {
+  Transaction { ..placeholder, inputs: ins, outputs: outs, extra_signatories: signers }
+}
+
+// --- Deposit -------------------------------------------------------
+
+test deposit_bootstraps_shares_one_to_one() {
+  let s0 = state(0, 0, 7, False)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [
+        out(vault_addr(), 2_000_000, state(10_000_000, 10_000_000, 7, False)),
+        out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 }),
+      ],
+      [alice],
+    )
+  yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+}
+
+test deposit_fails_when_minting_more_shares_than_paid_for() {
+  let s0 = state(0, 0, 7, False)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [
+        out(vault_addr(), 2_000_000, state(11_000_000, 10_000_000, 7, False)),
+        out(vault_addr(), 10_000_000, Position { owner: alice, shares: 11_000_000 }),
+      ],
+      [alice],
+    )
+  !yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+}
+
+test deposit_below_bootstrap_minimum_is_rejected() {
+  let s0 = state(0, 0, 7, False)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [
+        out(vault_addr(), 2_000_000, state(5_000_000, 5_000_000, 7, False)),
+        out(vault_addr(), 5_000_000, Position { owner: alice, shares: 5_000_000 }),
+      ],
+      [alice],
+    )
+  !yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+}
+
+test deposit_fails_while_paused() {
+  let s0 = state(0, 0, 7, True)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [
+        out(vault_addr(), 2_000_000, state(10_000_000, 10_000_000, 7, True)),
+        out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 }),
+      ],
+      [alice],
+    )
+  !yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+}
+
+// --- Accrue --------------------------------------------------------
+
+fn funded_tx_for_accrue(signers: List<ByteArray>, new_epoch: Int) -> Transaction {
+  tx(
+    [
+      input_at(0, out(vault_addr(), 2_000_000, state(10_000_000, 10_000_000, 7, False))),
+      input_at(1, out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 })),
+    ],
+    [
+      out(vault_addr(), 4_000_000, state(10_000_000, 12_000_000, new_epoch, False)),
+      out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 }),
+    ],
+    signers,
+  )
+}
+
+test accrue_ok_with_full_operator_threshold() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  yield_vault.spend(
+    t_version,
+    t_asset,
+    Some(s0),
+    Accrue { amount: 2_000_000 },
+    state_ref,
+    funded_tx_for_accrue([op1, op2], 8),
+  )
+}
+
+test accrue_fails_below_operator_threshold() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  !yield_vault.spend(
+    t_version,
+    t_asset,
+    Some(s0),
+    Accrue { amount: 2_000_000 },
+    state_ref,
+    funded_tx_for_accrue([op1], 8),
+  )
+}
+
+test accrue_fails_when_a_non_operator_signs() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  !yield_vault.spend(
+    t_version,
+    t_asset,
+    Some(s0),
+    Accrue { amount: 2_000_000 },
+    state_ref,
+    funded_tx_for_accrue([op1, mallory], 8),
+  )
+}
+
+test accrue_must_bump_the_epoch() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  !yield_vault.spend(
+    t_version,
+    t_asset,
+    Some(s0),
+    Accrue { amount: 2_000_000 },
+    state_ref,
+    funded_tx_for_accrue([op1, op2], 7),
+  )
+}
+
+test accrue_fails_without_a_matching_value_increase() {
+  // Datum claims +2 ADA of yield but no lovelace actually arrived.
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let t =
+    tx(
+      [
+        input_at(0, out(vault_addr(), 2_000_000, s0)),
+        input_at(1, out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 })),
+      ],
+      [
+        out(vault_addr(), 2_000_000, state(10_000_000, 12_000_000, 8, False)),
+        out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 }),
+      ],
+      [op1, op2],
+    )
+  !yield_vault.spend(t_version, t_asset, Some(s0), Accrue { amount: 2_000_000 }, state_ref, t)
+}
+
+// --- Withdraw ------------------------------------------------------
+
+test full_withdraw_burns_shares_and_drains_assets() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let t =
+    tx(
+      [
+        input_at(0, out(vault_addr(), 2_000_000, s0)),
+        input_at(1, out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 })),
+      ],
+      [out(vault_addr(), 2_000_000, state(0, 0, 7, False)), plain_out(alice, 10_000_000)],
+      [alice],
+    )
+  yield_vault.spend(t_version, t_asset, Some(s0), Withdraw { shares: 10_000_000 }, state_ref, t)
+}
+
+test withdraw_cannot_take_more_than_the_share_price_allows() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let t =
+    tx(
+      [
+        input_at(0, out(vault_addr(), 2_000_000, s0)),
+        input_at(1, out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 })),
+      ],
+      [out(vault_addr(), 1_000_000, state(0, -1_000_000, 7, False)), plain_out(alice, 11_000_000)],
+      [alice],
+    )
+  !yield_vault.spend(t_version, t_asset, Some(s0), Withdraw { shares: 10_000_000 }, state_ref, t)
+}
+
+test partial_withdraw_leaves_a_viable_position() {
+  // 4 ADA taken from a 10 ADA position at price 1; 6 ADA stays behind.
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let t =
+    tx(
+      [
+        input_at(0, out(vault_addr(), 2_000_000, s0)),
+        input_at(1, out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 })),
+      ],
+      [
+        out(vault_addr(), 2_000_000, state(6_000_000, 6_000_000, 7, False)),
+        out(vault_addr(), 6_000_000, Position { owner: alice, shares: 6_000_000 }),
+        plain_out(alice, 4_000_000),
+      ],
+      [alice],
+    )
+  yield_vault.spend(t_version, t_asset, Some(s0), Withdraw { shares: 4_000_000 }, state_ref, t)
+}
+
+test partial_withdraw_stranding_a_dust_position_is_rejected() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let t =
+    tx(
+      [
+        input_at(0, out(vault_addr(), 2_000_000, s0)),
+        input_at(1, out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 })),
+      ],
+      [
+        out(vault_addr(), 2_000_000, state(500_000, 500_000, 7, False)),
+        out(vault_addr(), 500_000, Position { owner: alice, shares: 500_000 }),
+        plain_out(alice, 9_500_000),
+      ],
+      [alice],
+    )
+  !yield_vault.spend(t_version, t_asset, Some(s0), Withdraw { shares: 9_500_000 }, state_ref, t)
+}
+
+test withdraw_is_still_allowed_while_paused() {
+  let s0 = state(10_000_000, 10_000_000, 7, True)
+  let t =
+    tx(
+      [
+        input_at(0, out(vault_addr(), 2_000_000, s0)),
+        input_at(1, out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 })),
+      ],
+      [out(vault_addr(), 2_000_000, state(0, 0, 7, True)), plain_out(alice, 10_000_000)],
+      [alice],
+    )
+  yield_vault.spend(t_version, t_asset, Some(s0), Withdraw { shares: 10_000_000 }, state_ref, t)
+}
+
+// --- Position spends -----------------------------------------------
+
+fn position_spend_tx(signers: List<ByteArray>, payee: ByteArray) -> Transaction {
+  tx(
+    [
+      input_at(0, out(vault_addr(), 2_000_000, state(10_000_000, 10_000_000, 7, False))),
+      input_at(1, out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 })),
+    ],
+    [out(vault_addr(), 2_000_000, state(0, 0, 7, False)), plain_out(payee, 10_000_000)],
+    signers,
+  )
+}
+
+test position_spend_ok_when_owner_signs_and_is_paid() {
+  let p = Position { owner: alice, shares: 10_000_000 }
+  yield_vault.spend(
+    t_version,
+    t_asset,
+    Some(p),
+    Withdraw { shares: 10_000_000 },
+    ref_at(1),
+    position_spend_tx([alice], alice),
+  )
+}
+
+test position_spend_fails_when_owner_did_not_sign() {
+  let p = Position { owner: alice, shares: 10_000_000 }
+  !yield_vault.spend(
+    t_version,
+    t_asset,
+    Some(p),
+    Withdraw { shares: 10_000_000 },
+    ref_at(1),
+    position_spend_tx([mallory], alice),
+  )
+}
+
+test position_spend_fails_when_funds_go_to_a_stranger() {
+  let p = Position { owner: alice, shares: 10_000_000 }
+  !yield_vault.spend(
+    t_version,
+    t_asset,
+    Some(p),
+    Withdraw { shares: 10_000_000 },
+    ref_at(1),
+    position_spend_tx([alice], mallory),
+  )
+}
+
+test position_spend_fails_without_the_state_utxo() {
+  // No aggregate ledger in the inputs means nothing enforces the accounting.
+  let p = Position { owner: alice, shares: 10_000_000 }
+  let t =
+    tx(
+      [input_at(1, out(vault_addr(), 10_000_000, p))],
+      [plain_out(alice, 10_000_000)],
+      [alice],
+    )
+  !yield_vault.spend(t_version, t_asset, Some(p), Withdraw { shares: 10_000_000 }, ref_at(1), t)
+}
+
+// --- Pause / committee ---------------------------------------------
+
+test operators_can_pause() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [out(vault_addr(), 2_000_000, state(10_000_000, 10_000_000, 7, True))],
+      [op1, op2],
+    )
+  yield_vault.spend(t_version, t_asset, Some(s0), SetPaused { paused: True }, state_ref, t)
+}
+
+test a_single_operator_cannot_pause() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [out(vault_addr(), 2_000_000, state(10_000_000, 10_000_000, 7, True))],
+      [op1],
+    )
+  !yield_vault.spend(t_version, t_asset, Some(s0), SetPaused { paused: True }, state_ref, t)
+}
+
+test committee_cannot_be_swapped_during_a_deposit() {
+  let s0 = state(0, 0, 7, False)
+  let hijacked =
+    State {
+      total_shares: 10_000_000,
+      total_assets: 10_000_000,
+      epoch: 7,
+      operators: [mallory],
+      threshold: 1,
+      paused: False,
+    }
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [
+        out(vault_addr(), 2_000_000, hijacked),
+        out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 }),
+      ],
+      [alice],
+    )
+  !yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+}
+
+test state_must_be_recreated_exactly_once() {
+  let s0 = state(0, 0, 7, False)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [
+        out(vault_addr(), 2_000_000, state(10_000_000, 10_000_000, 7, False)),
+        out(vault_addr(), 2_000_000, state(10_000_000, 10_000_000, 7, False)),
+        out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 }),
+      ],
+      [alice],
+    )
+  !yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
 }
