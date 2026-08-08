@@ -135,7 +135,7 @@ function MarketplaceIndex() {
           const Icon = (categoryIcon as Record<string, typeof Leaf>)[asset.category] ?? Landmark;
           const target = Number(asset.target_lovelace);
           const raised = Number(asset.raised_lovelace);
-          const fundedPct = target > 0 ? Math.min(100, (raised / target) * 100) : 0;
+          const pct = fundedPct(asset);
           return (
             <Link
               key={asset.id}
