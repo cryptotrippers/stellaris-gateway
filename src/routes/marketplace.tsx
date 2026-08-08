@@ -166,10 +166,10 @@ function MarketplaceIndex() {
                 <Metric label="Term" value={asset.maturity_months ? `${asset.maturity_months}mo` : "—"} />
               </div>
 
-              <FundingBar pct={fundedPct} />
+              <FundingBar pct={pct} />
               <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
                 <span>Funded</span>
-                <span className="number-display text-foreground">{fundedPct.toFixed(1)}%</span>
+                <span className="number-display text-foreground">{pct.toFixed(1)}%</span>
               </div>
             </Link>
           );
