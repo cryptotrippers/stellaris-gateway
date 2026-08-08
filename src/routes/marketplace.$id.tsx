@@ -200,7 +200,12 @@ function AssetDetail() {
               </p>
             )}
           </div>
+
+          <div className="mt-6">
+            <AssetVaultPanel assetId={asset.id} />
+          </div>
         </div>
+
 
         {/* Right rail — every asset derives its own vault script from (version, asset_id) */}
         <aside className="h-fit space-y-4 lg:sticky lg:top-24">
