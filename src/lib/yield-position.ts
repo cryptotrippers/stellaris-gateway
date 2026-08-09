@@ -18,7 +18,12 @@
  */
 
 import { checkVaultPreconditions, initLucidWithWallet } from "./vault";
-import { getYieldVaultScript } from "./yield-vault";
+import {
+  assertReceiptPolicy,
+  getReceiptPolicy,
+  getYieldVaultScript,
+  type AppliedReceiptPolicy,
+} from "./yield-vault";
 import {
   readPositionDatum,
   readStateDatum,
@@ -82,6 +87,7 @@ interface LucidBits {
   lucid: Awaited<ReturnType<typeof initLucidWithWallet>>["lucid"];
   lucidMod: Awaited<ReturnType<typeof initLucidWithWallet>>["lucidMod"];
   script: ReturnType<typeof getYieldVaultScript>;
+  receipt: AppliedReceiptPolicy;
   selfHash: string;
   walletAddress: string;
 }
@@ -91,10 +97,11 @@ async function connect(assetId: string): Promise<LucidBits> {
   if (!pre.ok) throw new Error(pre.reason);
   const { lucid, lucidMod } = await initLucidWithWallet();
   const script = getYieldVaultScript(lucidMod, assetId);
+  const receipt = getReceiptPolicy(lucidMod, assetId);
   const walletAddress = await lucid.wallet().address();
   const cred = lucidMod.paymentCredentialOf(walletAddress);
   if (cred.type !== "Key") throw new Error("Connected address is not a key-hash address.");
-  return { lucid, lucidMod, script, selfHash: cred.hash, walletAddress };
+  return { lucid, lucidMod, script, receipt, selfHash: cred.hash, walletAddress };
 }
 
 interface ResolvedUtxos {
@@ -165,6 +172,7 @@ function encodeState(
       state.treasury,
       BigInt(state.treasuryShares),
       BigInt(state.lastFeeTime),
+      state.receiptPolicy,
     ]),
   );
 }
@@ -217,8 +225,9 @@ export async function depositToYieldVault(params: {
   assetId: string;
   amountLovelace: bigint;
 }): Promise<DepositResult> {
-  const { lucid, lucidMod, script, selfHash } = await connect(params.assetId);
+  const { lucid, lucidMod, script, receipt, selfHash } = await connect(params.assetId);
   const { stateUtxo, state, stateLovelace } = await resolveVault(lucid, script.address);
+  assertReceiptPolicy(receipt, state.receiptPolicy);
 
   if (state.paused) {
     throw new Error("This vault is paused — deposits are closed until operators unpause it.");
@@ -250,10 +259,16 @@ export async function depositToYieldVault(params: {
     Constr: new (index: number, fields: unknown[]) => unknown;
   };
 
+  // Stage 6: the validator now requires receipts to be minted 1:1 with the
+  // depositor shares created by this deposit.
+  const mintRedeemer = Data.to(new Constr(0, []));
+
   const completed = await lucid
     .newTx()
     .collectFrom([stateUtxo as never], Data.to(new Constr(REDEEMER_DEPOSIT, [])))
     .attach.SpendingValidator({ type: "PlutusV3", script: script.cbor })
+    .mintAssets({ [receipt.unit]: minted }, mintRedeemer)
+    .attach.MintingPolicy({ type: "PlutusV3", script: receipt.cbor })
     .pay.ToContract(script.address, { kind: "inline", value: nextState }, { lovelace: stateLovelace })
     .pay.ToContract(script.address, { kind: "inline", value: positionDatum }, { lovelace: deposit })
     .complete();
@@ -291,12 +306,15 @@ export async function withdrawFromYieldVault(params: {
   /** Shares to burn. Defaults to the whole position (full close). */
   shares?: bigint;
 }): Promise<WithdrawResult> {
-  const { lucid, lucidMod, script, selfHash, walletAddress } = await connect(params.assetId);
+  const { lucid, lucidMod, script, receipt, selfHash, walletAddress } = await connect(
+    params.assetId,
+  );
   const { stateUtxo, state, stateLovelace, positions } = await resolveVault(
     lucid,
     script.address,
     selfHash,
   );
+  assertReceiptPolicy(receipt, state.receiptPolicy);
   if (positions.length === 0) {
     throw new Error("This wallet holds no position in this vault.");
   }
@@ -356,6 +374,9 @@ export async function withdrawFromYieldVault(params: {
     .newTx()
     .collectFrom([stateUtxo as never, chosen.utxo as never], redeemer)
     .attach.SpendingValidator({ type: "PlutusV3", script: script.cbor })
+    // Stage 6: redeeming shares burns exactly that many receipts.
+    .mintAssets({ [receipt.unit]: -shares }, Data.to(new Constr(0, [])))
+    .attach.MintingPolicy({ type: "PlutusV3", script: receipt.cbor })
     .pay.ToContract(
       script.address,
       { kind: "inline", value: nextState },

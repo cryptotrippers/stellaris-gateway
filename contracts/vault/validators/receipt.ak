@@ -55,6 +55,7 @@ pub type VaultDatumMirror {
     treasury: ByteArray,
     treasury_shares: Int,
     last_fee_time: Int,
+    receipt_policy: ByteArray,
   }
 }
 
@@ -157,6 +158,7 @@ fn state(total_shares: Int, treasury_shares: Int) -> VaultDatumMirror {
     treasury: treas,
     treasury_shares,
     last_fee_time: 1_700_000_000_000,
+    receipt_policy: #"ca06d650b0ff77c959b3776771c3438bb61fe99a072eeb59d8cedb18",
   }
 }
 

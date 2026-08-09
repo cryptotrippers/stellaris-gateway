@@ -47,7 +47,7 @@ export interface BfTxUtxos {
 //   Position { owner, shares }                                 -> constructor 0
 //   State { total_shares, total_assets, epoch, operators,
 //           threshold, paused, fee_bps, treasury,
-//           treasury_shares, last_fee_time }                   -> constructor 1
+//           treasury_shares, last_fee_time, receipt_policy }    -> constructor 1
 // ---------------------------------------------------------------------------
 
 export interface VaultStateDatum {
@@ -65,6 +65,8 @@ export interface VaultStateDatum {
   treasuryShares: string;
   /** POSIX milliseconds the fee was last settled to. */
   lastFeeTime: string;
+  /** Stage 6: receipt minting policy id bound to this vault (28-byte hex). */
+  receiptPolicy: string;
 }
 
 export interface VaultPositionDatum {
@@ -78,7 +80,7 @@ export function lovelaceOf(utxo: { amount: BfAmount[] }): bigint {
 }
 
 export function decodeState(d: PlutusData): VaultStateDatum | null {
-  if (d.kind !== "constr" || d.index !== 1 || d.fields.length !== 10) return null;
+  if (d.kind !== "constr" || d.index !== 1 || d.fields.length !== 11) return null;
   return {
     totalShares: asInt(d.fields[0]).toString(),
     totalAssets: asInt(d.fields[1]).toString(),
@@ -90,6 +92,7 @@ export function decodeState(d: PlutusData): VaultStateDatum | null {
     treasury: asBytes(d.fields[7]),
     treasuryShares: asInt(d.fields[8]).toString(),
     lastFeeTime: asInt(d.fields[9]).toString(),
+    receiptPolicy: asBytes(d.fields[10]),
   };
 }
 
