@@ -864,12 +864,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      execute_fund_asset_proposal: {
+        Args: { _proposal_id: string; _user_id: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      mark_proposal_executed_offchain: {
+        Args: { _proposal_id: string }
+        Returns: undefined
       }
     }
     Enums: {
