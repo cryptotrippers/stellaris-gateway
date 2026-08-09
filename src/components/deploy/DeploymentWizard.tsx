@@ -387,7 +387,7 @@ export function DeploymentWizard() {
         </section>
       )}
 
-      {/* Step 3 — bootstrap the yield vault --------------------------------- */
+      {/* Step 3 — bootstrap the yield vault --------------------------------- */}
       <Step index={3} title="Deploy the yield vault state UTxO" done={Boolean(bootstrapTx)}>
         <p className="text-sm text-muted-foreground">
           Creates the single ledger UTxO every deposit, accrual, and redemption balances against,
