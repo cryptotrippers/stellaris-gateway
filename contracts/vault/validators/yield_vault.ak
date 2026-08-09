@@ -347,7 +347,9 @@ validator yield_vault(_version: Int, asset_id: ByteArray) {
             n_threshold,
           ) && positions_well_formed(outs) && values_pure(outs) && n_shares >= 0 && n_assets >= 0 && locked_out >= 0 && n_epoch >= epoch && fee_bps_ok(
             n_fee_bps,
-          ) && n_treasury_shares >= 0 && n_treasury_shares <= n_shares && n_last_fee_time >= last_fee_time && n_treasury == treasury
+          ) && n_treasury_shares >= 0 && n_treasury_shares <= n_shares && n_last_fee_time >= last_fee_time && n_treasury == treasury && n_receipt_policy == receipt_policy && bytearray.length(
+            receipt_policy,
+          ) == 28
 
         let same_committee = committee_unchanged(d, next)
 
