@@ -1330,3 +1330,136 @@ test depositors_cannot_withdraw_against_treasury_shares() {
 
 
 // stage5: fee-aware yield vault (SetFee / ClaimFee / prorated Accrue)
+
+
+// --- Stage 6: receipt tokens ---------------------------------------
+
+test deposit_must_mint_matching_receipts() {
+  let s0 = state(0, 0, 7, False)
+  let t =
+    tx_minting(
+      [input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [
+        out(vault_addr(), 2_000_000, state(10_000_000, 10_000_000, 7, False)),
+        out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 }),
+      ],
+      [alice],
+      10_000_000,
+    )
+  yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+}
+
+test deposit_without_receipts_is_rejected() {
+  let s0 = state(0, 0, 7, False)
+  let t =
+    tx_minting(
+      [input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [
+        out(vault_addr(), 2_000_000, state(10_000_000, 10_000_000, 7, False)),
+        out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 }),
+      ],
+      [alice],
+      0,
+    )
+  !yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+}
+
+test deposit_over_minting_receipts_is_rejected() {
+  let s0 = state(0, 0, 7, False)
+  let t =
+    tx_minting(
+      [input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [
+        out(vault_addr(), 2_000_000, state(10_000_000, 10_000_000, 7, False)),
+        out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 }),
+      ],
+      [alice],
+      10_000_001,
+    )
+  !yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+}
+
+test withdraw_must_burn_the_receipts() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let t =
+    tx_minting(
+      [
+        input_at(0, out(vault_addr(), 2_000_000, s0)),
+        input_at(1, out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 })),
+      ],
+      [
+        out(vault_addr(), 2_000_000, state(0, 0, 7, False)),
+        plain_out(alice, 10_000_000),
+      ],
+      [alice],
+      -10_000_000,
+    )
+  yield_vault.spend(t_version, t_asset, Some(s0), Withdraw { shares: 10_000_000 }, state_ref, t)
+}
+
+test withdraw_without_burning_receipts_is_rejected() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let t =
+    tx_minting(
+      [
+        input_at(0, out(vault_addr(), 2_000_000, s0)),
+        input_at(1, out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 })),
+      ],
+      [
+        out(vault_addr(), 2_000_000, state(0, 0, 7, False)),
+        plain_out(alice, 10_000_000),
+      ],
+      [alice],
+      0,
+    )
+  !yield_vault.spend(t_version, t_asset, Some(s0), Withdraw { shares: 10_000_000 }, state_ref, t)
+}
+
+test accrue_cannot_mint_receipts() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let t =
+    tx_minting(
+      [
+        input_at(0, out(vault_addr(), 2_000_000, s0)),
+        input_at(1, out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 })),
+      ],
+      [
+        out(vault_addr(), 4_000_000, state(10_000_000, 12_000_000, 8, False)),
+        out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 }),
+      ],
+      [op1, op2],
+      1,
+    )
+  !yield_vault.spend(t_version, t_asset, Some(s0), Accrue { amount: 2_000_000 }, state_ref, t)
+}
+
+/// The bound policy is immutable: a state output may not re-point the vault
+/// at an attacker-controlled receipt policy.
+test receipt_policy_cannot_be_swapped() {
+  let s0 = state(0, 0, 7, False)
+  let hijacked =
+    State {
+      total_shares: 10_000_000,
+      total_assets: 10_000_000,
+      epoch: 7,
+      operators: [op1, op2],
+      threshold: 2,
+      paused: False,
+      fee_bps: 0,
+      treasury: treas,
+      treasury_shares: 0,
+      last_fee_time: t0,
+      receipt_policy: #"11111111111111111111111111111111111111111111111111111111",
+    }
+  let t =
+    tx_minting(
+      [input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [
+        out(vault_addr(), 2_000_000, hijacked),
+        out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 }),
+      ],
+      [alice],
+      10_000_000,
+    )
+  !yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+}
