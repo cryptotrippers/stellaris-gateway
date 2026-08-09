@@ -35,9 +35,11 @@
 
 use aiken/collection/dict
 use aiken/collection/list
-use cardano/address.{Script}
-use cardano/assets.{PolicyId}
-use cardano/transaction.{InlineDatum, Input, Output, Transaction}
+use cardano/address.{Address, Script}
+use cardano/assets.{PolicyId, Value}
+use cardano/transaction.{
+  InlineDatum, Input, Output, OutputReference, Transaction, placeholder,
+}
 
 /// Structural mirror of `yield_vault.YieldDatum`.
 pub type VaultDatumMirror {
@@ -160,7 +162,7 @@ fn state(total_shares: Int, treasury_shares: Int) -> VaultDatumMirror {
 
 fn vault_out(hash: ByteArray, lovelace: Int, d: VaultDatumMirror) -> Output {
   Output {
-    address: cardano/address.Address {
+    address: Address {
       payment_credential: Script(hash),
       stake_credential: None,
     },
@@ -172,7 +174,7 @@ fn vault_out(hash: ByteArray, lovelace: Int, d: VaultDatumMirror) -> Output {
 
 fn input_at(ix: Int, o: Output) -> Input {
   Input {
-    output_reference: cardano/transaction.OutputReference {
+    output_reference: OutputReference {
       transaction_id: #"0000000000000000000000000000000000000000000000000000000000000000",
       output_index: ix,
     },
@@ -183,9 +185,9 @@ fn input_at(ix: Int, o: Output) -> Input {
 fn tx_with(
   ins: List<Input>,
   outs: List<Output>,
-  mint: assets.Value,
+  mint: Value,
 ) -> Transaction {
-  Transaction { ..cardano/transaction.placeholder, inputs: ins, outputs: outs, mint: mint }
+  Transaction { ..placeholder, inputs: ins, outputs: outs, mint: mint }
 }
 
 test mint_matches_deposit_share_delta() {
