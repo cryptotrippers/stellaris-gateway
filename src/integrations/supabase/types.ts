@@ -876,7 +876,7 @@ export type Database = {
         Returns: boolean
       }
       mark_proposal_executed_offchain: {
-        Args: { _proposal_id: string }
+        Args: { _proposal_id: string; _user_id: string }
         Returns: undefined
       }
     }
