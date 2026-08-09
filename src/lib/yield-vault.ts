@@ -64,6 +64,20 @@ export function getYieldVaultScript(lucidMod: unknown, assetId: string): Applied
   const { applyParamsToScript, validatorToAddress, validatorToScriptHash, fromText } =
     lucidMod as LucidModLike;
 
+  // Verify the *unapplied* blueprint before any parameters are applied, so a
+  // drifted or stale plutus.json can never be used to build an on-chain tx.
+  const unappliedHash = validatorToScriptHash({
+    type: "PlutusV3",
+    script: YIELD_BLUEPRINT_CBOR,
+  });
+  if (unappliedHash !== YIELD_BLUEPRINT_HASH) {
+    throw new Error(
+      `Yield vault blueprint mismatch: compiled artifact hashes to ${unappliedHash}, ` +
+        `but the verified pin is ${YIELD_BLUEPRINT_HASH}. Rebuild the Aiken contracts ` +
+        `and re-pin YIELD_BLUEPRINT_HASH before signing any transaction.`,
+    );
+  }
+
   const cbor = applyParamsToScript(YIELD_BLUEPRINT_CBOR, [
     YIELD_VAULT_VERSION,
     fromText(assetId),
@@ -74,5 +88,27 @@ export function getYieldVaultScript(lucidMod: unknown, assetId: string): Applied
 
   const applied: AppliedYieldVault = { cbor, scriptHash, address, assetId, type: "PlutusV3" };
   appliedCache.set(assetId, applied);
+  console.info(
+    `[yield-vault] blueprint=${YIELD_BLUEPRINT_HASH} v${String(YIELD_VAULT_VERSION)} ` +
+      `asset=${assetId} → hash=${scriptHash} addr=${address}`,
+  );
   return applied;
 }
+
+/**
+ * Guard for builders that spend a vault UTxO recorded in the registry: refuse
+ * to build if the stored address no longer matches the verified script.
+ */
+export function assertYieldVaultAddress(
+  script: AppliedYieldVault,
+  registryAddress: string | null | undefined,
+): void {
+  if (registryAddress && registryAddress !== script.address) {
+    throw new Error(
+      `Vault address drift for ${script.assetId}: registry has ${registryAddress}, ` +
+        `verified script v${String(YIELD_VAULT_VERSION)} derives ${script.address}. ` +
+        `Re-bootstrap the vault before transacting.`,
+    );
+  }
+}
+
