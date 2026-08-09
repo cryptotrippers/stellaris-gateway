@@ -376,13 +376,13 @@ validator yield_vault(_version: Int, asset_id: ByteArray) {
               same_committee && fee_frozen && !paused && n_paused == paused && n_epoch == epoch && deposit_ok(
                 acc,
                 deposit,
-              ) && shares_delta == minted && n_shares == total_shares + minted && n_assets == total_assets + deposit
+              ) && shares_delta == minted && receipt_delta == minted && n_shares == total_shares + minted && n_assets == total_assets + deposit
             }
 
             Withdraw { shares } -> {
               let paid = -value_delta
               // Withdrawals stay available while paused, at the last price.
-              same_committee && fee_frozen && n_paused == paused && n_epoch == epoch && shares > 0 && shares <= total_shares - treasury_shares && shares_delta == -shares && paid > 0 && paid <= redeem_value(
+              same_committee && fee_frozen && n_paused == paused && n_epoch == epoch && shares > 0 && shares <= total_shares - treasury_shares && shares_delta == -shares && receipt_delta == -shares && paid > 0 && paid <= redeem_value(
                 acc,
                 shares,
               ) && n_shares == total_shares - shares && n_assets == total_assets - paid
