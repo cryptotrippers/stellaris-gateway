@@ -140,23 +140,30 @@ export const createVaultProposal = createServerFn({ method: "POST" })
   });
 
 /**
- * Record that a passed proposal was executed on chain.
+ * Record that a passed proposal was executed.
  *
- * The transaction is verified against the vault address before anything is
- * written: it must spend and recreate the vault state, bump the epoch, leave
- * the share supply untouched, and accrue exactly the approved amount. A
- * transaction that fails any of those checks cannot mark a proposal executed.
+ * For an accrual, execution is a Cardano transaction: it is verified against
+ * the vault address before anything is written — it must spend and recreate
+ * the vault state, bump the epoch, leave the share supply untouched, and
+ * accrue exactly the approved amount.
+ *
+ * `fund_asset` and `set_fee` have no chain event of their own: funding a new
+ * asset is what creates the vault in the first place, and a fee change is
+ * mirrored from the terms the vote approved. For those two kinds the
+ * "transaction" is the database becoming consistent, so a null tx hash is the
+ * correct and expected outcome. Their writes go through a single Postgres
+ * routine so a partial failure can never leave an executed proposal without
+ * its asset.
  */
 export const recordProposalExecution = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { proposalId: string; txHash: string }) => {
+  .inputValidator((data: { proposalId: string; txHash?: string | null }) => {
     if (!data?.proposalId) throw new Error("proposalId is required");
-    if (!TX_HASH_RE.test(data?.txHash ?? "")) throw new Error("Invalid transaction hash.");
-    return { proposalId: data.proposalId, txHash: data.txHash.toLowerCase() };
+    const txHash = (data.txHash ?? "").trim().toLowerCase();
+    if (txHash && !TX_HASH_RE.test(txHash)) throw new Error("Invalid transaction hash.");
+    return { proposalId: data.proposalId, txHash: txHash || null };
   })
   .handler(async ({ data, context }): Promise<{ ok: boolean; reason: string }> => {
-    await requireRole(context.supabase, context.userId, "operator");
-
     const { data: proposal, error: pErr } = await context.supabase
       .from("governance_proposals")
       .select(PROPOSAL_COLUMNS)
@@ -172,13 +179,90 @@ export const recordProposalExecution = createServerFn({ method: "POST" })
     if (row.executed_tx_hash) {
       return { ok: false, reason: "This proposal already has an execution transaction recorded." };
     }
+
+    // --- Create a new real-world asset from an approved funding request -----
+    if (row.kind === "fund_asset") {
+      // Creating an asset is an admin decision, distinct from operating an
+      // existing vault, so the operator role is deliberately not enough.
+      await requireRole(context.supabase, context.userId, "admin");
+
+      const fundingRequestId = String(row.params?.["funding_request_id"] ?? "");
+      if (!fundingRequestId) {
+        return { ok: false, reason: "This proposal names no funding request." };
+      }
+      // Re-read the request server-side; nothing from the client is trusted.
+      const { data: fr, error: frErr } = await context.supabase
+        .from("funding_requests")
+        .select("id, asset_slug, status")
+        .eq("id", fundingRequestId)
+        .maybeSingle();
+      if (frErr) throw new Error(frErr.message);
+      if (!fr) return { ok: false, reason: "That funding request no longer exists." };
+
+      const { data: created, error: rpcErr } = await context.supabase.rpc(
+        "execute_fund_asset_proposal",
+        { _proposal_id: row.id, _user_id: context.userId } as never,
+      );
+      if (rpcErr) return { ok: false, reason: rpcErr.message };
+      return { ok: true, reason: `Asset "${String(created)}" created and proposal executed.` };
+    }
+
+    // --- Apply the approved management fee ---------------------------------
+    if (row.kind === "set_fee") {
+      await requireRole(context.supabase, context.userId, "operator");
+      if (!row.asset_id) return { ok: false, reason: "This proposal names no asset." };
+
+      const feeBps = Number(row.params?.["fee_bps"]);
+      const treasuryAddress = String(row.params?.["treasury_address"] ?? "");
+      if (!Number.isInteger(feeBps) || feeBps < 0 || feeBps > MAX_FEE_BPS) {
+        return { ok: false, reason: `The approved fee must be between 0 and ${MAX_FEE_BPS} bps.` };
+      }
+      if (!BECH32_ADDRESS_RE.test(treasuryAddress)) {
+        return { ok: false, reason: "The approved treasury address is not a valid address." };
+      }
+
+      const { data: feeVault, error: fvErr } = await context.supabase
+        .from("asset_vaults")
+        .select("vault_version, network")
+        .eq("asset_id", row.asset_id)
+        .order("vault_version", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (fvErr) throw new Error(fvErr.message);
+      if (!feeVault) {
+        return { ok: false, reason: "No bootstrapped vault is registered for this asset." };
+      }
+
+      const { insertFeeSchedule } = await import("./asset-vaults.shared");
+      await insertFeeSchedule(context.supabase, {
+        assetId: row.asset_id,
+        vaultVersion: feeVault.vault_version as number,
+        network: (feeVault.network as string) ?? "preprod",
+        feeBps,
+        treasuryAddress,
+        proposalId: row.id,
+      });
+
+      const { error: markErr } = await context.supabase.rpc(
+        "mark_proposal_executed_offchain",
+        { _proposal_id: row.id, _user_id: context.userId } as never,
+      );
+      if (markErr) return { ok: false, reason: markErr.message };
+      return { ok: true, reason: "New fee schedule recorded and proposal executed." };
+    }
+
+    // --- Everything else is an on-chain accrual ----------------------------
+    await requireRole(context.supabase, context.userId, "operator");
     if (row.kind !== "accrue") {
       return {
         ok: false,
         reason: "Only accrual proposals can be verified automatically right now.",
       };
     }
+    if (!data.txHash) return { ok: false, reason: "A transaction hash is required." };
     if (!row.asset_id) return { ok: false, reason: "This proposal names no asset." };
+
+
 
     const { data: vault, error: vErr } = await context.supabase
       .from("asset_vaults")
