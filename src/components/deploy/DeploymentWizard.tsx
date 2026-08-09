@@ -237,6 +237,29 @@ export function DeploymentWizard() {
     }
   }
 
+  async function runSfm02Verify() {
+    setSfm02Verifying(true);
+    setSfm02VerifyErr(null);
+    setSfm02Verified(null);
+    try {
+      const current = await deriveYieldVaultAddress("sfm-02");
+      const registered = (vaultsQ.data ?? []).find((v) => v.asset_id === "sfm-02") ?? null;
+      const state = await getVaultChainState({ data: { address: current.address } });
+      setSfm02Verified({
+        derivedAddress: current.address,
+        registeredAddress: registered?.script_address ?? null,
+        addressMatches: registered?.script_address === current.address,
+        found: state.found,
+        locked: state.lockedLovelace,
+        stateTx: state.stateUtxo?.txHash ?? null,
+      });
+    } catch (e) {
+      setSfm02VerifyErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSfm02Verifying(false);
+    }
+  }
+
   return (
     <section className="mt-10 card-institutional p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
