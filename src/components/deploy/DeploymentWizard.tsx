@@ -375,7 +375,7 @@ export function DeploymentWizard() {
               <VerificationResult
                 label="Derived address match"
                 ok={sfm02Verified.addressMatches}
-                value={sfm02Verified.registeredAddress === null ? "No registry entry" : sfm02Verified.addressMatches ? "Matches registry" : "Registry is stale"}
+                value={sfm02MatchLabel(sfm02Verified)}
               />
               <div className="sm:col-span-3 rounded-lg border border-border bg-background/60 p-3 text-[11px] text-muted-foreground">
                 <div>Derived yield_vault: <span className="font-mono text-foreground">{short(sfm02Verified.derivedAddress, 16, 10)}</span></div>
