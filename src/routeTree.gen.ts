@@ -32,6 +32,7 @@ import { Route as MarketplaceIdRouteImport } from './routes/marketplace.$id'
 import { Route as GovernanceNewRouteImport } from './routes/governance.new'
 import { Route as GovernanceSipRouteImport } from './routes/governance.$sip'
 import { Route as FundingNewRouteImport } from './routes/funding.new'
+import { Route as FundingIdRouteImport } from './routes/funding.$id'
 import { Route as Char91DotwellKnownChar93SecurityChar91DotChar93txtRouteImport } from './routes/[.well-known]/security[.]txt'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
@@ -154,6 +155,11 @@ const FundingNewRoute = FundingNewRouteImport.update({
   path: '/funding/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FundingIdRoute = FundingIdRouteImport.update({
+  id: '/funding/$id',
+  path: '/funding/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute =
   Char91DotwellKnownChar93SecurityChar91DotChar93txtRouteImport.update({
     id: '/.well-known/security.txt',
@@ -211,6 +217,7 @@ export interface FileRoutesByFullPath {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.well-known/security.txt': typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
+  '/funding/$id': typeof FundingIdRoute
   '/funding/new': typeof FundingNewRoute
   '/governance/$sip': typeof GovernanceSipRoute
   '/governance/new': typeof GovernanceNewRoute
@@ -241,6 +248,7 @@ export interface FileRoutesByTo {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.well-known/security.txt': typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
+  '/funding/$id': typeof FundingIdRoute
   '/funding/new': typeof FundingNewRoute
   '/governance/$sip': typeof GovernanceSipRoute
   '/governance/new': typeof GovernanceNewRoute
@@ -273,6 +281,7 @@ export interface FileRoutesById {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.well-known/security.txt': typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
+  '/funding/$id': typeof FundingIdRoute
   '/funding/new': typeof FundingNewRoute
   '/governance/$sip': typeof GovernanceSipRoute
   '/governance/new': typeof GovernanceNewRoute
@@ -306,6 +315,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/.well-known/security.txt'
+    | '/funding/$id'
     | '/funding/new'
     | '/governance/$sip'
     | '/governance/new'
@@ -336,6 +346,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/.well-known/security.txt'
+    | '/funding/$id'
     | '/funding/new'
     | '/governance/$sip'
     | '/governance/new'
@@ -367,6 +378,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/.well-known/security.txt'
+    | '/funding/$id'
     | '/funding/new'
     | '/governance/$sip'
     | '/governance/new'
@@ -399,6 +411,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute: typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
+  FundingIdRoute: typeof FundingIdRoute
   FundingNewRoute: typeof FundingNewRoute
   FundingIndexRoute: typeof FundingIndexRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -569,6 +582,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FundingNewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/funding/$id': {
+      id: '/funding/$id'
+      path: '/funding/$id'
+      fullPath: '/funding/$id'
+      preLoaderRoute: typeof FundingIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/.well-known/security.txt': {
       id: '/.well-known/security.txt'
       path: '/.well-known/security.txt'
@@ -675,6 +695,7 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute:
     Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute,
+  FundingIdRoute: FundingIdRoute,
   FundingNewRoute: FundingNewRoute,
   FundingIndexRoute: FundingIndexRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
