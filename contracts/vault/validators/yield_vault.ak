@@ -54,6 +54,12 @@ pub type YieldDatum {
     treasury: ByteArray,
     treasury_shares: Int,
     last_fee_time: Int,
+    /// Stage 6: the receipt minting policy bound to this vault, written once
+    /// at bootstrap and immutable afterwards. Every `Deposit` must mint, and
+    /// every `Withdraw` must burn, exactly the depositor-share delta under
+    /// this policy with token name = `asset_id`; every other action must move
+    /// zero receipts. Must be a 28-byte script hash.
+    receipt_policy: ByteArray,
   }
 }
 
