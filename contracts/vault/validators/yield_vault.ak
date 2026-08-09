@@ -298,6 +298,13 @@ validator yield_vault(_version: Int, asset_id: ByteArray) {
         last_fee_time,
         receipt_policy,
       } -> {
+        // V-01: exactly ONE State UTxO may be spent. Without this, two State
+        // UTxOs at this address can be collapsed into the single required
+        // State output: `locked_in` then sums both, so the surviving datum
+        // only has to balance one of them and the other's lovelace can leave
+        // the script unaccounted. The output side was already constrained by
+        // `sole_state(outs)`; this mirrors it on the input side.
+        expect Some(_only_state_in) = sole_state(ins)
         expect Some(next) = sole_state(outs)
         expect State {
           total_shares: n_shares,
