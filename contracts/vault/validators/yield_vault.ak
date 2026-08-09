@@ -22,6 +22,7 @@
 
 use aiken/collection/list
 use aiken/interval.{Finite}
+use aiken/primitive/bytearray
 use cardano/address.{Address, Script, VerificationKey}
 use cardano/assets
 use cardano/transaction.{
@@ -518,6 +519,10 @@ fn plain_out(pkh: ByteArray, lovelace: Int) -> Output {
   }
 }
 
+/// The receipt minting policy bound to the fixture vault (28 bytes).
+const rpolicy: ByteArray =
+  #"ca06d650b0ff77c959b3776771c3438bb61fe99a072eeb59d8cedb18"
+
 /// Treasury key used across the fixtures.
 const treas: ByteArray = #"deadbeef00000000000000000000000000000000000000000000dead"
 
@@ -543,6 +548,7 @@ fn state(
     treasury: treas,
     treasury_shares: 0,
     last_fee_time: t0,
+    receipt_policy: rpolicy,
   }
 }
 
@@ -564,12 +570,30 @@ const state_ref: OutputReference =
     output_index: 0,
   }
 
+/// Fixture transaction. The receipt mint is derived from the fixture's own
+/// depositor-share delta, so the Stage 6 mint rule is satisfied by default and
+/// each legacy test keeps exercising exactly the property it was written for.
+/// Tests that target the mint rule itself use `tx_minting`.
 fn tx(ins: List<Input>, outs: List<Output>, signers: List<ByteArray>) -> Transaction {
+  let delta =
+    position_shares(list.map(ins, fn(i) { i.output })) * -1 + position_shares(
+      outs,
+    )
+  tx_minting(ins, outs, signers, delta)
+}
+
+fn tx_minting(
+  ins: List<Input>,
+  outs: List<Output>,
+  signers: List<ByteArray>,
+  receipts: Int,
+) -> Transaction {
   Transaction {
     ..placeholder,
     inputs: ins,
     outputs: outs,
     extra_signatories: signers,
+    mint: assets.from_asset(rpolicy, t_asset, receipts),
     validity_range: interval.after(t0),
   }
 }
@@ -895,6 +919,7 @@ test committee_cannot_be_swapped_during_a_deposit() {
       treasury: treas,
       treasury_shares: 0,
       last_fee_time: t0,
+      receipt_policy: rpolicy,
     }
   let t =
     tx(
@@ -947,6 +972,7 @@ fn state_with(
     treasury: treas,
     treasury_shares: 0,
     last_fee_time: t0,
+    receipt_policy: rpolicy,
   }
 }
 
@@ -1102,6 +1128,7 @@ fn fee_state(
     treasury: treas,
     treasury_shares,
     last_fee_time: t0 - owed_since,
+    receipt_policy: rpolicy,
   }
 }
 
