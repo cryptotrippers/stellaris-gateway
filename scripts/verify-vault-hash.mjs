@@ -74,10 +74,14 @@ const targets = [
     label: "yield_vault (Stage 4)",
     onChain: findValidator("yield_vault.yield_vault"),
     hash: yieldPin("YIELD_BLUEPRINT_HASH"),
-    cbor: yieldPin("YIELD_BLUEPRINT_CBOR"),
+    cbor: yieldPin("YIELD_BLUEPRINT_CBOR", "__BLUEPRINT_IMPORT__"),
     file: "src/lib/yield-vault.ts",
   },
 ];
+
+for (const target of targets) {
+  if (target.cbor === "__BLUEPRINT_IMPORT__") target.cbor = target.onChain.compiledCode;
+}
 
 let drift = false;
 for (const t of targets) {
