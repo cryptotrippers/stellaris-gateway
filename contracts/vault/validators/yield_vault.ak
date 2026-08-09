@@ -399,7 +399,7 @@ validator yield_vault(_version: Int, asset_id: ByteArray) {
                 operators,
                 threshold,
                 tx.extra_signatories,
-              ) && now >= last_fee_time && n_last_fee_time == now && value_delta == amount && shares_delta == 0 && n_shares == total_shares + fee_shares && n_treasury_shares == treasury_shares + fee_shares && n_assets == total_assets + amount && n_epoch == epoch + 1
+              ) && now >= last_fee_time && n_last_fee_time == now && value_delta == amount && shares_delta == 0 && receipt_delta == 0 && n_shares == total_shares + fee_shares && n_treasury_shares == treasury_shares + fee_shares && n_assets == total_assets + amount && n_epoch == epoch + 1
             }
 
             SetPaused { paused: want } ->
@@ -407,7 +407,7 @@ validator yield_vault(_version: Int, asset_id: ByteArray) {
                 operators,
                 threshold,
                 tx.extra_signatories,
-              ) && n_paused == want && want != paused && n_epoch == epoch && n_shares == total_shares && n_assets == total_assets && value_delta == 0 && shares_delta == 0
+              ) && n_paused == want && want != paused && n_epoch == epoch && n_shares == total_shares && n_assets == total_assets && value_delta == 0 && shares_delta == 0 && receipt_delta == 0
 
             // Committee rotation: authorized by M-of-N of the OUTGOING
             // committee, and the redeemer must match the committee actually
@@ -421,7 +421,7 @@ validator yield_vault(_version: Int, asset_id: ByteArray) {
                 tx.extra_signatories,
               ) && n_operators == want_ops && n_threshold == want_thr && !(
                 n_operators == operators && n_threshold == threshold
-              ) && n_paused == paused && n_epoch == epoch && n_shares == total_shares && n_assets == total_assets && value_delta == 0 && shares_delta == 0
+              ) && n_paused == paused && n_epoch == epoch && n_shares == total_shares && n_assets == total_assets && value_delta == 0 && shares_delta == 0 && receipt_delta == 0
 
             // Fee change. The fee owed under the OLD rate is settled in the
             // same transaction, so a rate change can never be applied
@@ -433,7 +433,7 @@ validator yield_vault(_version: Int, asset_id: ByteArray) {
                 operators,
                 threshold,
                 tx.extra_signatories,
-              ) && fee_bps_ok(want) && want != fee_bps && n_fee_bps == want && now >= last_fee_time && n_last_fee_time == now && n_paused == paused && n_epoch == epoch && n_shares == total_shares + fee_shares && n_treasury_shares == treasury_shares + fee_shares && n_assets == total_assets && value_delta == 0 && shares_delta == 0
+              ) && fee_bps_ok(want) && want != fee_bps && n_fee_bps == want && now >= last_fee_time && n_last_fee_time == now && n_paused == paused && n_epoch == epoch && n_shares == total_shares + fee_shares && n_treasury_shares == treasury_shares + fee_shares && n_assets == total_assets && value_delta == 0 && shares_delta == 0 && receipt_delta == 0
             }
 
             // Treasury cashes out accrued fee shares at the current price.
@@ -457,7 +457,7 @@ validator yield_vault(_version: Int, asset_id: ByteArray) {
               ) && treasury_paid && shares > 0 && shares <= treasury_shares && paid > 0 && paid <= redeem_value(
                 acc,
                 shares,
-              ) && shares_delta == 0 && n_paused == paused && n_epoch == epoch && n_shares == total_shares - shares && n_treasury_shares == treasury_shares - shares && n_assets == total_assets - paid
+              ) && shares_delta == 0 && receipt_delta == 0 && n_paused == paused && n_epoch == epoch && n_shares == total_shares - shares && n_treasury_shares == treasury_shares - shares && n_assets == total_assets - paid
             }
           }
 
