@@ -165,6 +165,7 @@ function encodeState(
       state.treasury,
       BigInt(state.treasuryShares),
       BigInt(state.lastFeeTime),
+      state.receiptPolicy,
     ]),
   );
 }

@@ -150,6 +150,7 @@ export async function buildAccrual(params: {
       state.treasury,
       fee.treasurySharesAfter,
       BigInt(settledAt),
+      state.receiptPolicy,
     ]),
   );
   const redeemer = Data.to(new Constr(REDEEMER_ACCRUE, [params.amountLovelace]));
