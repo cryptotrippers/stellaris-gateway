@@ -45,6 +45,25 @@ export const Route = createFileRoute("/operators")({
 interface AssetLite {
   id: string;
   name: string;
+  data_source: string;
+  funding_status: string;
+}
+
+/**
+ * A vault may only be bootstrapped against an asset with real provenance:
+ * either it was created by an executed `fund_asset` governance proposal, or it
+ * is an explicitly flagged on-chain pilot. Anything else (imported, demo or
+ * draft rows) is refused so no vault can be pointed at a fabricated asset.
+ */
+function approvalReason(
+  asset: AssetLite,
+  governanceApproved: Set<string>,
+): { ok: true; label: string } | { ok: false; label: string } {
+  if (governanceApproved.has(asset.id)) return { ok: true, label: "governance approved" };
+  if (asset.data_source === "onchain_preprod" && asset.funding_status === "pilot") {
+    return { ok: true, label: "testnet pilot" };
+  }
+  return { ok: false, label: "no approved funding request" };
 }
 
 function OperatorConsole() {
@@ -60,12 +79,22 @@ function OperatorConsole() {
   });
 
   const [assets, setAssets] = useState<AssetLite[] | null>(null);
+  const [approvedIds, setApprovedIds] = useState<Set<string>>(new Set());
   useEffect(() => {
     supabase
       .from("assets")
-      .select("id, name")
+      .select("id, name, data_source, funding_status")
       .order("name")
       .then(({ data }) => setAssets((data as AssetLite[] | null) ?? []));
+    supabase
+      .from("funding_requests")
+      .select("asset_id, status")
+      .eq("status", "asset_created")
+      .then(({ data }) =>
+        setApprovedIds(
+          new Set(((data ?? []) as { asset_id: string | null }[]).flatMap((r) => (r.asset_id ? [r.asset_id] : []))),
+        ),
+      );
   }, []);
 
   const roles = rolesQ.data?.roles ?? [];
@@ -75,7 +104,10 @@ function OperatorConsole() {
   const canBootstrap = isAdmin && master.ok;
 
   const registered = new Set((vaultsQ.data ?? []).map((v) => v.asset_id));
-  const unbootstrapped = (assets ?? []).filter((a) => !registered.has(a.id));
+  const candidates = (assets ?? []).filter((a) => !registered.has(a.id));
+  const eligible = candidates.filter((a) => approvalReason(a, approvedIds).ok);
+  const blocked = candidates.filter((a) => !approvalReason(a, approvedIds).ok);
+
 
 
   return (
