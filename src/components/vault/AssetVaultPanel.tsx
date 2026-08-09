@@ -27,7 +27,7 @@ export function AssetVaultPanel({ assetId }: { assetId: string }) {
 
   // Always read the chain at the address the *current* validators derive, so a
   // stale registry row can never make this card describe a dead script.
-  const { derived, effectiveAddress, isStale } = useDerivedVaultAddress(
+  const { derived, effectiveAddress, isStale, error: deriveError } = useDerivedVaultAddress(
     assetId,
     vault?.script_address ?? null,
   );
@@ -59,6 +59,13 @@ export function AssetVaultPanel({ assetId }: { assetId: string }) {
 
       {vault && (
         <>
+          {deriveError && (
+            <p className="mt-4 rounded-md border border-border bg-secondary/40 p-3 text-xs text-muted-foreground">
+              This address could not be verified against the current validator in your browser, so
+              it is shown exactly as registered. Re-check before sending funds.
+            </p>
+          )}
+
           {isStale && derived && (
             <VaultAddressDriftNotice
               registryAddress={vault.script_address}
