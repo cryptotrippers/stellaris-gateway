@@ -17,7 +17,7 @@ export const YIELD_VAULT_VERSION = 3n;
 
 /** Hash of the *unapplied* yield_vault validator from plutus.json. */
 export const YIELD_BLUEPRINT_HASH =
-  "623678fe6de5b685b6d287c185c0da8a25a495a95742760a0c6e6fe7";
+  "ff755a8ef4fd16a01a0fd6bab6e1e2217df0b67b2ef726e7fd3e022a";
 
 /** Compiled CBOR of the *unapplied* yield_vault validator (PlutusV3). */
 import yieldBlueprintSource from "../../contracts/vault/plutus.json?raw";
@@ -35,6 +35,28 @@ if (!yieldValidator?.compiledCode) {
 }
 
 export const YIELD_BLUEPRINT_CBOR = yieldValidator.compiledCode;
+
+/**
+ * Stage 6 — receipt token policy.
+ *
+ * `receipt.ak` is parameterized by `(applied_yield_vault_hash, asset_id)`, and
+ * the vault in turn stores the resulting policy id in its State datum, so a
+ * deposit MUST mint and a withdrawal MUST burn exactly the depositor-share
+ * delta. There is no hash cycle: the vault's own hash depends only on
+ * `(version, asset_id)`.
+ */
+export const RECEIPT_BLUEPRINT_HASH =
+  "ae6bf02ede5ed0aa23d619400208fca63f4dba372a69b7ae7e01862d";
+
+const receiptValidator = yieldBlueprint.validators?.find(
+  (validator) => validator.title === "receipt.receipt.mint",
+);
+
+if (!receiptValidator?.compiledCode) {
+  throw new Error("The receipt blueprint is missing compiledCode.");
+}
+
+export const RECEIPT_BLUEPRINT_CBOR = receiptValidator.compiledCode;
 
 export interface AppliedYieldVault {
   cbor: string;
@@ -93,6 +115,79 @@ export function getYieldVaultScript(lucidMod: unknown, assetId: string): Applied
       `asset=${assetId} → hash=${scriptHash} addr=${address}`,
   );
   return applied;
+}
+
+export interface AppliedReceiptPolicy {
+  cbor: string;
+  policyId: string;
+  /** Token name (hex) — always the vault's asset id. */
+  assetNameHex: string;
+  /** `policyId + assetNameHex`, the Lucid unit for the receipt token. */
+  unit: string;
+  type: "PlutusV3";
+}
+
+const receiptCache = new Map<string, AppliedReceiptPolicy>();
+
+/**
+ * Derive the receipt minting policy bound to this asset's yield vault. The
+ * unapplied blueprint is re-hashed and checked against the pin first, exactly
+ * like the vault, so a stale artifact can never be attached to a signed tx.
+ */
+export function getReceiptPolicy(lucidMod: unknown, assetId: string): AppliedReceiptPolicy {
+  const cached = receiptCache.get(assetId);
+  if (cached) return cached;
+
+  const { applyParamsToScript, validatorToScriptHash, fromText } = lucidMod as LucidModLike;
+
+  const unappliedHash = validatorToScriptHash({
+    type: "PlutusV3",
+    script: RECEIPT_BLUEPRINT_CBOR,
+  });
+  if (unappliedHash !== RECEIPT_BLUEPRINT_HASH) {
+    throw new Error(
+      `Receipt policy blueprint mismatch: compiled artifact hashes to ${unappliedHash}, ` +
+        `but the verified pin is ${RECEIPT_BLUEPRINT_HASH}. Rebuild the Aiken contracts ` +
+        `and re-pin RECEIPT_BLUEPRINT_HASH before signing any transaction.`,
+    );
+  }
+
+  const vault = getYieldVaultScript(lucidMod, assetId);
+  const assetNameHex = fromText(assetId);
+  const cbor = applyParamsToScript(RECEIPT_BLUEPRINT_CBOR, [vault.scriptHash, assetNameHex]);
+  const policyId = validatorToScriptHash({ type: "PlutusV3", script: cbor });
+
+  const applied: AppliedReceiptPolicy = {
+    cbor,
+    policyId,
+    assetNameHex,
+    unit: `${policyId}${assetNameHex}`,
+    type: "PlutusV3",
+  };
+  receiptCache.set(assetId, applied);
+  return applied;
+}
+
+/**
+ * Refuse to transact against a vault whose datum points at a different receipt
+ * policy than the one this build derives.
+ */
+export function assertReceiptPolicy(
+  policy: AppliedReceiptPolicy,
+  datumPolicy: string | null | undefined,
+): void {
+  const onChain = (datumPolicy ?? "").toLowerCase();
+  if (!onChain) {
+    throw new Error(
+      "This vault's state datum carries no receipt policy — it predates Stage 6 and must be re-bootstrapped.",
+    );
+  }
+  if (onChain !== policy.policyId) {
+    throw new Error(
+      `Receipt policy drift: the vault datum is bound to ${onChain}, but this build derives ` +
+        `${policy.policyId}. Re-bootstrap the vault before transacting.`,
+    );
+  }
 }
 
 /**
