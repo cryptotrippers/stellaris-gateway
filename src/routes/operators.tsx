@@ -198,13 +198,36 @@ function OperatorConsole() {
         </div>
       </section>
 
+      {blocked.length > 0 && (
+        <div className="mt-6 flex items-start gap-3 rounded-lg border border-warning/40 bg-warning/10 p-4 text-sm">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+          <div>
+            <div className="font-medium text-foreground">
+              {blocked.length} asset{blocked.length === 1 ? "" : "s"} cannot be bootstrapped
+            </div>
+            <ul className="mt-1 space-y-0.5 text-muted-foreground">
+              {blocked.map((a) => (
+                <li key={a.id}>
+                  <span className="font-mono text-[11px]">{a.id}</span> — {approvalReason(a, approvedIds).label}
+                </li>
+              ))}
+            </ul>
+            <div className="mt-2 text-muted-foreground">
+              An asset becomes eligible once a funding request for it passes governance and the
+              proposal is executed.
+            </div>
+          </div>
+        </div>
+      )}
+
       <BootstrapForm
-        assets={unbootstrapped}
+        assets={eligible}
         disabled={!canBootstrap}
         onDone={() => {
           vaultsQ.refetch();
         }}
       />
+
 
       <RebootstrapVaultCard
         vaults={vaultsQ.data ?? []}
