@@ -70,7 +70,11 @@ function FundingPage() {
             <article key={r.id} className="card-institutional p-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-base font-medium text-foreground">{r.name}</h2>
+                  <h2 className="text-base font-medium text-foreground">
+                    <Link to="/funding/$id" params={{ id: r.asset_slug }} className="hover:text-primary">
+                      {r.name}
+                    </Link>
+                  </h2>
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {r.category} · {r.issuer}
                     {r.location ? ` · ${r.location}` : ""}
@@ -120,9 +124,13 @@ function FundingPage() {
                   Under governance review <ArrowRight className="h-3 w-3" />
                 </Link>
               ) : (
-                <p className="mt-4 text-[11px] text-muted-foreground">
-                  Not yet linked to a governance proposal.
-                </p>
+                <Link
+                  to="/funding/$id"
+                  params={{ id: r.asset_slug }}
+                  className="mt-4 inline-flex items-center gap-1.5 text-xs text-primary"
+                >
+                  Review &amp; propose <ArrowRight className="h-3 w-3" />
+                </Link>
               )}
             </article>
           ))}

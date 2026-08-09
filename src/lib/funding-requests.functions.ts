@@ -174,3 +174,76 @@ export const submitFundingRequest = createServerFn({ method: "POST" })
     }
     return row as FundingRequestRow;
   });
+
+/**
+ * Promote a submitted funding request to a governance proposal.
+ *
+ * The numbers on the proposal are read fresh from the funding_requests row —
+ * the caller supplies nothing but the request id — so a proposal can never
+ * claim terms different from what was actually put up for review.
+ */
+export const proposeFundingForGovernance = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { fundingRequestId: string }) => {
+    const id = (data?.fundingRequestId ?? "").trim();
+    if (!id) throw new Error("fundingRequestId is required");
+    return { fundingRequestId: id };
+  })
+  .handler(async ({ data, context }): Promise<{ sipNumber: string; proposalId: string }> => {
+    const { data: row, error } = await context.supabase
+      .from("funding_requests")
+      .select(`${COLS}, submitted_by`)
+      .eq("id", data.fundingRequestId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) throw new Error("That funding request does not exist.");
+
+    const req = row as FundingRequestRow & { submitted_by: string };
+
+    if (req.status !== "submitted") {
+      throw new Error(
+        `This request is "${req.status}" — only requests still under review can be proposed.`,
+      );
+    }
+    if (req.proposal_id) {
+      throw new Error(
+        "This request already has a governance proposal. Resubmission after a rejection is a human decision, not an automatic new proposal.",
+      );
+    }
+
+    if (req.submitted_by !== context.userId) {
+      const { data: isAdmin, error: roleErr } = await context.supabase.rpc("has_role", {
+        _user_id: context.userId,
+        _role: "admin",
+      } as never);
+      if (roleErr) throw new Error(roleErr.message);
+      if (!isAdmin) {
+        throw new Error("Only the submitter or an admin can propose this request for a vote.");
+      }
+    }
+
+    const { createVaultProposal } = await import("./governance-vault.functions");
+
+    const body =
+      (req.description ?? "").trim() ||
+      `${req.name} — funding request submitted by ${req.issuer}.`;
+
+    const proposal = await createVaultProposal({
+      data: {
+        title: `Fund: ${req.name}`.slice(0, 160),
+        body,
+        kind: "fund_asset",
+        assetId: null,
+        params: { funding_request_id: req.id },
+      },
+    });
+
+    const { error: updErr } = await context.supabase
+      .from("funding_requests")
+      .update({ proposal_id: proposal.id, status: "proposed" })
+      .eq("id", req.id)
+      .eq("status", "submitted");
+    if (updErr) throw new Error(updErr.message);
+
+    return { sipNumber: proposal.sipNumber, proposalId: proposal.id };
+  });

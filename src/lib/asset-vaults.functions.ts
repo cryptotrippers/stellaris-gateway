@@ -19,6 +19,9 @@ import {
   type AssetVaultRow,
   assertRole,
   normaliseCommittee,
+  insertFeeSchedule,
+  FEE_COLS,
+  type VaultFeeScheduleRow,
 } from "./asset-vaults.shared";
 
 export type { AssetVaultRow } from "./asset-vaults.shared";
@@ -140,21 +143,7 @@ export const registerAssetVault = createServerFn({ method: "POST" })
 // Management fee schedule
 // ---------------------------------------------------------------------------
 
-export interface VaultFeeScheduleRow {
-  id: string;
-  asset_id: string;
-  vault_version: number;
-  network: string;
-  fee_bps: number;
-  treasury_address: string;
-  treasury_pkh: string | null;
-  set_tx_hash: string | null;
-  proposal_id: string | null;
-  created_at: string;
-}
-
-const FEE_COLS =
-  "id, asset_id, vault_version, network, fee_bps, treasury_address, treasury_pkh, set_tx_hash, proposal_id, created_at";
+export type { VaultFeeScheduleRow } from "./asset-vaults.shared";
 
 /** Fee rate in force for an asset's vault, newest first. Public. */
 export const getVaultFeeSchedule = createServerFn({ method: "GET" })
@@ -216,20 +205,5 @@ export const recordVaultFeeSchedule = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }): Promise<VaultFeeScheduleRow> => {
     await assertRole(context.supabase, context.userId, "admin");
-    const { data: row, error } = await context.supabase
-      .from("vault_fee_schedules")
-      .insert({
-        asset_id: data.assetId,
-        vault_version: data.vaultVersion,
-        network: data.network,
-        fee_bps: data.feeBps,
-        treasury_address: data.treasuryAddress,
-        treasury_pkh: data.treasuryPkh,
-        set_tx_hash: data.setTxHash,
-        proposal_id: data.proposalId,
-      })
-      .select(FEE_COLS)
-      .single();
-    if (error) throw new Error(error.message);
-    return row as VaultFeeScheduleRow;
+    return insertFeeSchedule(context.supabase, data);
   });

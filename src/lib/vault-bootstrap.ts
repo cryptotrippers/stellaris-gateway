@@ -10,7 +10,7 @@
  */
 
 import { checkVaultPreconditions, initLucidWithWallet } from "./vault";
-import { getYieldVaultScript, YIELD_VAULT_VERSION } from "./yield-vault";
+import { getReceiptPolicy, getYieldVaultScript, YIELD_VAULT_VERSION } from "./yield-vault";
 import { feeBpsOk, MAX_FEE_BPS } from "./vault-fees";
 
 export interface BootstrapParams {
@@ -38,6 +38,8 @@ export interface BootstrapResult {
   feeBps: number;
   treasuryPkh: string;
   lastFeeTime: number;
+  /** Receipt minting policy id written into the vault's state datum. */
+  receiptPolicy: string;
 }
 
 const HEX28 = /^[0-9a-f]{56}$/;
@@ -104,6 +106,7 @@ export async function bootstrapYieldVault(params: BootstrapParams): Promise<Boot
 
   const { lucid, lucidMod } = await initLucidWithWallet();
   const script = getYieldVaultScript(lucidMod, params.assetId);
+  const receipt = getReceiptPolicy(lucidMod, params.assetId);
 
   const { Data, Constr } = lucidMod as unknown as {
     Data: { to: (v: unknown) => string };
@@ -131,7 +134,8 @@ export async function bootstrapYieldVault(params: BootstrapParams): Promise<Boot
   const lastFeeTime = Date.now();
 
   // State { total_shares, total_assets, epoch, operators, threshold, paused,
-  //         fee_bps, treasury, treasury_shares, last_fee_time }
+  //         fee_bps, treasury, treasury_shares, last_fee_time,
+  //         receipt_policy }
   // is constructor index 1 of YieldDatum.
   const datum = Data.to(
     new Constr(1, [
@@ -145,6 +149,7 @@ export async function bootstrapYieldVault(params: BootstrapParams): Promise<Boot
       treasuryPkh,
       0n,
       BigInt(lastFeeTime),
+      receipt.policyId,
     ]),
   );
 
@@ -168,5 +173,6 @@ export async function bootstrapYieldVault(params: BootstrapParams): Promise<Boot
     feeBps,
     treasuryPkh,
     lastFeeTime,
+    receiptPolicy: receipt.policyId,
   };
 }
