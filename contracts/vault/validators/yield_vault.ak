@@ -295,6 +295,7 @@ validator yield_vault(_version: Int, asset_id: ByteArray) {
         treasury,
         treasury_shares,
         last_fee_time,
+        receipt_policy,
       } -> {
         expect Some(next) = sole_state(outs)
         expect State {
@@ -308,6 +309,7 @@ validator yield_vault(_version: Int, asset_id: ByteArray) {
           treasury: n_treasury,
           treasury_shares: n_treasury_shares,
           last_fee_time: n_last_fee_time,
+          receipt_policy: n_receipt_policy,
         } = next
 
         let acc = VaultAccounting { total_shares, total_assets }
@@ -317,6 +319,12 @@ validator yield_vault(_version: Int, asset_id: ByteArray) {
         let shares_in = position_shares(ins)
         let shares_out = position_shares(outs)
         let shares_delta = shares_out - shares_in
+
+        // Stage 6: net receipts minted (positive) or burned (negative) under
+        // the vault's bound policy, for this vault's token name.
+        let receipt_delta =
+          assets.quantity_of(tx.mint, receipt_policy, asset_id)
+
 
         // Structural rules that hold for EVERY action.
         //
