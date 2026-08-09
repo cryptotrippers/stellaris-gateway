@@ -537,6 +537,11 @@ export function DeploymentWizard() {
   );
 }
 
+function sfm02MatchLabel(result: { registeredAddress: string | null; addressMatches: boolean }): string {
+  if (result.registeredAddress === null) return "No registry entry";
+  return result.addressMatches ? "Matches registry" : "Registry is stale";
+}
+
 function VerificationResult({
   label,
   ok,
