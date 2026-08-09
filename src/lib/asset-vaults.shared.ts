@@ -75,3 +75,76 @@ export function normaliseCommittee(operators: string[], threshold: number): stri
   }
   return list;
 }
+
+// ---------------------------------------------------------------------------
+// Management fee schedule (shared so governance execution reuses the same
+// validation and insert as the operator-facing server function).
+// ---------------------------------------------------------------------------
+
+export interface VaultFeeScheduleRow {
+  id: string;
+  asset_id: string;
+  vault_version: number;
+  network: string;
+  fee_bps: number;
+  treasury_address: string;
+  treasury_pkh: string | null;
+  set_tx_hash: string | null;
+  proposal_id: string | null;
+  created_at: string;
+}
+
+export const FEE_COLS =
+  "id, asset_id, vault_version, network, fee_bps, treasury_address, treasury_pkh, set_tx_hash, proposal_id, created_at";
+
+export interface FeeScheduleInput {
+  assetId: string;
+  vaultVersion: number;
+  network?: string;
+  feeBps: number;
+  treasuryAddress: string;
+  treasuryPkh?: string | null;
+  setTxHash?: string | null;
+  proposalId?: string | null;
+}
+
+const TX_HASH = /^[0-9a-f]{64}$/;
+
+/** Validate and normalise fee terms before they are mirrored into the table. */
+export function normaliseFeeSchedule(data: FeeScheduleInput) {
+  if (!data?.assetId) throw new Error("assetId is required");
+  if (!Number.isInteger(data.feeBps) || data.feeBps < 0 || data.feeBps > 500) {
+    throw new Error("feeBps must be a whole number between 0 and 500");
+  }
+  if (!data.treasuryAddress) throw new Error("A treasury address is required");
+  if (data.setTxHash && !TX_HASH.test(data.setTxHash)) {
+    throw new Error("Invalid transaction hash");
+  }
+  if (data.treasuryPkh && !HEX28.test(data.treasuryPkh)) {
+    throw new Error("Invalid treasury key hash");
+  }
+  return {
+    asset_id: data.assetId,
+    vault_version: data.vaultVersion,
+    network: data.network === "mainnet" ? "mainnet" : "preprod",
+    fee_bps: data.feeBps,
+    treasury_address: data.treasuryAddress,
+    treasury_pkh: data.treasuryPkh ?? null,
+    set_tx_hash: data.setTxHash ?? null,
+    proposal_id: data.proposalId ?? null,
+  };
+}
+
+/** Insert a fee schedule row as the caller (row-level rules still apply). */
+export async function insertFeeSchedule(
+  supabase: SupabaseClient<Database>,
+  data: FeeScheduleInput,
+): Promise<VaultFeeScheduleRow> {
+  const { data: row, error } = await supabase
+    .from("vault_fee_schedules")
+    .insert(normaliseFeeSchedule(data) as never)
+    .select(FEE_COLS)
+    .single();
+  if (error) throw new Error(error.message);
+  return row as unknown as VaultFeeScheduleRow;
+}
