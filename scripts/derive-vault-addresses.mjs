@@ -56,7 +56,11 @@ const yVersionMatch = ysrc.match(/YIELD_VAULT_VERSION\s*=\s*(\d+)n/);
 if (!yVersionMatch) throw new Error("Could not read YIELD_VAULT_VERSION");
 const Y_VERSION = BigInt(yVersionMatch[1]);
 const Y_HASH = ypin("YIELD_BLUEPRINT_HASH");
-const Y_CBOR = ypin("YIELD_BLUEPRINT_CBOR");
+// The yield blueprint CBOR is imported from plutus.json at runtime by the app,
+// so read it from the same artifact here instead of a literal pin.
+const Y_CBOR = JSON.parse(
+  readFileSync(new URL("../contracts/vault/plutus.json", import.meta.url), "utf8"),
+).validators.find((v) => v.title === "yield_vault.yield_vault.spend").compiledCode;
 
 console.log(`[derive-yield-addresses] version=${Y_VERSION}`);
 console.log(`[derive-yield-addresses] blueprint hash=${Y_HASH}`);
