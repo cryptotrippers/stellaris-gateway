@@ -562,6 +562,26 @@ export function DeploymentWizard() {
   );
 }
 
+function VerificationResult({
+  label,
+  ok,
+  value,
+}: {
+  label: string;
+  ok: boolean;
+  value: string;
+}) {
+  return (
+    <div className={`rounded-lg border p-3 ${ok ? "border-primary/30 bg-primary/5" : "border-warning/30 bg-warning/10"}`}>
+      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</div>
+      <div className={`mt-1 text-xs font-semibold ${ok ? "text-primary" : "text-warning-foreground"}`}>
+        {ok ? <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" /> : <AlertTriangle className="mr-1 inline h-3.5 w-3.5" />}
+        {value}
+      </div>
+    </div>
+  );
+}
+
 function Step({
   index,
   title,
