@@ -1131,8 +1131,10 @@ test accrue_cannot_overcharge_the_fee() {
   !yield_vault.spend(t_version, t_asset, Some(s0), Accrue { amount: 2_000_000 }, state_ref, t)
 }
 
-test accrue_needs_a_bounded_validity_range() {
+test accrue_needs_a_bounded_validity_range() fail {
   // An unbounded lower bound would let operators claim arbitrary elapsed time.
+  // The validator aborts on the missing finite bound, so the tx is rejected;
+  // this is an expected-failure test rather than a `False` result.
   let s0 = fee_state(1_000_000_000, 1_000_000_000, 7, 100, 0, ms_per_year)
   let s1 =
     fee_state(1_000_000_000 + fee_year_shares, 1_002_000_000, 8, 100, fee_year_shares, 0)
@@ -1143,7 +1145,7 @@ test accrue_needs_a_bounded_validity_range() {
       outputs: [out(vault_addr(), 1_002_000_000, s1)],
       extra_signatories: [op1, op2],
     }
-  !yield_vault.spend(t_version, t_asset, Some(s0), Accrue { amount: 2_000_000 }, state_ref, t)
+  yield_vault.spend(t_version, t_asset, Some(s0), Accrue { amount: 2_000_000 }, state_ref, t)
 }
 
 test fee_rate_can_be_set_within_the_cap() {
