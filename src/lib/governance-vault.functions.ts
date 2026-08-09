@@ -12,6 +12,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { publicSupabase } from "./asset-vaults.shared";
 import { BECH32_ADDRESS_RE, TX_HASH_RE } from "./yield-chain-decode";
 import {
+  MAX_FEE_BPS,
   PROPOSAL_COLUMNS,
   PROPOSAL_KINDS,
   nextSipNumber,
@@ -124,7 +125,7 @@ export const createVaultProposal = createServerFn({ method: "POST" })
         body: data.body,
         kind: data.kind,
         asset_id: data.assetId,
-        params: data.params as never,
+        params: params as never,
         author_user_id: context.userId,
         status: "active",
         votes_for_pct: 0,
