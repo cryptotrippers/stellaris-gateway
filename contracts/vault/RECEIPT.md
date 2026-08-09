@@ -2,8 +2,8 @@
 
 Status: **Step 2 complete — the vault now REQUIRES the receipt mint.**
 
-Breaking: `yield_vault` moved to `ff755a8ef4fd16a01a0fd6bab6e1e2217df0b67b2ef726e7fd3e022a`
-(was `623678fe…`), every applied address changed, and the State datum gained an
+Breaking: `yield_vault` moved to `e34414de8570158a207577dee9d1e77f6788154bff5057168f73e696`
+(was `ff755a8e…`, and `623678fe…` before Stage 6), every applied address changed, and the State datum gained an
 11th field. Any position at an old address must be withdrawn using the previous
 build before the registry is re-bootstrapped.
 
