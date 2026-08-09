@@ -40,6 +40,15 @@ jobs:
         working-directory: contracts/vault
         run: aiken build
 
+      - name: Committed plutus.json must equal the fresh build
+        run: |
+          if ! git diff --quiet -- contracts/vault/plutus.json; then
+            echo "::error::contracts/vault/plutus.json is stale — it does not match a clean 'aiken build'."
+            git --no-pager diff --stat -- contracts/vault/plutus.json
+            echo "Run 'aiken build' in contracts/vault and commit the regenerated plutus.json."
+            exit 1
+          fi
+
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
