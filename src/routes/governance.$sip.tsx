@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, ExternalLink, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/StatusBadge";
 import { cardanoscanTx, short } from "@/lib/chain-format";
@@ -21,6 +21,8 @@ import {
   type ProposalOutcome,
 } from "@/lib/governance-outcome.shared";
 import { getEligibleWeights } from "@/lib/governance-eligibility.functions";
+import { getMyRoles } from "@/lib/asset-vaults.functions";
+import { recordProposalExecution } from "@/lib/governance-vault.functions";
 import type { TxChainTime } from "@/lib/governance-chain.functions";
 
 export const Route = createFileRoute("/governance/$sip")({
@@ -152,6 +154,8 @@ function ProposalDetailPage() {
         <VotingStatusCard tally={tally} loading={gov.talliesLoading} outcome={outcome} />
         <QuorumCard outcome={outcome} eligibleUnknown={eligibleQ.isLoading} />
       </section>
+
+      {proposal.status === "passed" && <ExecuteCard proposal={proposal} />}
 
       <section className="mt-4 grid gap-4 md:grid-cols-2">
         <ExecutionCard proposal={proposal} outcome={outcome} chainTime={chainTime} />
@@ -403,6 +407,93 @@ function QuorumCard({
         </div>
       )}
     </div>
+  );
+}
+
+const EXECUTE_LABEL: Record<string, string> = {
+  fund_asset: "Create asset from this proposal",
+  set_fee: "Apply new fee schedule",
+  accrue: "Record execution transaction",
+};
+
+function ExecuteCard({ proposal }: { proposal: ProposalRow }) {
+  const queryClient = useQueryClient();
+  const [txHash, setTxHash] = useState("");
+  const [result, setResult] = useState<{ ok: boolean; reason: string } | null>(null);
+
+  const rolesQ = useQuery({
+    queryKey: ["my-roles"],
+    queryFn: () => getMyRoles(),
+    staleTime: 60_000,
+    retry: false,
+  });
+  const roles = rolesQ.data?.roles ?? [];
+  const isAdmin = roles.includes("admin");
+  const canExecute =
+    proposal.kind === "fund_asset" ? isAdmin : isAdmin || roles.includes("operator");
+
+  const exec = useMutation({
+    mutationFn: () =>
+      recordProposalExecution({
+        data: {
+          proposalId: proposal.id,
+          txHash: proposal.kind === "accrue" ? txHash.trim() : null,
+        },
+      }),
+    onSuccess: (r) => {
+      setResult(r);
+      if (r.ok) void queryClient.invalidateQueries();
+    },
+    onError: (e: Error) => setResult({ ok: false, reason: e.message }),
+  });
+
+  const label = EXECUTE_LABEL[proposal.kind] ?? "Record execution transaction";
+
+  return (
+    <section className="card-institutional mt-4 p-5">
+      <h2 className="text-[10px] uppercase tracking-widest text-muted-foreground">Execution</h2>
+
+      {!canExecute ? (
+        <p className="mt-2 text-xs text-muted-foreground">
+          This proposal has passed and is awaiting execution by{" "}
+          {proposal.kind === "fund_asset" ? "an administrator" : "an operator"}.
+        </p>
+      ) : (
+        <>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {proposal.kind === "accrue"
+              ? "Paste the transaction that carried out this accrual. It is verified against the vault before anything is recorded."
+              : "There is no chain transaction for this kind — executing writes the approved terms into the registry in one all-or-nothing step."}
+          </p>
+
+          {proposal.kind === "accrue" && (
+            <input
+              value={txHash}
+              onChange={(e) => setTxHash(e.target.value)}
+              placeholder="Transaction hash"
+              spellCheck={false}
+              className="mt-3 w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-xs text-foreground"
+            />
+          )}
+
+          <button
+            type="button"
+            onClick={() => exec.mutate()}
+            disabled={exec.isPending || (proposal.kind === "accrue" && txHash.trim().length !== 64)}
+            className="mt-3 inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+          >
+            {exec.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            {label}
+          </button>
+        </>
+      )}
+
+      {result && (
+        <p className={`mt-3 text-xs ${result.ok ? "text-success" : "text-destructive"}`}>
+          {result.reason}
+        </p>
+      )}
+    </section>
   );
 }
 
