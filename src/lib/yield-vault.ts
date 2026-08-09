@@ -66,6 +66,11 @@ export interface AppliedYieldVault {
   type: "PlutusV3";
 }
 
+/**
+ * Applied-script cache. Keys embed the pinned blueprint hash and version so a
+ * contract change can never be served an address derived from a previous
+ * build — the entry simply does not match.
+ */
 const appliedCache = new Map<string, AppliedYieldVault>();
 
 type LucidModLike = {
@@ -80,7 +85,8 @@ type LucidModLike = {
  * applied script + its address on the active network. Cached per asset.
  */
 export function getYieldVaultScript(lucidMod: unknown, assetId: string): AppliedYieldVault {
-  const cached = appliedCache.get(assetId);
+  const cacheKey = `${YIELD_BLUEPRINT_HASH}:${String(YIELD_VAULT_VERSION)}:${assetId}`;
+  const cached = appliedCache.get(cacheKey);
   if (cached) return cached;
 
   const { applyParamsToScript, validatorToAddress, validatorToScriptHash, fromText } =
@@ -109,7 +115,7 @@ export function getYieldVaultScript(lucidMod: unknown, assetId: string): Applied
   const address = validatorToAddress(LUCID_NETWORK, validator);
 
   const applied: AppliedYieldVault = { cbor, scriptHash, address, assetId, type: "PlutusV3" };
-  appliedCache.set(assetId, applied);
+  appliedCache.set(cacheKey, applied);
   console.info(
     `[yield-vault] blueprint=${YIELD_BLUEPRINT_HASH} v${String(YIELD_VAULT_VERSION)} ` +
       `asset=${assetId} → hash=${scriptHash} addr=${address}`,
@@ -135,7 +141,8 @@ const receiptCache = new Map<string, AppliedReceiptPolicy>();
  * like the vault, so a stale artifact can never be attached to a signed tx.
  */
 export function getReceiptPolicy(lucidMod: unknown, assetId: string): AppliedReceiptPolicy {
-  const cached = receiptCache.get(assetId);
+  const cacheKey = `${RECEIPT_BLUEPRINT_HASH}:${YIELD_BLUEPRINT_HASH}:${String(YIELD_VAULT_VERSION)}:${assetId}`;
+  const cached = receiptCache.get(cacheKey);
   if (cached) return cached;
 
   const { applyParamsToScript, validatorToScriptHash, fromText } = lucidMod as LucidModLike;
@@ -164,7 +171,7 @@ export function getReceiptPolicy(lucidMod: unknown, assetId: string): AppliedRec
     unit: `${policyId}${assetNameHex}`,
     type: "PlutusV3",
   };
-  receiptCache.set(assetId, applied);
+  receiptCache.set(cacheKey, applied);
   return applied;
 }
 

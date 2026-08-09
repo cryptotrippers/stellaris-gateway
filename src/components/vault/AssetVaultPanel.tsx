@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, Landmark } from "lucide-react";
 import { getAssetVault } from "@/lib/asset-vaults.functions";
 import { getVaultChainState } from "@/lib/yield-chain.functions";
+import { useDerivedVaultAddress } from "@/hooks/useDerivedVaultAddress";
+import { VaultAddressDriftNotice } from "@/components/vault/VaultAddressDriftNotice";
 import {
   cardanoscanAddress,
   cardanoscanTx,
@@ -23,10 +25,17 @@ export function AssetVaultPanel({ assetId }: { assetId: string }) {
   });
   const vault = vaultQ.data ?? null;
 
+  // Always read the chain at the address the *current* validators derive, so a
+  // stale registry row can never make this card describe a dead script.
+  const { derived, effectiveAddress, isStale, error: deriveError } = useDerivedVaultAddress(
+    assetId,
+    vault?.script_address ?? null,
+  );
+
   const stateQ = useQuery({
-    queryKey: ["vault-chain-state", vault?.script_address],
-    queryFn: () => getVaultChainState({ data: { address: vault!.script_address } }),
-    enabled: !!vault?.script_address,
+    queryKey: ["vault-chain-state", effectiveAddress],
+    queryFn: () => getVaultChainState({ data: { address: effectiveAddress! } }),
+    enabled: !!effectiveAddress,
     refetchInterval: 60_000,
     retry: 0,
   });
@@ -50,10 +59,28 @@ export function AssetVaultPanel({ assetId }: { assetId: string }) {
 
       {vault && (
         <>
+          {deriveError && (
+            <p className="mt-4 rounded-md border border-border bg-secondary/40 p-3 text-xs text-muted-foreground">
+              This address could not be verified against the current validator in your browser, so
+              it is shown exactly as registered. Re-check before sending funds.
+            </p>
+          )}
+
+          {isStale && derived && (
+            <VaultAddressDriftNotice
+              registryAddress={vault.script_address}
+              derivedAddress={derived.address}
+            />
+          )}
+
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <Row label="Network" value={vault.network} />
             <Row label="Vault version" value={`v${vault.vault_version}`} />
-            <Row label="Script hash" value={short(vault.script_hash, 10, 6)} mono />
+            <Row
+              label="Script hash"
+              value={short(derived?.scriptHash ?? vault.script_hash, 10, 6)}
+              mono
+            />
             <Row
               label="Committee"
               value={`${vault.signature_threshold}-of-${vault.operator_key_hashes.length}`}
@@ -62,7 +89,7 @@ export function AssetVaultPanel({ assetId }: { assetId: string }) {
 
           <div className="mt-3 flex flex-wrap items-center gap-3 text-xs">
             <a
-              href={cardanoscanAddress(vault.script_address)}
+              href={cardanoscanAddress(effectiveAddress ?? vault.script_address)}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 font-medium text-primary"
@@ -92,7 +119,8 @@ export function AssetVaultPanel({ assetId }: { assetId: string }) {
             )}
             {stateQ.data && !stateQ.data.found && (
               <p className="text-xs text-muted-foreground">
-                No State output found at this address yet.
+                No State output found at this address yet — the vault still needs to be
+                bootstrapped on the current script.
               </p>
             )}
             {stateQ.data?.found && stateQ.data.state && (
