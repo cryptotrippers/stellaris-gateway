@@ -242,7 +242,7 @@ fn lower_bound_time(tx: Transaction) -> Option<Int> {
 // Validator
 // ------------------------------------------------------------------
 
-validator yield_vault(_version: Int, _asset_id: ByteArray) {
+validator yield_vault(_version: Int, asset_id: ByteArray) {
   spend(
     datum: Option<YieldDatum>,
     redeemer: YieldRedeemer,
