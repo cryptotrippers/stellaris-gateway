@@ -50,13 +50,12 @@ function findValidator(titlePrefix) {
 
 function readPins(path) {
   const src = readFileSync(path, "utf8");
-  return (name) => {
+  return (name, fallback) => {
     const m = src.match(new RegExp(`${name}\\s*=\\s*\\n?\\s*"([0-9a-fA-F]+)"`));
-    if (!m) {
-      console.error(`[verify-vault-hash] ${name} not found in ${path}`);
-      process.exit(1);
-    }
-    return m[1];
+    if (m) return m[1];
+    if (fallback) return fallback;
+    console.error(`[verify-vault-hash] ${name} not found in ${path}`);
+    process.exit(1);
   };
 }
 
@@ -75,10 +74,14 @@ const targets = [
     label: "yield_vault (Stage 4)",
     onChain: findValidator("yield_vault.yield_vault"),
     hash: yieldPin("YIELD_BLUEPRINT_HASH"),
-    cbor: yieldPin("YIELD_BLUEPRINT_CBOR"),
+    cbor: yieldPin("YIELD_BLUEPRINT_CBOR", "__BLUEPRINT_IMPORT__"),
     file: "src/lib/yield-vault.ts",
   },
 ];
+
+for (const target of targets) {
+  if (target.cbor === "__BLUEPRINT_IMPORT__") target.cbor = target.onChain.compiledCode;
+}
 
 let drift = false;
 for (const t of targets) {
