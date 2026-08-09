@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Check, Copy, Info, Leaf, Link2, TrendingUp, Users } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
+import { DeploymentWizard } from "@/components/deploy/DeploymentWizard";
 import { Badge } from "@/components/ui/StatusBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { buildInviteUrl, getInviteStats, getMyCode, isReferralConfirmed } from "@/lib/referral";
@@ -218,6 +219,8 @@ function Stewardship() {
 
         <StewardReferralCard />
       </div>
+
+      <DeploymentWizard />
 
       <p className="mt-6 text-[11px] text-muted-foreground">
         Steward activity measures education and distribution reach. It is deliberately kept separate
