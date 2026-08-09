@@ -53,5 +53,9 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Install JS dependencies (verify script needs @noble/hashes)
+        run: bun install --frozen-lockfile
+
       - name: Verify pinned blueprints match plutus.json
         run: node scripts/verify-vault-hash.mjs --strict
+
