@@ -114,6 +114,33 @@ export const registerAssetVault = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<AssetVaultRow> => {
     await assertRole(context.supabase, context.userId, "admin");
 
+    // Gate: a vault may only be registered against a real, approved asset —
+    // one created by an executed fund_asset proposal, or an explicit pilot.
+    const { data: asset, error: assetErr } = await context.supabase
+      .from("assets")
+      .select("id, data_source, funding_status")
+      .eq("id", data.assetId)
+      .maybeSingle();
+    if (assetErr) throw new Error(assetErr.message);
+    if (!asset) throw new Error(`No asset "${data.assetId}" exists — it cannot be given a vault.`);
+
+    const { data: approvedReq, error: reqErr } = await context.supabase
+      .from("funding_requests")
+      .select("id")
+      .eq("asset_id", data.assetId)
+      .eq("status", "asset_created")
+      .limit(1);
+    if (reqErr) throw new Error(reqErr.message);
+
+    const isPilot = asset.data_source === "onchain_preprod" && asset.funding_status === "pilot";
+    if ((approvedReq?.length ?? 0) === 0 && !isPilot) {
+      throw new Error(
+        `"${data.assetId}" has no approved funding request. An asset must pass governance and have its funding proposal executed before a vault can be bootstrapped for it.`,
+      );
+    }
+
+
+
     const { data: row, error } = await context.supabase
       .from("asset_vaults")
       .upsert(
