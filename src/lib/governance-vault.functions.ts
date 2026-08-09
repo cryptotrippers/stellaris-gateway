@@ -67,6 +67,47 @@ export const createVaultProposal = createServerFn({ method: "POST" })
     },
   )
   .handler(async ({ data, context }): Promise<{ id: string; sipNumber: string }> => {
+    let params = data.params;
+
+    if (data.kind === "fund_asset") {
+      // Re-read the submitted funding request server-side: a proposal may never
+      // claim different numbers than what was actually put up for review.
+      const { data: fr, error: frErr } = await context.supabase
+        .from("funding_requests")
+        .select(
+          "id, asset_slug, target_lovelace, min_deposit_lovelace, proposed_fee_bps, treasury_address",
+        )
+        .eq("id", String(params["funding_request_id"]))
+        .maybeSingle();
+      if (frErr) throw new Error(frErr.message);
+      if (!fr) throw new Error("That funding request does not exist.");
+      const feeBps = Number(fr.proposed_fee_bps);
+      if (!Number.isInteger(feeBps) || feeBps < 0 || feeBps > MAX_FEE_BPS) {
+        throw new Error(`The requested fee must be between 0 and ${MAX_FEE_BPS} bps.`);
+      }
+      params = {
+        funding_request_id: fr.id,
+        asset_slug: fr.asset_slug,
+        target_lovelace: String(fr.target_lovelace),
+        min_deposit_lovelace: String(fr.min_deposit_lovelace),
+        proposed_fee_bps: feeBps,
+        treasury_address: fr.treasury_address ?? "",
+      };
+      if (!params["treasury_address"]) {
+        throw new Error("That funding request has no treasury address yet.");
+      }
+    }
+
+    if (data.kind === "set_fee") {
+      const { data: asset, error: aErr } = await context.supabase
+        .from("assets")
+        .select("id")
+        .eq("id", data.assetId!)
+        .maybeSingle();
+      if (aErr) throw new Error(aErr.message);
+      if (!asset) throw new Error("That asset does not exist.");
+    }
+
     const { data: existing, error: listErr } = await context.supabase
       .from("governance_proposals")
       .select("sip_number");
