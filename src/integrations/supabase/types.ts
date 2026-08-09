@@ -50,6 +50,7 @@ export type Database = {
           id: string
           network: string
           operator_key_hashes: string[]
+          ref_script_utxos: Json
           reporting_cadence: string | null
           script_address: string
           script_hash: string
@@ -65,6 +66,7 @@ export type Database = {
           id?: string
           network?: string
           operator_key_hashes?: string[]
+          ref_script_utxos?: Json
           reporting_cadence?: string | null
           script_address: string
           script_hash: string
@@ -80,6 +82,7 @@ export type Database = {
           id?: string
           network?: string
           operator_key_hashes?: string[]
+          ref_script_utxos?: Json
           reporting_cadence?: string | null
           script_address?: string
           script_hash?: string
