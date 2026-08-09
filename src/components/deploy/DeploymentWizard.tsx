@@ -103,6 +103,17 @@ export function DeploymentWizard() {
     stateTx: string | null;
   } | null>(null);
 
+  const [sfm02Verifying, setSfm02Verifying] = useState(false);
+  const [sfm02VerifyErr, setSfm02VerifyErr] = useState<string | null>(null);
+  const [sfm02Verified, setSfm02Verified] = useState<{
+    derivedAddress: string;
+    registeredAddress: string | null;
+    addressMatches: boolean;
+    found: boolean;
+    locked: string;
+    stateTx: string | null;
+  } | null>(null);
+
   const roles = rolesQ.data?.roles ?? [];
   const isAdmin = roles.includes("admin");
   const signedOut = Boolean(rolesQ.error);
