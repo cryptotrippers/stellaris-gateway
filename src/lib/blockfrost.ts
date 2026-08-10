@@ -12,7 +12,7 @@ import { useCallback, useEffect, useState } from "react";
  * traffic and rely on Blockfrost's per-project rate limiting.
  */
 
-const NETWORK = (import.meta.env.VITE_BLOCKFROST_NETWORK ?? "mainnet") as
+const NETWORK = (import.meta.env.VITE_BLOCKFROST_NETWORK ?? "preprod") as
   | "mainnet"
   | "preprod"
   | "preview";
