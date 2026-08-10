@@ -23,6 +23,7 @@ import {
   FEE_COLS,
   type VaultFeeScheduleRow,
 } from "./asset-vaults.shared";
+import { isValidatorKey, type ValidatorKey } from "./ref-scripts.shared";
 
 export type { AssetVaultRow } from "./asset-vaults.shared";
 
