@@ -144,6 +144,39 @@ export function DeploymentWizard() {
     [vaultsQ.data, assetId],
   );
 
+  const refScriptsQ = useQuery({
+    queryKey: ["ref-scripts", assetId, existing?.vault_version ?? null],
+    enabled: Boolean(existing),
+    queryFn: () =>
+      getReferenceScripts({
+        data: { assetId, vaultVersion: existing?.vault_version ?? 0 },
+      }),
+  });
+  const refScripts: Record<string, RefScriptEntry> = refScriptsQ.data ?? {};
+
+  async function runPublishRefScript(key: ValidatorKey) {
+    if (!existing) return;
+    setPublishing(key);
+    setPublishErr(null);
+    try {
+      const res = await publishReferenceScript(key, assetId);
+      await recordReferenceScript({
+        data: {
+          assetId,
+          vaultVersion: existing.vault_version,
+          validatorKey: key,
+          txHash: res.txHash,
+        },
+      });
+      await refScriptsQ.refetch();
+    } catch (e) {
+      setPublishErr(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPublishing(null);
+    }
+  }
+
+
   // Reset the downstream steps whenever the target asset changes.
   useEffect(() => {
     setDerived(null);
