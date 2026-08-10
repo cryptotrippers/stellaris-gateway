@@ -126,15 +126,16 @@ export const getVaultChainHistory = createServerFn({ method: "GET" })
     for (const tx of txs) {
       const detail = await bfGet<BfTxUtxos>(`/txs/${tx.tx_hash}/utxos`);
       if (!detail) continue;
-      for (const out of detail.outputs) {
-        if (out.address !== data.address) continue;
-        const decoded = readStateDatum(out.inline_datum);
-        if (decoded) {
-          points.push({ tx, state: decoded });
-          break;
-        }
-      }
+      // O-03: a transaction that pays two State-shaped outputs to the vault
+      // address is not a history point to guess at — refuse it loudly.
+      const decoded = detail.outputs
+        .filter((out) => out.address === data.address)
+        .map((out) => readStateDatum(out.inline_datum))
+        .filter((s): s is VaultStateDatum => s !== null);
+      const sole = soleStateOrThrow(decoded, data.address);
+      if (sole) points.push({ tx, state: sole });
     }
+
 
     const accruals = deriveAccruals(points);
 
