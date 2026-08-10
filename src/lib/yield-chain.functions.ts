@@ -21,6 +21,7 @@ import {
   readPositionDatum,
   readStateDatum,
   sharePriceOf,
+  soleStateOrThrow,
   type BfAddressTx,
   type BfTxUtxos,
   type BfUtxo,
@@ -53,21 +54,25 @@ export const getVaultChainState = createServerFn({ method: "GET" })
     const { bfGet } = await import("./blockfrost-fetch.server");
     const utxos = (await bfGet<BfUtxo[]>(`/addresses/${data.address}/utxos?count=100`)) ?? [];
 
-    let state: VaultStateDatum | null = null;
-    let stateUtxo: VaultChainState["stateUtxo"] = null;
+    const stateCandidates: Array<{
+      state: VaultStateDatum;
+      utxo: NonNullable<VaultChainState["stateUtxo"]>;
+    }> = [];
     const positions: VaultChainState["positions"] = [];
     let locked = 0n;
 
     for (const u of utxos) {
       locked += lovelaceOf(u);
       const asState = readStateDatum(u.inline_datum);
-      if (asState && !state) {
-        state = asState;
-        stateUtxo = {
-          txHash: u.tx_hash,
-          outputIndex: u.output_index,
-          lovelace: lovelaceOf(u).toString(),
-        };
+      if (asState) {
+        stateCandidates.push({
+          state: asState,
+          utxo: {
+            txHash: u.tx_hash,
+            outputIndex: u.output_index,
+            lovelace: lovelaceOf(u).toString(),
+          },
+        });
         continue;
       }
       const asPosition = readPositionDatum(u.inline_datum);
@@ -80,6 +85,11 @@ export const getVaultChainState = createServerFn({ method: "GET" })
         });
       }
     }
+
+    const sole = soleStateOrThrow(stateCandidates, data.address);
+    const state = sole?.state ?? null;
+    const stateUtxo = sole?.utxo ?? null;
+
 
     return {
       address: data.address,
@@ -116,15 +126,16 @@ export const getVaultChainHistory = createServerFn({ method: "GET" })
     for (const tx of txs) {
       const detail = await bfGet<BfTxUtxos>(`/txs/${tx.tx_hash}/utxos`);
       if (!detail) continue;
-      for (const out of detail.outputs) {
-        if (out.address !== data.address) continue;
-        const decoded = readStateDatum(out.inline_datum);
-        if (decoded) {
-          points.push({ tx, state: decoded });
-          break;
-        }
-      }
+      // O-03: a transaction that pays two State-shaped outputs to the vault
+      // address is not a history point to guess at — refuse it loudly.
+      const decoded = detail.outputs
+        .filter((out) => out.address === data.address)
+        .map((out) => readStateDatum(out.inline_datum))
+        .filter((s): s is VaultStateDatum => s !== null);
+      const sole = soleStateOrThrow(decoded, data.address);
+      if (sole) points.push({ tx, state: sole });
     }
+
 
     const accruals = deriveAccruals(points);
 
