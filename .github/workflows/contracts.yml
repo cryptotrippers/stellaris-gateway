@@ -24,13 +24,13 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "Using Aiken $version"
 
-      - name: Install Aiken
-        run: |
-          curl -sSfL https://install.aiken-lang.org | bash
-          echo "$HOME/.aiken/bin" >> "$GITHUB_PATH"
-
-      - name: Pin Aiken toolchain
-        run: aikup install ${{ steps.aiken.outputs.version }}
+      - name: Install pinned Aiken toolchain
+        uses: aiken-lang/setup-aiken@v1
+        with:
+          version: ${{ steps.aiken.outputs.version }}
+          # Use GitHub's short-lived workflow token to avoid unauthenticated
+          # release/API requests being throttled by GitHub.
+          github-token: ${{ github.token }}
 
       - name: Run validator tests
         working-directory: contracts/vault
