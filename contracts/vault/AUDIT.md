@@ -7,11 +7,14 @@ Scope: `validators/vault.ak`, `validators/yield_vault.ak`, `validators/receipt.a
 `src/lib/yield-vault.ts`, `src/lib/yield-chain-decode.ts`.
 
 Method: manual review against the invariants in `SPEC.md` §7 and `YIELD.md` §5.
-No changes were made to any validator. Each finding names the missing rule, the
-transaction that exploits it, and the fix. Nothing here is fixed yet.
+Each finding names the missing rule, the transaction that exploits it, and the
+fix. **Close-out (2026-08-10):** V-01, V-03, V-05 and O-03 are fixed, V-02 is
+mitigated on-chain, V-04 is decided as (a). Per-finding status is recorded in
+its own section.
 
-Status legend: **OPEN** (accepted, not yet fixed), **DECIDE** (needs your call
-before any code moves), **INFO** (recorded, no action).
+Status legend: **FIXED** (shipped, with a regression test), **MITIGATED-ON-CHAIN**
+(cannot be prevented, but cannot be exploited), **DECIDED-(x)** (design call
+recorded), **OPEN** (accepted, not yet fixed), **INFO** (recorded, no action).
 
 Migration note that applies to every code fix below: touching a validator moves
 its blueprint hash, which moves every applied vault address. All accepted fixes
@@ -20,7 +23,13 @@ from the current addresses first.
 
 ---
 
-## V-01 — No "exactly one State input" rule — HIGH — OPEN
+## V-01 — No "exactly one State input" rule — HIGH — **FIXED**
+
+> **Fixed** in the security-scan close-out: the `State` branch now applies
+> `sole_state(ins)` to the script inputs, mirroring the output rule, so two
+> State UTxOs can never be spent together. Regression test:
+> `two_state_inputs_are_rejected` in `validators/yield_vault.ak`. Blueprint hash
+> moved to `e79ee0c4c5d5e0e29d095d616046cbcb9554ab6ba64b428236e11875`.
 
 **Where:** `yield_vault.ak`, `State` branch, around the `expect Some(next) =
 sole_state(outs)` line.
@@ -61,7 +70,14 @@ fail. Today it does not.
 
 ---
 
-## V-02 — Anyone can create a State-shaped output at the vault address — HIGH — OPEN
+## V-02 — Anyone can create a State-shaped output at the vault address — HIGH — **MITIGATED-ON-CHAIN**
+
+> **Mitigated.** A planted State can still be *created* (nothing can stop a
+> third party paying an inline datum to an address), but with V-01 fixed it is
+> permanently unspendable: any transaction spending it alongside the genuine
+> State traps. The remaining risk was off-chain display, fixed via O-03 — the
+> decoder now refuses an ambiguous address instead of trusting the first State
+> it finds.
 
 **Where:** structural, not a single line. The vault address accepts any payment.
 
@@ -94,7 +110,14 @@ asserting that two State candidates produce an error, not a value.
 
 ---
 
-## V-03 — Withdraw accounting is aggregate, not per-owner — MEDIUM — OPEN
+## V-03 — Withdraw accounting is aggregate, not per-owner — MEDIUM — **FIXED**
+
+> **Fixed.** `Withdraw` now requires exactly one `Position` input and at most
+> one `Position` output, the returned Position must carry the spent Position's
+> owner and exactly `held - shares`, and `shares.withdraw_ok` (previously
+> defined and tested but never called) is wired in alongside `deposit_ok`.
+> Tests: `partial_withdraw_must_preserve_owner`,
+> `batched_withdraw_cannot_reshuffle_shares`.
 
 **Where:** `yield_vault.ak`, `Withdraw` branch, and `positions_well_formed`.
 
@@ -141,7 +164,14 @@ datumed to a different key — reject) and `batched_withdraw_cannot_reshuffle_sh
 
 ---
 
-## V-04 — The receipt is not a bearer instrument — MEDIUM — DECIDE
+## V-04 — The receipt is not a bearer instrument — MEDIUM — **DECIDED-(a)**
+
+> **Decision (a): receipts remain proof of claim with owner-authorized
+> redemption.** `RECEIPT.md` now carries a "Transferability status" section
+> stating that a transferee acquires no redemption right, that bearer
+> redemption is a future stage needing its own spec, and that no UI may present
+> receipts as tradeable until it ships. The yield vault card labels receipts
+> "proof of claim — not transferable value" and offers no transfer affordance.
 
 **Where:** `yield_vault.ak` `Withdraw`, plus `receipt.ak`.
 
@@ -182,7 +212,13 @@ not a nicety.
 
 ---
 
-## V-05 — Fee proration has no upper time bound — LOW — OPEN
+## V-05 — Fee proration has no upper time bound — LOW — **FIXED**
+
+> **Fixed as specified below.** `max_settle_window = 7_776_000_000` (90 days)
+> added to `shares.ak`; `Accrue` and `SetFee` now require a finite validity
+> upper bound and enforce `now <= hi` and
+> `now - last_fee_time <= max_settle_window` via `fee_anchor_ok`. Tests:
+> `accrue_rejects_future_anchor`, `accrue_rejects_oversized_settle_window`.
 
 **Where:** `yield_vault.ak`, `Accrue` and `SetFee`, via `lower_bound_time`.
 
