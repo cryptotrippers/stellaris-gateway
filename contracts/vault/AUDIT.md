@@ -320,7 +320,12 @@ time to warn anyone. Fix: a single shared `encodeStateDatum(state)` used by both
 writers, plus a round-trip test that encodes a state, decodes it with the
 production decoder, and asserts field-for-field equality.
 
-**O-03 — decoder picks the first State — see V-02.** Same fix.
+**O-03 — decoder picks the first State — FIXED.** `yield-chain-decode.ts` now
+exports `soleStateOrThrow`, which collects every State-shaped UTxO at the
+address and throws a descriptive "Vault state ambiguous" error when more than
+one exists. Both `getVaultChainState` and `getVaultChainHistory` in
+`src/lib/yield-chain.functions.ts` route through it, so a planted State can
+never be silently trusted for display or for transaction building.
 
 ---
 
