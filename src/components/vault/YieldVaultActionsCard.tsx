@@ -105,6 +105,14 @@ export function YieldVaultActionsCard({ assetId }: { assetId: string }) {
           </div>
 
           <div className="mt-3 rounded-md border border-border bg-secondary/20 p-3 text-[11px] text-muted-foreground">
+            Receipt tokens: <span className="text-foreground">proof of claim — not transferable
+            value</span>. One receipt is minted per share to evidence your deposit, but redemption
+            is authorised by your position&apos;s owner key, not by holding the token. Sending a
+            receipt to another wallet transfers no redemption right, and this vault offers no
+            transfer or trading action for them.
+          </div>
+
+          <div className="mt-3 rounded-md border border-border bg-secondary/20 p-3 text-[11px] text-muted-foreground">
             Management fee <span className="text-foreground">{formatFeeBps(view.state.feeBps)}</span>{" "}
             on accounted assets, settled at each accrual by minting shares to the treasury. Unclaimed
             treasury shares:{" "}
@@ -112,6 +120,7 @@ export function YieldVaultActionsCard({ assetId }: { assetId: string }) {
             redeemable value already reflects the fee settled so far; fee accrued since the last
             settlement is charged at the next accrual.
           </div>
+
 
 
           <div className="mt-5 space-y-2">
