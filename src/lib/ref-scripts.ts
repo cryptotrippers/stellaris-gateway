@@ -136,3 +136,56 @@ export async function getRefUtxoIfPublished(
 }
 
 export type { RefScriptUtxoRead };
+
+/** A published reference UTxO in the shape Lucid's `readFrom` expects. */
+export interface LucidRefUtxo {
+  txHash: string;
+  outputIndex: number;
+  address: string;
+  assets: Record<string, bigint>;
+  datum: string | null;
+  datumHash: string | null;
+  scriptRef: { type: "PlutusV3"; script: string };
+}
+
+/**
+ * Reference input for one validator of one asset vault, ready to hand to
+ * `tx.readFrom([...])`, or `null` when that validator has nothing published —
+ * in which case the caller keeps embedding the script exactly as before.
+ *
+ * `appliedCbor` is the script this build derives. The on-chain reference
+ * script was verified against the same derivation when it was recorded, and
+ * the hash is re-checked here, so a stale or foreign UTxO can never be used.
+ */
+export async function getRefInputIfPublished(
+  assetId: string,
+  vaultVersion: number,
+  validatorKey: ValidatorKey,
+  appliedCbor: string,
+  expectedScriptHash?: string,
+): Promise<LucidRefUtxo | null> {
+  const read = await getRefUtxoIfPublished(assetId, vaultVersion, validatorKey);
+  if (!read) return null;
+  if (!read.scriptHash) {
+    throw new Error(
+      `The published ${validatorKey} reference UTxO carries no script. Refusing to use it.`,
+    );
+  }
+  if (expectedScriptHash && read.scriptHash.toLowerCase() !== expectedScriptHash.toLowerCase()) {
+    throw new Error(
+      `The published ${validatorKey} reference script (${read.scriptHash}) does not match the script this build derives (${expectedScriptHash}). Republish it before transacting.`,
+    );
+  }
+  const assets: Record<string, bigint> = {};
+  for (const [unit, qty] of Object.entries(read.assets)) assets[unit] = BigInt(qty);
+  return {
+    txHash: read.txHash,
+    outputIndex: read.outputIndex,
+    address: read.address,
+    assets,
+    datum: read.inlineDatum,
+    datumHash: read.datumHash,
+    scriptRef: { type: "PlutusV3", script: appliedCbor },
+  };
+}
+

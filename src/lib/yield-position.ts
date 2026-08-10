@@ -22,8 +22,10 @@ import {
   assertReceiptPolicy,
   getReceiptPolicy,
   getYieldVaultScript,
+  YIELD_VAULT_VERSION,
   type AppliedReceiptPolicy,
 } from "./yield-vault";
+import { getRefInputIfPublished } from "./ref-scripts";
 import {
   readPositionDatum,
   readStateDatum,
@@ -40,6 +42,25 @@ export const MIN_INITIAL_DEPOSIT = 10_000_000n;
 export const MIN_POSITION_VALUE = 2_000_000n;
 /** Headroom kept on the State UTxO so it always satisfies min-ADA. */
 const STATE_MIN_LOVELACE = 2_000_000n;
+
+/**
+ * Reference inputs for the vault's spending validator and its receipt policy,
+ * when this asset has published them. `null` on either side means that script
+ * is still embedded in the transaction, which is how every asset works until
+ * an admin publishes reference scripts for it.
+ */
+async function refInputs(
+  assetId: string,
+  script: { cbor: string; scriptHash: string },
+  receipt: AppliedReceiptPolicy,
+) {
+  const version = Number(YIELD_VAULT_VERSION);
+  const [spendRef, mintRef] = await Promise.all([
+    getRefInputIfPublished(assetId, version, "yield_vault", script.cbor, script.scriptHash),
+    getRefInputIfPublished(assetId, version, "receipt", receipt.cbor, receipt.policyId),
+  ]);
+  return { spendRef, mintRef };
+}
 
 export interface MyPosition {
   txHash: string;
@@ -263,12 +284,22 @@ export async function depositToYieldVault(params: {
   // depositor shares created by this deposit.
   const mintRedeemer = Data.to(new Constr(0, []));
 
-  const completed = await lucid
-    .newTx()
-    .collectFrom([stateUtxo as never], Data.to(new Constr(REDEEMER_DEPOSIT, [])))
-    .attach.SpendingValidator({ type: "PlutusV3", script: script.cbor })
-    .mintAssets({ [receipt.unit]: minted }, mintRedeemer)
-    .attach.MintingPolicy({ type: "PlutusV3", script: receipt.cbor })
+  // Per-asset opt-in: spend and mint through published reference scripts when
+  // this vault has them; otherwise embed the CBOR exactly as before.
+  const { spendRef, mintRef } = await refInputs(params.assetId, script, receipt);
+
+  let builder = lucid.newTx();
+  if (spendRef) builder = builder.readFrom([spendRef as never]);
+  if (mintRef) builder = builder.readFrom([mintRef as never]);
+  builder = builder.collectFrom([stateUtxo as never], Data.to(new Constr(REDEEMER_DEPOSIT, [])));
+  if (!spendRef) {
+    builder = builder.attach.SpendingValidator({ type: "PlutusV3", script: script.cbor });
+  }
+  builder = builder.mintAssets({ [receipt.unit]: minted }, mintRedeemer);
+  if (!mintRef) {
+    builder = builder.attach.MintingPolicy({ type: "PlutusV3", script: receipt.cbor });
+  }
+  const completed = await builder
     .pay.ToContract(script.address, { kind: "inline", value: nextState }, { lovelace: stateLovelace })
     .pay.ToContract(script.address, { kind: "inline", value: positionDatum }, { lovelace: deposit })
     .complete();
@@ -370,13 +401,21 @@ export async function withdrawFromYieldVault(params: {
   };
   const redeemer = Data.to(new Constr(REDEEMER_WITHDRAW, [shares]));
 
-  let builder = lucid
-    .newTx()
-    .collectFrom([stateUtxo as never, chosen.utxo as never], redeemer)
-    .attach.SpendingValidator({ type: "PlutusV3", script: script.cbor })
-    // Stage 6: redeeming shares burns exactly that many receipts.
-    .mintAssets({ [receipt.unit]: -shares }, Data.to(new Constr(0, [])))
-    .attach.MintingPolicy({ type: "PlutusV3", script: receipt.cbor })
+  const { spendRef, mintRef } = await refInputs(params.assetId, script, receipt);
+
+  let builder = lucid.newTx();
+  if (spendRef) builder = builder.readFrom([spendRef as never]);
+  if (mintRef) builder = builder.readFrom([mintRef as never]);
+  builder = builder.collectFrom([stateUtxo as never, chosen.utxo as never], redeemer);
+  if (!spendRef) {
+    builder = builder.attach.SpendingValidator({ type: "PlutusV3", script: script.cbor });
+  }
+  // Stage 6: redeeming shares burns exactly that many receipts.
+  builder = builder.mintAssets({ [receipt.unit]: -shares }, Data.to(new Constr(0, [])));
+  if (!mintRef) {
+    builder = builder.attach.MintingPolicy({ type: "PlutusV3", script: receipt.cbor });
+  }
+  builder = builder
     .pay.ToContract(
       script.address,
       { kind: "inline", value: nextState },

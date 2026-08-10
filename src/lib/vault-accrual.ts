@@ -12,7 +12,8 @@
  */
 
 import { checkVaultPreconditions, initLucidWithWallet } from "./vault";
-import { getYieldVaultScript } from "./yield-vault";
+import { getYieldVaultScript, YIELD_VAULT_VERSION } from "./yield-vault";
+import { getRefInputIfPublished } from "./ref-scripts";
 import { readStateDatum, type VaultStateDatum } from "./yield-chain-decode";
 import { settleFee } from "./vault-fees";
 
@@ -157,10 +158,24 @@ export async function buildAccrual(params: {
 
   const currentLovelace = stateUtxo.assets["lovelace"] ?? 0n;
 
-  let builder = lucid
-    .newTx()
-    .collectFrom([stateUtxo], redeemer)
-    .attach.SpendingValidator({ type: "PlutusV3", script: script.cbor })
+  // Per-asset opt-in: once this vault's yield_vault script is published as a
+  // reference script, point at it instead of carrying its CBOR. Assets with
+  // nothing published keep embedding the script exactly as before.
+  const ref = await getRefInputIfPublished(
+    params.assetId,
+    Number(YIELD_VAULT_VERSION),
+    "yield_vault",
+    script.cbor,
+    script.scriptHash,
+  );
+
+  let builder = lucid.newTx();
+  if (ref) builder = builder.readFrom([ref as never]);
+  builder = builder.collectFrom([stateUtxo], redeemer);
+  if (!ref) {
+    builder = builder.attach.SpendingValidator({ type: "PlutusV3", script: script.cbor });
+  }
+  builder = builder
     .pay.ToContract(
       script.address,
       { kind: "inline", value: nextDatum },
