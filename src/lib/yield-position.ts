@@ -22,8 +22,10 @@ import {
   assertReceiptPolicy,
   getReceiptPolicy,
   getYieldVaultScript,
+  YIELD_VAULT_VERSION,
   type AppliedReceiptPolicy,
 } from "./yield-vault";
+import { getRefInputIfPublished } from "./ref-scripts";
 import {
   readPositionDatum,
   readStateDatum,
