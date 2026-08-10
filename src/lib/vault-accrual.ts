@@ -12,7 +12,8 @@
  */
 
 import { checkVaultPreconditions, initLucidWithWallet } from "./vault";
-import { getYieldVaultScript } from "./yield-vault";
+import { getYieldVaultScript, YIELD_VAULT_VERSION } from "./yield-vault";
+import { getRefInputIfPublished } from "./ref-scripts";
 import { readStateDatum, type VaultStateDatum } from "./yield-chain-decode";
 import { settleFee } from "./vault-fees";
 
