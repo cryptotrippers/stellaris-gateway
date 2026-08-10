@@ -401,13 +401,21 @@ export async function withdrawFromYieldVault(params: {
   };
   const redeemer = Data.to(new Constr(REDEEMER_WITHDRAW, [shares]));
 
-  let builder = lucid
-    .newTx()
-    .collectFrom([stateUtxo as never, chosen.utxo as never], redeemer)
-    .attach.SpendingValidator({ type: "PlutusV3", script: script.cbor })
-    // Stage 6: redeeming shares burns exactly that many receipts.
-    .mintAssets({ [receipt.unit]: -shares }, Data.to(new Constr(0, [])))
-    .attach.MintingPolicy({ type: "PlutusV3", script: receipt.cbor })
+  const { spendRef, mintRef } = await refInputs(params.assetId, script, receipt);
+
+  let builder = lucid.newTx();
+  if (spendRef) builder = builder.readFrom([spendRef as never]);
+  if (mintRef) builder = builder.readFrom([mintRef as never]);
+  builder = builder.collectFrom([stateUtxo as never, chosen.utxo as never], redeemer);
+  if (!spendRef) {
+    builder = builder.attach.SpendingValidator({ type: "PlutusV3", script: script.cbor });
+  }
+  // Stage 6: redeeming shares burns exactly that many receipts.
+  builder = builder.mintAssets({ [receipt.unit]: -shares }, Data.to(new Constr(0, [])));
+  if (!mintRef) {
+    builder = builder.attach.MintingPolicy({ type: "PlutusV3", script: receipt.cbor });
+  }
+  builder = builder
     .pay.ToContract(
       script.address,
       { kind: "inline", value: nextState },
