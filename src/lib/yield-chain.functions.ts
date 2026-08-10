@@ -21,6 +21,7 @@ import {
   readPositionDatum,
   readStateDatum,
   sharePriceOf,
+  soleStateOrThrow,
   type BfAddressTx,
   type BfTxUtxos,
   type BfUtxo,
