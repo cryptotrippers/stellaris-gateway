@@ -23,6 +23,7 @@ import {
   FEE_COLS,
   type VaultFeeScheduleRow,
 } from "./asset-vaults.shared";
+import { isValidatorKey, type ValidatorKey } from "./ref-scripts.shared";
 
 export type { AssetVaultRow } from "./asset-vaults.shared";
 
@@ -233,4 +234,118 @@ export const recordVaultFeeSchedule = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<VaultFeeScheduleRow> => {
     await assertRole(context.supabase, context.userId, "admin");
     return insertFeeSchedule(context.supabase, data);
+  });
+
+// ---------------------------------------------------------------------------
+// Published reference scripts
+// ---------------------------------------------------------------------------
+
+export interface RefScriptEntry {
+  txHash: string;
+  outputIndex: number;
+  publishedAt: string;
+  scriptHash?: string;
+}
+
+/**
+ * Record a reference script published for one validator of one asset vault.
+ *
+ * Admin only: publishing spends real ADA into a UTxO that is meant never to be
+ * spent again, so a wrong entry cannot be cheaply undone. Nothing the client
+ * says about *what* was published is trusted — the expected script identity is
+ * re-established server-side and compared against the chain.
+ */
+export const recordReferenceScript = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (data: {
+      assetId: string;
+      vaultVersion: number;
+      validatorKey: string;
+      txHash: string;
+      replaceExisting?: boolean;
+    }) => {
+      if (!data?.assetId) throw new Error("assetId is required");
+      if (!Number.isInteger(data.vaultVersion) || data.vaultVersion < 1) {
+        throw new Error("vaultVersion must be a positive integer");
+      }
+      if (!isValidatorKey(data.validatorKey)) {
+        throw new Error("validatorKey must be one of vault, yield_vault, receipt");
+      }
+      if (!TX_HASH_RE.test(data.txHash ?? "")) throw new Error("Invalid transaction hash");
+      return {
+        assetId: data.assetId,
+        vaultVersion: data.vaultVersion,
+        validatorKey: data.validatorKey,
+        txHash: data.txHash.toLowerCase(),
+        replaceExisting: data.replaceExisting === true,
+      };
+    },
+  )
+  .handler(async ({ data, context }): Promise<{ entries: Record<string, RefScriptEntry> }> => {
+    await assertRole(context.supabase, context.userId, "admin");
+
+    const { data: vault, error: vaultErr } = await context.supabase
+      .from("asset_vaults")
+      .select("id, script_hash, script_address, ref_script_utxos")
+      .eq("asset_id", data.assetId)
+      .eq("vault_version", data.vaultVersion)
+      .maybeSingle();
+    if (vaultErr) throw new Error(vaultErr.message);
+    if (!vault) {
+      throw new Error(
+        `No registered vault for "${data.assetId}" version ${data.vaultVersion}. Bootstrap it before publishing reference scripts.`,
+      );
+    }
+
+    const entries = {
+      ...((vault.ref_script_utxos as Record<string, RefScriptEntry> | null) ?? {}),
+    };
+    const already = entries[data.validatorKey];
+    if (already && !data.replaceExisting) {
+      throw new Error(
+        `A reference script for ${data.validatorKey} is already published for this vault (${already.txHash}#${already.outputIndex}). Publishing again would strand more ADA — confirm the replacement explicitly if that is really what you want.`,
+      );
+    }
+
+    const { verifyPublishedReferenceScript } = await import("./ref-scripts-verify.server");
+    const verified = await verifyPublishedReferenceScript({
+      assetId: data.assetId,
+      validatorKey: data.validatorKey,
+      txHash: data.txHash,
+      vault: { script_hash: vault.script_hash, script_address: vault.script_address },
+    });
+
+    entries[data.validatorKey] = {
+      txHash: verified.txHash,
+      outputIndex: verified.outputIndex,
+      publishedAt: new Date().toISOString(),
+      scriptHash: verified.scriptHash,
+    };
+
+    const { error: updErr } = await context.supabase
+      .from("asset_vaults")
+      .update({ ref_script_utxos: entries as unknown as Record<string, never> })
+      .eq("id", vault.id);
+    if (updErr) throw new Error(updErr.message);
+
+    return { entries };
+  });
+
+/** Reference scripts already published for one asset's vault. Public. */
+export const getReferenceScripts = createServerFn({ method: "GET" })
+  .inputValidator((data: { assetId: string; vaultVersion: number }) => {
+    if (!data?.assetId) throw new Error("assetId is required");
+    return { assetId: data.assetId, vaultVersion: data.vaultVersion };
+  })
+  .handler(async ({ data }): Promise<Record<string, RefScriptEntry>> => {
+    const supabase = publicSupabase();
+    const { data: row, error } = await supabase
+      .from("asset_vaults")
+      .select("ref_script_utxos")
+      .eq("asset_id", data.assetId)
+      .eq("vault_version", data.vaultVersion)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return (row?.ref_script_utxos as Record<string, RefScriptEntry> | null) ?? {};
   });

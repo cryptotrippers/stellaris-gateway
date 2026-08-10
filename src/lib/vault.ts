@@ -37,15 +37,17 @@ async function getBlockfrostConfig() {
 // scripts/verify-vault-hash.mjs fails the build if these drift.
 // ---------------------------------------------------------------------------
 
-/** Bumping this value produces a fresh vault instance on-chain. */
-export const VAULT_VERSION = 2n;
-
 /**
+ * Version + default asset live in `vault-params.ts` so server-only code can
+ * read them without pulling in Lucid or the wallet store. Re-exported here to
+ * keep every existing import path working.
+ *
  * Stage 3: the validator is parameterized by `(version, asset_id)`, so every
  * marketplace asset gets its own script hash + address. The validator now
  * also enforces owner-preserving datum continuity for partial withdrawals.
  */
-export const DEFAULT_VAULT_ASSET_ID = "sfm-01";
+export { VAULT_VERSION, DEFAULT_VAULT_ASSET_ID } from "./vault-params";
+import { VAULT_VERSION, DEFAULT_VAULT_ASSET_ID } from "./vault-params";
 
 /** Hash of the *unapplied* Stage 3 validator from plutus.json. */
 export const VAULT_BLUEPRINT_HASH =
