@@ -122,6 +122,24 @@ export function readPositionDatum(datumHex: string | null): VaultPositionDatum |
   }
 }
 
+/**
+ * AUDIT.md O-03: never silently trust the first State-shaped UTxO found at a
+ * vault address. With V-01 fixed a planted State is unspendable on-chain, but
+ * the decoder must not read one for display or for transaction building —
+ * a second State means the address is ambiguous and the operator has to look.
+ */
+export function soleStateOrThrow<T>(candidates: T[], address: string): T | null {
+  if (candidates.length > 1) {
+    throw new Error(
+      `Vault state ambiguous: found ${String(candidates.length)} State UTxOs at ${address}, ` +
+        `expected exactly one. A duplicate or planted vault state is present — ` +
+        `it cannot be spent on-chain, but no balance or transaction may be built ` +
+        `from this address until an operator identifies the genuine state UTxO.`,
+    );
+  }
+  return candidates[0] ?? null;
+}
+
 /** Share price = total_assets / total_shares; exactly 1.0 before any deposit. */
 export function sharePriceOf(state: { totalAssets: string; totalShares: string }): number {
   const shares = Number(state.totalShares);
