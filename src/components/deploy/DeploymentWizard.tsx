@@ -27,7 +27,21 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/StatusBadge";
 import { supabase } from "@/integrations/supabase/client";
-import { getMyRoles, listAssetVaults, registerAssetVault } from "@/lib/asset-vaults.functions";
+import {
+  getMyRoles,
+  getReferenceScripts,
+  listAssetVaults,
+  recordReferenceScript,
+  registerAssetVault,
+  type RefScriptEntry,
+} from "@/lib/asset-vaults.functions";
+import {
+  VALIDATOR_KEYS,
+  VALIDATOR_LABELS,
+  isPlaceholderHome,
+  type ValidatorKey,
+} from "@/lib/ref-scripts.shared";
+import { publishReferenceScript } from "@/lib/ref-scripts-publish";
 import { getVaultChainState } from "@/lib/yield-chain.functions";
 import {
   bootstrapYieldVault,
