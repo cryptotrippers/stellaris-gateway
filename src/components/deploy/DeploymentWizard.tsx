@@ -533,6 +533,79 @@ export function DeploymentWizard() {
           </div>
         )}
       </Step>
+
+      {/* Step 6 — publish reference scripts --------------------------------- */}
+      <Step
+        index={6}
+        title="Publish reference scripts"
+        done={VALIDATOR_KEYS.every((k) => Boolean(refScripts[k]))}
+      >
+        <p className="text-sm text-muted-foreground">
+          Each validator is published once into its own UTxO at the dedicated
+          reference-script address, so later transactions can point at it instead of carrying the
+          full script. Publishing spends real ADA into a UTxO that must never be spent again — the
+          server re-derives and re-checks the script on chain before recording anything.
+        </p>
+        {refHomePlaceholder && (
+          <ErrorNote>
+            The reference-script home address is still the Step 0 placeholder. Set it before
+            publishing.
+          </ErrorNote>
+        )}
+        <div className="mt-3 flex flex-col gap-2">
+          {VALIDATOR_KEYS.map((key) => {
+            const entry = refScripts[key];
+            const busy = publishing === key;
+            return (
+              <div
+                key={key}
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3"
+              >
+                <div className="text-xs text-foreground">
+                  <div className="font-medium">{VALIDATOR_LABELS[key]}</div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {entry ? (
+                      <>
+                        Published ·{" "}
+                        <a
+                          href={cardanoscanTx(entry.txHash)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 font-mono text-primary hover:underline"
+                        >
+                          {short(entry.txHash, 8, 6)}#{entry.outputIndex}{" "}
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      </>
+                    ) : (
+                      "Not published yet"
+                    )}
+                  </div>
+                </div>
+                {entry ? (
+                  <Badge tone="accent">Published</Badge>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => runPublishRefScript(key)}
+                    disabled={!isAdmin || !pre.ok || refHomePlaceholder || Boolean(publishing) || !existing}
+                    className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+                  >
+                    {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    Publish &amp; record
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        {!existing && (
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            This asset has no registered vault yet — bootstrap it in step 3 first.
+          </p>
+        )}
+        {publishErr && <ErrorNote>{publishErr}</ErrorNote>}
+      </Step>
     </section>
   );
 }
