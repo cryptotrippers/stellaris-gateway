@@ -263,12 +263,22 @@ export async function depositToYieldVault(params: {
   // depositor shares created by this deposit.
   const mintRedeemer = Data.to(new Constr(0, []));
 
-  const completed = await lucid
-    .newTx()
-    .collectFrom([stateUtxo as never], Data.to(new Constr(REDEEMER_DEPOSIT, [])))
-    .attach.SpendingValidator({ type: "PlutusV3", script: script.cbor })
-    .mintAssets({ [receipt.unit]: minted }, mintRedeemer)
-    .attach.MintingPolicy({ type: "PlutusV3", script: receipt.cbor })
+  // Per-asset opt-in: spend and mint through published reference scripts when
+  // this vault has them; otherwise embed the CBOR exactly as before.
+  const { spendRef, mintRef } = await refInputs(params.assetId, script, receipt);
+
+  let builder = lucid.newTx();
+  if (spendRef) builder = builder.readFrom([spendRef as never]);
+  if (mintRef) builder = builder.readFrom([mintRef as never]);
+  builder = builder.collectFrom([stateUtxo as never], Data.to(new Constr(REDEEMER_DEPOSIT, [])));
+  if (!spendRef) {
+    builder = builder.attach.SpendingValidator({ type: "PlutusV3", script: script.cbor });
+  }
+  builder = builder.mintAssets({ [receipt.unit]: minted }, mintRedeemer);
+  if (!mintRef) {
+    builder = builder.attach.MintingPolicy({ type: "PlutusV3", script: receipt.cbor });
+  }
+  const completed = await builder
     .pay.ToContract(script.address, { kind: "inline", value: nextState }, { lovelace: stateLovelace })
     .pay.ToContract(script.address, { kind: "inline", value: positionDatum }, { lovelace: deposit })
     .complete();
