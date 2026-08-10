@@ -126,6 +126,14 @@ pub fn solvent(acc: VaultAccounting, locked_lovelace: Int) -> Bool {
 /// Milliseconds in a 365-day fee year. Fees are prorated against this.
 pub const ms_per_year: Int = 31_536_000_000
 
+/// V-05: the longest span of unsettled time a single fee action may charge
+/// for, in milliseconds (90 days). The fee anchor is the transaction's
+/// validity LOWER bound, which the operator committee chooses, so without a
+/// cap a committee could post-date a settlement and charge for time that has
+/// not elapsed. A committee that misses the window simply settles in more
+/// than one transaction; nothing is lost.
+pub const max_settle_window: Int = 7_776_000_000
+
 /// Hard cap on the annual management fee, in basis points (5.00%/yr).
 /// Governance can move the fee only within this bound; the validator
 /// rejects any datum outside it, so no committee can silently levy more.
