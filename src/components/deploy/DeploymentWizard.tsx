@@ -128,6 +128,11 @@ export function DeploymentWizard() {
     stateTx: string | null;
   } | null>(null);
 
+  const [publishing, setPublishing] = useState<ValidatorKey | null>(null);
+  const [publishErr, setPublishErr] = useState<string | null>(null);
+  const refHomePlaceholder = isPlaceholderHome();
+
+
   const roles = rolesQ.data?.roles ?? [];
   const isAdmin = roles.includes("admin");
   const signedOut = Boolean(rolesQ.error);
