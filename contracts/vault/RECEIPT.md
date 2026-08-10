@@ -84,19 +84,41 @@ also rejects pre-Stage-6 vaults outright.
   `receiptPolicy`. A 10-field (pre-Stage-6) datum no longer decodes, so old
   vaults read as "not bootstrapped" — intentional, they are unsupported here.
 
+## Transferability status
+
+**Receipts are proof of claim. They are not transferable value.** (AUDIT.md
+V-04, decision (a).)
+
+One receipt is minted per share and burned on redemption, so supply always
+equals outstanding depositor shares. But redemption is authorized by the
+`Position` datum's owner signature, not by holding the token. Therefore:
+
+* transferring a receipt conveys **no** redemption right to the transferee —
+  a secondary-market buyer acquires nothing enforceable;
+* the receipt evidences that a deposit was made and how large the claim is,
+  and nothing more.
+
+Bearer-style, receipt-authorized redemption is a designed future stage. It is a
+substantial contract change (owner authorization removed from `Withdraw`, payout
+keyed to whoever burns N receipts, with its own double-satisfaction analysis)
+and requires its own spec section before any code is written.
+
+**No UI may present receipts as tradeable, transferable value, or a bearer
+instrument until that stage ships.** Wherever a receipt balance is displayed it
+must be labelled "proof of claim — not transferable value", and no transfer or
+trade affordance may be offered. The yield vault card carries this label today.
+
 ## Remaining steps
 
-3. Transferability: redemption is still authorized by the `Position` owner, so
-   the receipt is a *proof* of claim, not yet a bearer instrument. Making
-   redemption receipt-authorized (burn N receipts, no owner signature) is the
-   next contract change.
+3. Transferability: deferred by decision — see "Transferability status" above.
+   Redemption stays owner-authorized until a bearer-redemption spec is written.
 4. UI surfacing: show the receipt unit and wallet balance on the vault card.
 
 ## Build
 
 ```bash
 cd contracts/vault
-aiken check    # 96 tests
+aiken check    # 101 tests
 aiken build    # regenerates plutus.json (3 validators)
 cd ../..
 node scripts/verify-vault-hash.mjs --strict

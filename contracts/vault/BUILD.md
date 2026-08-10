@@ -67,3 +67,18 @@ blueprints are checked by validator title:
 
 Locally: `bun run verify:contracts` (skips if you haven't built) or
 `bun run verify:contracts:strict`.
+
+## Yield vault blueprint (Stage 6 + security scan close-out)
+
+The security-scan fixes (AUDIT.md V-01, V-03, V-05) changed `yield_vault.ak`,
+so its unapplied blueprint hash moved again:
+
+- Previous: `e34414de8570158a207577dee9d1e77f6788154bff5057168f73e696`
+- **Current: `e79ee0c4c5d5e0e29d095d616046cbcb9554ab6ba64b428236e11875`**
+  (pinned in `YIELD_BLUEPRINT_HASH`, `src/lib/yield-vault.ts`)
+- `receipt.receipt.mint`: `ae6bf02ede5ed0aa23d619400208fca63f4dba372a69b7ae7e01862d` (unchanged)
+- `vault.vault.spend`: `b582793a5e9bb3993ed68876ee017165808efb672e0d333e83975194` (unchanged)
+
+Every applied yield-vault address therefore changes and each asset must be
+re-bootstrapped. This was safe to do because nothing was bootstrapped on the
+previous hash. `aiken check` runs 101 tests.
