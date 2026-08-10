@@ -325,9 +325,27 @@ export const recordReferenceScript = createServerFn({ method: "POST" })
 
     const { error: updErr } = await context.supabase
       .from("asset_vaults")
-      .update({ ref_script_utxos: entries })
+      .update({ ref_script_utxos: entries as unknown as Record<string, never> })
       .eq("id", vault.id);
     if (updErr) throw new Error(updErr.message);
 
     return { entries };
+  });
+
+/** Reference scripts already published for one asset's vault. Public. */
+export const getReferenceScripts = createServerFn({ method: "GET" })
+  .inputValidator((data: { assetId: string; vaultVersion: number }) => {
+    if (!data?.assetId) throw new Error("assetId is required");
+    return { assetId: data.assetId, vaultVersion: data.vaultVersion };
+  })
+  .handler(async ({ data }): Promise<Record<string, RefScriptEntry>> => {
+    const supabase = publicSupabase();
+    const { data: row, error } = await supabase
+      .from("asset_vaults")
+      .select("ref_script_utxos")
+      .eq("asset_id", data.assetId)
+      .eq("vault_version", data.vaultVersion)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return (row?.ref_script_utxos as Record<string, RefScriptEntry> | null) ?? {};
   });
