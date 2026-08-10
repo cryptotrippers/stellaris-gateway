@@ -59,3 +59,10 @@ jobs:
       - name: Verify pinned blueprints match plutus.json
         run: node scripts/verify-vault-hash.mjs --strict
 
+
+      - name: Verify published reference script UTxOs are still unspent
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          BLOCKFROST_PREPROD_PROJECT_ID: ${{ secrets.BLOCKFROST_PREPROD_PROJECT_ID }}
+        run: node scripts/verify-ref-scripts.mjs
