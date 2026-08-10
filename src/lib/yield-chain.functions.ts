@@ -53,21 +53,25 @@ export const getVaultChainState = createServerFn({ method: "GET" })
     const { bfGet } = await import("./blockfrost-fetch.server");
     const utxos = (await bfGet<BfUtxo[]>(`/addresses/${data.address}/utxos?count=100`)) ?? [];
 
-    let state: VaultStateDatum | null = null;
-    let stateUtxo: VaultChainState["stateUtxo"] = null;
+    const stateCandidates: Array<{
+      state: VaultStateDatum;
+      utxo: NonNullable<VaultChainState["stateUtxo"]>;
+    }> = [];
     const positions: VaultChainState["positions"] = [];
     let locked = 0n;
 
     for (const u of utxos) {
       locked += lovelaceOf(u);
       const asState = readStateDatum(u.inline_datum);
-      if (asState && !state) {
-        state = asState;
-        stateUtxo = {
-          txHash: u.tx_hash,
-          outputIndex: u.output_index,
-          lovelace: lovelaceOf(u).toString(),
-        };
+      if (asState) {
+        stateCandidates.push({
+          state: asState,
+          utxo: {
+            txHash: u.tx_hash,
+            outputIndex: u.output_index,
+            lovelace: lovelaceOf(u).toString(),
+          },
+        });
         continue;
       }
       const asPosition = readPositionDatum(u.inline_datum);
@@ -80,6 +84,11 @@ export const getVaultChainState = createServerFn({ method: "GET" })
         });
       }
     }
+
+    const sole = soleStateOrThrow(stateCandidates, data.address);
+    const state = sole?.state ?? null;
+    const stateUtxo = sole?.utxo ?? null;
+
 
     return {
       address: data.address,
