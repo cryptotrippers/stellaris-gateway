@@ -41,6 +41,25 @@ export const MIN_POSITION_VALUE = 2_000_000n;
 /** Headroom kept on the State UTxO so it always satisfies min-ADA. */
 const STATE_MIN_LOVELACE = 2_000_000n;
 
+/**
+ * Reference inputs for the vault's spending validator and its receipt policy,
+ * when this asset has published them. `null` on either side means that script
+ * is still embedded in the transaction, which is how every asset works until
+ * an admin publishes reference scripts for it.
+ */
+async function refInputs(
+  assetId: string,
+  script: { cbor: string; scriptHash: string },
+  receipt: AppliedReceiptPolicy,
+) {
+  const version = Number(YIELD_VAULT_VERSION);
+  const [spendRef, mintRef] = await Promise.all([
+    getRefInputIfPublished(assetId, version, "yield_vault", script.cbor, script.scriptHash),
+    getRefInputIfPublished(assetId, version, "receipt", receipt.cbor, receipt.policyId),
+  ]);
+  return { spendRef, mintRef };
+}
+
 export interface MyPosition {
   txHash: string;
   outputIndex: number;
