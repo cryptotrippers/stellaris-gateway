@@ -12,25 +12,24 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { getCoinsPerUtxoByte, getUtxoByRef, type RefScriptUtxoRead } from "./ref-scripts.functions";
+import {
+  REF_SCRIPT_HOME_ADDRESS,
+  isPlaceholderHome,
+  type ValidatorKey,
+} from "./ref-scripts.shared";
 
-/** Dedicated address that holds every published reference-script UTxO. */
-export const REF_SCRIPT_HOME_ADDRESS = "<PASTE THE ADDRESS FROM STEP 0 HERE>";
-
-export type ValidatorKey = "vault" | "yield_vault" | "receipt";
+export { REF_SCRIPT_HOME_ADDRESS, isPlaceholderHome } from "./ref-scripts.shared";
+export type { ValidatorKey } from "./ref-scripts.shared";
 
 /** Constant overhead (in bytes) the ledger adds to every UTxO entry. */
 const UTXO_ENTRY_OVERHEAD_BYTES = 160n;
 /** Extra headroom over the theoretical minimum, so rounding never blocks a tx. */
 const SAFETY_MARGIN_PCT = 10n;
 
-function isPlaceholderHome(): boolean {
-  return REF_SCRIPT_HOME_ADDRESS.startsWith("<");
-}
-
 function assertHomeAddress(): void {
   if (isPlaceholderHome()) {
     throw new Error(
-      "REF_SCRIPT_HOME_ADDRESS is still the placeholder. Complete Step 0 and paste the dedicated reference-script address into src/lib/ref-scripts.ts.",
+      "REF_SCRIPT_HOME_ADDRESS is still the placeholder. Complete Step 0 and paste the dedicated reference-script address into src/lib/ref-scripts.shared.ts.",
     );
   }
 }
