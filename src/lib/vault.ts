@@ -47,7 +47,7 @@ async function getBlockfrostConfig() {
  * also enforces owner-preserving datum continuity for partial withdrawals.
  */
 export { VAULT_VERSION, DEFAULT_VAULT_ASSET_ID } from "./vault-params";
-import { VAULT_VERSION } from "./vault-params";
+import { VAULT_VERSION, DEFAULT_VAULT_ASSET_ID } from "./vault-params";
 
 /** Hash of the *unapplied* Stage 3 validator from plutus.json. */
 export const VAULT_BLUEPRINT_HASH =
