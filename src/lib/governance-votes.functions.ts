@@ -10,7 +10,7 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { publicSupabase } from "./asset-vaults.shared";
+
 import {
   VOTE_CHOICES,
   tallyVotes,
@@ -22,11 +22,16 @@ import {
 
 export type { ProposalTally, VoteChoice } from "./governance-votes.shared";
 
-/** Public, aggregated tallies. No voter identity is ever returned. */
+/**
+ * Public, aggregated tallies. No voter identity is ever returned.
+ * Individual ballots are not readable by anon/authenticated roles (RLS), so the
+ * aggregation is done server-side with the service-role client and only the
+ * aggregate leaves this handler.
+ */
 export const getProposalTallies = createServerFn({ method: "GET" }).handler(
   async (): Promise<Record<string, ProposalTally>> => {
-    const supabase = publicSupabase();
-    const { data, error } = await supabase
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
       .from("proposal_votes")
       .select("proposal_id, voter_user_id, choice, weight_ada, created_at, updated_at");
     if (error) throw new Error(error.message);

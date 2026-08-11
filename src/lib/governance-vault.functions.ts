@@ -199,7 +199,9 @@ export const recordProposalExecution = createServerFn({ method: "POST" })
       if (frErr) throw new Error(frErr.message);
       if (!fr) return { ok: false, reason: "That funding request no longer exists." };
 
-      const { data: created, error: rpcErr } = await context.supabase.rpc(
+      // The RPC is service-role only; the admin check above already gated it.
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: created, error: rpcErr } = await supabaseAdmin.rpc(
         "execute_fund_asset_proposal",
         { _proposal_id: row.id, _user_id: context.userId } as never,
       );
@@ -243,7 +245,9 @@ export const recordProposalExecution = createServerFn({ method: "POST" })
         proposalId: row.id,
       });
 
-      const { error: markErr } = await context.supabase.rpc(
+      // Service-role only RPC; the operator check above already gated it.
+      const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
+      const { error: markErr } = await admin.rpc(
         "mark_proposal_executed_offchain",
         { _proposal_id: row.id, _user_id: context.userId } as never,
       );
