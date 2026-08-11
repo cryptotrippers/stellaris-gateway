@@ -10,7 +10,7 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { publicSupabase } from "./asset-vaults.shared";
+
 import {
   VOTE_CHOICES,
   tallyVotes,
