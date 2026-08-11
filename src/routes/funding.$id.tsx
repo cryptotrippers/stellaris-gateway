@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, ArrowRight, Loader2, Vote } from "lucide-react";
+import { ArrowLeft, ArrowRight, Hammer, Loader2, ShieldCheck, Vote } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import {
   getFundingRequest,
@@ -10,7 +10,9 @@ import {
 } from "@/lib/funding-requests.functions";
 import { getMyRoles } from "@/lib/asset-vaults.functions";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
-import { formatFeeBps } from "@/lib/vault-fees";
+import { formatFeeBps, projectApyMatrix } from "@/lib/vault-fees";
+
+const APY_SCENARIOS_BPS = [300, 500, 800, 1200];
 
 export const Route = createFileRoute("/funding/$id")({
   head: ({ params }) => {
@@ -56,6 +58,10 @@ function FundingRequestDetail() {
   });
 
   const req = q.data ?? null;
+  const apyMatrix = useMemo(
+    () => (req ? projectApyMatrix(req.proposed_fee_bps, APY_SCENARIOS_BPS) : []),
+    [req],
+  );
   const isAdmin = (rolesQ.data?.roles ?? []).includes("admin");
   // The row itself never exposes submitted_by publicly; admins always see the
   // action, and the server re-checks ownership for everyone else.
@@ -143,6 +149,50 @@ function FundingRequestDetail() {
             </div>
           )}
 
+          <section className="mt-8">
+            <h2 className="text-sm font-medium text-foreground">Projected net APY</h2>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Illustrative only, computed with the same fee formula the validator enforces on chain
+              at the proposed {formatFeeBps(req.proposed_fee_bps)} management fee.
+            </p>
+            <div className="mt-3 overflow-x-auto rounded-md border border-border">
+              <table className="w-full min-w-[420px] text-xs tabular-nums">
+                <thead>
+                  <tr className="bg-secondary/20 text-left text-muted-foreground">
+                    <th className="px-3 py-2 font-normal">Assumed gross APY</th>
+                    <th className="px-3 py-2 font-normal">Management fee</th>
+                    <th className="px-3 py-2 font-normal">Net APY to depositors</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {apyMatrix.map((row) => (
+                    <tr key={row.grossApyBps} className="border-t border-border">
+                      <td className="px-3 py-1.5 text-foreground">
+                        {formatFeeBps(row.grossApyBps)}
+                      </td>
+                      <td className="px-3 py-1.5 text-muted-foreground">
+                        {formatFeeBps(req.proposed_fee_bps)}
+                      </td>
+                      <td className="px-3 py-1.5 font-medium text-foreground">
+                        {formatFeeBps(row.netApyBps)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          {req.terms_accepted_at && (
+            <p className="mt-4 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <ShieldCheck className="h-3 w-3" /> Submitter accepted{" "}
+              <Link to="/terms" className="text-primary underline">
+                platform terms {req.terms_version}
+              </Link>{" "}
+              on {new Date(req.terms_accepted_at).toLocaleDateString()}.
+            </p>
+          )}
+
           <section className="card-institutional mt-8 p-5">
             <h2 className="text-sm font-medium text-foreground">Governance</h2>
 
@@ -156,6 +206,11 @@ function FundingRequestDetail() {
                 >
                   Open the proposal <ArrowRight className="h-3 w-3" />
                 </Link>
+              </p>
+            ) : req.status === "asset_created" ? (
+              <p className="mt-2 text-sm text-muted-foreground">
+                Governance passed and an asset row now exists. See “Smart contract” below for what
+                happens next.
               </p>
             ) : req.proposal_id ? (
               <p className="mt-2 text-sm text-muted-foreground">
@@ -196,6 +251,33 @@ function FundingRequestDetail() {
             )}
 
             {err && <p className="mt-3 text-sm text-destructive">{err}</p>}
+          </section>
+
+          <section className="card-institutional mt-6 p-5">
+            <h2 className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+              <Hammer className="h-3.5 w-3.5" /> Smart contract
+            </h2>
+            {req.status === "asset_created" ? (
+              <p className="mt-2 text-sm text-muted-foreground">
+                The <code>{req.asset_slug}</code> asset row exists, but no vault has been derived
+                for it yet. An operator bootstraps the on-chain vault next, writing this request's
+                approved fee terms into its state datum.{" "}
+                <Link to="/operators" className="inline-flex items-center gap-1 text-primary">
+                  Open the operator console <ArrowRight className="h-3 w-3" />
+                </Link>
+              </p>
+            ) : req.proposal_id ? (
+              <p className="mt-2 text-sm text-muted-foreground">
+                No vault exists yet. If the linked proposal passes, an asset row is created and
+                bootstrap becomes available in the operator console — nothing on chain happens
+                automatically.
+              </p>
+            ) : (
+              <p className="mt-2 text-sm text-muted-foreground">
+                No vault can exist until this request becomes a governance proposal and that
+                proposal passes.
+              </p>
+            )}
           </section>
         </>
       )}

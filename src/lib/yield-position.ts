@@ -20,6 +20,7 @@
 import { checkVaultPreconditions, initLucidWithWallet } from "./vault";
 import {
   assertReceiptPolicy,
+  assertYieldVaultAddress,
   getReceiptPolicy,
   getYieldVaultScript,
   YIELD_VAULT_VERSION,
@@ -27,6 +28,7 @@ import {
 } from "./yield-vault";
 import { getRefInputIfPublished } from "./ref-scripts";
 import {
+  encodeStateDatum,
   readPositionDatum,
   readStateDatum,
   type VaultPositionDatum,
@@ -113,11 +115,12 @@ interface LucidBits {
   walletAddress: string;
 }
 
-async function connect(assetId: string): Promise<LucidBits> {
+async function connect(assetId: string, registryAddress?: string | null): Promise<LucidBits> {
   const pre = checkVaultPreconditions();
   if (!pre.ok) throw new Error(pre.reason);
   const { lucid, lucidMod } = await initLucidWithWallet();
   const script = getYieldVaultScript(lucidMod, assetId);
+  assertYieldVaultAddress(script, registryAddress);
   const receipt = getReceiptPolicy(lucidMod, assetId);
   const walletAddress = await lucid.wallet().address();
   const cred = lucidMod.paymentCredentialOf(walletAddress);
@@ -175,27 +178,14 @@ function encodeState(
   state: VaultStateDatum,
   next: { shares: bigint; assets: bigint; epoch?: number },
 ): string {
-  const { Data, Constr } = lucidMod as unknown as {
-    Data: { to: (v: unknown) => string };
-    Constr: new (index: number, fields: unknown[]) => unknown;
-  };
   // Deposits and redemptions never touch the fee terms; they are copied
   // through unchanged so the validator's continuity check passes.
-  return Data.to(
-    new Constr(1, [
-      next.shares,
-      next.assets,
-      BigInt(next.epoch ?? state.epoch),
-      state.operators.map((o) => o.toLowerCase()),
-      BigInt(state.threshold),
-      new Constr(state.paused ? 1 : 0, []),
-      BigInt(state.feeBps),
-      state.treasury,
-      BigInt(state.treasuryShares),
-      BigInt(state.lastFeeTime),
-      state.receiptPolicy,
-    ]),
-  );
+  return encodeStateDatum(lucidMod, {
+    ...state,
+    totalShares: next.shares.toString(),
+    totalAssets: next.assets.toString(),
+    epoch: next.epoch ?? state.epoch,
+  });
 }
 
 function encodePosition(lucidMod: LucidBits["lucidMod"], owner: string, shares: bigint): string {
@@ -207,8 +197,11 @@ function encodePosition(lucidMod: LucidBits["lucidMod"], owner: string, shares: 
 }
 
 /** Read the vault plus the connected wallet's positions in it. */
-export async function loadMyVaultView(assetId: string): Promise<VaultView> {
-  const { lucid, script, selfHash } = await connect(assetId);
+export async function loadMyVaultView(
+  assetId: string,
+  registryAddress?: string | null,
+): Promise<VaultView> {
+  const { lucid, script, selfHash } = await connect(assetId, registryAddress);
   const resolved = await resolveVault(lucid, script.address, selfHash);
   return {
     address: script.address,
@@ -245,8 +238,13 @@ export interface DepositResult {
 export async function depositToYieldVault(params: {
   assetId: string;
   amountLovelace: bigint;
+  /** Registry's recorded vault address, if known. Verified against the script this build derives. */
+  registryAddress?: string | null;
 }): Promise<DepositResult> {
-  const { lucid, lucidMod, script, receipt, selfHash } = await connect(params.assetId);
+  const { lucid, lucidMod, script, receipt, selfHash } = await connect(
+    params.assetId,
+    params.registryAddress,
+  );
   const { stateUtxo, state, stateLovelace } = await resolveVault(lucid, script.address);
   assertReceiptPolicy(receipt, state.receiptPolicy);
 
@@ -336,9 +334,12 @@ export async function withdrawFromYieldVault(params: {
   positionOutputIndex?: number;
   /** Shares to burn. Defaults to the whole position (full close). */
   shares?: bigint;
+  /** Registry's recorded vault address, if known. Verified against the script this build derives. */
+  registryAddress?: string | null;
 }): Promise<WithdrawResult> {
   const { lucid, lucidMod, script, receipt, selfHash, walletAddress } = await connect(
     params.assetId,
+    params.registryAddress,
   );
   const { stateUtxo, state, stateLovelace, positions } = await resolveVault(
     lucid,

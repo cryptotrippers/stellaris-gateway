@@ -110,3 +110,36 @@ export function depositorShares(state: { totalShares: string; treasuryShares: st
 export function formatFeeBps(feeBps: number): string {
   return `${(feeBps / 100).toFixed(2)}% / yr`;
 }
+
+export interface ApyProjectionRow {
+  /** Assumed gross annual yield on the underlying asset, in basis points. */
+  grossApyBps: number;
+  /** Resulting net annual return to a depositor, in basis points. */
+  netApyBps: number;
+}
+
+/**
+ * Onboarding preview: for a proposed `feeBps`, project net depositor APY
+ * across a few assumed gross-yield scenarios. Reuses `feeAssetsFor` /
+ * `feeSharesFor` — the exact functions the accrual builder and the
+ * validator use — so the preview can never drift from how the fee actually
+ * behaves on chain. Mirrors `Accrue`'s order: the year's fee is settled
+ * (as share dilution) on today's assets *before* that year's yield lands.
+ *
+ * Illustrative only — not used by any transaction builder.
+ */
+export function projectApyMatrix(
+  feeBps: number,
+  grossApyBpsScenarios: number[],
+): ApyProjectionRow[] {
+  const BASE = 1_000_000_000n; // arbitrary baseline; cancels out in the ratio
+  return grossApyBpsScenarios.map((grossApyBps) => {
+    const acc = { totalShares: BASE, totalAssets: BASE };
+    const feeAssets = feeAssetsFor(acc, feeBps, MS_PER_YEAR);
+    const feeShares = feeSharesFor(acc, feeAssets);
+    const sharesAfterFee = acc.totalShares + feeShares;
+    const assetsAfterYield = acc.totalAssets + (acc.totalAssets * BigInt(grossApyBps)) / 10_000n;
+    const netPriceBps = (assetsAfterYield * 10_000n) / sharesAfterFee;
+    return { grossApyBps, netApyBps: Number(netPriceBps) - 10_000 };
+  });
+}

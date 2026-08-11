@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { SCRIPT_BUILD_ID, scriptScopedKey } from "@/lib/script-identity";
+import { assertYieldVaultAddress } from "@/lib/yield-vault";
 
 export interface DerivedVaultAddress {
   address: string;
@@ -59,7 +60,21 @@ export function useDerivedVaultAddress(
   });
 
   const derived = query.data ?? null;
-  const isStale = !!(derived && registryAddress && registryAddress !== derived.address);
+  // AUDIT.md O-01: route the staleness check through the shared guard
+  // (assertYieldVaultAddress) instead of a local inequality, so this hook and
+  // every transaction builder agree on exactly one definition of "matches".
+  const isStale = (() => {
+    if (!derived || !registryAddress) return false;
+    try {
+      assertYieldVaultAddress(
+        { address: derived.address, assetId: assetId ?? "" },
+        registryAddress,
+      );
+      return false;
+    } catch {
+      return true;
+    }
+  })();
 
   useEffect(() => {
     if (!isStale || !registryAddress) return;

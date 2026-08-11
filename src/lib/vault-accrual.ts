@@ -12,9 +12,9 @@
  */
 
 import { checkVaultPreconditions, initLucidWithWallet } from "./vault";
-import { getYieldVaultScript, YIELD_VAULT_VERSION } from "./yield-vault";
+import { assertYieldVaultAddress, getYieldVaultScript, YIELD_VAULT_VERSION } from "./yield-vault";
 import { getRefInputIfPublished } from "./ref-scripts";
-import { readStateDatum, type VaultStateDatum } from "./yield-chain-decode";
+import { encodeStateDatum, readStateDatum, type VaultStateDatum } from "./yield-chain-decode";
 import { settleFee } from "./vault-fees";
 
 /** YieldRedeemer constructor indices — mirrors yield_vault.ak. */
@@ -67,6 +67,8 @@ export async function buildAccrual(params: {
   amountLovelace: bigint;
   /** Operator key hashes that will sign. Defaults to the connected wallet. */
   signers?: string[];
+  /** Registry's recorded vault address, if known. Verified against the script this build derives. */
+  registryAddress?: string | null;
 }): Promise<AccrualDraft> {
   const pre = checkVaultPreconditions();
   if (!pre.ok) throw new Error(pre.reason);
@@ -74,6 +76,7 @@ export async function buildAccrual(params: {
 
   const { lucid, lucidMod } = await initLucidWithWallet();
   const script = getYieldVaultScript(lucidMod, params.assetId);
+  assertYieldVaultAddress(script, params.registryAddress);
 
   const walletAddress = await lucid.wallet().address();
   const cred = lucidMod.paymentCredentialOf(walletAddress);
@@ -139,21 +142,19 @@ export async function buildAccrual(params: {
     Constr: new (index: number, fields: unknown[]) => unknown;
   };
 
-  const nextDatum = Data.to(
-    new Constr(1, [
-      totalSharesAfter,
-      totalAssetsAfter,
-      BigInt(state.epoch + 1),
-      committee,
-      BigInt(state.threshold),
-      new Constr(state.paused ? 1 : 0, []),
-      BigInt(state.feeBps),
-      state.treasury,
-      fee.treasurySharesAfter,
-      BigInt(settledAt),
-      state.receiptPolicy,
-    ]),
-  );
+  const nextDatum = encodeStateDatum(lucidMod, {
+    totalShares: totalSharesAfter.toString(),
+    totalAssets: totalAssetsAfter.toString(),
+    epoch: state.epoch + 1,
+    operators: committee,
+    threshold: state.threshold,
+    paused: state.paused,
+    feeBps: state.feeBps,
+    treasury: state.treasury,
+    treasuryShares: fee.treasurySharesAfter.toString(),
+    lastFeeTime: settledAt.toString(),
+    receiptPolicy: state.receiptPolicy,
+  });
   const redeemer = Data.to(new Constr(REDEEMER_ACCRUE, [params.amountLovelace]));
 
   const currentLovelace = stateUtxo.assets["lovelace"] ?? 0n;

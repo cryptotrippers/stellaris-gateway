@@ -12,6 +12,7 @@
 import { checkVaultPreconditions, initLucidWithWallet } from "./vault";
 import { getReceiptPolicy, getYieldVaultScript, YIELD_VAULT_VERSION } from "./yield-vault";
 import { feeBpsOk, MAX_FEE_BPS } from "./vault-fees";
+import { encodeStateDatum } from "./yield-chain-decode";
 
 export interface BootstrapParams {
   assetId: string;
@@ -105,13 +106,14 @@ export async function bootstrapYieldVault(params: BootstrapParams): Promise<Boot
   if (!committee.ok) throw new Error(committee.reason);
 
   const { lucid, lucidMod } = await initLucidWithWallet();
+  // AUDIT.md O-01: bootstrap intentionally does NOT check against a registry
+  // address — it exists to create a state UTxO at whatever address this
+  // build derives, including the re-bootstrap flow that deliberately targets
+  // a new address after the registry's old one has drifted. Callers that
+  // spend an *existing* state UTxO (deposit/withdraw/accrue) are the ones
+  // that must verify against the registry; see assertYieldVaultAddress.
   const script = getYieldVaultScript(lucidMod, params.assetId);
   const receipt = getReceiptPolicy(lucidMod, params.assetId);
-
-  const { Data, Constr } = lucidMod as unknown as {
-    Data: { to: (v: unknown) => string };
-    Constr: new (index: number, fields: unknown[]) => unknown;
-  };
 
   const feeBps = params.feeBps ?? 0;
   if (!feeBpsOk(feeBps)) {
@@ -137,21 +139,19 @@ export async function bootstrapYieldVault(params: BootstrapParams): Promise<Boot
   //         fee_bps, treasury, treasury_shares, last_fee_time,
   //         receipt_policy }
   // is constructor index 1 of YieldDatum.
-  const datum = Data.to(
-    new Constr(1, [
-      0n,
-      0n,
-      0n,
-      operators,
-      BigInt(params.threshold),
-      new Constr(0, []),
-      BigInt(feeBps),
-      treasuryPkh,
-      0n,
-      BigInt(lastFeeTime),
-      receipt.policyId,
-    ]),
-  );
+  const datum = encodeStateDatum(lucidMod, {
+    totalShares: "0",
+    totalAssets: "0",
+    epoch: 0,
+    operators,
+    threshold: params.threshold,
+    paused: false,
+    feeBps,
+    treasury: treasuryPkh,
+    treasuryShares: "0",
+    lastFeeTime: lastFeeTime.toString(),
+    receiptPolicy: receipt.policyId,
+  });
 
   const lovelace = params.lovelace ?? 5_000_000n;
 

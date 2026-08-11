@@ -121,6 +121,7 @@ export function AccrueYieldCard({
       const d = await buildAccrual({
         assetId: vault.asset_id,
         amountLovelace: BigInt(Math.round(ada * 1_000_000)),
+        registryAddress: vault.script_address,
         ...(extraSigners.length > 0 ? { signers: extraSigners } : {}),
       });
       setDraft(d);

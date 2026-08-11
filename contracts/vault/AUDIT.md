@@ -9,8 +9,9 @@ Scope: `validators/vault.ak`, `validators/yield_vault.ak`, `validators/receipt.a
 Method: manual review against the invariants in `SPEC.md` §7 and `YIELD.md` §5.
 Each finding names the missing rule, the transaction that exploits it, and the
 fix. **Close-out (2026-08-10):** V-01, V-03, V-05 and O-03 are fixed, V-02 is
-mitigated on-chain, V-04 is decided as (a). Per-finding status is recorded in
-its own section.
+mitigated on-chain, V-04 is decided as (a). **Close-out (2026-08-11):** O-01
+and O-02 are fixed — the last two open off-chain findings. Per-finding status
+is recorded in its own section.
 
 Status legend: **FIXED** (shipped, with a regression test), **MITIGATED-ON-CHAIN**
 (cannot be prevented, but cannot be exploited), **DECIDED-(x)** (design call
@@ -298,7 +299,21 @@ correct; recorded as a standing constraint.
 
 ## Off-chain findings
 
-**O-01 — `assertYieldVaultAddress` is defined and never called — MEDIUM — OPEN.**
+**O-01 — `assertYieldVaultAddress` is defined and never called — MEDIUM — FIXED.**
+> **Fixed.** `assertYieldVaultAddress` now takes the structural shape
+> `{ address, assetId }` so it can be reused outside `AppliedYieldVault`.
+> `loadMyVaultView`, `depositToYieldVault` and `withdrawFromYieldVault`
+> (`yield-position.ts`, via their shared `connect()`) and `buildAccrual`
+> (`vault-accrual.ts`) all take an optional `registryAddress` and call the
+> guard immediately after deriving the script, before any UTxO is read or
+> spent. `useDerivedVaultAddress`'s `isStale` check now delegates to the same
+> function instead of a local inequality. `bootstrapYieldVault` deliberately
+> does **not** call it — bootstrap (including the re-bootstrap flow in
+> `RebootstrapVaultCard`) intentionally targets whatever address the current
+> build derives, not the registry's old one; that distinction is recorded as a
+> comment at the call site. `AccrueYieldCard` passes the registry's
+> `script_address`; `YieldVaultActionsCard` fetches it via `getAssetVault`.
+
 `src/lib/yield-vault.ts` exports it as the drift guard that compares the derived
 address against the stored one, but no call site exists anywhere in `src/`.
 `assertReceiptPolicy` *is* called, twice, in `yield-position.ts`. The result is
@@ -309,7 +324,18 @@ produced the stale sfm-01 address. Fix: call it at the top of every builder in
 `yield-position.ts`, `vault-accrual.ts`, and `vault-bootstrap.ts`, and in the
 `useDerivedVaultAddress` hook's comparison path.
 
-**O-02 — hand-rolled State datum encoders — MEDIUM — OPEN.** `vault-bootstrap.ts`
+**O-02 — hand-rolled State datum encoders — MEDIUM — FIXED.**
+> **Fixed.** `encodeStateDatum(lucidMod, state)` in `yield-chain-decode.ts` is
+> now the single writer for the 11-field `State` constructor, built next to
+> `decodeState` so the two stay symmetric. `vault-bootstrap.ts`,
+> `vault-accrual.ts` and `yield-position.ts`'s `encodeState` helper all
+> delegate to it instead of hand-rolling `Constr(1, [...])`. Regression:
+> `scripts/verify-state-datum-roundtrip.ts` (`bun run
+> verify:state-datum`, wired into `.github/workflows/contracts.yml`) encodes
+> representative states, decodes them with the production `decodeState`, and
+> fails on any field mismatch.
+
+`vault-bootstrap.ts`
 and `vault-accrual.ts` each build the 11-field `State` constructor by hand as a
 positional `Constr(1, [...])` array. `yield-chain-decode.ts` reads it back with
 an explicit `fields.length !== 11` guard, but the two writers have no such
