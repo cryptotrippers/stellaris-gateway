@@ -8,6 +8,8 @@ This project is currently pre-1.0. The public API, on-chain contract addresses, 
 ## [Unreleased]
 
 ### Added
+- `src/lib/yield-chain-decode.ts` now exports `encodeStateDatum`, the single writer for the yield vault's State datum, replacing three independent hand-rolled encoders (`vault-bootstrap.ts`, `vault-accrual.ts`, `yield-position.ts`) — closes `AUDIT.md` O-02, with `scripts/verify-state-datum-roundtrip.ts` added as a CI regression.
+- `assertYieldVaultAddress` is now called by every builder that spends an existing yield-vault UTxO (`loadMyVaultView`, `depositToYieldVault`, `withdrawFromYieldVault`, `buildAccrual`) and by `useDerivedVaultAddress`'s staleness check — closes `AUDIT.md` O-01.
 - `contracts/vault/SPEC.md` defining the current Stage 3 state transitions, migration rules, shared-accounting invariants, and ordered contract test vectors.
 - `scripts/derive-vault-addresses.mjs`, which derives the applied version-2 script hash and Preprod address per asset directly from the pinned blueprint.
 - A version-2 address registry and a live Preprod proof table in `contracts/vault/DEPLOY.md`.

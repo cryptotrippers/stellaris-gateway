@@ -101,6 +101,39 @@ export function decodePosition(d: PlutusData): VaultPositionDatum | null {
   return { owner: asBytes(d.fields[0]), shares: asInt(d.fields[1]).toString() };
 }
 
+type LucidDataMod = {
+  Data: { to: (v: unknown) => string };
+  Constr: new (index: number, fields: unknown[]) => unknown;
+};
+
+/**
+ * AUDIT.md O-02: the single writer for the yield-vault's State datum
+ * (constructor index 1). Previously `vault-bootstrap.ts`, `vault-accrual.ts`
+ * and `yield-position.ts` each hand-rolled this 11-field constructor
+ * independently; a field written in the wrong position or CBOR type produces
+ * a UTxO the validator can never spend, with no build-time error to warn
+ * anyone. Every writer must go through this function so its output always
+ * matches `decodeState` field-for-field — see
+ * `scripts/verify-state-datum-roundtrip.ts` for the regression test.
+ */
+export function encodeStateDatum(lucidMod: unknown, state: VaultStateDatum): string {
+  const { Data, Constr } = lucidMod as LucidDataMod;
+  return Data.to(
+    new Constr(1, [
+      BigInt(state.totalShares),
+      BigInt(state.totalAssets),
+      BigInt(state.epoch),
+      state.operators.map((o) => o.toLowerCase()),
+      BigInt(state.threshold),
+      new Constr(state.paused ? 1 : 0, []),
+      BigInt(state.feeBps),
+      state.treasury,
+      BigInt(state.treasuryShares),
+      BigInt(state.lastFeeTime),
+      state.receiptPolicy,
+    ]),
+  );
+}
 
 /** Safely read a State datum from an inline datum hex string. */
 export function readStateDatum(datumHex: string | null): VaultStateDatum | null {

@@ -15,6 +15,7 @@ import {
   withdrawFromYieldVault,
   type VaultView,
 } from "@/lib/yield-position";
+import { getAssetVault } from "@/lib/asset-vaults.functions";
 
 /**
  * Depositor-side smart contract actions for a shared yield vault: mint shares
@@ -30,9 +31,18 @@ export function YieldVaultActionsCard({ assetId }: { assetId: string }) {
 
   const walletReady = wallet.connected && wallet.networkId === EXPECTED_WALLET_NETWORK_ID;
 
+  // AUDIT.md O-01: the registry's recorded address, verified against the
+  // script this build derives before any builder spends the vault's UTxOs.
+  const registryQ = useQuery({
+    queryKey: ["asset-vault", assetId],
+    queryFn: () => getAssetVault({ data: { assetId } }),
+    staleTime: 60_000,
+  });
+  const registryAddress = registryQ.data?.script_address ?? null;
+
   const viewQ = useQuery<VaultView>({
-    queryKey: ["yield-vault-view", assetId, wallet.address],
-    queryFn: () => loadMyVaultView(assetId),
+    queryKey: ["yield-vault-view", assetId, wallet.address, registryAddress],
+    queryFn: () => loadMyVaultView(assetId, registryAddress),
     enabled: walletReady,
     retry: 0,
   });
@@ -50,10 +60,10 @@ export function YieldVaultActionsCard({ assetId }: { assetId: string }) {
     try {
       if (kind === "deposit") {
         const lovelace = BigInt(Math.round((Number(amount) || 0) * 1e6));
-        const r = await depositToYieldVault({ assetId, amountLovelace: lovelace });
+        const r = await depositToYieldVault({ assetId, amountLovelace: lovelace, registryAddress });
         setTxHash(r.txHash);
       } else {
-        const r = await withdrawFromYieldVault({ assetId });
+        const r = await withdrawFromYieldVault({ assetId, registryAddress });
         setTxHash(r.txHash);
       }
       setTimeout(() => void viewQ.refetch(), 25_000);

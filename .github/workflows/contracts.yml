@@ -59,6 +59,8 @@ jobs:
       - name: Verify pinned blueprints match plutus.json
         run: node scripts/verify-vault-hash.mjs --strict
 
+      - name: Verify the State datum encoder/decoder round-trip (AUDIT.md O-02)
+        run: bun run scripts/verify-state-datum-roundtrip.ts
 
       - name: Verify published reference script UTxOs are still unspent
         env:

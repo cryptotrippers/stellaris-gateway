@@ -200,9 +200,15 @@ export function assertReceiptPolicy(
 /**
  * Guard for builders that spend a vault UTxO recorded in the registry: refuse
  * to build if the stored address no longer matches the verified script.
+ *
+ * AUDIT.md O-01: this was defined but never called anywhere. Every builder
+ * that spends an existing on-chain vault UTxO (deposit, withdraw, accrue)
+ * must call it with the registry's recorded address, and
+ * `useDerivedVaultAddress` routes its staleness check through it too, so
+ * "does this address match" has exactly one definition.
  */
 export function assertYieldVaultAddress(
-  script: AppliedYieldVault,
+  script: Pick<AppliedYieldVault, "address" | "assetId">,
   registryAddress: string | null | undefined,
 ): void {
   if (registryAddress && registryAddress !== script.address) {
