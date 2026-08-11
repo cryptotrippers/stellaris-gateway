@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AlertCircle, ArrowLeft, CheckCircle2, Loader2 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { submitFundingRequest } from "@/lib/funding-requests.functions";
-import { MAX_FEE_BPS, formatFeeBps } from "@/lib/vault-fees";
+import { MAX_FEE_BPS, formatFeeBps, projectApyMatrix } from "@/lib/vault-fees";
+import { FUNDING_TERMS_SECTIONS, FUNDING_TERMS_VERSION } from "@/lib/onboarding-terms";
 
 export const Route = createFileRoute("/funding/new")({
   head: () => ({
@@ -30,6 +31,8 @@ export const Route = createFileRoute("/funding/new")({
 
 const STEPS = ["Project", "Terms & fee", "Evidence & review"] as const;
 const CATEGORIES = ["Renewables", "Real estate", "Private credit", "Infrastructure", "Other"];
+/** Illustrative gross-yield scenarios for the onboarding APY preview: 3/5/8/12%. */
+const APY_SCENARIOS_BPS = [300, 500, 800, 1200];
 
 function NewFundingRequest() {
   const [step, setStep] = useState(0);
@@ -46,9 +49,12 @@ function NewFundingRequest() {
   const [feeBps, setFeeBps] = useState(0);
   const [treasuryAddress, setTreasuryAddress] = useState("");
   const [evidence, setEvidence] = useState("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [doneSlug, setDoneSlug] = useState<string | null>(null);
+
+  const apyMatrix = useMemo(() => projectApyMatrix(feeBps, APY_SCENARIOS_BPS), [feeBps]);
 
   const submit = useServerFn(submitFundingRequest);
   const navigate = useNavigate();
@@ -75,6 +81,7 @@ function NewFundingRequest() {
             .filter(Boolean),
           proposedFeeBps: feeBps,
           treasuryAddress,
+          termsAccepted,
         },
       });
       setDoneSlug(row.asset_slug);
@@ -288,6 +295,39 @@ function NewFundingRequest() {
                 </Field>
               </div>
             </div>
+
+            <div className="rounded-md border border-border bg-secondary/20 p-4">
+              <span className="text-sm text-muted-foreground">
+                Projected net APY at this fee rate
+              </span>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Illustrative only, computed with the same fee formula the validator enforces on
+                chain. Not a promise of returns — actual yield depends entirely on the underlying
+                asset.
+              </p>
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full min-w-[420px] text-xs tabular-nums">
+                  <thead>
+                    <tr className="text-left text-muted-foreground">
+                      <th className="pb-2 font-normal">Assumed gross APY</th>
+                      <th className="pb-2 font-normal">Management fee</th>
+                      <th className="pb-2 font-normal">Net APY to depositors</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {apyMatrix.map((row) => (
+                      <tr key={row.grossApyBps} className="border-t border-border">
+                        <td className="py-1.5 text-foreground">{formatFeeBps(row.grossApyBps)}</td>
+                        <td className="py-1.5 text-muted-foreground">{formatFeeBps(feeBps)}</td>
+                        <td className="py-1.5 font-medium text-foreground">
+                          {formatFeeBps(row.netApyBps)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 
@@ -320,6 +360,35 @@ function NewFundingRequest() {
               Submitting records a public request. It does not create an asset, derive a vault, or
               move any funds.
             </p>
+
+            <div className="rounded-md border border-border bg-secondary/20 p-4">
+              <span className="text-sm text-muted-foreground">
+                Platform terms — version <span className="font-mono">{FUNDING_TERMS_VERSION}</span>
+              </span>
+              <div className="mt-2 max-h-40 space-y-3 overflow-y-auto rounded border border-border bg-background p-3 text-[11px] leading-relaxed text-muted-foreground">
+                {FUNDING_TERMS_SECTIONS.map((s) => (
+                  <div key={s.heading}>
+                    <p className="font-medium text-foreground">{s.heading}</p>
+                    <p className="mt-0.5">{s.body}</p>
+                  </div>
+                ))}
+              </div>
+              <label className="mt-3 flex items-start gap-2 text-sm text-foreground">
+                <input
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                  className="mt-0.5"
+                />
+                <span>
+                  I have read and agree to the{" "}
+                  <Link to="/terms" target="_blank" className="text-primary underline">
+                    platform terms
+                  </Link>
+                  , including that everything above is public and must be accurate.
+                </span>
+              </label>
+            </div>
           </div>
         )}
 
@@ -351,7 +420,8 @@ function NewFundingRequest() {
             <button
               type="button"
               onClick={send}
-              disabled={busy}
+              disabled={busy || !termsAccepted}
+              title={!termsAccepted ? "Accept the platform terms first" : undefined}
               className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
               {busy && <Loader2 className="h-4 w-4 animate-spin" />}

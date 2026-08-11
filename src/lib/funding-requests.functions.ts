@@ -10,6 +10,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { publicSupabase } from "./asset-vaults.shared";
+import { FUNDING_TERMS_VERSION } from "./onboarding-terms";
 
 export interface FundingRequestRow {
   id: string;
@@ -29,11 +30,13 @@ export interface FundingRequestRow {
   status: string;
   proposal_id: string | null;
   asset_id: string | null;
+  terms_version: string | null;
+  terms_accepted_at: string | null;
   created_at: string;
 }
 
 const COLS =
-  "id, asset_slug, name, category, issuer, location, description, target_lovelace, min_deposit_lovelace, maturity_months, reporting_cadence, evidence_urls, proposed_fee_bps, treasury_address, status, proposal_id, asset_id, created_at";
+  "id, asset_slug, name, category, issuer, location, description, target_lovelace, min_deposit_lovelace, maturity_months, reporting_cadence, evidence_urls, proposed_fee_bps, treasury_address, status, proposal_id, asset_id, terms_version, terms_accepted_at, created_at";
 
 const SLUG_RE = /^[a-z0-9](?:[a-z0-9-]{1,30}[a-z0-9])$/;
 const URL_RE = /^https:\/\/[^\s]{5,300}$/;
@@ -83,6 +86,8 @@ export interface FundingRequestInput {
   evidenceUrls: string[];
   proposedFeeBps: number;
   treasuryAddress?: string;
+  /** Must be true — the submitter has read and agreed to the platform terms. */
+  termsAccepted: boolean;
 }
 
 function validate(input: FundingRequestInput) {
@@ -118,6 +123,9 @@ function validate(input: FundingRequestInput) {
   }
   const bad = evidence.find((u) => !URL_RE.test(u));
   if (bad) throw new Error(`"${bad.slice(0, 40)}" is not an https link.`);
+  if (input.termsAccepted !== true) {
+    throw new Error("You must read and accept the platform terms before submitting.");
+  }
 
   return {
     slug,
@@ -163,6 +171,8 @@ export const submitFundingRequest = createServerFn({ method: "POST" })
         proposed_fee_bps: v.proposedFeeBps,
         treasury_address: v.treasuryAddress,
         status: "submitted",
+        terms_version: FUNDING_TERMS_VERSION,
+        terms_accepted_at: new Date().toISOString(),
       })
       .select(COLS)
       .single();
