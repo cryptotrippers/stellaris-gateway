@@ -199,7 +199,9 @@ export const recordProposalExecution = createServerFn({ method: "POST" })
       if (frErr) throw new Error(frErr.message);
       if (!fr) return { ok: false, reason: "That funding request no longer exists." };
 
-      const { data: created, error: rpcErr } = await context.supabase.rpc(
+      // The RPC is service-role only; the admin check above already gated it.
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: created, error: rpcErr } = await supabaseAdmin.rpc(
         "execute_fund_asset_proposal",
         { _proposal_id: row.id, _user_id: context.userId } as never,
       );
