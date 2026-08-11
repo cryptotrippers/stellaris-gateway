@@ -245,7 +245,9 @@ export const recordProposalExecution = createServerFn({ method: "POST" })
         proposalId: row.id,
       });
 
-      const { error: markErr } = await context.supabase.rpc(
+      // Service-role only RPC; the operator check above already gated it.
+      const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
+      const { error: markErr } = await admin.rpc(
         "mark_proposal_executed_offchain",
         { _proposal_id: row.id, _user_id: context.userId } as never,
       );
