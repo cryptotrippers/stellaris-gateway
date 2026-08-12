@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as YieldRouteImport } from './routes/yield'
 import { Route as UpgradeRouteImport } from './routes/upgrade'
 import { Route as TestnetRouteImport } from './routes/testnet'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as StewardshipRouteImport } from './routes/stewardship'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SecurityRouteImport } from './routes/security'
@@ -53,6 +54,11 @@ const UpgradeRoute = UpgradeRouteImport.update({
 const TestnetRoute = TestnetRouteImport.update({
   id: '/testnet',
   path: '/testnet',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StewardshipRoute = StewardshipRouteImport.update({
@@ -211,6 +217,7 @@ export interface FileRoutesByFullPath {
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stewardship': typeof StewardshipRoute
+  '/terms': typeof TermsRoute
   '/testnet': typeof TestnetRoute
   '/upgrade': typeof UpgradeRouteWithChildren
   '/yield': typeof YieldRoute
@@ -243,6 +250,7 @@ export interface FileRoutesByTo {
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stewardship': typeof StewardshipRoute
+  '/terms': typeof TermsRoute
   '/testnet': typeof TestnetRoute
   '/yield': typeof YieldRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
@@ -275,6 +283,7 @@ export interface FileRoutesById {
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stewardship': typeof StewardshipRoute
+  '/terms': typeof TermsRoute
   '/testnet': typeof TestnetRoute
   '/upgrade': typeof UpgradeRouteWithChildren
   '/yield': typeof YieldRoute
@@ -309,6 +318,7 @@ export interface FileRouteTypes {
     | '/security'
     | '/sitemap.xml'
     | '/stewardship'
+    | '/terms'
     | '/testnet'
     | '/upgrade'
     | '/yield'
@@ -341,6 +351,7 @@ export interface FileRouteTypes {
     | '/security'
     | '/sitemap.xml'
     | '/stewardship'
+    | '/terms'
     | '/testnet'
     | '/yield'
     | '/.mcp/list-tools'
@@ -372,6 +383,7 @@ export interface FileRouteTypes {
     | '/security'
     | '/sitemap.xml'
     | '/stewardship'
+    | '/terms'
     | '/testnet'
     | '/upgrade'
     | '/yield'
@@ -405,6 +417,7 @@ export interface RootRouteChildren {
   SecurityRoute: typeof SecurityRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StewardshipRoute: typeof StewardshipRoute
+  TermsRoute: typeof TermsRoute
   TestnetRoute: typeof TestnetRoute
   UpgradeRoute: typeof UpgradeRouteWithChildren
   YieldRoute: typeof YieldRoute
@@ -440,6 +453,13 @@ declare module '@tanstack/react-router' {
       path: '/testnet'
       fullPath: '/testnet'
       preLoaderRoute: typeof TestnetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/stewardship': {
@@ -687,6 +707,7 @@ const rootRouteChildren: RootRouteChildren = {
   SecurityRoute: SecurityRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StewardshipRoute: StewardshipRoute,
+  TermsRoute: TermsRoute,
   TestnetRoute: TestnetRoute,
   UpgradeRoute: UpgradeRouteWithChildren,
   YieldRoute: YieldRoute,
