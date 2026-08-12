@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as YieldRouteImport } from './routes/yield'
 import { Route as UpgradeRouteImport } from './routes/upgrade'
 import { Route as TestnetRouteImport } from './routes/testnet'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as StewardshipRouteImport } from './routes/stewardship'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SecurityRouteImport } from './routes/security'
@@ -26,6 +27,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UpgradeIndexRouteImport } from './routes/upgrade.index'
+import { Route as GovernanceIndexRouteImport } from './routes/governance.index'
 import { Route as FundingIndexRouteImport } from './routes/funding.index'
 import { Route as UpgradeReturnRouteImport } from './routes/upgrade.return'
 import { Route as MarketplaceIdRouteImport } from './routes/marketplace.$id'
@@ -53,6 +55,11 @@ const UpgradeRoute = UpgradeRouteImport.update({
 const TestnetRoute = TestnetRouteImport.update({
   id: '/testnet',
   path: '/testnet',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StewardshipRoute = StewardshipRouteImport.update({
@@ -124,6 +131,11 @@ const UpgradeIndexRoute = UpgradeIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => UpgradeRoute,
+} as any)
+const GovernanceIndexRoute = GovernanceIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => GovernanceRoute,
 } as any)
 const FundingIndexRoute = FundingIndexRouteImport.update({
   id: '/funding/',
@@ -211,6 +223,7 @@ export interface FileRoutesByFullPath {
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stewardship': typeof StewardshipRoute
+  '/terms': typeof TermsRoute
   '/testnet': typeof TestnetRoute
   '/upgrade': typeof UpgradeRouteWithChildren
   '/yield': typeof YieldRoute
@@ -224,6 +237,7 @@ export interface FileRoutesByFullPath {
   '/marketplace/$id': typeof MarketplaceIdRoute
   '/upgrade/return': typeof UpgradeReturnRoute
   '/funding/': typeof FundingIndexRoute
+  '/governance/': typeof GovernanceIndexRoute
   '/upgrade/': typeof UpgradeIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/blockfrost/webhook': typeof ApiPublicBlockfrostWebhookRoute
@@ -235,7 +249,6 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/blockfrost-health': typeof BlockfrostHealthRoute
   '/developers': typeof DevelopersRoute
-  '/governance': typeof GovernanceRouteWithChildren
   '/invite': typeof InviteRoute
   '/marketplace': typeof MarketplaceRouteWithChildren
   '/mcp': typeof McpRoute
@@ -243,6 +256,7 @@ export interface FileRoutesByTo {
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stewardship': typeof StewardshipRoute
+  '/terms': typeof TermsRoute
   '/testnet': typeof TestnetRoute
   '/yield': typeof YieldRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
@@ -255,6 +269,7 @@ export interface FileRoutesByTo {
   '/marketplace/$id': typeof MarketplaceIdRoute
   '/upgrade/return': typeof UpgradeReturnRoute
   '/funding': typeof FundingIndexRoute
+  '/governance': typeof GovernanceIndexRoute
   '/upgrade': typeof UpgradeIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/blockfrost/webhook': typeof ApiPublicBlockfrostWebhookRoute
@@ -275,6 +290,7 @@ export interface FileRoutesById {
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stewardship': typeof StewardshipRoute
+  '/terms': typeof TermsRoute
   '/testnet': typeof TestnetRoute
   '/upgrade': typeof UpgradeRouteWithChildren
   '/yield': typeof YieldRoute
@@ -288,6 +304,7 @@ export interface FileRoutesById {
   '/marketplace/$id': typeof MarketplaceIdRoute
   '/upgrade/return': typeof UpgradeReturnRoute
   '/funding/': typeof FundingIndexRoute
+  '/governance/': typeof GovernanceIndexRoute
   '/upgrade/': typeof UpgradeIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/blockfrost/webhook': typeof ApiPublicBlockfrostWebhookRoute
@@ -309,6 +326,7 @@ export interface FileRouteTypes {
     | '/security'
     | '/sitemap.xml'
     | '/stewardship'
+    | '/terms'
     | '/testnet'
     | '/upgrade'
     | '/yield'
@@ -322,6 +340,7 @@ export interface FileRouteTypes {
     | '/marketplace/$id'
     | '/upgrade/return'
     | '/funding/'
+    | '/governance/'
     | '/upgrade/'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/blockfrost/webhook'
@@ -333,7 +352,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/blockfrost-health'
     | '/developers'
-    | '/governance'
     | '/invite'
     | '/marketplace'
     | '/mcp'
@@ -341,6 +359,7 @@ export interface FileRouteTypes {
     | '/security'
     | '/sitemap.xml'
     | '/stewardship'
+    | '/terms'
     | '/testnet'
     | '/yield'
     | '/.mcp/list-tools'
@@ -353,6 +372,7 @@ export interface FileRouteTypes {
     | '/marketplace/$id'
     | '/upgrade/return'
     | '/funding'
+    | '/governance'
     | '/upgrade'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/blockfrost/webhook'
@@ -372,6 +392,7 @@ export interface FileRouteTypes {
     | '/security'
     | '/sitemap.xml'
     | '/stewardship'
+    | '/terms'
     | '/testnet'
     | '/upgrade'
     | '/yield'
@@ -385,6 +406,7 @@ export interface FileRouteTypes {
     | '/marketplace/$id'
     | '/upgrade/return'
     | '/funding/'
+    | '/governance/'
     | '/upgrade/'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/blockfrost/webhook'
@@ -405,6 +427,7 @@ export interface RootRouteChildren {
   SecurityRoute: typeof SecurityRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StewardshipRoute: typeof StewardshipRoute
+  TermsRoute: typeof TermsRoute
   TestnetRoute: typeof TestnetRoute
   UpgradeRoute: typeof UpgradeRouteWithChildren
   YieldRoute: typeof YieldRoute
@@ -440,6 +463,13 @@ declare module '@tanstack/react-router' {
       path: '/testnet'
       fullPath: '/testnet'
       preLoaderRoute: typeof TestnetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/stewardship': {
@@ -540,6 +570,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UpgradeIndexRouteImport
       parentRoute: typeof UpgradeRoute
     }
+    '/governance/': {
+      id: '/governance/'
+      path: '/'
+      fullPath: '/governance/'
+      preLoaderRoute: typeof GovernanceIndexRouteImport
+      parentRoute: typeof GovernanceRoute
+    }
     '/funding/': {
       id: '/funding/'
       path: '/funding'
@@ -637,11 +674,13 @@ declare module '@tanstack/react-router' {
 interface GovernanceRouteChildren {
   GovernanceSipRoute: typeof GovernanceSipRoute
   GovernanceNewRoute: typeof GovernanceNewRoute
+  GovernanceIndexRoute: typeof GovernanceIndexRoute
 }
 
 const GovernanceRouteChildren: GovernanceRouteChildren = {
   GovernanceSipRoute: GovernanceSipRoute,
   GovernanceNewRoute: GovernanceNewRoute,
+  GovernanceIndexRoute: GovernanceIndexRoute,
 }
 
 const GovernanceRouteWithChildren = GovernanceRoute._addFileChildren(
@@ -687,6 +726,7 @@ const rootRouteChildren: RootRouteChildren = {
   SecurityRoute: SecurityRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StewardshipRoute: StewardshipRoute,
+  TermsRoute: TermsRoute,
   TestnetRoute: TestnetRoute,
   UpgradeRoute: UpgradeRouteWithChildren,
   YieldRoute: YieldRoute,

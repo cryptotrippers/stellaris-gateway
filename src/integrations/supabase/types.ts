@@ -224,6 +224,8 @@ export type Database = {
           status: string
           submitted_by: string
           target_lovelace: number
+          terms_accepted_at: string | null
+          terms_version: string | null
           treasury_address: string | null
           updated_at: string
         }
@@ -246,6 +248,8 @@ export type Database = {
           status?: string
           submitted_by: string
           target_lovelace?: number
+          terms_accepted_at?: string | null
+          terms_version?: string | null
           treasury_address?: string | null
           updated_at?: string
         }
@@ -268,6 +272,8 @@ export type Database = {
           status?: string
           submitted_by?: string
           target_lovelace?: number
+          terms_accepted_at?: string | null
+          terms_version?: string | null
           treasury_address?: string | null
           updated_at?: string
         }
