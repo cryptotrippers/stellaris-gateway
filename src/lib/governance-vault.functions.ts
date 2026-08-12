@@ -22,6 +22,8 @@ import {
   type ProposalRow,
   type ProposalParams,
 } from "./governance-vault.shared";
+import { derivedStatus, emptyTally, tallyVotes, type VoteRow } from "./governance-votes.shared";
+import { computeOutcome } from "./governance-outcome.shared";
 
 export type { ProposalRow, ProposalKind } from "./governance-vault.shared";
 
@@ -140,6 +142,88 @@ export const createVaultProposal = createServerFn({ method: "POST" })
   });
 
 /**
+ * Finalise a proposal whose voting window has closed: apply the same quorum
+ * and approval-threshold rules the UI already shows voters
+ * (`computeOutcome`), and write the result to `status` so `passed` proposals
+ * become executable. Nothing upstream of this function ever writes `status`
+ * to anything but `active` — this is the missing link between voting and
+ * execution, so every field it depends on is re-derived from the ballots and
+ * vault positions themselves, never trusted from the caller.
+ *
+ * Restricted to operator/admin, matching the UI's own language ("the result
+ * stands until the committee finalises it") and `recordProposalExecution`'s
+ * existing role gate for non-admin-only kinds.
+ */
+export const finalizeProposal = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { proposalId: string }) => {
+    if (!data?.proposalId) throw new Error("proposalId is required");
+    return { proposalId: data.proposalId };
+  })
+  .handler(async ({ data, context }): Promise<{ ok: boolean; reason: string; status?: string }> => {
+    await requireRole(context.supabase, context.userId, "operator");
+
+    const { data: row, error } = await context.supabase
+      .from("governance_proposals")
+      .select(PROPOSAL_COLUMNS)
+      .eq("id", data.proposalId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!row) return { ok: false, reason: "Proposal not found." };
+    const proposal = row as unknown as ProposalRow;
+
+    if (derivedStatus(proposal) !== "awaiting_finalisation") {
+      return {
+        ok: false,
+        reason:
+          "This proposal is not ready to finalise — voting must be closed and it must not already be finalised.",
+      };
+    }
+
+    const votesRes = await publicSupabase()
+      .from("proposal_votes")
+      .select("proposal_id, voter_user_id, choice, weight_ada, created_at, updated_at")
+      .eq("proposal_id", proposal.id);
+    if (votesRes.error) throw new Error(votesRes.error.message);
+    const tally = tallyVotes((votesRes.data ?? []) as unknown as VoteRow[])[proposal.id];
+
+    // vault_positions is RLS-scoped per user, so the eligible-weight
+    // denominator behind quorum must be aggregated with the service role —
+    // same as getEligibleWeights().
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    let posQuery = supabaseAdmin.from("vault_positions").select("amount_ada, vault_id");
+    if (proposal.asset_id) posQuery = posQuery.eq("vault_id", proposal.asset_id);
+    const posRes = await posQuery;
+    if (posRes.error) throw new Error(posRes.error.message);
+    const eligibleAda = (posRes.data ?? []).reduce(
+      (sum, r) => sum + (Number(r.amount_ada) || 0),
+      0,
+    );
+
+    const outcome = computeOutcome(proposal, tally ?? emptyTally(proposal.id), eligibleAda);
+
+    const nextStatus = outcome.verdict === "would_pass" ? "passed" : "rejected";
+
+    const { error: updErr } = await context.supabase
+      .from("governance_proposals")
+      .update({ status: nextStatus })
+      .eq("id", proposal.id)
+      .eq("status", "active");
+    if (updErr) throw new Error(updErr.message);
+
+    return {
+      ok: true,
+      reason:
+        nextStatus === "passed"
+          ? `Finalised as passed — ${outcome.approvalPct?.toFixed(1) ?? "0"}% approval, quorum met.`
+          : outcome.verdict === "quorum_failed"
+            ? "Finalised as rejected — the voting window closed below quorum."
+            : `Finalised as rejected — approval was ${outcome.approvalPct?.toFixed(1) ?? "0"}%, below the ${outcome.thresholdPct}% threshold.`,
+      status: nextStatus,
+    };
+  });
+
+/**
  * Record that a passed proposal was executed.
  *
  * For an accrual, execution is a Cardano transaction: it is verified against
@@ -247,10 +331,10 @@ export const recordProposalExecution = createServerFn({ method: "POST" })
 
       // Service-role only RPC; the operator check above already gated it.
       const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
-      const { error: markErr } = await admin.rpc(
-        "mark_proposal_executed_offchain",
-        { _proposal_id: row.id, _user_id: context.userId } as never,
-      );
+      const { error: markErr } = await admin.rpc("mark_proposal_executed_offchain", {
+        _proposal_id: row.id,
+        _user_id: context.userId,
+      } as never);
       if (markErr) return { ok: false, reason: markErr.message };
       return { ok: true, reason: "New fee schedule recorded and proposal executed." };
     }
@@ -265,8 +349,6 @@ export const recordProposalExecution = createServerFn({ method: "POST" })
     }
     if (!data.txHash) return { ok: false, reason: "A transaction hash is required." };
     if (!row.asset_id) return { ok: false, reason: "This proposal names no asset." };
-
-
 
     const { data: vault, error: vErr } = await context.supabase
       .from("asset_vaults")
