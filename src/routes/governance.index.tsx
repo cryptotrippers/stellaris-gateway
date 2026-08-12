@@ -21,7 +21,7 @@ type TreasuryConfigRow = Database["public"]["Tables"]["treasury_config"]["Row"];
 type GovTab = "overview" | "proposals" | "vaults" | "delegates" | "signals";
 const TABS: GovTab[] = ["overview", "proposals", "vaults", "delegates", "signals"];
 
-export const Route = createFileRoute("/governance")({
+export const Route = createFileRoute("/governance/")({
   validateSearch: (search: Record<string, unknown>): { tab?: GovTab } => {
     const t = search.tab;
     return { tab: typeof t === "string" && (TABS as string[]).includes(t) ? (t as GovTab) : undefined };
