@@ -20,6 +20,7 @@ import { Route as OperatorsRouteImport } from './routes/operators'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as MarketplaceRouteImport } from './routes/marketplace'
 import { Route as InviteRouteImport } from './routes/invite'
+import { Route as GovernanceRouteImport } from './routes/governance'
 import { Route as DevelopersRouteImport } from './routes/developers'
 import { Route as BlockfrostHealthRouteImport } from './routes/blockfrost-health'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -96,6 +97,11 @@ const InviteRoute = InviteRouteImport.update({
   path: '/invite',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GovernanceRoute = GovernanceRouteImport.update({
+  id: '/governance',
+  path: '/governance',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DevelopersRoute = DevelopersRouteImport.update({
   id: '/developers',
   path: '/developers',
@@ -127,9 +133,9 @@ const UpgradeIndexRoute = UpgradeIndexRouteImport.update({
   getParentRoute: () => UpgradeRoute,
 } as any)
 const GovernanceIndexRoute = GovernanceIndexRouteImport.update({
-  id: '/governance/',
-  path: '/governance/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => GovernanceRoute,
 } as any)
 const FundingIndexRoute = FundingIndexRouteImport.update({
   id: '/funding/',
@@ -147,14 +153,14 @@ const MarketplaceIdRoute = MarketplaceIdRouteImport.update({
   getParentRoute: () => MarketplaceRoute,
 } as any)
 const GovernanceNewRoute = GovernanceNewRouteImport.update({
-  id: '/governance/new',
-  path: '/governance/new',
-  getParentRoute: () => rootRouteImport,
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => GovernanceRoute,
 } as any)
 const GovernanceSipRoute = GovernanceSipRouteImport.update({
-  id: '/governance/$sip',
-  path: '/governance/$sip',
-  getParentRoute: () => rootRouteImport,
+  id: '/$sip',
+  path: '/$sip',
+  getParentRoute: () => GovernanceRoute,
 } as any)
 const FundingNewRoute = FundingNewRouteImport.update({
   id: '/funding/new',
@@ -209,6 +215,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/blockfrost-health': typeof BlockfrostHealthRoute
   '/developers': typeof DevelopersRoute
+  '/governance': typeof GovernanceRouteWithChildren
   '/invite': typeof InviteRoute
   '/marketplace': typeof MarketplaceRouteWithChildren
   '/mcp': typeof McpRoute
@@ -275,6 +282,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/blockfrost-health': typeof BlockfrostHealthRoute
   '/developers': typeof DevelopersRoute
+  '/governance': typeof GovernanceRouteWithChildren
   '/invite': typeof InviteRoute
   '/marketplace': typeof MarketplaceRouteWithChildren
   '/mcp': typeof McpRoute
@@ -310,6 +318,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/blockfrost-health'
     | '/developers'
+    | '/governance'
     | '/invite'
     | '/marketplace'
     | '/mcp'
@@ -375,6 +384,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/blockfrost-health'
     | '/developers'
+    | '/governance'
     | '/invite'
     | '/marketplace'
     | '/mcp'
@@ -409,6 +419,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   BlockfrostHealthRoute: typeof BlockfrostHealthRoute
   DevelopersRoute: typeof DevelopersRoute
+  GovernanceRoute: typeof GovernanceRouteWithChildren
   InviteRoute: typeof InviteRoute
   MarketplaceRoute: typeof MarketplaceRouteWithChildren
   McpRoute: typeof McpRoute
@@ -425,10 +436,7 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute: typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
   FundingIdRoute: typeof FundingIdRoute
   FundingNewRoute: typeof FundingNewRoute
-  GovernanceSipRoute: typeof GovernanceSipRoute
-  GovernanceNewRoute: typeof GovernanceNewRoute
   FundingIndexRoute: typeof FundingIndexRoute
-  GovernanceIndexRoute: typeof GovernanceIndexRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicBlockfrostWebhookRoute: typeof ApiPublicBlockfrostWebhookRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -513,6 +521,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InviteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/governance': {
+      id: '/governance'
+      path: '/governance'
+      fullPath: '/governance'
+      preLoaderRoute: typeof GovernanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/developers': {
       id: '/developers'
       path: '/developers'
@@ -557,10 +572,10 @@ declare module '@tanstack/react-router' {
     }
     '/governance/': {
       id: '/governance/'
-      path: '/governance'
+      path: '/'
       fullPath: '/governance/'
       preLoaderRoute: typeof GovernanceIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof GovernanceRoute
     }
     '/funding/': {
       id: '/funding/'
@@ -585,17 +600,17 @@ declare module '@tanstack/react-router' {
     }
     '/governance/new': {
       id: '/governance/new'
-      path: '/governance/new'
+      path: '/new'
       fullPath: '/governance/new'
       preLoaderRoute: typeof GovernanceNewRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof GovernanceRoute
     }
     '/governance/$sip': {
       id: '/governance/$sip'
-      path: '/governance/$sip'
+      path: '/$sip'
       fullPath: '/governance/$sip'
       preLoaderRoute: typeof GovernanceSipRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof GovernanceRoute
     }
     '/funding/new': {
       id: '/funding/new'
@@ -656,6 +671,22 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface GovernanceRouteChildren {
+  GovernanceSipRoute: typeof GovernanceSipRoute
+  GovernanceNewRoute: typeof GovernanceNewRoute
+  GovernanceIndexRoute: typeof GovernanceIndexRoute
+}
+
+const GovernanceRouteChildren: GovernanceRouteChildren = {
+  GovernanceSipRoute: GovernanceSipRoute,
+  GovernanceNewRoute: GovernanceNewRoute,
+  GovernanceIndexRoute: GovernanceIndexRoute,
+}
+
+const GovernanceRouteWithChildren = GovernanceRoute._addFileChildren(
+  GovernanceRouteChildren,
+)
+
 interface MarketplaceRouteChildren {
   MarketplaceIdRoute: typeof MarketplaceIdRoute
 }
@@ -687,6 +718,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   BlockfrostHealthRoute: BlockfrostHealthRoute,
   DevelopersRoute: DevelopersRoute,
+  GovernanceRoute: GovernanceRouteWithChildren,
   InviteRoute: InviteRoute,
   MarketplaceRoute: MarketplaceRouteWithChildren,
   McpRoute: McpRoute,
@@ -705,10 +737,7 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute,
   FundingIdRoute: FundingIdRoute,
   FundingNewRoute: FundingNewRoute,
-  GovernanceSipRoute: GovernanceSipRoute,
-  GovernanceNewRoute: GovernanceNewRoute,
   FundingIndexRoute: FundingIndexRoute,
-  GovernanceIndexRoute: GovernanceIndexRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicBlockfrostWebhookRoute: ApiPublicBlockfrostWebhookRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
