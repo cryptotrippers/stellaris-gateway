@@ -22,7 +22,7 @@ import {
 } from "@/lib/governance-outcome.shared";
 import { getEligibleWeights } from "@/lib/governance-eligibility.functions";
 import { getMyRoles } from "@/lib/asset-vaults.functions";
-import { recordProposalExecution } from "@/lib/governance-vault.functions";
+import { finalizeProposal, recordProposalExecution } from "@/lib/governance-vault.functions";
 import type { TxChainTime } from "@/lib/governance-chain.functions";
 
 export const Route = createFileRoute("/governance/$sip")({
@@ -155,6 +155,7 @@ function ProposalDetailPage() {
         <QuorumCard outcome={outcome} eligibleUnknown={eligibleQ.isLoading} />
       </section>
 
+      {status === "awaiting_finalisation" && <FinaliseCard proposal={proposal} />}
       {proposal.status === "passed" && <ExecuteCard proposal={proposal} />}
 
       <section className="mt-4 grid gap-4 md:grid-cols-2">
@@ -407,6 +408,62 @@ function QuorumCard({
         </div>
       )}
     </div>
+  );
+}
+
+function FinaliseCard({ proposal }: { proposal: ProposalRow }) {
+  const queryClient = useQueryClient();
+  const [result, setResult] = useState<{ ok: boolean; reason: string } | null>(null);
+
+  const rolesQ = useQuery({
+    queryKey: ["my-roles"],
+    queryFn: () => getMyRoles(),
+    staleTime: 60_000,
+    retry: false,
+  });
+  const roles = rolesQ.data?.roles ?? [];
+  const canFinalise = roles.includes("operator") || roles.includes("admin");
+
+  const finalise = useMutation({
+    mutationFn: () => finalizeProposal({ data: { proposalId: proposal.id } }),
+    onSuccess: (r) => {
+      setResult(r);
+      if (r.ok) void queryClient.invalidateQueries();
+    },
+    onError: (e: Error) => setResult({ ok: false, reason: e.message }),
+  });
+
+  return (
+    <section className="card-institutional mt-4 p-5">
+      <h2 className="text-[10px] uppercase tracking-widest text-muted-foreground">Finalisation</h2>
+      {!canFinalise ? (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Voting has closed. This SIP is awaiting finalisation by an operator, which applies the
+          quorum and approval rules shown above and unlocks execution.
+        </p>
+      ) : (
+        <>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Applies the quorum and threshold rules above and writes the result. If it passes,
+            execution becomes available below.
+          </p>
+          <button
+            type="button"
+            onClick={() => finalise.mutate()}
+            disabled={finalise.isPending}
+            className="mt-3 inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+          >
+            {finalise.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            Finalise this proposal
+          </button>
+        </>
+      )}
+      {result && (
+        <p className={`mt-3 text-xs ${result.ok ? "text-success" : "text-destructive"}`}>
+          {result.reason}
+        </p>
+      )}
+    </section>
   );
 }
 
