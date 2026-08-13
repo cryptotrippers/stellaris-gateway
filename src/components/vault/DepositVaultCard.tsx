@@ -61,24 +61,33 @@ export function DepositVaultCard({ assetId }: { assetId?: string } = {}) {
     <div className="card-institutional p-6">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-[10px] uppercase tracking-widest text-primary">On-chain · Preprod</div>
-          <h3 className="mt-1 text-sm font-semibold text-foreground">Deposit ADA into vault</h3>
+          <div className="text-[10px] uppercase tracking-widest text-primary">Invest</div>
+          <h3 className="mt-1 text-sm font-semibold text-foreground">Put money into this project</h3>
         </div>
         <Badge tone={deployed ? "success" : "warning"}>
-          <Shield className="h-3 w-3" /> {deployed ? "Vault live" : "Not deployed"}
+          <Shield className="h-3 w-3" /> {deployed ? "Open" : "Not open yet"}
         </Badge>
       </div>
 
       <p className="mt-2 text-xs text-muted-foreground">
-        This card builds and submits a real Cardano transaction on the Preprod testnet using your connected wallet. Funds are locked at the Aiken vault script with your payment-key hash as the owner.
+        This is a demo network — you're investing test funds, not real money. Your investment is
+        held by the project's smart contract and only you can take it back out.
       </p>
+
+      <details className="mt-2 text-[11px] text-muted-foreground">
+        <summary className="cursor-pointer select-none hover:text-foreground">Technical details</summary>
+        <p className="mt-1">
+          Builds and submits a Cardano Preprod transaction with your connected CIP-30 wallet. Funds
+          are locked at the Aiken vault script with your payment-key hash recorded as owner in the
+          datum.
+        </p>
+      </details>
 
       {!deployed && (
         <div className="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-300">
-          <div className="font-semibold">Compile the validator first</div>
+          <div className="font-semibold">This project isn't open for investment yet</div>
           <div className="mt-1">
-            Run <code className="font-mono">aiken build</code> in <code className="font-mono">contracts/vault/</code>, derive the Preprod script address, then set{" "}
-            <code className="font-mono">VITE_VAULT_SCRIPT_ADDRESS</code> in <code className="font-mono">.env.development</code>. See <code className="font-mono">contracts/vault/README.md</code>.
+            Its contract still needs to be published to the network before deposits can be accepted.
           </div>
         </div>
       )}
@@ -87,8 +96,8 @@ export function DepositVaultCard({ assetId }: { assetId?: string } = {}) {
         <div className="mt-4 rounded-lg border border-border bg-secondary/60 p-3 text-xs text-muted-foreground">
           <Wallet className="mr-1 inline h-3.5 w-3.5 text-primary" />
           {wallet.connected
-            ? `Network mismatch — this app is on ${APP_NETWORK === "mainnet" ? "Mainnet" : "Preprod testnet"} but your wallet is on ${networkNameFromId(wallet.networkId)}. Switch your wallet's network and reconnect.`
-            : "Connect a CIP-30 wallet (Lace, Eternl, Nami) from the top bar to continue."}
+            ? `Your wallet is on the wrong network — this app uses ${APP_NETWORK === "mainnet" ? "Mainnet" : "the Preprod demo network"} but your wallet is on ${networkNameFromId(wallet.networkId)}. Switch it and reconnect.`
+            : "Connect a wallet (Lace, Eternl or Nami) from the top bar to continue."}
           {wallet.connected && (
             <div className="mt-2"><NetworkSwitchHelp compact /></div>
           )}
@@ -96,7 +105,7 @@ export function DepositVaultCard({ assetId }: { assetId?: string } = {}) {
       )}
 
       <div className="mt-5">
-        <label className="text-xs font-medium text-muted-foreground">Amount (tADA)</label>
+        <label className="text-xs font-medium text-muted-foreground">Amount to invest</label>
         <div className="mt-1 flex items-center rounded-xl border border-border bg-surface px-3 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
           <span className="text-lg text-muted-foreground">₳</span>
           <input
@@ -108,9 +117,10 @@ export function DepositVaultCard({ assetId }: { assetId?: string } = {}) {
           />
         </div>
         <div className="mt-1 text-[11px] text-muted-foreground">
-          Min. 2 tADA · Preprod faucet gives 10,000 tADA per request.
+          Test ADA — no real money. Minimum ₳2; the free faucet gives you 10,000 per request.
         </div>
       </div>
+
 
       <button
         disabled={!canSubmit}
