@@ -13,12 +13,13 @@ import { assetsQueryOptions, fundedPct, type AssetRow } from "@/lib/assets-query
 export const Route = createFileRoute("/marketplace")({
   head: () => ({
     meta: [
-      { title: "Asset Marketplace · Stellaris Finance" },
-      { name: "description", content: "Fractionalized real-world assets: sustainable farming, clean energy, real estate, carbon credits, and infrastructure — on Cardano." },
-      { property: "og:title", content: "RealFi Asset Marketplace · Stellaris" },
-      { property: "og:description", content: "Institutional-grade tokenized RWAs with verified ESG ratings and transparent yields." },
+      { title: "Invest in real-world projects · Stellaris" },
+      { name: "description", content: "Farms, solar, property and infrastructure split into small shares anyone can buy — with clear returns and verified operators." },
+      { property: "og:title", content: "Invest in real-world projects · Stellaris" },
+      { property: "og:description", content: "Small shares of real things: farms, solar, property. Clear returns, verified operators." },
     ],
   }),
+
   component: MarketplaceLayout,
 });
 
