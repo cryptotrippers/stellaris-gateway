@@ -4,6 +4,7 @@ import { StellarisWordmark } from "@/components/brand/Logo";
 import { WalletButton } from "@/components/wallet/WalletButton";
 import { AccountButton } from "@/components/layout/AccountButton";
 import { NetworkBadge } from "@/components/layout/NetworkBadge";
+import { MoreMenu } from "@/components/layout/MoreMenu";
 
 export function TopAppBar() {
   return (
@@ -14,28 +15,25 @@ export function TopAppBar() {
         </Link>
 
         <nav className="hidden md:flex items-center gap-1 ml-6">
-          <NavItem to="/app">Portfolio</NavItem>
-          <NavItem to="/marketplace">Marketplace</NavItem>
-          <NavItem to="/yield">Yield Engine</NavItem>
-          <NavItem to="/governance">Governance</NavItem>
-          <NavItem to="/stewardship">Stewardship</NavItem>
-          <NavItem to="/security">Security</NavItem>
-          <NavItem to="/developers">Developers</NavItem>
-          <NavItem to="/invite">Invite</NavItem>
+          <NavItem to="/">Home</NavItem>
+          <NavItem to="/marketplace">Invest</NavItem>
+          <NavItem to="/app">My Portfolio</NavItem>
+          <NavItem to="/governance">Vote</NavItem>
+          <MoreMenu />
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
           <NetworkBadge />
           <Link
             to="/upgrade"
-            className="hidden sm:inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-accent to-primary px-3 py-1 text-[11px] font-semibold text-white shadow-sm hover:opacity-90 transition-opacity"
+            className="hidden lg:inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-accent to-primary px-3 py-1 text-[11px] font-semibold text-primary-foreground shadow-sm hover:opacity-90 transition-opacity"
           >
             <Shield className="h-3.5 w-3.5" />
             <span>Upgrade to Pro</span>
           </Link>
           <button
             aria-label="Notifications"
-            className="relative grid h-9 w-9 place-items-center rounded-full border border-border bg-surface hover:bg-secondary transition-colors"
+            className="relative hidden sm:grid h-9 w-9 place-items-center rounded-full border border-border bg-surface hover:bg-secondary transition-colors"
           >
             <Bell className="h-4 w-4 text-muted-foreground" />
             <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-accent" />
