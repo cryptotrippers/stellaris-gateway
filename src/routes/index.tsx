@@ -373,20 +373,20 @@ function ImpactStrip() {
     <section className="mx-auto max-w-[1400px] px-4 md:px-6 py-16 md:py-24">
       <div className="grid gap-8 lg:grid-cols-[1fr_1.4fr] items-center">
         <div>
-          <div className="text-[11px] uppercase tracking-[0.22em] text-success">Verifiable impact</div>
+          <div className="text-sm font-medium text-success">Verifiable impact</div>
           <h2 className="mt-2 text-3xl md:text-4xl font-semibold tracking-tight">Every ₳ has a footprint you can check.</h2>
-          <p className="mt-3 text-muted-foreground">Impact metrics are published only once they are anchored on-chain and independently attested. Nothing is estimated here.</p>
+          <p className="mt-3 text-muted-foreground">Impact numbers only appear here once they've been independently checked and recorded. Nothing is estimated.</p>
           <Link to="/stewardship" className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80">
-            See the impact ledger <ArrowUpRight className="h-4 w-4" />
+            See the impact record <ArrowUpRight className="h-4 w-4" />
           </Link>
         </div>
         <div className="card-institutional p-8">
-          <div className="text-sm font-semibold text-foreground">No attested impact metrics published yet</div>
+          <div className="text-sm font-semibold text-foreground">No impact results published yet</div>
           <p className="mt-2 text-sm text-muted-foreground">
-            Attestations are recorded against each vault as reporting periods close. Once the first period is attested,
-            tonnes of CO₂ offset, households powered, hectares protected, and producers financed appear here with a link
-            to the on-chain record.
+            Each project reports at the end of its reporting period. Once the first one is checked, you'll see
+            CO₂ avoided, households powered, hectares protected and producers financed here — each linked to its record.
           </p>
+
         </div>
       </div>
     </section>
@@ -398,7 +398,7 @@ function FaqSection() {
   return (
     <section className="mx-auto max-w-[900px] px-4 md:px-6 py-16 md:py-24">
       <div className="text-center">
-        <div className="text-[11px] uppercase tracking-[0.22em] text-primary">FAQ</div>
+        <div className="text-sm font-medium text-primary">FAQ</div>
         <h2 className="mt-2 text-3xl md:text-4xl font-semibold tracking-tight">Everything you're probably wondering.</h2>
       </div>
       <div className="mt-10 space-y-3">
