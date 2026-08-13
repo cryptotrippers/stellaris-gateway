@@ -114,11 +114,12 @@ export function WithdrawVaultCard({ assetId }: { assetId?: string } = {}) {
         >
           {status === "signing" ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Building spend tx…
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> Preparing your withdrawal…
             </>
           ) : (
-            <>Unlock my vault UTxOs</>
+            <>Withdraw</>
           )}
+
         </button>
         <button
           type="button"
@@ -144,12 +145,12 @@ export function WithdrawVaultCard({ assetId }: { assetId?: string } = {}) {
       {status === "success" && result && (
         <div className="mt-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-xs text-emerald-700 dark:text-emerald-300">
           <div className="flex items-center gap-1 font-semibold">
-            <CheckCircle2 className="h-4 w-4" /> Withdrawal submitted
+            <CheckCircle2 className="h-4 w-4" /> Withdrawal sent
           </div>
           <div className="mt-1">
-            Unlocked {result.amountAda.toFixed(6)} tADA from {result.utxoCount} UTxO
-            {result.utxoCount === 1 ? "" : "s"}.
+            ₳{result.amountAda.toFixed(2)} is on its way back to your wallet.
           </div>
+
           <a
             href={`https://preprod.cardanoscan.io/transaction/${result.txHash}`}
             target="_blank"
