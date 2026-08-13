@@ -13,12 +13,13 @@ import { assetsQueryOptions, fundedPct, type AssetRow } from "@/lib/assets-query
 export const Route = createFileRoute("/marketplace")({
   head: () => ({
     meta: [
-      { title: "Asset Marketplace · Stellaris Finance" },
-      { name: "description", content: "Fractionalized real-world assets: sustainable farming, clean energy, real estate, carbon credits, and infrastructure — on Cardano." },
-      { property: "og:title", content: "RealFi Asset Marketplace · Stellaris" },
-      { property: "og:description", content: "Institutional-grade tokenized RWAs with verified ESG ratings and transparent yields." },
+      { title: "Invest in real-world projects · Stellaris" },
+      { name: "description", content: "Farms, solar, property and infrastructure split into small shares anyone can buy — with clear returns and verified operators." },
+      { property: "og:title", content: "Invest in real-world projects · Stellaris" },
+      { property: "og:description", content: "Small shares of real things: farms, solar, property. Clear returns, verified operators." },
     ],
   }),
+
   component: MarketplaceLayout,
 });
 
@@ -74,14 +75,15 @@ function MarketplaceIndex() {
     <>
       <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
         <div>
-          <div className="text-[11px] uppercase tracking-[0.22em] text-primary">Marketplace</div>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground">Real-World Asset Opportunities</h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Fractionalised, transparent, on-chain settlement in ADA. Assets appear here once issuers register and pass verification.</p>
+          <div className="text-[11px] tracking-wide text-primary">Invest</div>
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground">Projects you can invest in</h1>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Real things — farms, solar, property — split into small shares anyone can buy. Projects appear here once the issuer has been verified.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge tone="accent">{assets.length} live vault{assets.length === 1 ? "" : "s"}</Badge>
+          <Badge tone="accent">{assets.length} open project{assets.length === 1 ? "" : "s"}</Badge>
         </div>
       </div>
+
 
       {/* Filters */}
       <div className="mt-6 card-institutional p-3 md:p-4 flex flex-col gap-3 md:flex-row md:items-center">
@@ -90,15 +92,16 @@ function MarketplaceIndex() {
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Search by asset, issuer, location, or category…"
+            placeholder="Search by project, operator, place, or type…"
             className="w-full rounded-lg border border-border bg-surface pl-9 pr-3 py-2 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Filter className="h-4 w-4" />
-          Live from the on-chain registry
+          Updated live
         </div>
       </div>
+
 
       {categories.length > 1 && (
         <div className="mt-3 flex flex-wrap gap-2">
@@ -118,16 +121,17 @@ function MarketplaceIndex() {
       )}
       {error && (
         <div className="mt-6 card-institutional p-6 text-sm text-destructive">
-          Failed to load assets: {(error as Error).message}
+          We couldn't load the projects just now. Please try again shortly.
         </div>
       )}
       {!isLoading && !error && filtered.length === 0 && (
         <div className="mt-6 card-institutional p-6 text-sm text-muted-foreground">
           {assets.length === 0
-            ? "No assets are registered yet. Issuers must complete on-chain verification before their vaults appear here."
-            : "No vaults match those filters."}
+            ? "No projects are open yet. Operators must pass verification before their project is listed here."
+            : "No projects match those filters."}
         </div>
       )}
+
 
 
       <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">

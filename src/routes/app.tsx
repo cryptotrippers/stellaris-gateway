@@ -154,55 +154,72 @@ function PortfolioPage() {
         </div>
 
         <div className="grid gap-4">
-          <ChainStatusCard />
-          <MyVaultHoldingsCard
-            assetIds={vaultAssetIds}
-            showAssetBreakdown
-            title="On-chain vault positions"
-          />
-          <div className="card-institutional p-5">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-foreground">Compliance Status</h3>
-              <Badge tone="accent">Not verified</Badge>
+          {positions.length === 0 && (
+            <div className="card-institutional p-5">
+              <h3 className="text-sm font-semibold text-foreground">How it works</h3>
+              <ol className="mt-3 space-y-3 text-sm">
+                <HowStep n={1} title="Pick a project" body="Browse farms, solar and property you can put money into." />
+                <HowStep n={2} title="Connect your wallet" body="Invest from ₳10 in test funds — no real money on this demo network." />
+                <HowStep n={3} title="Track your earnings" body="Returns show up here and go straight back to your wallet." />
+              </ol>
+              <Link
+                to="/marketplace"
+                className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-gradient-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-glow hover:-translate-y-0.5 transition-transform"
+              >
+                Browse projects <ArrowUpRight className="h-4 w-4" />
+              </Link>
             </div>
-            <ul className="mt-4 space-y-2 text-sm">
-              <ComplianceRow label="ZK-KYC attestation" ok={false} />
-              <ComplianceRow label="Accredited investor attestation" ok={false} />
-              <ComplianceRow label="Jurisdictional eligibility" ok={false} />
-              <ComplianceRow label="Multi-Factor Authentication" ok={false} />
-            </ul>
-            <p className="mt-3 text-[11px] text-muted-foreground">
-              KYC integration pending. No attestations issued on this account.
-            </p>
-          </div>
-          <div className="card-institutional p-5">
-            <h3 className="text-sm font-semibold text-foreground">Quick Actions</h3>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <QuickAction to="/marketplace" label="Browse assets" />
-              <QuickAction to="/governance" label="Vote SIPs" />
-              <QuickAction to="/security" label="Security" />
-              <QuickAction to="/stewardship" label="Impact" />
+          )}
+
+          <details className="card-institutional p-5">
+            <summary className="cursor-pointer select-none text-sm font-semibold text-foreground">
+              Account &amp; network
+            </summary>
+            <div className="mt-4 grid gap-4">
+              <ChainStatusCard />
+              <MyVaultHoldingsCard
+                assetIds={vaultAssetIds}
+                showAssetBreakdown
+                title="Your holdings on-chain"
+              />
+              <div>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-foreground">Verification</h3>
+                  <Badge tone="accent">Not verified</Badge>
+                </div>
+                <ul className="mt-4 space-y-2 text-sm">
+                  <ComplianceRow label="Identity check" ok={false} />
+                  <ComplianceRow label="Investor eligibility" ok={false} />
+                  <ComplianceRow label="Country eligibility" ok={false} />
+                  <ComplianceRow label="Two-factor sign-in" ok={false} />
+                </ul>
+                <p className="mt-3 text-[11px] text-muted-foreground">
+                  Identity checks aren't switched on yet, so nothing has been verified on this account.
+                </p>
+              </div>
             </div>
-          </div>
+          </details>
         </div>
+
       </section>
 
       <section className="mt-10">
-        <SectionHeader title="Active Investments" href="/marketplace" hrefLabel="Explore marketplace" />
+        <SectionHeader title="Your investments" href="/marketplace" hrefLabel="Browse projects" />
         {!wallet.connected ? (
           <div className="mt-4 card-institutional p-8 text-center">
             <Wallet className="mx-auto h-8 w-8 text-muted-foreground" />
-            <div className="mt-3 text-sm font-medium text-foreground">Connect a wallet to see your positions</div>
-            <div className="mt-1 text-xs text-muted-foreground">No demo data is shown until a wallet is linked.</div>
+            <div className="mt-3 text-sm font-medium text-foreground">Connect a wallet to see your investments</div>
+            <div className="mt-1 text-xs text-muted-foreground">Nothing is shown until your wallet is linked.</div>
           </div>
         ) : positions.length === 0 ? (
           <div className="mt-4 card-institutional p-8 text-center">
             <div className="number-display text-2xl font-semibold text-foreground">{formatAda(0)}</div>
-            <div className="mt-1 text-sm text-muted-foreground">No active vaults yet — browse the marketplace to invest.</div>
+            <div className="mt-1 text-sm text-muted-foreground">You haven't invested in anything yet.</div>
             <Link to="/marketplace" className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary">
-              Explore assets <ArrowUpRight className="h-3.5 w-3.5" />
+              Browse projects <ArrowUpRight className="h-3.5 w-3.5" />
             </Link>
           </div>
+
         ) : (
           <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {positions.map((inv) => {
@@ -333,10 +350,17 @@ function ComplianceRow({ label, ok }: { label: string; ok?: boolean }) {
   );
 }
 
-function QuickAction({ to, label }: { to: string; label: string }) {
+function HowStep({ n, title, body }: { n: number; title: string; body: string }) {
   return (
-    <Link to={to} className="rounded-xl border border-border bg-secondary/50 px-3 py-2.5 text-sm font-medium text-foreground hover:border-primary/40 hover:bg-secondary transition-colors">
-      {label}
-    </Link>
+    <li className="flex gap-3">
+      <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+        {n}
+      </span>
+      <span>
+        <span className="block font-medium text-foreground">{title}</span>
+        <span className="block text-xs text-muted-foreground">{body}</span>
+      </span>
+    </li>
   );
+
 }

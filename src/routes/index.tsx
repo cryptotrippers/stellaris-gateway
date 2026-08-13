@@ -29,16 +29,17 @@ const OG_IMAGE = `${SITE}${ogAsset.url}`;
 const FAQ = [
   {
     q: "Is this actually safe?",
-    a: "Every vault is issued by a registered, audited entity, custody is institutional (Fireblocks), and withdrawals carry a 24h timelock. All positions settle on Cardano — you always hold the on-chain token, not an IOU.",
+    a: "Every project is run by a registered, audited operator, and withdrawals carry a 24h safety delay. Your share is recorded in your own name on Cardano — you hold it, not us.",
   },
   {
     q: "Do I need to know anything about crypto?",
-    a: "No. You can invest with a debit card via Stripe, or connect a Cardano wallet if you already have one. Yield is paid in ADA and can be converted back to your local currency at any time.",
+    a: "No. You can pay by card, or connect a Cardano wallet if you already have one. Returns can be converted back to your local currency at any time.",
   },
   {
     q: "What's the minimum investment?",
-    a: "Positions start at ₳10 (about $4 USD). Different vaults have different minimums — most sit between ₳100 and ₳500.",
+    a: "You can start from ₳10 (about $4). Some projects set a higher minimum — most sit between ₳100 and ₳500.",
   },
+
   {
     q: "What are the fees?",
     a: "0.4% per year, streamed continuously from yield. No entry fee, no exit fee, no lockups beyond the 24h security timelock.",
@@ -134,11 +135,12 @@ function MarketingNav() {
       <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-4 px-4 md:px-6">
         <Link to="/" className="shrink-0"><StellarisWordmark /></Link>
         <nav className="ml-6 hidden md:flex items-center gap-1">
-          <NavLink to="/marketplace">Marketplace</NavLink>
-          <NavLink to="/yield">How yield works</NavLink>
+          <NavLink to="/marketplace">Invest</NavLink>
+          <NavLink to="/yield">Earnings</NavLink>
           <NavLink to="/stewardship">Impact</NavLink>
           <NavLink to="/security">Security</NavLink>
         </nav>
+
         <div className="ml-auto flex items-center gap-2">
           <Link
             to="/app"
@@ -173,8 +175,8 @@ function Hero() {
     <section className="relative mx-auto max-w-[1400px] px-4 md:px-6 pt-16 md:pt-24 pb-12 md:pb-20">
       <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr] items-center">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/70 backdrop-blur px-3 py-1 text-[11px] uppercase tracking-[0.22em] text-primary">
-            <Sparkles className="h-3 w-3" /> Now open to retail · From ₳10
+          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/70 backdrop-blur px-3 py-1 text-xs text-primary">
+            <Sparkles className="h-3 w-3" /> Open to everyone · Start from ₳10
           </div>
           <h1 className="mt-5 text-4xl md:text-6xl font-semibold tracking-tight leading-[1.05]">
             Own a piece of the <span className="text-transparent bg-clip-text bg-gradient-primary">real world.</span>
@@ -182,7 +184,8 @@ function Hero() {
             From <span className="number-display">₳10</span>.
           </h1>
           <p className="mt-5 max-w-xl text-base md:text-lg text-muted-foreground leading-relaxed">
-            Solar farms, coffee estates, and real estate — fractionalized on Cardano. Verified yields, ESG ratings, and 24-hour withdrawals. No suits, no minimums that don't make sense.
+            Solar farms, coffee estates and property — split into small shares you can buy in a few
+            taps. You can see exactly what you own and take your money out whenever you like.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link
@@ -190,21 +193,21 @@ function Hero() {
               onClick={() => trackEvent("landing_hero_cta_click", { target: "marketplace" })}
               className="inline-flex items-center gap-2 rounded-xl bg-gradient-primary px-6 py-3.5 text-sm md:text-base font-semibold text-primary-foreground shadow-glow hover:-translate-y-0.5 transition-transform"
             >
-              Explore assets <ArrowRight className="h-4 w-4" />
+              Browse projects <ArrowRight className="h-4 w-4" />
             </Link>
-            <Link
-              to="/app"
-              onClick={() => trackEvent("landing_hero_cta_click", { target: "app" })}
+            <a
+              href="#how-it-works"
               className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-6 py-3.5 text-sm md:text-base font-semibold text-foreground hover:border-primary/50 hover:bg-secondary transition-colors"
             >
-              See a live portfolio
-            </Link>
+              How it works
+            </a>
           </div>
           <div className="mt-6 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-primary" /> Open-source, testnet</span>
-            <span className="inline-flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5 text-primary" /> CIP-30 wallets</span>
-            <span className="inline-flex items-center gap-1.5"><TrendingUp className="h-3.5 w-3.5 text-accent" /> Live on Cardano preprod</span>
+            <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-primary" /> Demo network — funds aren't real</span>
+            <span className="inline-flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5 text-primary" /> Works with common Cardano wallets</span>
+            <span className="inline-flex items-center gap-1.5"><TrendingUp className="h-3.5 w-3.5 text-accent" /> Everything verifiable on-chain</span>
           </div>
+
         </div>
 
         <div className="relative">
@@ -218,9 +221,10 @@ function Hero() {
             />
           </div>
           <div className="absolute -bottom-4 -left-4 hidden md:block rounded-2xl border border-border bg-surface/95 backdrop-blur px-4 py-3 shadow-elegant">
-            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Network</div>
-            <div className="number-display text-lg font-semibold text-accent">Cardano Preprod</div>
+            <div className="text-xs text-muted-foreground">Currently running on</div>
+            <div className="text-lg font-semibold text-accent">A free demo network</div>
           </div>
+
         </div>
       </div>
     </section>
@@ -229,23 +233,22 @@ function Hero() {
 
 function SocialProof() {
   const stats = [
-    { k: "Network", v: "Preprod" },
-    { k: "Vaults live", v: "0" },
-    { k: "Assets tokenised", v: "0" },
-    { k: "Audit reports", v: "0" },
+    { k: "Projects open", v: "0" },
+    { k: "Minimum to start", v: "₳10" },
+    { k: "Independent audits", v: "0" },
   ];
   return (
     <section className="relative border-y border-border/60 bg-surface/40">
-      <div className="mx-auto max-w-[1400px] px-4 md:px-6 py-8 grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div className="mx-auto max-w-[1400px] px-4 md:px-6 py-8 grid grid-cols-3 gap-6">
         {stats.map(s => (
           <div key={s.k} className="text-center md:text-left">
             <div className="number-display text-2xl md:text-3xl font-semibold text-foreground">{s.v}</div>
-            <div className="mt-1 text-[11px] uppercase tracking-widest text-muted-foreground">{s.k}</div>
+            <div className="mt-1 text-xs text-muted-foreground">{s.k}</div>
           </div>
         ))}
       </div>
-      <div className="mx-auto max-w-[1400px] px-4 md:px-6 pb-6 -mt-3 text-[11px] text-muted-foreground">
-        Testnet build. See <a href="/NETWORK.md" className="text-primary hover:underline">NETWORK.md</a> for the path to mainnet.
+      <div className="mx-auto max-w-[1400px] px-4 md:px-6 pb-6 -mt-3 text-xs text-muted-foreground">
+        This is a demo build on a test network — no real money is involved.
       </div>
     </section>
   );
@@ -253,16 +256,16 @@ function SocialProof() {
 
 function HowItWorks() {
   const steps = [
-    { icon: Coins, title: "Pick an asset", body: "Browse curated real-world vaults — solar, farms, real estate. Every listing is ESG-rated and audit-verified." },
-    { icon: Wallet, title: "Invest in a tap", body: "Pay with a card or connect a Cardano wallet. Your position is minted as an on-chain token you actually own." },
-    { icon: TrendingUp, title: "Earn yield in ADA", body: "Yield streams directly to your wallet, on-chain and provable. Withdraw anytime after the 24h security window." },
+    { icon: Coins, title: "Pick a project", body: "Browse real things — solar, farms, property. Each one shows what it does and what it aims to pay." },
+    { icon: Wallet, title: "Connect a wallet", body: "Link a Cardano wallet and put in as little as ₳10. Your share is recorded in your own name, not ours." },
+    { icon: TrendingUp, title: "Track your earnings", body: "Returns land back in your wallet and show up in your portfolio. Withdraw whenever you want." },
   ];
   return (
-    <section className="mx-auto max-w-[1400px] px-4 md:px-6 py-16 md:py-24">
+    <section id="how-it-works" className="mx-auto max-w-[1400px] px-4 md:px-6 py-16 md:py-24 scroll-mt-20">
       <div className="max-w-2xl">
-        <div className="text-[11px] uppercase tracking-[0.22em] text-primary">How it works</div>
+        <div className="text-sm font-medium text-primary">How it works</div>
         <h2 className="mt-2 text-3xl md:text-4xl font-semibold tracking-tight">Three steps. No jargon.</h2>
-        <p className="mt-3 text-muted-foreground">Same real-world investments that used to require a private banker — now open, transparent, and starting at ₳10.</p>
+        <p className="mt-3 text-muted-foreground">The kind of investments that used to need a private banker — now open to anyone, starting at ₳10.</p>
       </div>
       <div className="mt-10 grid gap-4 md:grid-cols-3">
         {steps.map((s, i) => (
@@ -280,6 +283,7 @@ function HowItWorks() {
   );
 }
 
+
 function FeaturedAssets() {
   const { data: assets, isLoading, error } = useQuery(assetsQueryOptions());
   const featured = (assets ?? []).slice(0, 6);
@@ -288,12 +292,13 @@ function FeaturedAssets() {
       <div className="mx-auto max-w-[1400px] px-4 md:px-6 py-16 md:py-24">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <div className="text-[11px] uppercase tracking-[0.22em] text-primary">Featured vaults</div>
+            <div className="text-sm font-medium text-primary">Featured projects</div>
             <h2 className="mt-2 text-3xl md:text-4xl font-semibold tracking-tight">Real things that make real money.</h2>
           </div>
           <Link to="/marketplace" className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80">
-            All vaults <ArrowUpRight className="h-4 w-4" />
+            All projects <ArrowUpRight className="h-4 w-4" />
           </Link>
+
         </div>
 
         {isLoading && (
@@ -305,14 +310,15 @@ function FeaturedAssets() {
         )}
         {error && (
           <div className="mt-8 card-institutional p-6 text-sm text-destructive">
-            Vault registry unavailable right now. Please try again shortly.
+            We couldn't load the projects right now. Please try again shortly.
           </div>
         )}
         {!isLoading && !error && featured.length === 0 && (
           <div className="mt-8 card-institutional p-6 text-sm text-muted-foreground">
-            No vaults are open yet. Issuers must complete on-chain verification before their vaults appear here.
+            No projects are open yet. Operators must pass verification before their project is listed here.
           </div>
         )}
+
 
         <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {featured.map(asset => {
@@ -368,20 +374,20 @@ function ImpactStrip() {
     <section className="mx-auto max-w-[1400px] px-4 md:px-6 py-16 md:py-24">
       <div className="grid gap-8 lg:grid-cols-[1fr_1.4fr] items-center">
         <div>
-          <div className="text-[11px] uppercase tracking-[0.22em] text-success">Verifiable impact</div>
+          <div className="text-sm font-medium text-success">Verifiable impact</div>
           <h2 className="mt-2 text-3xl md:text-4xl font-semibold tracking-tight">Every ₳ has a footprint you can check.</h2>
-          <p className="mt-3 text-muted-foreground">Impact metrics are published only once they are anchored on-chain and independently attested. Nothing is estimated here.</p>
+          <p className="mt-3 text-muted-foreground">Impact numbers only appear here once they've been independently checked and recorded. Nothing is estimated.</p>
           <Link to="/stewardship" className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80">
-            See the impact ledger <ArrowUpRight className="h-4 w-4" />
+            See the impact record <ArrowUpRight className="h-4 w-4" />
           </Link>
         </div>
         <div className="card-institutional p-8">
-          <div className="text-sm font-semibold text-foreground">No attested impact metrics published yet</div>
+          <div className="text-sm font-semibold text-foreground">No impact results published yet</div>
           <p className="mt-2 text-sm text-muted-foreground">
-            Attestations are recorded against each vault as reporting periods close. Once the first period is attested,
-            tonnes of CO₂ offset, households powered, hectares protected, and producers financed appear here with a link
-            to the on-chain record.
+            Each project reports at the end of its reporting period. Once the first one is checked, you'll see
+            CO₂ avoided, households powered, hectares protected and producers financed here — each linked to its record.
           </p>
+
         </div>
       </div>
     </section>
@@ -393,7 +399,7 @@ function FaqSection() {
   return (
     <section className="mx-auto max-w-[900px] px-4 md:px-6 py-16 md:py-24">
       <div className="text-center">
-        <div className="text-[11px] uppercase tracking-[0.22em] text-primary">FAQ</div>
+        <div className="text-sm font-medium text-primary">FAQ</div>
         <h2 className="mt-2 text-3xl md:text-4xl font-semibold tracking-tight">Everything you're probably wondering.</h2>
       </div>
       <div className="mt-10 space-y-3">
@@ -434,14 +440,15 @@ function FinalCta() {
               onClick={() => trackEvent("landing_final_cta_click")}
               className="inline-flex items-center gap-2 rounded-xl bg-white text-primary px-6 py-3.5 text-base font-semibold hover:-translate-y-0.5 transition-transform"
             >
-              Browse assets <ArrowRight className="h-4 w-4" />
+              Browse projects <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
               to="/app"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/30 bg-white/10 backdrop-blur px-6 py-3.5 text-base font-semibold text-white hover:bg-white/20 transition-colors"
+              className="inline-flex items-center gap-2 rounded-xl border border-primary-foreground/30 bg-primary-foreground/10 backdrop-blur px-6 py-3.5 text-base font-semibold text-primary-foreground hover:bg-primary-foreground/20 transition-colors"
             >
-              Open the app
+              My portfolio
             </Link>
+
           </div>
           <div className="mt-10 flex justify-center">
             <ShareRow
@@ -463,11 +470,12 @@ function Footer() {
       <div className="mx-auto max-w-[1400px] px-4 md:px-6 py-12 grid gap-8 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
         <div>
           <StellarisWordmark />
-          <p className="mt-3 text-sm text-muted-foreground max-w-sm">Fractional real-world assets on Cardano. Retail-friendly, institutionally engineered.</p>
+          <p className="mt-3 text-sm text-muted-foreground max-w-sm">Small shares of real-world projects, on Cardano. Simple to use, seriously engineered.</p>
         </div>
-        <FooterCol title="Product" links={[["Marketplace", "/marketplace"], ["Yield engine", "/yield"], ["Governance", "/governance"]]} />
-        <FooterCol title="Trust" links={[["Security", "/security"], ["Stewardship", "/stewardship"], ["Developers", "/developers"]]} />
-        <FooterCol title="Account" links={[["Open app", "/app"], ["Upgrade", "/upgrade"]]} />
+        <FooterCol title="Product" links={[["Invest", "/marketplace"], ["Earnings", "/yield"], ["Vote", "/governance"]]} />
+        <FooterCol title="Trust" links={[["Security", "/security"], ["Impact", "/stewardship"], ["Developers", "/developers"]]} />
+        <FooterCol title="Account" links={[["My portfolio", "/app"], ["Upgrade", "/upgrade"]]} />
+
       </div>
       <div className="border-t border-border/60">
         <div className="mx-auto max-w-[1400px] px-4 md:px-6 py-4 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">

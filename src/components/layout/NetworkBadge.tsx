@@ -1,14 +1,14 @@
 import { APP_NETWORK, NETWORK_LABEL, IS_UNEXPECTED_MAINNET } from "@/lib/network";
-import { AlertTriangle, ShieldCheck } from "lucide-react";
+import { AlertTriangle, Info } from "lucide-react";
 
 /**
- * Persistent network badge. This deployment is Preprod-only: mainnet is a
- * misconfiguration, so it renders permanently red with a warning icon.
+ * Persistent network notice. In the normal (Preprod) case this stays calm and
+ * plain-language; the loud red state is reserved for an actual misconfiguration.
  */
 export function NetworkBadge() {
   const isMainnet = APP_NETWORK === "mainnet";
-  const danger = !isMainnet || IS_UNEXPECTED_MAINNET; // red for testnet AND for unexpected mainnet
-  const Icon = danger ? AlertTriangle : ShieldCheck;
+  const danger = IS_UNEXPECTED_MAINNET;
+  const Icon = danger ? AlertTriangle : Info;
   return (
     <span
       title={
@@ -16,18 +16,21 @@ export function NetworkBadge() {
           ? "CONFIGURATION ERROR: the app resolved to Cardano Mainnet, but this deployment is Preprod-only. Do not sign transactions."
           : isMainnet
             ? "App is pointed at Cardano Mainnet. Transactions use real ADA."
-            : "App is pointed at Cardano Preprod testnet. Transactions use test ADA only."
+            : `Demo network (${NETWORK_LABEL}). Everything here uses test funds — no real money is involved.`
       }
       className={
-        "inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-widest ring-1 " +
+        "inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold ring-1 " +
         (danger
-          ? "bg-red-500/15 text-red-600 ring-red-500/50 dark:text-red-300 animate-pulse"
-          : "bg-emerald-500/15 text-emerald-600 ring-emerald-500/40 dark:text-emerald-300")
+          ? "bg-destructive/15 text-destructive ring-destructive/50 uppercase tracking-widest animate-pulse"
+          : "bg-secondary text-muted-foreground ring-border")
       }
     >
       <Icon className="h-3 w-3" />
-      {IS_UNEXPECTED_MAINNET ? `${NETWORK_LABEL} — MISCONFIGURED` : NETWORK_LABEL}
+      {IS_UNEXPECTED_MAINNET
+        ? `${NETWORK_LABEL} — MISCONFIGURED`
+        : isMainnet
+          ? "Live network"
+          : "Demo network — funds aren't real"}
     </span>
   );
 }
-
