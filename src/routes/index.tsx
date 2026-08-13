@@ -220,9 +220,10 @@ function Hero() {
             />
           </div>
           <div className="absolute -bottom-4 -left-4 hidden md:block rounded-2xl border border-border bg-surface/95 backdrop-blur px-4 py-3 shadow-elegant">
-            <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Network</div>
-            <div className="number-display text-lg font-semibold text-accent">Cardano Preprod</div>
+            <div className="text-xs text-muted-foreground">Currently running on</div>
+            <div className="text-lg font-semibold text-accent">A free demo network</div>
           </div>
+
         </div>
       </div>
     </section>
@@ -231,23 +232,22 @@ function Hero() {
 
 function SocialProof() {
   const stats = [
-    { k: "Network", v: "Preprod" },
-    { k: "Vaults live", v: "0" },
-    { k: "Assets tokenised", v: "0" },
-    { k: "Audit reports", v: "0" },
+    { k: "Projects open", v: "0" },
+    { k: "Minimum to start", v: "₳10" },
+    { k: "Independent audits", v: "0" },
   ];
   return (
     <section className="relative border-y border-border/60 bg-surface/40">
-      <div className="mx-auto max-w-[1400px] px-4 md:px-6 py-8 grid grid-cols-2 md:grid-cols-4 gap-6">
+      <div className="mx-auto max-w-[1400px] px-4 md:px-6 py-8 grid grid-cols-3 gap-6">
         {stats.map(s => (
           <div key={s.k} className="text-center md:text-left">
             <div className="number-display text-2xl md:text-3xl font-semibold text-foreground">{s.v}</div>
-            <div className="mt-1 text-[11px] uppercase tracking-widest text-muted-foreground">{s.k}</div>
+            <div className="mt-1 text-xs text-muted-foreground">{s.k}</div>
           </div>
         ))}
       </div>
-      <div className="mx-auto max-w-[1400px] px-4 md:px-6 pb-6 -mt-3 text-[11px] text-muted-foreground">
-        Testnet build. See <a href="/NETWORK.md" className="text-primary hover:underline">NETWORK.md</a> for the path to mainnet.
+      <div className="mx-auto max-w-[1400px] px-4 md:px-6 pb-6 -mt-3 text-xs text-muted-foreground">
+        This is a demo build on a test network — no real money is involved.
       </div>
     </section>
   );
@@ -255,16 +255,16 @@ function SocialProof() {
 
 function HowItWorks() {
   const steps = [
-    { icon: Coins, title: "Pick an asset", body: "Browse curated real-world vaults — solar, farms, real estate. Every listing is ESG-rated and audit-verified." },
-    { icon: Wallet, title: "Invest in a tap", body: "Pay with a card or connect a Cardano wallet. Your position is minted as an on-chain token you actually own." },
-    { icon: TrendingUp, title: "Earn yield in ADA", body: "Yield streams directly to your wallet, on-chain and provable. Withdraw anytime after the 24h security window." },
+    { icon: Coins, title: "Pick a project", body: "Browse real things — solar, farms, property. Each one shows what it does and what it aims to pay." },
+    { icon: Wallet, title: "Connect a wallet", body: "Link a Cardano wallet and put in as little as ₳10. Your share is recorded in your own name, not ours." },
+    { icon: TrendingUp, title: "Track your earnings", body: "Returns land back in your wallet and show up in your portfolio. Withdraw whenever you want." },
   ];
   return (
-    <section className="mx-auto max-w-[1400px] px-4 md:px-6 py-16 md:py-24">
+    <section id="how-it-works" className="mx-auto max-w-[1400px] px-4 md:px-6 py-16 md:py-24 scroll-mt-20">
       <div className="max-w-2xl">
-        <div className="text-[11px] uppercase tracking-[0.22em] text-primary">How it works</div>
+        <div className="text-sm font-medium text-primary">How it works</div>
         <h2 className="mt-2 text-3xl md:text-4xl font-semibold tracking-tight">Three steps. No jargon.</h2>
-        <p className="mt-3 text-muted-foreground">Same real-world investments that used to require a private banker — now open, transparent, and starting at ₳10.</p>
+        <p className="mt-3 text-muted-foreground">The kind of investments that used to need a private banker — now open to anyone, starting at ₳10.</p>
       </div>
       <div className="mt-10 grid gap-4 md:grid-cols-3">
         {steps.map((s, i) => (
@@ -281,6 +281,7 @@ function HowItWorks() {
     </section>
   );
 }
+
 
 function FeaturedAssets() {
   const { data: assets, isLoading, error } = useQuery(assetsQueryOptions());
