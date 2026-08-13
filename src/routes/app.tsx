@@ -154,37 +154,53 @@ function PortfolioPage() {
         </div>
 
         <div className="grid gap-4">
-          <ChainStatusCard />
-          <MyVaultHoldingsCard
-            assetIds={vaultAssetIds}
-            showAssetBreakdown
-            title="On-chain vault positions"
-          />
-          <div className="card-institutional p-5">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-foreground">Compliance Status</h3>
-              <Badge tone="accent">Not verified</Badge>
+          {positions.length === 0 && (
+            <div className="card-institutional p-5">
+              <h3 className="text-sm font-semibold text-foreground">How it works</h3>
+              <ol className="mt-3 space-y-3 text-sm">
+                <HowStep n={1} title="Pick a project" body="Browse farms, solar and property you can put money into." />
+                <HowStep n={2} title="Connect your wallet" body="Invest from ₳10 in test funds — no real money on this demo network." />
+                <HowStep n={3} title="Track your earnings" body="Returns show up here and go straight back to your wallet." />
+              </ol>
+              <Link
+                to="/marketplace"
+                className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-gradient-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-glow hover:-translate-y-0.5 transition-transform"
+              >
+                Browse projects <ArrowUpRight className="h-4 w-4" />
+              </Link>
             </div>
-            <ul className="mt-4 space-y-2 text-sm">
-              <ComplianceRow label="ZK-KYC attestation" ok={false} />
-              <ComplianceRow label="Accredited investor attestation" ok={false} />
-              <ComplianceRow label="Jurisdictional eligibility" ok={false} />
-              <ComplianceRow label="Multi-Factor Authentication" ok={false} />
-            </ul>
-            <p className="mt-3 text-[11px] text-muted-foreground">
-              KYC integration pending. No attestations issued on this account.
-            </p>
-          </div>
-          <div className="card-institutional p-5">
-            <h3 className="text-sm font-semibold text-foreground">Quick Actions</h3>
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              <QuickAction to="/marketplace" label="Browse assets" />
-              <QuickAction to="/governance" label="Vote SIPs" />
-              <QuickAction to="/security" label="Security" />
-              <QuickAction to="/stewardship" label="Impact" />
+          )}
+
+          <details className="card-institutional p-5">
+            <summary className="cursor-pointer select-none text-sm font-semibold text-foreground">
+              Account &amp; network
+            </summary>
+            <div className="mt-4 grid gap-4">
+              <ChainStatusCard />
+              <MyVaultHoldingsCard
+                assetIds={vaultAssetIds}
+                showAssetBreakdown
+                title="Your holdings on-chain"
+              />
+              <div>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-foreground">Verification</h3>
+                  <Badge tone="accent">Not verified</Badge>
+                </div>
+                <ul className="mt-4 space-y-2 text-sm">
+                  <ComplianceRow label="Identity check" ok={false} />
+                  <ComplianceRow label="Investor eligibility" ok={false} />
+                  <ComplianceRow label="Country eligibility" ok={false} />
+                  <ComplianceRow label="Two-factor sign-in" ok={false} />
+                </ul>
+                <p className="mt-3 text-[11px] text-muted-foreground">
+                  Identity checks aren't switched on yet, so nothing has been verified on this account.
+                </p>
+              </div>
             </div>
-          </div>
+          </details>
         </div>
+
       </section>
 
       <section className="mt-10">
