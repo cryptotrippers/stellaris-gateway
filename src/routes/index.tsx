@@ -291,12 +291,13 @@ function FeaturedAssets() {
       <div className="mx-auto max-w-[1400px] px-4 md:px-6 py-16 md:py-24">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <div className="text-[11px] uppercase tracking-[0.22em] text-primary">Featured vaults</div>
+            <div className="text-sm font-medium text-primary">Featured projects</div>
             <h2 className="mt-2 text-3xl md:text-4xl font-semibold tracking-tight">Real things that make real money.</h2>
           </div>
           <Link to="/marketplace" className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80">
-            All vaults <ArrowUpRight className="h-4 w-4" />
+            All projects <ArrowUpRight className="h-4 w-4" />
           </Link>
+
         </div>
 
         {isLoading && (
@@ -308,14 +309,15 @@ function FeaturedAssets() {
         )}
         {error && (
           <div className="mt-8 card-institutional p-6 text-sm text-destructive">
-            Vault registry unavailable right now. Please try again shortly.
+            We couldn't load the projects right now. Please try again shortly.
           </div>
         )}
         {!isLoading && !error && featured.length === 0 && (
           <div className="mt-8 card-institutional p-6 text-sm text-muted-foreground">
-            No vaults are open yet. Issuers must complete on-chain verification before their vaults appear here.
+            No projects are open yet. Operators must pass verification before their project is listed here.
           </div>
         )}
+
 
         <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {featured.map(asset => {
