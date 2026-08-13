@@ -91,15 +91,16 @@ function MarketplaceIndex() {
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Search by asset, issuer, location, or category…"
+            placeholder="Search by project, operator, place, or type…"
             className="w-full rounded-lg border border-border bg-surface pl-9 pr-3 py-2 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Filter className="h-4 w-4" />
-          Live from the on-chain registry
+          Updated live
         </div>
       </div>
+
 
       {categories.length > 1 && (
         <div className="mt-3 flex flex-wrap gap-2">
@@ -119,16 +120,17 @@ function MarketplaceIndex() {
       )}
       {error && (
         <div className="mt-6 card-institutional p-6 text-sm text-destructive">
-          Failed to load assets: {(error as Error).message}
+          We couldn't load the projects just now. Please try again shortly.
         </div>
       )}
       {!isLoading && !error && filtered.length === 0 && (
         <div className="mt-6 card-institutional p-6 text-sm text-muted-foreground">
           {assets.length === 0
-            ? "No assets are registered yet. Issuers must complete on-chain verification before their vaults appear here."
-            : "No vaults match those filters."}
+            ? "No projects are open yet. Operators must pass verification before their project is listed here."
+            : "No projects match those filters."}
         </div>
       )}
+
 
 
       <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
