@@ -71,28 +71,38 @@ export function WithdrawVaultCard({ assetId }: { assetId?: string } = {}) {
     <div className="card-institutional p-6">
       <div className="flex items-center justify-between">
         <div>
-          <div className="text-[10px] uppercase tracking-widest text-primary">On-chain · Preprod</div>
-          <h3 className="mt-1 text-sm font-semibold text-foreground">Withdraw from vault</h3>
+          <div className="text-[10px] uppercase tracking-widest text-primary">Cash out</div>
+          <h3 className="mt-1 text-sm font-semibold text-foreground">Take your money back</h3>
         </div>
         <Badge tone={deployed ? "success" : "warning"}>
-          <Unlock className="h-3 w-3" /> Owner-only
+          <Unlock className="h-3 w-3" /> Only you
         </Badge>
       </div>
 
       <p className="mt-2 text-xs text-muted-foreground">
-        Unlocks every vault UTxO whose datum matches your payment-key hash and sends the ADA back to your wallet. The Aiken validator rejects the tx unless you sign it.
+        Sends everything you've invested in this project back to your wallet. Nobody else can move
+        it — the contract only releases funds to you.
       </p>
+
+      <details className="mt-2 text-[11px] text-muted-foreground">
+        <summary className="cursor-pointer select-none hover:text-foreground">Technical details</summary>
+        <p className="mt-1">
+          Spends every vault UTxO whose datum matches your payment-key hash. The Aiken validator
+          rejects the transaction unless your key signs it.
+        </p>
+      </details>
 
       {!walletReady && deployed && (
         <div className="mt-4 rounded-lg border border-border bg-secondary/60 p-3 text-xs text-muted-foreground">
           {wallet.connected
-            ? `Network mismatch — this app is on ${APP_NETWORK === "mainnet" ? "Mainnet" : "Preprod testnet"} but your wallet is on ${networkNameFromId(wallet.networkId)}. Switch your wallet's network and reconnect.`
-            : "Connect a CIP-30 wallet from the top bar to continue."}
+            ? `Your wallet is on the wrong network — this app uses ${APP_NETWORK === "mainnet" ? "Mainnet" : "the Preprod demo network"} but your wallet is on ${networkNameFromId(wallet.networkId)}. Switch it and reconnect.`
+            : "Connect a wallet from the top bar to continue."}
           {wallet.connected && (
             <div className="mt-2"><NetworkSwitchHelp compact /></div>
           )}
         </div>
       )}
+
 
       <div className="mt-5 grid gap-2 sm:grid-cols-[1fr_auto]">
         <button
