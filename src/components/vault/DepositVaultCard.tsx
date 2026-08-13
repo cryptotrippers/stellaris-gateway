@@ -129,11 +129,12 @@ export function DepositVaultCard({ assetId }: { assetId?: string } = {}) {
       >
         {status === "signing" ? (
           <>
-            <Loader2 className="h-4 w-4 animate-spin" /> Waiting for wallet signature…
+            <Loader2 className="h-4 w-4 animate-spin" /> Confirm in your wallet…
           </>
         ) : (
-          <>Lock {n || "—"} tADA in vault</>
+          <>Invest ₳{n || "—"}</>
         )}
+
       </button>
 
       {status === "error" && error && (
@@ -146,11 +147,12 @@ export function DepositVaultCard({ assetId }: { assetId?: string } = {}) {
       {status === "success" && result && (
         <div className="mt-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-xs text-emerald-700 dark:text-emerald-300">
           <div className="flex items-center gap-1 font-semibold">
-            <CheckCircle2 className="h-4 w-4" /> Deposit submitted
+            <CheckCircle2 className="h-4 w-4" /> Investment sent
           </div>
           <div className="mt-1">
-            {result.amountAda} tADA locked at the vault. Confirmation usually takes ~20s on Preprod.
+            ₳{result.amountAda} is on its way. It usually confirms in about 20 seconds.
           </div>
+
           <a
             href={`https://preprod.cardanoscan.io/transaction/${result.txHash}`}
             target="_blank"
