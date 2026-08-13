@@ -350,10 +350,17 @@ function ComplianceRow({ label, ok }: { label: string; ok?: boolean }) {
   );
 }
 
-function QuickAction({ to, label }: { to: string; label: string }) {
+function HowStep({ n, title, body }: { n: number; title: string; body: string }) {
   return (
-    <Link to={to} className="rounded-xl border border-border bg-secondary/50 px-3 py-2.5 text-sm font-medium text-foreground hover:border-primary/40 hover:bg-secondary transition-colors">
-      {label}
-    </Link>
+    <li className="flex gap-3">
+      <span className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+        {n}
+      </span>
+      <span>
+        <span className="block font-medium text-foreground">{title}</span>
+        <span className="block text-xs text-muted-foreground">{body}</span>
+      </span>
+    </li>
   );
+
 }
