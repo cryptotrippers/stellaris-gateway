@@ -440,14 +440,15 @@ function FinalCta() {
               onClick={() => trackEvent("landing_final_cta_click")}
               className="inline-flex items-center gap-2 rounded-xl bg-white text-primary px-6 py-3.5 text-base font-semibold hover:-translate-y-0.5 transition-transform"
             >
-              Browse assets <ArrowRight className="h-4 w-4" />
+              Browse projects <ArrowRight className="h-4 w-4" />
             </Link>
             <Link
               to="/app"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/30 bg-white/10 backdrop-blur px-6 py-3.5 text-base font-semibold text-white hover:bg-white/20 transition-colors"
+              className="inline-flex items-center gap-2 rounded-xl border border-primary-foreground/30 bg-primary-foreground/10 backdrop-blur px-6 py-3.5 text-base font-semibold text-primary-foreground hover:bg-primary-foreground/20 transition-colors"
             >
-              Open the app
+              My portfolio
             </Link>
+
           </div>
           <div className="mt-10 flex justify-center">
             <ShareRow
@@ -469,11 +470,12 @@ function Footer() {
       <div className="mx-auto max-w-[1400px] px-4 md:px-6 py-12 grid gap-8 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
         <div>
           <StellarisWordmark />
-          <p className="mt-3 text-sm text-muted-foreground max-w-sm">Fractional real-world assets on Cardano. Retail-friendly, institutionally engineered.</p>
+          <p className="mt-3 text-sm text-muted-foreground max-w-sm">Small shares of real-world projects, on Cardano. Simple to use, seriously engineered.</p>
         </div>
-        <FooterCol title="Product" links={[["Marketplace", "/marketplace"], ["Yield engine", "/yield"], ["Governance", "/governance"]]} />
-        <FooterCol title="Trust" links={[["Security", "/security"], ["Stewardship", "/stewardship"], ["Developers", "/developers"]]} />
-        <FooterCol title="Account" links={[["Open app", "/app"], ["Upgrade", "/upgrade"]]} />
+        <FooterCol title="Product" links={[["Invest", "/marketplace"], ["Earnings", "/yield"], ["Vote", "/governance"]]} />
+        <FooterCol title="Trust" links={[["Security", "/security"], ["Impact", "/stewardship"], ["Developers", "/developers"]]} />
+        <FooterCol title="Account" links={[["My portfolio", "/app"], ["Upgrade", "/upgrade"]]} />
+
       </div>
       <div className="border-t border-border/60">
         <div className="mx-auto max-w-[1400px] px-4 md:px-6 py-4 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
