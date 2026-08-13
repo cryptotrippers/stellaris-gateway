@@ -204,21 +204,22 @@ function PortfolioPage() {
       </section>
 
       <section className="mt-10">
-        <SectionHeader title="Active Investments" href="/marketplace" hrefLabel="Explore marketplace" />
+        <SectionHeader title="Your investments" href="/marketplace" hrefLabel="Browse projects" />
         {!wallet.connected ? (
           <div className="mt-4 card-institutional p-8 text-center">
             <Wallet className="mx-auto h-8 w-8 text-muted-foreground" />
-            <div className="mt-3 text-sm font-medium text-foreground">Connect a wallet to see your positions</div>
-            <div className="mt-1 text-xs text-muted-foreground">No demo data is shown until a wallet is linked.</div>
+            <div className="mt-3 text-sm font-medium text-foreground">Connect a wallet to see your investments</div>
+            <div className="mt-1 text-xs text-muted-foreground">Nothing is shown until your wallet is linked.</div>
           </div>
         ) : positions.length === 0 ? (
           <div className="mt-4 card-institutional p-8 text-center">
             <div className="number-display text-2xl font-semibold text-foreground">{formatAda(0)}</div>
-            <div className="mt-1 text-sm text-muted-foreground">No active vaults yet — browse the marketplace to invest.</div>
+            <div className="mt-1 text-sm text-muted-foreground">You haven't invested in anything yet.</div>
             <Link to="/marketplace" className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-primary">
-              Explore assets <ArrowUpRight className="h-3.5 w-3.5" />
+              Browse projects <ArrowUpRight className="h-3.5 w-3.5" />
             </Link>
           </div>
+
         ) : (
           <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {positions.map((inv) => {
