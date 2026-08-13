@@ -29,16 +29,17 @@ const OG_IMAGE = `${SITE}${ogAsset.url}`;
 const FAQ = [
   {
     q: "Is this actually safe?",
-    a: "Every vault is issued by a registered, audited entity, custody is institutional (Fireblocks), and withdrawals carry a 24h timelock. All positions settle on Cardano — you always hold the on-chain token, not an IOU.",
+    a: "Every project is run by a registered, audited operator, and withdrawals carry a 24h safety delay. Your share is recorded in your own name on Cardano — you hold it, not us.",
   },
   {
     q: "Do I need to know anything about crypto?",
-    a: "No. You can invest with a debit card via Stripe, or connect a Cardano wallet if you already have one. Yield is paid in ADA and can be converted back to your local currency at any time.",
+    a: "No. You can pay by card, or connect a Cardano wallet if you already have one. Returns can be converted back to your local currency at any time.",
   },
   {
     q: "What's the minimum investment?",
-    a: "Positions start at ₳10 (about $4 USD). Different vaults have different minimums — most sit between ₳100 and ₳500.",
+    a: "You can start from ₳10 (about $4). Some projects set a higher minimum — most sit between ₳100 and ₳500.",
   },
+
   {
     q: "What are the fees?",
     a: "0.4% per year, streamed continuously from yield. No entry fee, no exit fee, no lockups beyond the 24h security timelock.",
