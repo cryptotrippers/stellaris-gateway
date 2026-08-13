@@ -134,11 +134,12 @@ function MarketingNav() {
       <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-4 px-4 md:px-6">
         <Link to="/" className="shrink-0"><StellarisWordmark /></Link>
         <nav className="ml-6 hidden md:flex items-center gap-1">
-          <NavLink to="/marketplace">Marketplace</NavLink>
-          <NavLink to="/yield">How yield works</NavLink>
+          <NavLink to="/marketplace">Invest</NavLink>
+          <NavLink to="/yield">Earnings</NavLink>
           <NavLink to="/stewardship">Impact</NavLink>
           <NavLink to="/security">Security</NavLink>
         </nav>
+
         <div className="ml-auto flex items-center gap-2">
           <Link
             to="/app"
@@ -173,8 +174,8 @@ function Hero() {
     <section className="relative mx-auto max-w-[1400px] px-4 md:px-6 pt-16 md:pt-24 pb-12 md:pb-20">
       <div className="grid gap-10 lg:grid-cols-[1.15fr_1fr] items-center">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/70 backdrop-blur px-3 py-1 text-[11px] uppercase tracking-[0.22em] text-primary">
-            <Sparkles className="h-3 w-3" /> Now open to retail · From ₳10
+          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/70 backdrop-blur px-3 py-1 text-xs text-primary">
+            <Sparkles className="h-3 w-3" /> Open to everyone · Start from ₳10
           </div>
           <h1 className="mt-5 text-4xl md:text-6xl font-semibold tracking-tight leading-[1.05]">
             Own a piece of the <span className="text-transparent bg-clip-text bg-gradient-primary">real world.</span>
@@ -182,7 +183,8 @@ function Hero() {
             From <span className="number-display">₳10</span>.
           </h1>
           <p className="mt-5 max-w-xl text-base md:text-lg text-muted-foreground leading-relaxed">
-            Solar farms, coffee estates, and real estate — fractionalized on Cardano. Verified yields, ESG ratings, and 24-hour withdrawals. No suits, no minimums that don't make sense.
+            Solar farms, coffee estates and property — split into small shares you can buy in a few
+            taps. You can see exactly what you own and take your money out whenever you like.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link
@@ -190,21 +192,21 @@ function Hero() {
               onClick={() => trackEvent("landing_hero_cta_click", { target: "marketplace" })}
               className="inline-flex items-center gap-2 rounded-xl bg-gradient-primary px-6 py-3.5 text-sm md:text-base font-semibold text-primary-foreground shadow-glow hover:-translate-y-0.5 transition-transform"
             >
-              Explore assets <ArrowRight className="h-4 w-4" />
+              Browse projects <ArrowRight className="h-4 w-4" />
             </Link>
-            <Link
-              to="/app"
-              onClick={() => trackEvent("landing_hero_cta_click", { target: "app" })}
+            <a
+              href="#how-it-works"
               className="inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-6 py-3.5 text-sm md:text-base font-semibold text-foreground hover:border-primary/50 hover:bg-secondary transition-colors"
             >
-              See a live portfolio
-            </Link>
+              How it works
+            </a>
           </div>
           <div className="mt-6 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-primary" /> Open-source, testnet</span>
-            <span className="inline-flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5 text-primary" /> CIP-30 wallets</span>
-            <span className="inline-flex items-center gap-1.5"><TrendingUp className="h-3.5 w-3.5 text-accent" /> Live on Cardano preprod</span>
+            <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5 text-primary" /> Demo network — funds aren't real</span>
+            <span className="inline-flex items-center gap-1.5"><Wallet className="h-3.5 w-3.5 text-primary" /> Works with common Cardano wallets</span>
+            <span className="inline-flex items-center gap-1.5"><TrendingUp className="h-3.5 w-3.5 text-accent" /> Everything verifiable on-chain</span>
           </div>
+
         </div>
 
         <div className="relative">
