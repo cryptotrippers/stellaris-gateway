@@ -74,14 +74,15 @@ function MarketplaceIndex() {
     <>
       <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
         <div>
-          <div className="text-[11px] uppercase tracking-[0.22em] text-primary">Marketplace</div>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground">Real-World Asset Opportunities</h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Fractionalised, transparent, on-chain settlement in ADA. Assets appear here once issuers register and pass verification.</p>
+          <div className="text-[11px] tracking-wide text-primary">Invest</div>
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground">Projects you can invest in</h1>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">Real things — farms, solar, property — split into small shares anyone can buy. Projects appear here once the issuer has been verified.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge tone="accent">{assets.length} live vault{assets.length === 1 ? "" : "s"}</Badge>
+          <Badge tone="accent">{assets.length} open project{assets.length === 1 ? "" : "s"}</Badge>
         </div>
       </div>
+
 
       {/* Filters */}
       <div className="mt-6 card-institutional p-3 md:p-4 flex flex-col gap-3 md:flex-row md:items-center">
