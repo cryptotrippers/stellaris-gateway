@@ -51,6 +51,11 @@ export function AssetVaultPanel({ assetId }: { assetId: string }) {
     retry: 0,
   });
   const apyPct = historyQ.data?.apyPct ?? null;
+  const accruals = historyQ.data?.accruals ?? [];
+  const accrualCount = accruals.length;
+  const firstAccrual = accruals[0] ?? null;
+  const lastAccrual = accruals[accrualCount - 1] ?? null;
+
 
   return (
     <div className="card-institutional p-6">
@@ -166,10 +171,62 @@ export function AssetVaultPanel({ assetId }: { assetId: string }) {
                 </div>
                 <p className="mt-2 text-center text-[10px] text-muted-foreground">
                   {apyPct !== null
-                    ? "Annualised from verified on-chain accruals."
-                    : "Return appears once two accruals have settled on chain."}
+                    ? `Annualised from ${accrualCount} verified on-chain accrual${accrualCount === 1 ? "" : "s"}.`
+                    : `Return appears once two accruals have settled on chain (${accrualCount} so far).`}
                 </p>
+
+                <details className="mt-3 rounded-lg bg-secondary/40 p-3 text-[11px] text-muted-foreground">
+                  <summary className="cursor-pointer font-medium text-foreground">
+                    Data source &amp; timestamp
+                  </summary>
+                  <dl className="mt-2 space-y-1">
+                    <SourceRow
+                      label="Source"
+                      value={`Blockfrost ${vault.network} — transaction history at the vault script address`}
+                    />
+                    <SourceRow
+                      label="Address read"
+                      value={short(effectiveAddress ?? vault.script_address, 12, 8)}
+                    />
+                    <SourceRow
+                      label="Transactions scanned"
+                      value={
+                        historyQ.data
+                          ? `${historyQ.data.scanned}${historyQ.data.truncated ? " (truncated at 50)" : ""}`
+                          : "—"
+                      }
+                    />
+                    <SourceRow label="Accruals detected" value={String(accrualCount)} />
+                    <SourceRow
+                      label="First accrual"
+                      value={
+                        firstAccrual
+                          ? `epoch ${firstAccrual.epoch} · ${formatUtc(firstAccrual.blockTime * 1000)}`
+                          : "none yet"
+                      }
+                    />
+                    <SourceRow
+                      label="Last accrual"
+                      value={
+                        lastAccrual
+                          ? `epoch ${lastAccrual.epoch} · ${formatUtc(lastAccrual.blockTime * 1000)}`
+                          : "none yet"
+                      }
+                    />
+                    <SourceRow
+                      label="Chain read at"
+                      value={
+                        historyQ.data?.checkedAt ? formatUtc(historyQ.data.checkedAt) : "—"
+                      }
+                    />
+                    <SourceRow
+                      label="Method"
+                      value="APY = (last accrual share price ÷ first accrual share price) ^ (1 year ÷ elapsed block time) − 1. No estimates or projections are used."
+                    />
+                  </dl>
+                </details>
               </>
+
             )}
 
           </div>
@@ -197,4 +254,18 @@ function Stat({ label, value, accent = false }: { label: string; value: string; 
       </div>
     </div>
   );
+}
+
+function SourceRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-wrap justify-between gap-2">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="max-w-[70%] text-right font-medium text-foreground">{value}</dd>
+    </div>
+  );
+}
+
+/** Timestamps are always shown in UTC so two people reading the same vault agree. */
+function formatUtc(ms: number): string {
+  return `${new Date(ms).toISOString().replace("T", " ").slice(0, 19)} UTC`;
 }
