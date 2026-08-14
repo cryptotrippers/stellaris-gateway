@@ -158,7 +158,15 @@ export function AssetVaultPanel({ assetId }: { assetId: string }) {
                 bootstrapped on the current script.
               </p>
             )}
+            {stateQ.data && stateQ.data.stateCount > 1 && (
+              <p className="mb-3 rounded-lg bg-secondary/40 p-2 text-[11px] text-muted-foreground">
+                This project was set up twice on chain, so {stateQ.data.stateCount} ledger records
+                exist at its address. The live one (the most advanced) is shown and used for every
+                transaction; the unused duplicate is ignored and can never be spent.
+              </p>
+            )}
             {stateQ.data?.found && stateQ.data.state && (
+
               <>
                 <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
                   <Stat label="Share price" value={formatSharePrice(stateQ.data.sharePrice)} accent />
