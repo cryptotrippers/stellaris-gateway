@@ -14,7 +14,12 @@
 import { checkVaultPreconditions, initLucidWithWallet } from "./vault";
 import { assertYieldVaultAddress, getYieldVaultScript, YIELD_VAULT_VERSION } from "./yield-vault";
 import { getRefInputIfPublished } from "./ref-scripts";
-import { encodeStateDatum, readStateDatum, type VaultStateDatum } from "./yield-chain-decode";
+import {
+  encodeStateDatum,
+  readStateDatum,
+  selectCanonicalState,
+  type VaultStateDatum,
+} from "./yield-chain-decode";
 import { settleFee } from "./vault-fees";
 
 /** YieldRedeemer constructor indices — mirrors yield_vault.ak. */
