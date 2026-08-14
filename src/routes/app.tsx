@@ -81,19 +81,31 @@ function PortfolioPage() {
   const assets: AssetRow[] = assetRows ?? [];
   const assetById = (id: string) => assets.find(a => a.id === id) ?? null;
 
-  const positions = data?.positions ?? [];
+  const dbPositions = data?.positions ?? [];
   const txns = data?.txns ?? [];
 
-  const totalAda = positions.reduce((s, p) => s + Number(p.amount_ada), 0);
+  // On-chain Position UTxOs are the source of truth for what the wallet holds.
+  const onchain = useMyInvestments(vaultAssetIds);
+  const positions = onchain.investments;
+  const loading = isLoading || onchain.isLoading;
+
+  const totalAda = onchain.totalAda;
   const yieldTxns = txns.filter(t => t.type === "yield");
-  const totalYield = yieldTxns.reduce((s, t) => s + Number(t.amount_ada), 0);
+  const dbYield = yieldTxns.reduce((s, t) => s + Number(t.amount_ada), 0);
+  const totalYield = onchain.gainAda > 0 ? onchain.gainAda : dbYield;
   const yieldPct = totalAda > 0 ? (totalYield / totalAda) * 100 : 0;
-  const activeVaults = new Set(positions.map(p => p.vault_id)).size;
+  const activeVaults = positions.length;
   const cutoff = Date.now() - 24 * 60 * 60 * 1000;
   const yield24h = yieldTxns
     .filter(t => new Date(t.created_at).getTime() >= cutoff)
     .reduce((s, t) => s + Number(t.amount_ada), 0);
-  const series = valueSeries(txns);
+  const series = valueSeries(txns.length > 0 ? txns : dbPositions.map(p => ({
+    type: "deposit" as const,
+    amount_ada: Number(p.amount_ada),
+    created_at: p.opened_at,
+    vault_id: p.vault_id,
+  })));
+
 
 
   return (
