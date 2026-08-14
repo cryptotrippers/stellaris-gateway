@@ -142,16 +142,13 @@ async function resolveVault(
   owner?: string,
 ): Promise<ResolvedUtxos> {
   const utxos = await lucid.utxosAt(address);
-  let stateUtxo: (typeof utxos)[number] | null = null;
-  let state: VaultStateDatum | null = null;
+  const stateCandidates: Array<{ utxo: (typeof utxos)[number]; state: VaultStateDatum }> = [];
   const positions: ResolvedUtxos["positions"] = [];
 
   for (const u of utxos) {
     const asState = readStateDatum(u.datum ?? null);
     if (asState) {
-      if (state) throw new Error("More than one state UTxO found — refusing to build.");
-      stateUtxo = u;
-      state = asState;
+      stateCandidates.push({ utxo: u, state: asState });
       continue;
     }
     const asPosition = readPositionDatum(u.datum ?? null);
@@ -163,9 +160,20 @@ async function resolveVault(
       });
     }
   }
+  // A vault bootstrapped twice leaves a second, never-used State UTxO here.
+  // The validator spends exactly one State per tx, so pick the live ledger with
+  // the same deterministic rule the readers use instead of refusing to build.
+  const chosen = selectCanonicalState(stateCandidates, (c) => ({
+    txHash: c.utxo.txHash,
+    outputIndex: c.utxo.outputIndex,
+    state: c.state,
+  }));
+  const stateUtxo = chosen?.utxo ?? null;
+  const state = chosen?.state ?? null;
   if (!stateUtxo || !state) {
     throw new Error("This vault has no state UTxO yet — it must be bootstrapped first.");
   }
+
   return {
     stateUtxo: stateUtxo as ResolvedUtxos["stateUtxo"],
     state,
