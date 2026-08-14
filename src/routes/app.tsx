@@ -8,6 +8,8 @@ import { FundingBar, SectionHeader } from "@/components/ui/funding-bar";
 import { ChainStatusCard } from "@/components/chain/ChainStatusCard";
 import { MyVaultHoldingsCard } from "@/components/vault/MyVaultHoldingsCard";
 import { useVaultAssetIds } from "@/hooks/useVaultAssetIds";
+import { useMyInvestments } from "@/hooks/useMyInvestments";
+
 import { formatAda, formatUsd, lovelaceToAda } from "@/lib/format";
 import { assetsQueryOptions, fundedPct, type AssetRow } from "@/lib/assets-query";
 import { APP_NETWORK } from "@/lib/network";
@@ -81,19 +83,31 @@ function PortfolioPage() {
   const assets: AssetRow[] = assetRows ?? [];
   const assetById = (id: string) => assets.find(a => a.id === id) ?? null;
 
-  const positions = data?.positions ?? [];
+  const dbPositions = data?.positions ?? [];
   const txns = data?.txns ?? [];
 
-  const totalAda = positions.reduce((s, p) => s + Number(p.amount_ada), 0);
+  // On-chain Position UTxOs are the source of truth for what the wallet holds.
+  const onchain = useMyInvestments(vaultAssetIds);
+  const positions = onchain.investments;
+  const loading = isLoading || onchain.isLoading;
+
+  const totalAda = onchain.totalAda;
   const yieldTxns = txns.filter(t => t.type === "yield");
-  const totalYield = yieldTxns.reduce((s, t) => s + Number(t.amount_ada), 0);
+  const dbYield = yieldTxns.reduce((s, t) => s + Number(t.amount_ada), 0);
+  const totalYield = onchain.gainAda > 0 ? onchain.gainAda : dbYield;
   const yieldPct = totalAda > 0 ? (totalYield / totalAda) * 100 : 0;
-  const activeVaults = new Set(positions.map(p => p.vault_id)).size;
+  const activeVaults = positions.length;
   const cutoff = Date.now() - 24 * 60 * 60 * 1000;
   const yield24h = yieldTxns
     .filter(t => new Date(t.created_at).getTime() >= cutoff)
     .reduce((s, t) => s + Number(t.amount_ada), 0);
-  const series = valueSeries(txns);
+  const series = valueSeries(txns.length > 0 ? txns : dbPositions.map(p => ({
+    type: "deposit" as const,
+    amount_ada: Number(p.amount_ada),
+    created_at: p.opened_at,
+    vault_id: p.vault_id,
+  })));
+
 
 
   return (
@@ -122,7 +136,7 @@ function PortfolioPage() {
               <>
                 <div className="mt-3 flex items-end gap-3">
                   <div className="number-display text-4xl md:text-5xl font-semibold tracking-tight">
-                    {isLoading ? "…" : formatAda(totalAda)}
+                    {loading ? "…" : formatAda(totalAda)}
                   </div>
                   <div className="pb-2 text-sm text-primary-foreground/70">≈ {formatUsd(totalAda)}</div>
                 </div>
@@ -211,6 +225,10 @@ function PortfolioPage() {
             <div className="mt-3 text-sm font-medium text-foreground">Connect a wallet to see your investments</div>
             <div className="mt-1 text-xs text-muted-foreground">Nothing is shown until your wallet is linked.</div>
           </div>
+        ) : loading ? (
+          <div className="mt-4 card-institutional p-8 text-center text-sm text-muted-foreground">
+            Reading your positions from the chain…
+          </div>
         ) : positions.length === 0 ? (
           <div className="mt-4 card-institutional p-8 text-center">
             <div className="number-display text-2xl font-semibold text-foreground">{formatAda(0)}</div>
@@ -223,9 +241,9 @@ function PortfolioPage() {
         ) : (
           <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {positions.map((inv) => {
-              const asset = assetById(inv.vault_id);
+              const asset = assetById(inv.assetId);
               const Icon = iconFor(asset?.category ?? "");
-              const amount = Number(inv.amount_ada);
+              const amount = Number(inv.redeemableLovelace) / 1e6;
               const body = (
                 <>
                   <div className="flex items-start justify-between gap-3">
@@ -238,7 +256,7 @@ function PortfolioPage() {
                           {asset?.category ?? "Unlisted vault"}
                         </div>
                         <div className="text-sm font-semibold text-foreground line-clamp-1">
-                          {asset?.name ?? inv.vault_id}
+                          {asset?.name ?? inv.assetId}
                         </div>
                       </div>
                     </div>
@@ -246,16 +264,19 @@ function PortfolioPage() {
 
                   <div className="mt-5 flex items-end justify-between">
                     <div>
-                      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Position</div>
+                      <div className="text-[10px] uppercase tracking-widest text-muted-foreground">Current value</div>
                       <div className="number-display text-xl font-semibold text-foreground">{formatAda(amount)}</div>
                     </div>
                     <div className="text-right text-xs text-muted-foreground">
-                      Opened {new Date(inv.opened_at).toLocaleDateString()}
+                      {inv.shares.toString()} shares
+                      <div>@ {inv.sharePrice.toFixed(6)} ₳</div>
                     </div>
                   </div>
 
                   <div className="mt-4 flex items-center justify-between text-xs">
-                    <span className="font-mono text-muted-foreground">{inv.tx_hash.slice(0, 12)}…</span>
+                    <span className="text-muted-foreground">
+                      On-chain · {inv.utxoCount} {inv.utxoCount === 1 ? "entry" : "entries"}
+                    </span>
                     {asset && (
                       <span className="inline-flex items-center gap-1 text-primary font-medium">
                         View <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
@@ -266,7 +287,7 @@ function PortfolioPage() {
               );
               return asset ? (
                 <Link
-                  key={`${inv.vault_id}-${inv.tx_hash}`}
+                  key={inv.assetId}
                   to="/marketplace/$id"
                   params={{ id: asset.id }}
                   className="card-institutional card-institutional-hover p-5 group"
@@ -274,11 +295,12 @@ function PortfolioPage() {
                   {body}
                 </Link>
               ) : (
-                <div key={`${inv.vault_id}-${inv.tx_hash}`} className="card-institutional p-5">{body}</div>
+                <div key={inv.assetId} className="card-institutional p-5">{body}</div>
               );
             })}
           </div>
         )}
+
       </section>
 
       <section className="mt-10">
