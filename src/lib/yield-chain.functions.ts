@@ -258,3 +258,70 @@ export const verifyAccrualTx = createServerFn({ method: "GET" })
       };
     },
   );
+
+/**
+ * Realised return for every registered vault, keyed by asset id.
+ *
+ * Used by the marketplace grid so listings can be compared at a glance. Each
+ * entry is derived the same way as the detail panel — accruals decoded from the
+ * vault's own transaction history — and assets with no bootstrapped vault are
+ * simply absent, never defaulted to zero.
+ */
+export const listVaultReturns = createServerFn({ method: "GET" }).handler(
+  async (): Promise<{
+    checkedAt: number;
+    vaults: Array<{
+      assetId: string;
+      address: string;
+      network: string;
+      apyPct: number | null;
+      accrualCount: number;
+      lastAccrualBlockTime: number | null;
+    }>;
+  }> => {
+    const { bfGet } = await import("./blockfrost-fetch.server");
+    const { supabase } = await import("@/integrations/supabase/client");
+
+    const { data: rows } = await supabase
+      .from("asset_vaults")
+      .select("asset_id,script_address,network");
+
+    const vaults: Array<{
+      assetId: string;
+      address: string;
+      network: string;
+      apyPct: number | null;
+      accrualCount: number;
+      lastAccrualBlockTime: number | null;
+    }> = [];
+
+    for (const row of rows ?? []) {
+      const address = row.script_address;
+      if (!BECH32_ADDRESS_RE.test(address)) continue;
+      const txs =
+        (await bfGet<BfAddressTx[]>(`/addresses/${address}/transactions?order=asc&count=50`)) ?? [];
+      const points: Array<{ tx: BfAddressTx; state: VaultStateDatum }> = [];
+      for (const tx of txs) {
+        const detail = await bfGet<BfTxUtxos>(`/txs/${tx.tx_hash}/utxos`);
+        if (!detail) continue;
+        const decoded = detail.outputs
+          .filter((out) => out.address === address)
+          .map((out) => readStateDatum(out.inline_datum))
+          .filter((s): s is VaultStateDatum => s !== null);
+        const sole = soleStateOrThrow(decoded, address);
+        if (sole) points.push({ tx, state: sole });
+      }
+      const accruals = deriveAccruals(points);
+      vaults.push({
+        assetId: row.asset_id,
+        address,
+        network: row.network,
+        apyPct: annualisedReturnPct(accruals),
+        accrualCount: accruals.length,
+        lastAccrualBlockTime: accruals[accruals.length - 1]?.blockTime ?? null,
+      });
+    }
+
+    return { checkedAt: Date.now(), vaults };
+  },
+);

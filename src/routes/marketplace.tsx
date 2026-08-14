@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/StatusBadge";
 import { FundingBar } from "@/components/ui/funding-bar";
 import { formatAda, lovelaceToAda } from "@/lib/format";
 import { assetsQueryOptions, fundedPct, type AssetRow } from "@/lib/assets-query";
+import { listVaultReturns } from "@/lib/yield-chain.functions";
 
 
 
@@ -53,6 +54,21 @@ function MarketplaceIndex() {
   const [category, setCategory] = useState<string>("all");
   const { data, isLoading, error } = useQuery(assetsQueryOptions());
   const assets: AssetRow[] = data ?? [];
+
+  // Realised returns for every bootstrapped vault, read straight from chain.
+  const returnsQ = useQuery({
+    queryKey: ["vault-returns"],
+    queryFn: () => listVaultReturns(),
+    staleTime: 300_000,
+    retry: 0,
+  });
+  const returnsByAsset = useMemo(() => {
+    const m = new Map<string, { apyPct: number | null; accrualCount: number }>();
+    for (const v of returnsQ.data?.vaults ?? []) {
+      m.set(v.assetId, { apyPct: v.apyPct, accrualCount: v.accrualCount });
+    }
+    return m;
+  }, [returnsQ.data]);
 
   const categories = useMemo(
     () => Array.from(new Set(assets.map(a => a.category))).sort(),
@@ -140,6 +156,7 @@ function MarketplaceIndex() {
           const target = Number(asset.target_lovelace);
           const raised = Number(asset.raised_lovelace);
           const pct = fundedPct(asset);
+          const ret = returnsByAsset.get(asset.id) ?? null;
           return (
             <Link
               key={asset.id}
@@ -164,17 +181,32 @@ function MarketplaceIndex() {
                 <p className="mt-3 text-xs text-muted-foreground line-clamp-2">{asset.description}</p>
               )}
 
-              <div className="mt-5 grid grid-cols-3 gap-3 text-center">
+              <div className="mt-5 grid grid-cols-4 gap-2 text-center">
                 <Metric label="Raised" value={`${lovelaceToAda(raised).toLocaleString()} ₳`} accent />
                 <Metric label="Target" value={target > 0 ? formatAda(lovelaceToAda(target)) : "—"} />
+                <Metric
+                  label="Return"
+                  value={ret?.apyPct != null ? `${ret.apyPct.toFixed(1)}%` : "—"}
+                  accent={ret?.apyPct != null}
+                />
                 <Metric label="Term" value={asset.maturity_months ? `${asset.maturity_months}mo` : "—"} />
               </div>
 
               <FundingBar pct={pct} />
               <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
-                <span>Funded</span>
+                <span>
+                  {lovelaceToAda(raised).toLocaleString()} of{" "}
+                  {target > 0 ? `${lovelaceToAda(target).toLocaleString()} ₳` : "—"} raised
+                </span>
                 <span className="number-display text-foreground">{pct.toFixed(1)}%</span>
               </div>
+              <p className="mt-1.5 text-[10px] text-muted-foreground">
+                {ret == null
+                  ? "Return shown once this project's vault goes live on chain."
+                  : ret.apyPct != null
+                    ? "Return is annualised from settled on-chain payouts."
+                    : `Vault live · ${ret.accrualCount} payout${ret.accrualCount === 1 ? "" : "s"} so far — a return needs two.`}
+              </p>
             </Link>
           );
         })}
