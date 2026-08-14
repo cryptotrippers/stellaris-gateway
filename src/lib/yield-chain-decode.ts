@@ -173,6 +173,48 @@ export function soleStateOrThrow<T>(candidates: T[], address: string): T | null 
   return candidates[0] ?? null;
 }
 
+/**
+ * Pick the live ledger when an address carries more than one State UTxO — the
+ * usual cause being a vault that was bootstrapped twice, which leaves a second,
+ * never-used State sitting at the same script address.
+ *
+ * The validator only ever spends ONE State per transaction, so duplicates are
+ * harmless on-chain; what matters is that every reader and every transaction
+ * builder agrees on the SAME one. The ordering below is fully deterministic:
+ *
+ *   1. the most advanced ledger wins (epoch, then accounted assets, then
+ *      shares, then fee clock) — a used vault beats an untouched bootstrap;
+ *   2. ties go to the State descended from the registered bootstrap tx;
+ *   3. remaining ties break lexicographically on `txHash#index`.
+ */
+export function selectCanonicalState<T>(
+  candidates: T[],
+  ref: (c: T) => { txHash: string; outputIndex: number; state: VaultStateDatum },
+  opts: { bootstrapTxHash?: string | null } = {},
+): T | null {
+  if (candidates.length <= 1) return candidates[0] ?? null;
+  const boot = (opts.bootstrapTxHash ?? "").toLowerCase();
+  const scored = candidates.map((c) => ({ c, r: ref(c) }));
+  scored.sort((a, b) => {
+    const sa = a.r.state;
+    const sb = b.r.state;
+    if (sb.epoch !== sa.epoch) return sb.epoch - sa.epoch;
+    const cmp = (x: string, y: string) => (BigInt(y) > BigInt(x) ? 1 : BigInt(y) < BigInt(x) ? -1 : 0);
+    const assets = cmp(sa.totalAssets, sb.totalAssets);
+    if (assets !== 0) return assets;
+    const shares = cmp(sa.totalShares, sb.totalShares);
+    if (shares !== 0) return shares;
+    const clock = cmp(sa.lastFeeTime, sb.lastFeeTime);
+    if (clock !== 0) return clock;
+    const ba = a.r.txHash.toLowerCase() === boot ? 0 : 1;
+    const bb = b.r.txHash.toLowerCase() === boot ? 0 : 1;
+    if (ba !== bb) return ba - bb;
+    return `${a.r.txHash}#${a.r.outputIndex}`.localeCompare(`${b.r.txHash}#${b.r.outputIndex}`);
+  });
+  return scored[0]?.c ?? null;
+}
+
+
 /** Share price = total_assets / total_shares; exactly 1.0 before any deposit. */
 export function sharePriceOf(state: { totalAssets: string; totalShares: string }): number {
   const shares = Number(state.totalShares);
@@ -192,7 +234,10 @@ export interface VaultChainState {
   stateUtxo: { txHash: string; outputIndex: number; lovelace: string } | null;
   positions: Array<VaultPositionDatum & { txHash: string; outputIndex: number; lovelace: string }>;
   lockedLovelace: string;
+  /** How many State UTxOs sit at this address (>1 means a duplicate bootstrap). */
+  stateCount: number;
   checkedAt: number;
+
 }
 
 export interface ChainAccrual {
