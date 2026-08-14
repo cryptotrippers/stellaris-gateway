@@ -1,12 +1,13 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft, Shield, ExternalLink } from "lucide-react";
-import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { getAssetVault } from "@/lib/asset-vaults.functions";
+import { getVaultChainState } from "@/lib/yield-chain.functions";
+import { useDerivedVaultAddress } from "@/hooks/useDerivedVaultAddress";
 import { Badge } from "@/components/ui/StatusBadge";
 import { FundingBar } from "@/components/ui/funding-bar";
 import { ShareRow } from "@/components/landing/ShareRow";
-import { DepositVaultCard } from "@/components/vault/DepositVaultCard";
-import { WithdrawVaultCard } from "@/components/vault/WithdrawVaultCard";
-import { MyVaultHoldingsCard } from "@/components/vault/MyVaultHoldingsCard";
+import { LegacyVaultCard } from "@/components/vault/LegacyVaultCard";
 import { VaultTxHistoryCard } from "@/components/vault/VaultTxHistoryCard";
 import { AssetVaultPanel } from "@/components/vault/AssetVaultPanel";
 import { YieldVaultActionsCard } from "@/components/vault/YieldVaultActionsCard";
@@ -105,12 +106,31 @@ function AssetDetail() {
   const { id } = Route.useParams();
   const { data: asset } = useSuspenseQuery(assetQuery(id));
 
+  // "Raised" is what the shared vault actually holds on chain, not a stored
+  // number, so the headline figure can never disagree with the ledger below.
+  const vaultQ = useQuery({
+    queryKey: ["asset-vault", id],
+    queryFn: () => getAssetVault({ data: { assetId: id } }),
+    staleTime: 60_000,
+  });
+  const { effectiveAddress } = useDerivedVaultAddress(id, vaultQ.data?.script_address ?? null);
+  const chainQ = useQuery({
+    queryKey: ["vault-chain-state", effectiveAddress],
+    queryFn: () => getVaultChainState({ data: { address: effectiveAddress! } }),
+    enabled: !!effectiveAddress,
+    refetchInterval: 60_000,
+    retry: 0,
+  });
+
+  const lockedLovelace = chainQ.data?.found ? Number(chainQ.data.lockedLovelace) : null;
+  const raisedLovelace = lockedLovelace ?? asset.raised_lovelace;
+
   const targetAda = lovelaceToAda(asset.target_lovelace);
-  const raisedAda = lovelaceToAda(asset.raised_lovelace);
+  const raisedAda = lovelaceToAda(raisedLovelace);
   const minAda = lovelaceToAda(asset.min_deposit_lovelace);
   const fundedPct =
     asset.target_lovelace > 0
-      ? Math.min(100, Math.round((asset.raised_lovelace / asset.target_lovelace) * 100))
+      ? Math.min(100, Math.round((raisedLovelace / asset.target_lovelace) * 100))
       : 0;
 
   return (
@@ -220,11 +240,8 @@ function AssetDetail() {
 
         {/* Right rail — every asset derives its own vault script from (version, asset_id) */}
         <aside className="h-fit space-y-4 lg:sticky lg:top-24">
-          <MyVaultHoldingsCard assetIds={[asset.id]} />
           <YieldVaultActionsCard assetId={asset.id} />
-
-          <DepositVaultCard assetId={asset.id} />
-          <WithdrawVaultCard assetId={asset.id} />
+          <LegacyVaultCard assetId={asset.id} />
           <VaultTxHistoryCard assetId={asset.id} />
         </aside>
       </div>
