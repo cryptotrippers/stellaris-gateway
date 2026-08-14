@@ -222,11 +222,13 @@ function OperatorConsole() {
 
       <BootstrapForm
         assets={eligible}
+        initialAssetId={preselect && eligible.some((a) => a.id === preselect) ? preselect : ""}
         disabled={!canBootstrap}
         onDone={() => {
           vaultsQ.refetch();
         }}
       />
+
 
 
       <RebootstrapVaultCard
