@@ -1,13 +1,14 @@
-import { useQueries } from "@tanstack/react-query";
-import { useWallet } from "@/lib/wallet-store";
-import { EXPECTED_WALLET_NETWORK_ID } from "@/lib/network";
-import { loadMyVaultView, type VaultView } from "@/lib/yield-position";
+import { useQueries, useQuery } from "@tanstack/react-query";
+import { useEffectiveAddress } from "@/lib/wallet-store";
+import { paymentKeyHashOf } from "@/lib/address";
+import { listAssetVaults, type AssetVaultRow } from "@/lib/asset-vaults.functions";
+import { getVaultChainState, type VaultChainState } from "@/lib/yield-chain.functions";
 
 export interface MyInvestment {
   assetId: string;
   address: string;
   shares: bigint;
-  /** Lovelace currently redeemable for those shares at the live share price. */
+  /** Lovelace redeemable for those shares at the live share price. */
   redeemableLovelace: bigint;
   /** Lovelace actually sitting in the depositor's Position UTxOs. */
   principalLovelace: bigint;
@@ -15,43 +16,61 @@ export interface MyInvestment {
   utxoCount: number;
 }
 
+function redeemable(state: VaultChainState["state"], shares: bigint): bigint {
+  if (!state) return 0n;
+  const total = BigInt(state.totalShares);
+  const assets = BigInt(state.totalAssets);
+  if (total <= 0n) return 0n;
+  if (shares >= total) return assets;
+  return (shares * assets) / total;
+}
+
 /**
- * The connected wallet's real, on-chain positions in every shared yield vault.
+ * The connected (or viewed) wallet's real, on-chain positions in every
+ * registered shared vault.
  *
- * The portfolio used to read `vault_positions` from the database, which is only
- * written by off-chain bookkeeping and is empty for wallets that deposited
- * directly through the contract — so investments looked like zero everywhere.
- * This reads the Position UTxOs themselves, which is the source of truth.
+ * Read server-side through Blockfrost rather than through the browser wallet:
+ * the portfolio must show the same numbers whether or not Lucid and the CIP-30
+ * API can be initialised, and it previously read an empty database table, so
+ * investments appeared as zero on every page.
  */
-export function useMyInvestments(assetIds: string[]) {
-  const wallet = useWallet();
-  const ready = wallet.connected && wallet.networkId === EXPECTED_WALLET_NETWORK_ID;
-  const ids = [...new Set(assetIds)].sort();
+export function useMyInvestments() {
+  const eff = useEffectiveAddress();
+  const myHash = paymentKeyHashOf(eff.address);
+
+  const vaultsQ = useQuery<AssetVaultRow[]>({
+    queryKey: ["asset-vaults-all"],
+    queryFn: () => listAssetVaults(),
+    staleTime: 5 * 60_000,
+  });
+  const vaults = (vaultsQ.data ?? []).filter((v) => !!v.script_address);
 
   const results = useQueries({
-    queries: ids.map((assetId) => ({
-      queryKey: ["my-investment", assetId, wallet.address],
-      queryFn: () => loadMyVaultView(assetId),
-      enabled: ready,
-      // A vault that was never bootstrapped throws; that is not an error here.
-      retry: 0,
+    queries: vaults.map((v) => ({
+      queryKey: ["vault-chain-state", v.script_address],
+      queryFn: () => getVaultChainState({ data: { address: v.script_address as string } }),
       staleTime: 30_000,
-      refetchInterval: ready ? 60_000 : (false as const),
+      refetchInterval: 60_000,
+      retry: 0,
     })),
   });
 
   const investments: MyInvestment[] = [];
   results.forEach((r, i) => {
-    const view = r.data as VaultView | undefined;
-    if (!view || view.positions.length === 0) return;
+    const view = r.data as VaultChainState | undefined;
+    const vault = vaults[i];
+    if (!view || !vault || !myHash || !view.found) return;
+    const mine = view.positions.filter((p) => p.owner.toLowerCase() === myHash);
+    if (mine.length === 0) return;
+    const shares = mine.reduce((a, p) => a + BigInt(p.shares), 0n);
     investments.push({
-      assetId: ids[i]!,
+      assetId: vault.asset_id,
       address: view.address,
-      shares: view.positions.reduce((a, p) => a + p.shares, 0n),
-      redeemableLovelace: view.positions.reduce((a, p) => a + p.redeemable, 0n),
-      principalLovelace: view.positions.reduce((a, p) => a + p.lovelace, 0n),
-      sharePrice: view.sharePrice,
-      utxoCount: view.positions.length,
+      shares,
+      redeemableLovelace: redeemable(view.state, shares),
+      principalLovelace: mine.reduce((a, p) => a + BigInt(p.lovelace), 0n),
+      sharePrice: view.sharePrice ?? 1,
+      utxoCount: mine.length,
     });
   });
 
@@ -59,13 +78,13 @@ export function useMyInvestments(assetIds: string[]) {
   const principalLovelace = investments.reduce((a, i) => a + i.principalLovelace, 0n);
 
   return {
-    ready,
+    ready: !!myHash,
     investments,
     totalAda: Number(totalLovelace) / 1e6,
     principalAda: Number(principalLovelace) / 1e6,
     /** Value gained over deposited principal, from on-chain accruals only. */
     gainAda: Number(totalLovelace - principalLovelace) / 1e6,
-    isLoading: ready && results.some((r) => r.isLoading),
-    isFetching: results.some((r) => r.isFetching),
+    isLoading: vaultsQ.isLoading || results.some((r) => r.isLoading),
+    isFetching: vaultsQ.isFetching || results.some((r) => r.isFetching),
   };
 }
