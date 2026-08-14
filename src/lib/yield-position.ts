@@ -31,6 +31,7 @@ import {
   encodeStateDatum,
   readPositionDatum,
   readStateDatum,
+  selectCanonicalState,
   type VaultPositionDatum,
   type VaultStateDatum,
 } from "./yield-chain-decode";
