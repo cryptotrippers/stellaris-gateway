@@ -47,3 +47,27 @@ export function shortenAddress(addr: string | null | undefined): string {
   if (addr.length <= 16) return addr;
   return `${addr.slice(0, 10)}…${addr.slice(-6)}`;
 }
+
+/**
+ * Payment credential hash (28-byte hex) of a bech32 payment address.
+ *
+ * Shelley payment addresses are `1 header byte + 28-byte payment credential
+ * (+ 28-byte staking part)`. Vault Position datums store exactly that hash as
+ * `owner`, so this is how the UI matches on-chain positions to a wallet
+ * without loading Lucid.
+ */
+export function paymentKeyHashOf(addr: string | null | undefined): string | null {
+  if (!addr) return null;
+  const parsed = parseCardanoAddress(addr);
+  if (!parsed.ok || parsed.value.kind !== "payment") return null;
+  try {
+    const { words } = bech32.decode(parsed.value.bech32, 200);
+    const bytes = bech32.fromWords(words);
+    if (bytes.length < 29) return null;
+    return Array.from(bytes.slice(1, 29))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  } catch {
+    return null;
+  }
+}
