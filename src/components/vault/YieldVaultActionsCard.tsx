@@ -16,6 +16,8 @@ import {
   type VaultView,
 } from "@/lib/yield-position";
 import { getAssetVault } from "@/lib/asset-vaults.functions";
+import { useMyInvestments } from "@/hooks/useMyInvestments";
+
 
 /**
  * Depositor-side smart contract actions for a shared yield vault: mint shares
