@@ -7,6 +7,7 @@ import { useDerivedVaultAddress } from "@/hooks/useDerivedVaultAddress";
 import { Badge } from "@/components/ui/StatusBadge";
 import { FundingBar } from "@/components/ui/funding-bar";
 import { ShareRow } from "@/components/landing/ShareRow";
+import { RefreshVaultDataButton } from "@/components/vault/RefreshVaultDataButton";
 import { LegacyVaultCard } from "@/components/vault/LegacyVaultCard";
 import { VaultTxHistoryCard } from "@/components/vault/VaultTxHistoryCard";
 import { AssetVaultPanel } from "@/components/vault/AssetVaultPanel";
@@ -167,6 +168,12 @@ function AssetDetail() {
           </div>
 
           <div className="mt-6 card-institutional p-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="text-[10px] uppercase tracking-widest text-primary">
+                Live on-chain figures
+              </div>
+              <RefreshVaultDataButton />
+            </div>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
               <BigStat
                 label="Target"

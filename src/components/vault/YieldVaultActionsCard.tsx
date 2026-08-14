@@ -44,6 +44,7 @@ export function YieldVaultActionsCard({ assetId }: { assetId: string }) {
     queryKey: ["yield-vault-view", assetId, wallet.address, registryAddress],
     queryFn: () => loadMyVaultView(assetId, registryAddress),
     enabled: walletReady,
+    refetchInterval: walletReady ? 60_000 : false,
     retry: 0,
   });
 
