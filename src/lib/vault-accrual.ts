@@ -83,21 +83,27 @@ export async function buildAccrual(params: {
   if (cred.type !== "Key") throw new Error("Connected address is not a key-hash address.");
   const selfHash = cred.hash;
 
-  // --- locate the single State UTxO -------------------------------------
+  // --- locate the live State UTxO ---------------------------------------
+  // A vault bootstrapped twice leaves a second, never-used State at the same
+  // address; the validator only ever spends one State per tx, so pick the live
+  // ledger deterministically (same rule every reader/builder uses).
   const utxos = await lucid.utxosAt(script.address);
-  let stateUtxo: (typeof utxos)[number] | null = null;
-  let state: VaultStateDatum | null = null;
+  const candidates: Array<{ utxo: (typeof utxos)[number]; state: VaultStateDatum }> = [];
   for (const u of utxos) {
     const decoded = readStateDatum(u.datum ?? null);
-    if (decoded) {
-      if (state) throw new Error("More than one state UTxO found — refusing to build an accrual.");
-      stateUtxo = u;
-      state = decoded;
-    }
+    if (decoded) candidates.push({ utxo: u, state: decoded });
   }
+  const chosen = selectCanonicalState(candidates, (c) => ({
+    txHash: c.utxo.txHash,
+    outputIndex: c.utxo.outputIndex,
+    state: c.state,
+  }));
+  const stateUtxo = chosen?.utxo ?? null;
+  const state = chosen?.state ?? null;
   if (!stateUtxo || !state) {
     throw new Error("This vault has no state UTxO yet — bootstrap it before accruing yield.");
   }
+
   if (state.paused) throw new Error("The vault is paused; unpause it before accruing yield.");
 
   const committee = state.operators.map((o) => o.toLowerCase());
