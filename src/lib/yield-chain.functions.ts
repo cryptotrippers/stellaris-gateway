@@ -86,7 +86,14 @@ export const getVaultChainState = createServerFn({ method: "GET" })
       }
     }
 
-    const sole = soleStateOrThrow(stateCandidates, data.address);
+    // A vault bootstrapped twice leaves a second, never-used State UTxO at the
+    // same address. Both are readable; only one is the live ledger. Pick it
+    // deterministically so reads and transaction builders agree.
+    const sole = selectCanonicalState(stateCandidates, (c) => ({
+      txHash: c.utxo.txHash,
+      outputIndex: c.utxo.outputIndex,
+      state: c.state,
+    }));
     const state = sole?.state ?? null;
     const stateUtxo = sole?.utxo ?? null;
 
@@ -99,9 +106,11 @@ export const getVaultChainState = createServerFn({ method: "GET" })
       stateUtxo,
       positions,
       lockedLovelace: locked.toString(),
+      stateCount: stateCandidates.length,
       checkedAt: Date.now(),
     };
   });
+
 
 /**
  * Walk the transaction history at a vault address, decode the State output of
