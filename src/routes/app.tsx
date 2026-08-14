@@ -87,7 +87,7 @@ function PortfolioPage() {
   const txns = data?.txns ?? [];
 
   // On-chain Position UTxOs are the source of truth for what the wallet holds.
-  const onchain = useMyInvestments(vaultAssetIds);
+  const onchain = useMyInvestments();
   const positions = onchain.investments;
   const loading = isLoading || onchain.isLoading;
 
