@@ -153,12 +153,25 @@ export function AssetVaultPanel({ assetId }: { assetId: string }) {
               </p>
             )}
             {stateQ.data?.found && stateQ.data.state && (
-              <div className="grid grid-cols-3 gap-3 text-center">
-                <Stat label="Share price" value={formatSharePrice(stateQ.data.sharePrice)} accent />
-                <Stat label="Locked" value={`₳ ${lovelaceToAda(stateQ.data.lockedLovelace)}`} />
-                <Stat label="Epoch" value={String(stateQ.data.state.epoch)} />
-              </div>
+              <>
+                <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
+                  <Stat label="Share price" value={formatSharePrice(stateQ.data.sharePrice)} accent />
+                  <Stat label="Locked" value={`₳ ${lovelaceToAda(stateQ.data.lockedLovelace)}`} />
+                  <Stat label="Epoch" value={String(stateQ.data.state.epoch)} />
+                  <Stat
+                    label="Return (APY)"
+                    value={apyPct !== null ? `${apyPct.toFixed(2)}%` : "—"}
+                    accent={apyPct !== null}
+                  />
+                </div>
+                <p className="mt-2 text-center text-[10px] text-muted-foreground">
+                  {apyPct !== null
+                    ? "Annualised from verified on-chain accruals."
+                    : "Return appears once two accruals have settled on chain."}
+                </p>
+              </>
             )}
+
           </div>
         </>
       )}
