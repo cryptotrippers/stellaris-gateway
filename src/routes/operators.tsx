@@ -39,8 +39,13 @@ export const Route = createFileRoute("/operators")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
+  validateSearch: (search: Record<string, unknown>): { asset?: string } => {
+    const asset = typeof search.asset === "string" ? search.asset.slice(0, 64) : undefined;
+    return asset ? { asset } : {};
+  },
   component: OperatorConsole,
 });
+
 
 interface AssetLite {
   id: string;
