@@ -49,8 +49,15 @@ export function YieldVaultActionsCard({ assetId }: { assetId: string }) {
   });
 
   const view = viewQ.data ?? null;
-  const totalShares = view ? view.positions.reduce((a, p) => a + p.shares, 0n) : 0n;
-  const totalRedeemable = view ? view.positions.reduce((a, p) => a + p.redeemable, 0n) : 0n;
+  // Wallet-side read (needed for signing) with a server-side Blockfrost read as
+  // fallback, so the position is still displayed when Lucid cannot enumerate it.
+  const chainMine = useMyInvestments().investments.find((i) => i.assetId === assetId) ?? null;
+  const walletShares = view ? view.positions.reduce((a, p) => a + p.shares, 0n) : 0n;
+  const walletRedeemable = view ? view.positions.reduce((a, p) => a + p.redeemable, 0n) : 0n;
+  const totalShares = walletShares > 0n ? walletShares : (chainMine?.shares ?? 0n);
+  const totalRedeemable =
+    walletShares > 0n ? walletRedeemable : (chainMine?.redeemableLovelace ?? 0n);
+
   const isBootstrapDeposit = view ? BigInt(view.state.totalShares) <= 0n : false;
   const minAda = Number(isBootstrapDeposit ? MIN_INITIAL_DEPOSIT : MIN_POSITION_VALUE) / 1e6;
 
