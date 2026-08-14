@@ -1,6 +1,9 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { ArrowLeft, Shield, ExternalLink } from "lucide-react";
-import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { getAssetVault } from "@/lib/asset-vaults.functions";
+import { getVaultChainState } from "@/lib/yield-chain.functions";
+import { useDerivedVaultAddress } from "@/hooks/useDerivedVaultAddress";
 import { Badge } from "@/components/ui/StatusBadge";
 import { FundingBar } from "@/components/ui/funding-bar";
 import { ShareRow } from "@/components/landing/ShareRow";
