@@ -80,9 +80,10 @@ export function AssetVaultPanel({ assetId }: { assetId: string }) {
             <li>4. Record an accrual; the realised return shows up below.</li>
           </ol>
           <div className="flex flex-wrap gap-3 text-xs font-medium">
-            <Link to="/operators" className="text-primary">
+            <Link to="/operators" search={{ asset: assetId }} className="text-primary">
               Bootstrap this vault →
             </Link>
+
             <Link to="/stewardship" className="text-primary">
               Deployment wizard →
             </Link>

@@ -39,8 +39,13 @@ export const Route = createFileRoute("/operators")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
+  validateSearch: (search: Record<string, unknown>): { asset?: string } => {
+    const asset = typeof search.asset === "string" ? search.asset.slice(0, 64) : undefined;
+    return asset ? { asset } : {};
+  },
   component: OperatorConsole,
 });
+
 
 interface AssetLite {
   id: string;
@@ -67,6 +72,8 @@ function approvalReason(
 }
 
 function OperatorConsole() {
+  const preselect = Route.useSearch().asset ?? "";
+
   const rolesQ = useQuery({
     queryKey: ["my-roles"],
     queryFn: () => getMyRoles(),
@@ -221,12 +228,16 @@ function OperatorConsole() {
       )}
 
       <BootstrapForm
+        key={eligible.some((a) => a.id === preselect) ? preselect : "none"}
         assets={eligible}
+        initialAssetId={eligible.some((a) => a.id === preselect) ? preselect : ""}
+
         disabled={!canBootstrap}
         onDone={() => {
           vaultsQ.refetch();
         }}
       />
+
 
 
       <RebootstrapVaultCard
@@ -252,14 +263,17 @@ function OperatorConsole() {
 
 function BootstrapForm({
   assets,
+  initialAssetId = "",
   disabled,
   onDone,
 }: {
   assets: AssetLite[];
+  initialAssetId?: string;
   disabled: boolean;
   onDone: () => void;
 }) {
-  const [assetId, setAssetId] = useState("");
+  const [assetId, setAssetId] = useState(initialAssetId);
+
   const [operatorsText, setOperatorsText] = useState("");
   const [threshold, setThreshold] = useState(1);
   const [feeBps, setFeeBps] = useState(0);
