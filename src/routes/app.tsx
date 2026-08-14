@@ -136,7 +136,7 @@ function PortfolioPage() {
               <>
                 <div className="mt-3 flex items-end gap-3">
                   <div className="number-display text-4xl md:text-5xl font-semibold tracking-tight">
-                    {isLoading ? "…" : formatAda(totalAda)}
+                    {loading ? "…" : formatAda(totalAda)}
                   </div>
                   <div className="pb-2 text-sm text-primary-foreground/70">≈ {formatUsd(totalAda)}</div>
                 </div>
