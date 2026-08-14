@@ -254,14 +254,17 @@ function OperatorConsole() {
 
 function BootstrapForm({
   assets,
+  initialAssetId = "",
   disabled,
   onDone,
 }: {
   assets: AssetLite[];
+  initialAssetId?: string;
   disabled: boolean;
   onDone: () => void;
 }) {
-  const [assetId, setAssetId] = useState("");
+  const [assetId, setAssetId] = useState(initialAssetId);
+
   const [operatorsText, setOperatorsText] = useState("");
   const [threshold, setThreshold] = useState(1);
   const [feeBps, setFeeBps] = useState(0);
