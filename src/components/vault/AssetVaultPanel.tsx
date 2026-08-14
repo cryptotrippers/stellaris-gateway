@@ -51,6 +51,11 @@ export function AssetVaultPanel({ assetId }: { assetId: string }) {
     retry: 0,
   });
   const apyPct = historyQ.data?.apyPct ?? null;
+  const accruals = historyQ.data?.accruals ?? [];
+  const accrualCount = accruals.length;
+  const firstAccrual = accruals[0] ?? null;
+  const lastAccrual = accruals[accrualCount - 1] ?? null;
+
 
   return (
     <div className="card-institutional p-6">
