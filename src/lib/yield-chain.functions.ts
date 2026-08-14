@@ -107,7 +107,10 @@ export const getVaultChainState = createServerFn({ method: "GET" })
       sharePrice: state ? sharePriceOf(state) : null,
       stateUtxo,
       positions,
-      lockedLovelace: locked.toString(),
+      // Depositor-owned value is what the live State accounts for, not the raw
+      // address balance — that also carries each State UTxO's min-ADA and any
+      // never-used duplicate, neither of which anyone can redeem.
+      lockedLovelace: (state ? BigInt(state.totalAssets) : locked).toString(),
       stateCount: stateCandidates.length,
       checkedAt: Date.now(),
     };
