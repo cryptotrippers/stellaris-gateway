@@ -234,7 +234,10 @@ export interface VaultChainState {
   stateUtxo: { txHash: string; outputIndex: number; lovelace: string } | null;
   positions: Array<VaultPositionDatum & { txHash: string; outputIndex: number; lovelace: string }>;
   lockedLovelace: string;
+  /** How many State UTxOs sit at this address (>1 means a duplicate bootstrap). */
+  stateCount: number;
   checkedAt: number;
+
 }
 
 export interface ChainAccrual {
