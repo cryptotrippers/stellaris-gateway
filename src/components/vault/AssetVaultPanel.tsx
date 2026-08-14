@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, Landmark } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { getAssetVault } from "@/lib/asset-vaults.functions";
-import { getVaultChainState } from "@/lib/yield-chain.functions";
+import { getVaultChainHistory, getVaultChainState } from "@/lib/yield-chain.functions";
 import { useDerivedVaultAddress } from "@/hooks/useDerivedVaultAddress";
 import { VaultAddressDriftNotice } from "@/components/vault/VaultAddressDriftNotice";
+
 import {
   cardanoscanAddress,
   cardanoscanTx,
