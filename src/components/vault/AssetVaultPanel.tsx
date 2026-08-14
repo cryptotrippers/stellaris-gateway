@@ -255,3 +255,17 @@ function Stat({ label, value, accent = false }: { label: string; value: string; 
     </div>
   );
 }
+
+function SourceRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex flex-wrap justify-between gap-2">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="max-w-[70%] text-right font-medium text-foreground">{value}</dd>
+    </div>
+  );
+}
+
+/** Timestamps are always shown in UTC so two people reading the same vault agree. */
+function formatUtc(ms: number): string {
+  return `${new Date(ms).toISOString().replace("T", " ").slice(0, 19)} UTC`;
+}
