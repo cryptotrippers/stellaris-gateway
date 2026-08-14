@@ -1,9 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { ExternalLink, Landmark } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { getAssetVault } from "@/lib/asset-vaults.functions";
-import { getVaultChainState } from "@/lib/yield-chain.functions";
+import { getVaultChainHistory, getVaultChainState } from "@/lib/yield-chain.functions";
 import { useDerivedVaultAddress } from "@/hooks/useDerivedVaultAddress";
 import { VaultAddressDriftNotice } from "@/components/vault/VaultAddressDriftNotice";
+
 import {
   cardanoscanAddress,
   cardanoscanTx,
@@ -40,6 +42,16 @@ export function AssetVaultPanel({ assetId }: { assetId: string }) {
     retry: 0,
   });
 
+  // Realised return, derived only from accruals already settled on chain.
+  const historyQ = useQuery({
+    queryKey: ["vault-chain-history", effectiveAddress],
+    queryFn: () => getVaultChainHistory({ data: { address: effectiveAddress!, max: 50 } }),
+    enabled: !!effectiveAddress,
+    staleTime: 120_000,
+    retry: 0,
+  });
+  const apyPct = historyQ.data?.apyPct ?? null;
+
   return (
     <div className="card-institutional p-6">
       <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
@@ -51,11 +63,28 @@ export function AssetVaultPanel({ assetId }: { assetId: string }) {
       )}
 
       {!vaultQ.isLoading && !vault && (
-        <p className="mt-3 text-sm text-muted-foreground">
-          No vault has been bootstrapped for this asset yet. Deposits open once an
-          operator derives the script and publishes the first State output.
-        </p>
+        <div className="mt-3 space-y-3">
+          <p className="text-sm text-muted-foreground">
+            No vault has been bootstrapped for this project yet. Deposits open once an
+            operator derives the script and publishes the first State output.
+          </p>
+          <ol className="space-y-1.5 rounded-lg bg-secondary/40 p-3 text-xs text-muted-foreground">
+            <li>1. Connect a Preprod wallet with test ADA.</li>
+            <li>2. Bootstrap the vault for this project (operator or admin).</li>
+            <li>3. Invest test ADA — your share balance appears here.</li>
+            <li>4. Record an accrual; the realised return shows up below.</li>
+          </ol>
+          <div className="flex flex-wrap gap-3 text-xs font-medium">
+            <Link to="/operators" className="text-primary">
+              Bootstrap this vault →
+            </Link>
+            <Link to="/stewardship" className="text-primary">
+              Deployment wizard →
+            </Link>
+          </div>
+        </div>
       )}
+
 
       {vault && (
         <>
@@ -124,12 +153,25 @@ export function AssetVaultPanel({ assetId }: { assetId: string }) {
               </p>
             )}
             {stateQ.data?.found && stateQ.data.state && (
-              <div className="grid grid-cols-3 gap-3 text-center">
-                <Stat label="Share price" value={formatSharePrice(stateQ.data.sharePrice)} accent />
-                <Stat label="Locked" value={`₳ ${lovelaceToAda(stateQ.data.lockedLovelace)}`} />
-                <Stat label="Epoch" value={String(stateQ.data.state.epoch)} />
-              </div>
+              <>
+                <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
+                  <Stat label="Share price" value={formatSharePrice(stateQ.data.sharePrice)} accent />
+                  <Stat label="Locked" value={`₳ ${lovelaceToAda(stateQ.data.lockedLovelace)}`} />
+                  <Stat label="Epoch" value={String(stateQ.data.state.epoch)} />
+                  <Stat
+                    label="Return (APY)"
+                    value={apyPct !== null ? `${apyPct.toFixed(2)}%` : "—"}
+                    accent={apyPct !== null}
+                  />
+                </div>
+                <p className="mt-2 text-center text-[10px] text-muted-foreground">
+                  {apyPct !== null
+                    ? "Annualised from verified on-chain accruals."
+                    : "Return appears once two accruals have settled on chain."}
+                </p>
+              </>
             )}
+
           </div>
         </>
       )}
