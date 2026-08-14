@@ -8,6 +8,8 @@ import { FundingBar, SectionHeader } from "@/components/ui/funding-bar";
 import { ChainStatusCard } from "@/components/chain/ChainStatusCard";
 import { MyVaultHoldingsCard } from "@/components/vault/MyVaultHoldingsCard";
 import { useVaultAssetIds } from "@/hooks/useVaultAssetIds";
+import { useMyInvestments } from "@/hooks/useMyInvestments";
+
 import { formatAda, formatUsd, lovelaceToAda } from "@/lib/format";
 import { assetsQueryOptions, fundedPct, type AssetRow } from "@/lib/assets-query";
 import { APP_NETWORK } from "@/lib/network";
