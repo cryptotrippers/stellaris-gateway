@@ -23,7 +23,7 @@ import { formatAda, lovelaceToAda } from "@/lib/format";
 import { trackEvent } from "@/lib/analytics";
 import ogAsset from "@/assets/og-landing.jpg.asset.json";
 
-const SITE = "https://stellaris-gateway.lovable.app";
+const SITE = "https://stellarischain.com";
 const OG_IMAGE = `${SITE}${ogAsset.url}`;
 
 const FAQ = [

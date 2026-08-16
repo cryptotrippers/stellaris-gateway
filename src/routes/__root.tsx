@@ -74,7 +74,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
-const OG_IMAGE = "https://stellaris-gateway.lovable.app/__l5e/assets-v1/2bd9f637-d650-4bde-b8b5-e2806a389cbe/og-landing.jpg";
+const OG_IMAGE = "https://stellarischain.com/__l5e/assets-v1/2bd9f637-d650-4bde-b8b5-e2806a389cbe/og-landing.jpg";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
@@ -104,7 +104,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "@context": "https://schema.org",
           "@type": "Organization",
           name: "Stellaris Finance",
-          url: "https://stellaris-gateway.lovable.app",
+          url: "https://stellarischain.com",
           logo: OG_IMAGE,
           sameAs: ["https://twitter.com/StellarisFi"],
         }),
