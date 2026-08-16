@@ -1,0 +1,56 @@
+name: sUSDr Contracts
+
+# Compiles the sUSDr/RealFi Aiken validators from source on every push/PR that
+# touches contracts/susdr-vault, and fails the build if the committed
+# plutus.json drifts from a clean build. Mirrors .github/workflows/contracts.yml
+# for contracts/vault; see contracts/susdr-vault/DESIGN.md for why this is a
+# separate contracts project rather than folded into that one.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "contracts/susdr-vault/**"
+  pull_request:
+    paths:
+      - "contracts/susdr-vault/**"
+  workflow_dispatch:
+
+jobs:
+  verify-blueprints:
+    name: aiken check + blueprint drift guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read Aiken version from aiken.toml
+        id: aiken
+        run: |
+          version=$(grep -E '^compiler\s*=' contracts/susdr-vault/aiken.toml | sed -E 's/.*"(.*)".*/\1/')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Using Aiken $version"
+
+      - name: Install pinned Aiken toolchain
+        uses: aiken-lang/setup-aiken@v1
+        with:
+          version: ${{ steps.aiken.outputs.version }}
+          # Use GitHub's short-lived workflow token to avoid unauthenticated
+          # release/API requests being throttled by GitHub.
+          github-token: ${{ github.token }}
+
+      - name: Run validator tests
+        working-directory: contracts/susdr-vault
+        run: aiken check
+
+      - name: Build blueprint
+        working-directory: contracts/susdr-vault
+        run: aiken build
+
+      - name: Committed plutus.json must equal the fresh build
+        run: |
+          if ! git diff --quiet -- contracts/susdr-vault/plutus.json; then
+            echo "::error::contracts/susdr-vault/plutus.json is stale — it does not match a clean 'aiken build'."
+            git --no-pager diff --stat -- contracts/susdr-vault/plutus.json
+            echo "Run 'aiken build' in contracts/susdr-vault and commit the regenerated plutus.json."
+            exit 1
+          fi
