@@ -8,7 +8,7 @@ function paymentsEnvironment(): StripeEnv {
   if (clientToken?.startsWith('pk_test_')) return 'sandbox';
   if (clientToken?.startsWith('pk_live_')) return 'live';
   throw new Error(
-    "Stripe payments are not configured for this build. Complete Stripe go-live in your Lovable project to enable production checkout."
+    "Payments are not configured for this build, so checkout is unavailable."
   );
 }
 
