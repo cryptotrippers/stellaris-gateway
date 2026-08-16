@@ -54,3 +54,16 @@ jobs:
             echo "Run 'aiken build' in contracts/susdr-vault and commit the regenerated plutus.json."
             exit 1
           fi
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install JS dependencies (verify script needs @noble/hashes)
+        run: bun install --frozen-lockfile
+
+      - name: Verify pinned blueprints match plutus.json, and spend/mint share a hash
+        run: node scripts/verify-susdr-vault-hash.mjs --strict
+
+      - name: Derive applied vault + USDr policy addresses (Phase 1 gate)
+        run: node scripts/derive-susdr-vault-addresses.mjs
