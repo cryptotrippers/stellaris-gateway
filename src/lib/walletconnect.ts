@@ -30,8 +30,8 @@ const PROJECT_ID = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID as string | und
 const METADATA = {
   name: "Stellaris Gateway",
   description: "Institutional-grade RealFi gateway on Cardano.",
-  url: typeof window === "undefined" ? "https://stellaris-gateway.lovable.app" : window.location.origin,
-  icons: ["https://stellaris-gateway.lovable.app/favicon.ico"],
+  url: typeof window === "undefined" ? "https://stellarischain.com" : window.location.origin,
+  icons: ["https://stellarischain.com/favicon.ico"],
 };
 
 let clientPromise: Promise<SignClient> | null = null;

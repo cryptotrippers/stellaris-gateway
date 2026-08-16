@@ -313,7 +313,7 @@ export function bumpInviteSent(channel: string): InviteSendResult {
 }
 
 export function buildInviteUrl(code: string, path = "/"): string {
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://stellaris-gateway.lovable.app";
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://stellarischain.com";
   return `${origin}${path}?ref=${encodeURIComponent(code)}`;
 }
 

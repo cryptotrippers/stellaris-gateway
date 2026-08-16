@@ -6,8 +6,8 @@ const BODY = `# RFC 9116 security.txt for stellaris.finance
 Contact: mailto:security@stellaris.finance
 Expires: 2027-01-01T00:00:00.000Z
 Preferred-Languages: en
-Policy: https://stellaris-gateway.lovable.app/security
-Canonical: https://stellaris-gateway.lovable.app/.well-known/security.txt
+Policy: https://stellarischain.com/security
+Canonical: https://stellarischain.com/.well-known/security.txt
 `;
 
 export const Route = createFileRoute("/.well-known/security.txt")({
