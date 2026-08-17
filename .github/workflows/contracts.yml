@@ -68,3 +68,39 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
           BLOCKFROST_PREPROD_PROJECT_ID: ${{ secrets.BLOCKFROST_PREPROD_PROJECT_ID }}
         run: node scripts/verify-ref-scripts.mjs
+
+  verify-susdr-blueprint:
+    name: aiken check + blueprint drift guard (susdr-vault)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read Aiken version from aiken.toml
+        id: aiken
+        run: |
+          version=$(grep -E '^compiler\s*=' contracts/susdr-vault/aiken.toml | sed -E 's/.*"(.*)".*/\1/')
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Using Aiken $version"
+
+      - name: Install pinned Aiken toolchain
+        uses: aiken-lang/setup-aiken@v1
+        with:
+          version: ${{ steps.aiken.outputs.version }}
+          github-token: ${{ github.token }}
+
+      - name: Run validator tests
+        working-directory: contracts/susdr-vault
+        run: aiken check
+
+      - name: Build blueprint
+        working-directory: contracts/susdr-vault
+        run: aiken build
+
+      - name: Committed plutus.json must equal the fresh build
+        run: |
+          if ! git diff --quiet -- contracts/susdr-vault/plutus.json; then
+            echo "::error::contracts/susdr-vault/plutus.json is stale — it does not match a clean 'aiken build'."
+            git --no-pager diff --stat -- contracts/susdr-vault/plutus.json
+            echo "Run 'aiken build' in contracts/susdr-vault and commit the regenerated plutus.json."
+            exit 1
+          fi
