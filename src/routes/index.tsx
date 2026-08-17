@@ -122,7 +122,9 @@ function LandingPage() {
         <Hero />
         <SocialProof />
         <HowItWorks />
+        <FractionalHousing />
         <FeaturedAssets />
+
         <ImpactStrip />
         <FaqSection />
         <FinalCta />
