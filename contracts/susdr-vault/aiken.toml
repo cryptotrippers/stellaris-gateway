@@ -1,0 +1,10 @@
+name = "stellaris/susdr"
+version = "0.1.0"
+compiler = "v1.1.23"
+plutus = "v3"
+description = "USDr/sUSDr-style stable yield vault for Cardano (Preprod demo)"
+
+[[dependencies]]
+name = "aiken-lang/stdlib"
+version = "v2.2.0"
+source = "github"
