@@ -11,6 +11,9 @@ import {
   Sun,
   Wind,
   Building2,
+  Home,
+  Users,
+  KeyRound,
   ChevronDown,
   Sparkles,
 } from "lucide-react";
