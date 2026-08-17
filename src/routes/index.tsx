@@ -288,6 +288,77 @@ function HowItWorks() {
   );
 }
 
+function FractionalHousing() {
+  const points = [
+    {
+      icon: KeyRound,
+      title: "A deposit you can actually reach",
+      body: "Instead of saving years for a full deposit, buy a fraction of a home from ₳10 and grow your stake as you go.",
+    },
+    {
+      icon: Users,
+      title: "Co-own with the community",
+      body: "Many small investors fund one property together. Each share is held in your own name on Cardano — not pooled in someone else's fund.",
+    },
+    {
+      icon: TrendingUp,
+      title: "Rent and growth, shared fairly",
+      body: "Rental income and any change in value flow back in proportion to the shares you hold, recorded transparently.",
+    },
+  ];
+  return (
+    <section
+      id="fractional-housing"
+      className="relative border-y border-border/60 bg-surface/40 scroll-mt-20"
+    >
+      <div className="mx-auto max-w-[1400px] px-4 md:px-6 py-16 md:py-24">
+        <div className="grid gap-10 lg:grid-cols-[1fr_1.2fr] items-start">
+          <div>
+            <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface/70 px-3 py-1 text-xs text-primary">
+              <Home className="h-3 w-3" /> Fractional housing
+            </div>
+            <h2 className="mt-4 text-3xl md:text-4xl font-semibold tracking-tight">
+              Helping solve the{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-primary">
+                Australian housing crisis
+              </span>
+              .
+            </h2>
+            <p className="mt-4 text-muted-foreground leading-relaxed">
+              Home ownership has drifted out of reach for a generation of Australians. Fractional
+              housing splits a property into small, tradeable shares so people can start building
+              equity today — and so new housing projects can be funded by the community they serve
+              rather than by a single institution.
+            </p>
+            <Link
+              to="/marketplace"
+              onClick={() => trackEvent("landing_housing_cta_click")}
+              className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80"
+            >
+              See housing projects <ArrowUpRight className="h-4 w-4" />
+            </Link>
+            <p className="mt-4 text-xs text-muted-foreground">
+              Demo network — housing listings appear here once an operator passes verification.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            {points.map(p => (
+              <div key={p.title} className="card-institutional p-5">
+                <div className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-primary text-primary-foreground shadow-glow">
+                  <p.icon className="h-5 w-5" />
+                </div>
+                <h3 className="mt-4 text-sm font-semibold text-foreground">{p.title}</h3>
+                <p className="mt-2 text-xs text-muted-foreground leading-relaxed">{p.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 
 function FeaturedAssets() {
   const { data: assets, isLoading, error } = useQuery(assetsQueryOptions());
