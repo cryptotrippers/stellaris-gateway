@@ -40,16 +40,24 @@ if (!existsSync(PLUTUS_PATH)) {
 const blueprint = JSON.parse(readFileSync(PLUTUS_PATH, "utf8"));
 const validators = blueprint?.validators ?? [];
 
-function findValidator(titlePrefix, purpose = ".spend") {
-  const v = validators.find(
+function findIn(list, titlePrefix, purpose = ".spend") {
+  const v = list.find(
     (x) => typeof x?.title === "string" && x.title.startsWith(titlePrefix) && x.title.includes(purpose),
   );
   if (!v?.hash || !v?.compiledCode) {
-    console.error(`[verify-vault-hash] plutus.json has no '${titlePrefix}' spend validator with hash + compiledCode`);
+    console.error(`[verify-vault-hash] plutus.json has no '${titlePrefix}${purpose}' validator with hash + compiledCode`);
     process.exit(1);
   }
   return v;
 }
+
+function findValidator(titlePrefix, purpose = ".spend") {
+  return findIn(validators, titlePrefix, purpose);
+}
+
+const susdrValidators = existsSync(SUSDR_PLUTUS_PATH)
+  ? (JSON.parse(readFileSync(SUSDR_PLUTUS_PATH, "utf8"))?.validators ?? [])
+  : null;
 
 function readPins(path) {
   const src = readFileSync(path, "utf8");
