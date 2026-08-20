@@ -111,6 +111,12 @@ function Developers() {
           </table>
         </div>
       )}
+
+      {tab === "reference" && (
+        <div className="mt-4">
+          <SusdrContractCard />
+        </div>
+      )}
     </AppShell>
   );
 }
