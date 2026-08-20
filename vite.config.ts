@@ -60,7 +60,9 @@ export default defineConfig({
       wasm(),
       nodePolyfills({
         include: ["events", "buffer", "stream", "util"],
-        globals: { Buffer: true, global: true, process: false },
+        // `process` must be shimmed: Lucid pulls in readable-stream, which reads
+        // `process.version.slice(...)` at module scope and crashes without it.
+        globals: { Buffer: true, global: true, process: true },
       }),
     ],
   },
