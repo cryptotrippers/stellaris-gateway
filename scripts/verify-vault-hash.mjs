@@ -21,38 +21,55 @@ import { resolve } from "node:path";
 import { blake2b } from "@noble/hashes/blake2.js";
 
 const PLUTUS_PATH = resolve("contracts/vault/plutus.json");
+const SUSDR_PLUTUS_PATH = resolve("contracts/susdr-vault/plutus.json");
 const VAULT_TS_PATH = resolve("src/lib/vault.ts");
 const YIELD_TS_PATH = resolve("src/lib/yield-vault.ts");
+const SUSDR_TS_PATH = resolve("src/lib/susdr-vault.ts");
 
 const STRICT = process.env.VERIFY_VAULT_STRICT === "1" || process.argv.includes("--strict");
 
 if (!existsSync(PLUTUS_PATH)) {
   if (STRICT) {
-    console.error("[verify-vault-hash] STRICT mode: contracts/vault/plutus.json is missing — run `aiken build` before verifying.");
+    console.error(
+      "[verify-vault-hash] STRICT mode: contracts/vault/plutus.json is missing — run `aiken build` before verifying.",
+    );
     process.exit(1);
   }
-  console.log("[verify-vault-hash] contracts/vault/plutus.json not present — skipping (run `aiken build` locally to generate it).");
+  console.log(
+    "[verify-vault-hash] contracts/vault/plutus.json not present — skipping (run `aiken build` locally to generate it).",
+  );
   process.exit(0);
 }
 
 const blueprint = JSON.parse(readFileSync(PLUTUS_PATH, "utf8"));
 const validators = blueprint?.validators ?? [];
 
-function findValidator(titlePrefix, purpose = ".spend") {
-  const v = validators.find(
-    (x) => typeof x?.title === "string" && x.title.startsWith(titlePrefix) && x.title.includes(purpose),
+function findIn(list, titlePrefix, purpose = ".spend") {
+  const v = list.find(
+    (x) =>
+      typeof x?.title === "string" && x.title.startsWith(titlePrefix) && x.title.includes(purpose),
   );
   if (!v?.hash || !v?.compiledCode) {
-    console.error(`[verify-vault-hash] plutus.json has no '${titlePrefix}' spend validator with hash + compiledCode`);
+    console.error(
+      `[verify-vault-hash] plutus.json has no '${titlePrefix}${purpose}' validator with hash + compiledCode`,
+    );
     process.exit(1);
   }
   return v;
 }
 
+function findValidator(titlePrefix, purpose = ".spend") {
+  return findIn(validators, titlePrefix, purpose);
+}
+
+const susdrValidators = existsSync(SUSDR_PLUTUS_PATH)
+  ? (JSON.parse(readFileSync(SUSDR_PLUTUS_PATH, "utf8"))?.validators ?? [])
+  : null;
+
 function readPins(path) {
   const src = readFileSync(path, "utf8");
   return (name, fallback) => {
-    const m = src.match(new RegExp(`${name}\\s*=\\s*\\n?\\s*"([0-9a-fA-F]+)"`));
+    const m = src.match(new RegExp(`(?:^|[^A-Za-z0-9_])${name}\\s*=\\s*\\n?\\s*"([0-9a-fA-F]+)"`));
     if (m) return m[1];
     if (fallback) return fallback;
     console.error(`[verify-vault-hash] ${name} not found in ${path}`);
@@ -99,6 +116,30 @@ const targets = [
     file: "src/lib/yield-vault.ts",
   },
 ];
+
+if (susdrValidators) {
+  const susdrPin = readPins(SUSDR_TS_PATH);
+  targets.push(
+    {
+      label: "susdr_vault",
+      onChain: findIn(susdrValidators, "susdr_vault.susdr_vault"),
+      hash: susdrPin("SUSDR_BLUEPRINT_HASH"),
+      cbor: "__BLUEPRINT_IMPORT__",
+      file: "src/lib/susdr-vault.ts",
+    },
+    {
+      label: "usdr policy",
+      onChain: findIn(susdrValidators, "usdr.usdr", ".mint"),
+      hash: susdrPin("USDR_BLUEPRINT_HASH"),
+      cbor: "__BLUEPRINT_IMPORT__",
+      file: "src/lib/susdr-vault.ts",
+    },
+  );
+} else {
+  console.log(
+    "[verify-vault-hash] contracts/susdr-vault/plutus.json not present — skipping sUSDr pins.",
+  );
+}
 
 for (const target of targets) {
   if (target.cbor === "__BLUEPRINT_IMPORT__") target.cbor = target.onChain.compiledCode;
