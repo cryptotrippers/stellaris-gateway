@@ -62,7 +62,7 @@ const susdrValidators = existsSync(SUSDR_PLUTUS_PATH)
 function readPins(path) {
   const src = readFileSync(path, "utf8");
   return (name, fallback) => {
-    const m = src.match(new RegExp(`${name}\\s*=\\s*\\n?\\s*"([0-9a-fA-F]+)"`));
+    const m = src.match(new RegExp(`(?:^|[^A-Za-z0-9_])${name}\\s*=\\s*\\n?\\s*"([0-9a-fA-F]+)"`));
     if (m) return m[1];
     if (fallback) return fallback;
     console.error(`[verify-vault-hash] ${name} not found in ${path}`);
