@@ -35,6 +35,7 @@ export function SusdrContractCard() {
       })
       .catch((e: unknown) => {
         if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+        console.error("[susdr] derive failed", e);
       });
     return () => {
       cancelled = true;
