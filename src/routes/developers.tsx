@@ -5,6 +5,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/StatusBadge";
 import { useApiKeys, apiKeysStore, maskKey, type ApiKey, type ApiKeyEnv } from "@/lib/api-keys-store";
 import { APP_NETWORK } from "@/lib/network";
+import { SusdrContractCard } from "@/components/chain/SusdrContractCard";
 
 export const Route = createFileRoute("/developers")({
   head: () => ({
