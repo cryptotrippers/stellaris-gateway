@@ -110,6 +110,28 @@ const targets = [
   },
 ];
 
+if (susdrValidators) {
+  const susdrPin = readPins(SUSDR_TS_PATH);
+  targets.push(
+    {
+      label: "susdr_vault",
+      onChain: findIn(susdrValidators, "susdr_vault.susdr_vault"),
+      hash: susdrPin("SUSDR_BLUEPRINT_HASH"),
+      cbor: "__BLUEPRINT_IMPORT__",
+      file: "src/lib/susdr-vault.ts",
+    },
+    {
+      label: "usdr policy",
+      onChain: findIn(susdrValidators, "usdr.usdr", ".mint"),
+      hash: susdrPin("USDR_BLUEPRINT_HASH"),
+      cbor: "__BLUEPRINT_IMPORT__",
+      file: "src/lib/susdr-vault.ts",
+    },
+  );
+} else {
+  console.log("[verify-vault-hash] contracts/susdr-vault/plutus.json not present — skipping sUSDr pins.");
+}
+
 for (const target of targets) {
   if (target.cbor === "__BLUEPRINT_IMPORT__") target.cbor = target.onChain.compiledCode;
 }
