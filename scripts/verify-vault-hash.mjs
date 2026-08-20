@@ -21,8 +21,10 @@ import { resolve } from "node:path";
 import { blake2b } from "@noble/hashes/blake2.js";
 
 const PLUTUS_PATH = resolve("contracts/vault/plutus.json");
+const SUSDR_PLUTUS_PATH = resolve("contracts/susdr-vault/plutus.json");
 const VAULT_TS_PATH = resolve("src/lib/vault.ts");
 const YIELD_TS_PATH = resolve("src/lib/yield-vault.ts");
+const SUSDR_TS_PATH = resolve("src/lib/susdr-vault.ts");
 
 const STRICT = process.env.VERIFY_VAULT_STRICT === "1" || process.argv.includes("--strict");
 
