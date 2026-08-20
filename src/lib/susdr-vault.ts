@@ -18,12 +18,10 @@ import { LUCID_NETWORK } from "./network";
 export const SUSDR_VAULT_VERSION = 1n;
 
 /** Hash of the *unapplied* susdr_vault validator from plutus.json. */
-export const SUSDR_BLUEPRINT_HASH =
-  "ca69e3255a3721e0881d3b8c93422a2027eadcf9064db16164026a7f";
+export const SUSDR_BLUEPRINT_HASH = "ca69e3255a3721e0881d3b8c93422a2027eadcf9064db16164026a7f";
 
 /** Hash of the *unapplied* usdr test-stablecoin policy from plutus.json. */
-export const USDR_BLUEPRINT_HASH =
-  "e066c6bda9520276cebc618decd6df908358a0bd9e33de43f71e9cc6";
+export const USDR_BLUEPRINT_HASH = "e066c6bda9520276cebc618decd6df908358a0bd9e33de43f71e9cc6";
 
 import susdrBlueprintSource from "../../contracts/susdr-vault/plutus.json?raw";
 
@@ -54,12 +52,7 @@ type LucidModLike = {
   validatorToScriptHash: (v: { type: "PlutusV3"; script: string }) => string;
 };
 
-function assertPin(
-  lucidMod: LucidModLike,
-  label: string,
-  cbor: string,
-  pinned: string,
-): void {
+function assertPin(lucidMod: LucidModLike, label: string, cbor: string, pinned: string): void {
   const unappliedHash = lucidMod.validatorToScriptHash({ type: "PlutusV3", script: cbor });
   if (unappliedHash !== pinned) {
     throw new Error(

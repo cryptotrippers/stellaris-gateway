@@ -30,10 +30,14 @@ const STRICT = process.env.VERIFY_VAULT_STRICT === "1" || process.argv.includes(
 
 if (!existsSync(PLUTUS_PATH)) {
   if (STRICT) {
-    console.error("[verify-vault-hash] STRICT mode: contracts/vault/plutus.json is missing — run `aiken build` before verifying.");
+    console.error(
+      "[verify-vault-hash] STRICT mode: contracts/vault/plutus.json is missing — run `aiken build` before verifying.",
+    );
     process.exit(1);
   }
-  console.log("[verify-vault-hash] contracts/vault/plutus.json not present — skipping (run `aiken build` locally to generate it).");
+  console.log(
+    "[verify-vault-hash] contracts/vault/plutus.json not present — skipping (run `aiken build` locally to generate it).",
+  );
   process.exit(0);
 }
 
@@ -42,10 +46,13 @@ const validators = blueprint?.validators ?? [];
 
 function findIn(list, titlePrefix, purpose = ".spend") {
   const v = list.find(
-    (x) => typeof x?.title === "string" && x.title.startsWith(titlePrefix) && x.title.includes(purpose),
+    (x) =>
+      typeof x?.title === "string" && x.title.startsWith(titlePrefix) && x.title.includes(purpose),
   );
   if (!v?.hash || !v?.compiledCode) {
-    console.error(`[verify-vault-hash] plutus.json has no '${titlePrefix}${purpose}' validator with hash + compiledCode`);
+    console.error(
+      `[verify-vault-hash] plutus.json has no '${titlePrefix}${purpose}' validator with hash + compiledCode`,
+    );
     process.exit(1);
   }
   return v;
@@ -129,7 +136,9 @@ if (susdrValidators) {
     },
   );
 } else {
-  console.log("[verify-vault-hash] contracts/susdr-vault/plutus.json not present — skipping sUSDr pins.");
+  console.log(
+    "[verify-vault-hash] contracts/susdr-vault/plutus.json not present — skipping sUSDr pins.",
+  );
 }
 
 for (const target of targets) {
