@@ -204,6 +204,53 @@ export type Database = {
         }
         Relationships: []
       }
+      funding_request_checklist: {
+        Row: {
+          created_at: string
+          evidence_url: string | null
+          funding_request_id: string
+          id: string
+          item_key: string
+          note: string | null
+          status: string
+          updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          evidence_url?: string | null
+          funding_request_id: string
+          id?: string
+          item_key: string
+          note?: string | null
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          evidence_url?: string | null
+          funding_request_id?: string
+          id?: string
+          item_key?: string
+          note?: string | null
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funding_request_checklist_funding_request_id_fkey"
+            columns: ["funding_request_id"]
+            isOneToOne: false
+            referencedRelation: "funding_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       funding_requests: {
         Row: {
           asset_id: string | null
@@ -214,6 +261,7 @@ export type Database = {
           evidence_urls: string[]
           id: string
           issuer: string
+          issuer_id: string | null
           location: string | null
           maturity_months: number | null
           min_deposit_lovelace: number
@@ -238,6 +286,7 @@ export type Database = {
           evidence_urls?: string[]
           id?: string
           issuer: string
+          issuer_id?: string | null
           location?: string | null
           maturity_months?: number | null
           min_deposit_lovelace?: number
@@ -262,6 +311,7 @@ export type Database = {
           evidence_urls?: string[]
           id?: string
           issuer?: string
+          issuer_id?: string | null
           location?: string | null
           maturity_months?: number | null
           min_deposit_lovelace?: number
@@ -283,6 +333,13 @@ export type Database = {
             columns: ["asset_id"]
             isOneToOne: false
             referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funding_requests_issuer_id_fkey"
+            columns: ["issuer_id"]
+            isOneToOne: false
+            referencedRelation: "issuers"
             referencedColumns: ["id"]
           },
           {
@@ -361,6 +418,174 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      impact_attestations: {
+        Row: {
+          attester: string
+          created_at: string
+          created_by: string
+          evidence_url: string | null
+          funding_request_id: string
+          id: string
+          methodology: string
+          published: boolean
+          reporting_cadence: string
+          updated_at: string
+        }
+        Insert: {
+          attester: string
+          created_at?: string
+          created_by: string
+          evidence_url?: string | null
+          funding_request_id: string
+          id?: string
+          methodology: string
+          published?: boolean
+          reporting_cadence?: string
+          updated_at?: string
+        }
+        Update: {
+          attester?: string
+          created_at?: string
+          created_by?: string
+          evidence_url?: string | null
+          funding_request_id?: string
+          id?: string
+          methodology?: string
+          published?: boolean
+          reporting_cadence?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "impact_attestations_funding_request_id_fkey"
+            columns: ["funding_request_id"]
+            isOneToOne: false
+            referencedRelation: "funding_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      impact_metrics: {
+        Row: {
+          attestation_id: string
+          baseline: number | null
+          created_at: string
+          id: string
+          measurement_method: string | null
+          metric_name: string
+          target: number | null
+          unit: string
+        }
+        Insert: {
+          attestation_id: string
+          baseline?: number | null
+          created_at?: string
+          id?: string
+          measurement_method?: string | null
+          metric_name: string
+          target?: number | null
+          unit: string
+        }
+        Update: {
+          attestation_id?: string
+          baseline?: number | null
+          created_at?: string
+          id?: string
+          measurement_method?: string | null
+          metric_name?: string
+          target?: number | null
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "impact_metrics_attestation_id_fkey"
+            columns: ["attestation_id"]
+            isOneToOne: false
+            referencedRelation: "impact_attestations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      issuer_verifications: {
+        Row: {
+          created_at: string
+          decided_by: string | null
+          id: string
+          issuer_id: string
+          note: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          decided_by?: string | null
+          id?: string
+          issuer_id: string
+          note?: string | null
+          status: string
+        }
+        Update: {
+          created_at?: string
+          decided_by?: string | null
+          id?: string
+          issuer_id?: string
+          note?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "issuer_verifications_issuer_id_fkey"
+            columns: ["issuer_id"]
+            isOneToOne: false
+            referencedRelation: "issuers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      issuers: {
+        Row: {
+          contact_email: string | null
+          created_at: string
+          id: string
+          jurisdiction: string
+          legal_name: string
+          owner_user_id: string
+          registration_number: string | null
+          updated_at: string
+          verification_status: string
+          verified_at: string | null
+          website: string | null
+          wrapper_type: string
+        }
+        Insert: {
+          contact_email?: string | null
+          created_at?: string
+          id?: string
+          jurisdiction: string
+          legal_name: string
+          owner_user_id: string
+          registration_number?: string | null
+          updated_at?: string
+          verification_status?: string
+          verified_at?: string | null
+          website?: string | null
+          wrapper_type?: string
+        }
+        Update: {
+          contact_email?: string | null
+          created_at?: string
+          id?: string
+          jurisdiction?: string
+          legal_name?: string
+          owner_user_id?: string
+          registration_number?: string | null
+          updated_at?: string
+          verification_status?: string
+          verified_at?: string | null
+          website?: string | null
+          wrapper_type?: string
+        }
+        Relationships: []
       }
       kyc_attestations: {
         Row: {
