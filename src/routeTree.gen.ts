@@ -28,6 +28,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UpgradeIndexRouteImport } from './routes/upgrade.index'
+import { Route as LearnIndexRouteImport } from './routes/learn.index'
 import { Route as GovernanceIndexRouteImport } from './routes/governance.index'
 import { Route as FundingIndexRouteImport } from './routes/funding.index'
 import { Route as UpgradeReturnRouteImport } from './routes/upgrade.return'
@@ -138,6 +139,11 @@ const UpgradeIndexRoute = UpgradeIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => UpgradeRoute,
+} as any)
+const LearnIndexRoute = LearnIndexRouteImport.update({
+  id: '/learn/',
+  path: '/learn/',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const GovernanceIndexRoute = GovernanceIndexRouteImport.update({
   id: '/',
@@ -252,6 +258,7 @@ export interface FileRoutesByFullPath {
   '/upgrade/return': typeof UpgradeReturnRoute
   '/funding/': typeof FundingIndexRoute
   '/governance/': typeof GovernanceIndexRoute
+  '/learn/': typeof LearnIndexRoute
   '/upgrade/': typeof UpgradeIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/blockfrost/webhook': typeof ApiPublicBlockfrostWebhookRoute
@@ -286,6 +293,7 @@ export interface FileRoutesByTo {
   '/upgrade/return': typeof UpgradeReturnRoute
   '/funding': typeof FundingIndexRoute
   '/governance': typeof GovernanceIndexRoute
+  '/learn': typeof LearnIndexRoute
   '/upgrade': typeof UpgradeIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/blockfrost/webhook': typeof ApiPublicBlockfrostWebhookRoute
@@ -323,6 +331,7 @@ export interface FileRoutesById {
   '/upgrade/return': typeof UpgradeReturnRoute
   '/funding/': typeof FundingIndexRoute
   '/governance/': typeof GovernanceIndexRoute
+  '/learn/': typeof LearnIndexRoute
   '/upgrade/': typeof UpgradeIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/public/blockfrost/webhook': typeof ApiPublicBlockfrostWebhookRoute
@@ -361,6 +370,7 @@ export interface FileRouteTypes {
     | '/upgrade/return'
     | '/funding/'
     | '/governance/'
+    | '/learn/'
     | '/upgrade/'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/blockfrost/webhook'
@@ -395,6 +405,7 @@ export interface FileRouteTypes {
     | '/upgrade/return'
     | '/funding'
     | '/governance'
+    | '/learn'
     | '/upgrade'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/blockfrost/webhook'
@@ -431,6 +442,7 @@ export interface FileRouteTypes {
     | '/upgrade/return'
     | '/funding/'
     | '/governance/'
+    | '/learn/'
     | '/upgrade/'
     | '/.mcp/invoke-tool/$tool'
     | '/api/public/blockfrost/webhook'
@@ -463,6 +475,7 @@ export interface RootRouteChildren {
   FundingNewRoute: typeof FundingNewRoute
   IssuersIdRoute: typeof IssuersIdRoute
   FundingIndexRoute: typeof FundingIndexRoute
+  LearnIndexRoute: typeof LearnIndexRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicBlockfrostWebhookRoute: typeof ApiPublicBlockfrostWebhookRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -602,6 +615,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/upgrade/'
       preLoaderRoute: typeof UpgradeIndexRouteImport
       parentRoute: typeof UpgradeRoute
+    }
+    '/learn/': {
+      id: '/learn/'
+      path: '/learn'
+      fullPath: '/learn/'
+      preLoaderRoute: typeof LearnIndexRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/governance/': {
       id: '/governance/'
@@ -780,6 +800,7 @@ const rootRouteChildren: RootRouteChildren = {
   FundingNewRoute: FundingNewRoute,
   IssuersIdRoute: IssuersIdRoute,
   FundingIndexRoute: FundingIndexRoute,
+  LearnIndexRoute: LearnIndexRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicBlockfrostWebhookRoute: ApiPublicBlockfrostWebhookRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
