@@ -183,7 +183,30 @@ function FundingRequestDetail() {
             </div>
           </section>
 
+          <div className="mt-8">
+            <AllocationSimulator
+              feeBps={req.proposed_fee_bps}
+              minDepositLovelace={req.min_deposit_lovelace}
+            />
+          </div>
+
+          <ProjectToolkit
+            slug={req.asset_slug}
+            fundingRequestId={req.id}
+            canEdit={Boolean(user)}
+            isAdmin={isAdmin}
+          />
+
+          {readiness !== null && readiness < READINESS_WARN_BELOW && req.status === "submitted" && (
+            <p className="mt-6 flex items-start gap-2 rounded-md border border-accent/40 bg-accent/5 p-3 text-xs text-muted-foreground">
+              <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
+              Only {readiness}% of the required evidence has been verified. Governance can still
+              vote on this project — voters simply see how little has been checked.
+            </p>
+          )}
+
           {req.terms_accepted_at && (
+
             <p className="mt-4 flex items-center gap-1.5 text-[11px] text-muted-foreground">
               <ShieldCheck className="h-3 w-3" /> Submitter accepted{" "}
               <Link to="/terms" className="text-primary underline">
