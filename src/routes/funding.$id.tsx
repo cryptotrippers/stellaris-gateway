@@ -75,6 +75,9 @@ function FundingRequestDetail() {
     [req],
   );
   const isAdmin = (rolesQ.data?.roles ?? []).includes("admin");
+  const toolkitQ = useProjectToolkit(id);
+  const readiness = toolkitQ.data?.readiness ?? null;
+
   // The row itself never exposes submitted_by publicly; admins always see the
   // action, and the server re-checks ownership for everyone else.
   const canPropose =
