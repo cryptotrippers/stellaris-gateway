@@ -23,16 +23,15 @@ export const Route = createFileRoute("/learn/$topic")({
     };
   },
   loader: ({ params }) => {
-    const topic = findTopic(params.topic);
-    if (!topic) throw notFound();
-    return { topic };
+    if (!findTopic(params.topic)) throw notFound();
   },
   notFoundComponent: TopicNotFound,
   component: TopicPage,
 });
 
 function TopicPage() {
-  const { topic } = Route.useLoaderData();
+  const { topic: slug } = Route.useParams();
+  const topic = findTopic(slug)!;
   const others = LEARN_TOPICS.filter((t) => t.slug !== topic.slug).slice(0, 3);
 
   return (
