@@ -2,7 +2,15 @@ import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, ArrowRight, Hammer, Loader2, ShieldCheck, Vote } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Hammer,
+  Loader2,
+  ShieldAlert,
+  ShieldCheck,
+  Vote,
+} from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import {
   getFundingRequest,
@@ -10,6 +18,10 @@ import {
 } from "@/lib/funding-requests.functions";
 import { getMyRoles } from "@/lib/asset-vaults.functions";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
+import { ProjectToolkit, useProjectToolkit } from "@/components/accelerator/ProjectToolkit";
+import { AllocationSimulator } from "@/components/accelerator/AllocationSimulator";
+import { READINESS_WARN_BELOW } from "@/lib/accelerator.shared";
+
 import { formatFeeBps, projectApyMatrix } from "@/lib/vault-fees";
 
 const APY_SCENARIOS_BPS = [300, 500, 800, 1200];
