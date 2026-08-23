@@ -2,7 +2,15 @@ import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowLeft, ArrowRight, Hammer, Loader2, ShieldCheck, Vote } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Hammer,
+  Loader2,
+  ShieldAlert,
+  ShieldCheck,
+  Vote,
+} from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import {
   getFundingRequest,
@@ -10,6 +18,10 @@ import {
 } from "@/lib/funding-requests.functions";
 import { getMyRoles } from "@/lib/asset-vaults.functions";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
+import { ProjectToolkit, useProjectToolkit } from "@/components/accelerator/ProjectToolkit";
+import { AllocationSimulator } from "@/components/accelerator/AllocationSimulator";
+import { READINESS_WARN_BELOW } from "@/lib/accelerator.shared";
+
 import { formatFeeBps, projectApyMatrix } from "@/lib/vault-fees";
 
 const APY_SCENARIOS_BPS = [300, 500, 800, 1200];
@@ -63,6 +75,9 @@ function FundingRequestDetail() {
     [req],
   );
   const isAdmin = (rolesQ.data?.roles ?? []).includes("admin");
+  const toolkitQ = useProjectToolkit(id);
+  const readiness = toolkitQ.data?.readiness ?? null;
+
   // The row itself never exposes submitted_by publicly; admins always see the
   // action, and the server re-checks ownership for everyone else.
   const canPropose =
@@ -183,7 +198,30 @@ function FundingRequestDetail() {
             </div>
           </section>
 
+          <div className="mt-8">
+            <AllocationSimulator
+              feeBps={req.proposed_fee_bps}
+              minDepositLovelace={req.min_deposit_lovelace}
+            />
+          </div>
+
+          <ProjectToolkit
+            slug={req.asset_slug}
+            fundingRequestId={req.id}
+            canEdit={Boolean(user)}
+            isAdmin={isAdmin}
+          />
+
+          {readiness !== null && readiness < READINESS_WARN_BELOW && req.status === "submitted" && (
+            <p className="mt-6 flex items-start gap-2 rounded-md border border-accent/40 bg-accent/5 p-3 text-xs text-muted-foreground">
+              <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
+              Only {readiness}% of the required evidence has been verified. Governance can still
+              vote on this project — voters simply see how little has been checked.
+            </p>
+          )}
+
           {req.terms_accepted_at && (
+
             <p className="mt-4 flex items-center gap-1.5 text-[11px] text-muted-foreground">
               <ShieldCheck className="h-3 w-3" /> Submitter accepted{" "}
               <Link to="/terms" className="text-primary underline">
