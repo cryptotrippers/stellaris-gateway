@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
+import { LEARN_TOPICS } from "@/lib/learn-content";
+
 
 const BASE_URL = "";
 
