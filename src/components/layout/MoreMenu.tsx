@@ -9,8 +9,11 @@ import {
 
 /** Secondary destinations, grouped so the main bar stays down to four choices. */
 export const MORE_LINKS: { to: string; label: string; hint: string }[] = [
+  { to: "/pipeline", label: "Project pipeline", hint: "What's being verified now" },
+  { to: "/learn", label: "Learn", hint: "Short plain-language guides" },
   { to: "/yield", label: "Earnings", hint: "How returns are paid out" },
   { to: "/stewardship", label: "Impact", hint: "What your money does" },
+
   { to: "/security", label: "Security", hint: "Account & protections" },
   { to: "/invite", label: "Invite friends", hint: "Share your link" },
   { to: "/developers", label: "Developers", hint: "API & docs" },
