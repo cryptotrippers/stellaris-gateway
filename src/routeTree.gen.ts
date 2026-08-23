@@ -33,6 +33,7 @@ import { Route as GovernanceIndexRouteImport } from './routes/governance.index'
 import { Route as FundingIndexRouteImport } from './routes/funding.index'
 import { Route as UpgradeReturnRouteImport } from './routes/upgrade.return'
 import { Route as MarketplaceIdRouteImport } from './routes/marketplace.$id'
+import { Route as LearnTopicRouteImport } from './routes/learn.$topic'
 import { Route as IssuersIdRouteImport } from './routes/issuers.$id'
 import { Route as GovernanceNewRouteImport } from './routes/governance.new'
 import { Route as GovernanceSipRouteImport } from './routes/governance.$sip'
@@ -165,6 +166,11 @@ const MarketplaceIdRoute = MarketplaceIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => MarketplaceRoute,
 } as any)
+const LearnTopicRoute = LearnTopicRouteImport.update({
+  id: '/learn/$topic',
+  path: '/learn/$topic',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IssuersIdRoute = IssuersIdRouteImport.update({
   id: '/issuers/$id',
   path: '/issuers/$id',
@@ -254,6 +260,7 @@ export interface FileRoutesByFullPath {
   '/governance/$sip': typeof GovernanceSipRoute
   '/governance/new': typeof GovernanceNewRoute
   '/issuers/$id': typeof IssuersIdRoute
+  '/learn/$topic': typeof LearnTopicRoute
   '/marketplace/$id': typeof MarketplaceIdRoute
   '/upgrade/return': typeof UpgradeReturnRoute
   '/funding/': typeof FundingIndexRoute
@@ -289,6 +296,7 @@ export interface FileRoutesByTo {
   '/governance/$sip': typeof GovernanceSipRoute
   '/governance/new': typeof GovernanceNewRoute
   '/issuers/$id': typeof IssuersIdRoute
+  '/learn/$topic': typeof LearnTopicRoute
   '/marketplace/$id': typeof MarketplaceIdRoute
   '/upgrade/return': typeof UpgradeReturnRoute
   '/funding': typeof FundingIndexRoute
@@ -327,6 +335,7 @@ export interface FileRoutesById {
   '/governance/$sip': typeof GovernanceSipRoute
   '/governance/new': typeof GovernanceNewRoute
   '/issuers/$id': typeof IssuersIdRoute
+  '/learn/$topic': typeof LearnTopicRoute
   '/marketplace/$id': typeof MarketplaceIdRoute
   '/upgrade/return': typeof UpgradeReturnRoute
   '/funding/': typeof FundingIndexRoute
@@ -366,6 +375,7 @@ export interface FileRouteTypes {
     | '/governance/$sip'
     | '/governance/new'
     | '/issuers/$id'
+    | '/learn/$topic'
     | '/marketplace/$id'
     | '/upgrade/return'
     | '/funding/'
@@ -401,6 +411,7 @@ export interface FileRouteTypes {
     | '/governance/$sip'
     | '/governance/new'
     | '/issuers/$id'
+    | '/learn/$topic'
     | '/marketplace/$id'
     | '/upgrade/return'
     | '/funding'
@@ -438,6 +449,7 @@ export interface FileRouteTypes {
     | '/governance/$sip'
     | '/governance/new'
     | '/issuers/$id'
+    | '/learn/$topic'
     | '/marketplace/$id'
     | '/upgrade/return'
     | '/funding/'
@@ -474,6 +486,7 @@ export interface RootRouteChildren {
   FundingIdRoute: typeof FundingIdRoute
   FundingNewRoute: typeof FundingNewRoute
   IssuersIdRoute: typeof IssuersIdRoute
+  LearnTopicRoute: typeof LearnTopicRoute
   FundingIndexRoute: typeof FundingIndexRoute
   LearnIndexRoute: typeof LearnIndexRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
@@ -651,6 +664,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MarketplaceIdRouteImport
       parentRoute: typeof MarketplaceRoute
     }
+    '/learn/$topic': {
+      id: '/learn/$topic'
+      path: '/learn/$topic'
+      fullPath: '/learn/$topic'
+      preLoaderRoute: typeof LearnTopicRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/issuers/$id': {
       id: '/issuers/$id'
       path: '/issuers/$id'
@@ -799,6 +819,7 @@ const rootRouteChildren: RootRouteChildren = {
   FundingIdRoute: FundingIdRoute,
   FundingNewRoute: FundingNewRoute,
   IssuersIdRoute: IssuersIdRoute,
+  LearnTopicRoute: LearnTopicRoute,
   FundingIndexRoute: FundingIndexRoute,
   LearnIndexRoute: LearnIndexRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
