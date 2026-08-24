@@ -105,6 +105,8 @@ export function AllocationFlow({ assetId }: { assetId: string }) {
       const r = await adapter.deposit(assetId, baseAmount);
       setTxHash(r.txHash);
       setMintedShares(projectedShares);
+      setSubmittedAmount(baseAmount);
+      setSubmittedAt(Date.now());
       setStep("done");
     } catch (e) {
       setError((e as Error).message || "Allocation failed");
@@ -117,6 +119,8 @@ export function AllocationFlow({ assetId }: { assetId: string }) {
     setStep("denomination");
     setTxHash(null);
     setMintedShares(null);
+    setSubmittedAmount(null);
+    setSubmittedAt(null);
     setError(null);
   }
 
