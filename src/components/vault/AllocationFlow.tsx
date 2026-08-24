@@ -45,6 +45,8 @@ export function AllocationFlow({ assetId }: { assetId: string }) {
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [mintedShares, setMintedShares] = useState<bigint | null>(null);
+  const [submittedAmount, setSubmittedAmount] = useState<bigint | null>(null);
+  const [submittedAt, setSubmittedAt] = useState<number | null>(null);
 
   const registryQ = useQuery<DepositAsset[]>({
     queryKey: ["deposit-assets"],
