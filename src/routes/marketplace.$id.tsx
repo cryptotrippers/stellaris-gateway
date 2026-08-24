@@ -12,6 +12,7 @@ import { LegacyVaultCard } from "@/components/vault/LegacyVaultCard";
 import { VaultTxHistoryCard } from "@/components/vault/VaultTxHistoryCard";
 import { AssetVaultPanel } from "@/components/vault/AssetVaultPanel";
 import { YieldVaultActionsCard } from "@/components/vault/YieldVaultActionsCard";
+import { AllocationFlow } from "@/components/vault/AllocationFlow";
 
 import { supabase } from "@/integrations/supabase/client";
 import { formatAda, lovelaceToAda } from "@/lib/format";
@@ -247,6 +248,7 @@ function AssetDetail() {
 
         {/* Right rail — every asset derives its own vault script from (version, asset_id) */}
         <aside className="h-fit space-y-4 lg:sticky lg:top-24">
+          <AllocationFlow assetId={asset.id} />
           <YieldVaultActionsCard assetId={asset.id} />
           <LegacyVaultCard assetId={asset.id} />
           <VaultTxHistoryCard assetId={asset.id} />
