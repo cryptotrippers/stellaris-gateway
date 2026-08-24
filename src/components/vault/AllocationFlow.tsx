@@ -21,6 +21,7 @@ import {
   type DepositAsset,
 } from "@/lib/deposit-assets.shared";
 import { createStellarisYieldAdapter } from "@/lib/adapters/stellaris-yield.adapter";
+import { MintReceipt } from "@/components/vault/MintReceipt";
 import type { RwaVaultAccounting, RwaVaultDescriptor } from "@/lib/rwa-adapter";
 
 type Step = "denomination" | "amount" | "confirm" | "done";
