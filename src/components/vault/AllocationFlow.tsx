@@ -302,28 +302,23 @@ export function AllocationFlow({ assetId }: { assetId: string }) {
         </div>
       )}
 
-      {step === "done" && txHash && (
-        <div className="mt-5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 text-xs text-emerald-700 dark:text-emerald-300">
-          <div className="flex items-center gap-1 font-semibold">
-            <CheckCircle2 className="h-4 w-4" /> Allocation submitted
-          </div>
-          <div className="mt-1">
-            {mintedShares ? `≈ ${mintedShares.toString()} fractional shares` : "Shares"} will appear
-            in your position once the transaction confirms.
-          </div>
-          <a
-            href={cardanoscanTx(txHash)}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-2 inline-flex items-center gap-1 font-medium hover:underline"
-          >
-            View on Cardanoscan <ExternalLink className="h-3 w-3" />
-          </a>
-          <div>
-            <button onClick={reset} className="mt-2 underline">
-              Allocate again
-            </button>
-          </div>
+      {step === "done" && txHash && selected && (
+        <div className="mt-5 space-y-3">
+          <MintReceipt
+            data={{
+              txHash,
+              assetId,
+              depositAsset: selected,
+              amount: submittedAmount ?? baseAmount,
+              shares: mintedShares,
+              sharePrice: accounting?.sharePrice ?? null,
+              epoch: accounting?.epoch ?? null,
+              submittedAt: submittedAt ?? Date.now(),
+            }}
+          />
+          <button onClick={reset} className="text-[11px] underline text-muted-foreground">
+            Allocate again
+          </button>
         </div>
       )}
     </div>
