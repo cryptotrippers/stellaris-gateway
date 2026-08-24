@@ -204,6 +204,57 @@ export type Database = {
         }
         Relationships: []
       }
+      deposit_assets: {
+        Row: {
+          asset_name_hex: string
+          cip113_metadata_url: string | null
+          created_at: string
+          decimals: number
+          display_name: string
+          docs_url: string | null
+          id: string
+          issuer_name: string
+          network: string
+          policy_id: string
+          sort_order: number
+          status: string
+          symbol: string
+          updated_at: string
+        }
+        Insert: {
+          asset_name_hex?: string
+          cip113_metadata_url?: string | null
+          created_at?: string
+          decimals?: number
+          display_name: string
+          docs_url?: string | null
+          id?: string
+          issuer_name: string
+          network?: string
+          policy_id?: string
+          sort_order?: number
+          status?: string
+          symbol: string
+          updated_at?: string
+        }
+        Update: {
+          asset_name_hex?: string
+          cip113_metadata_url?: string | null
+          created_at?: string
+          decimals?: number
+          display_name?: string
+          docs_url?: string | null
+          id?: string
+          issuer_name?: string
+          network?: string
+          policy_id?: string
+          sort_order?: number
+          status?: string
+          symbol?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       funding_request_checklist: {
         Row: {
           created_at: string
