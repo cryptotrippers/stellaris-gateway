@@ -51,10 +51,18 @@ export default defineConfig({
     })),
   },
   vite: {
+    // `vite-plugin-node-polyfills` injects a bare `process` define in dev, which
+    // shadows TanStack Start's `process.env.TSS_*` defines and makes server-function
+    // URLs resolve to `/undefined<id>`. Re-declare the ones we depend on.
+    define: {
+      "process.env.TSS_SERVER_FN_BASE": JSON.stringify("/_serverFn/"),
+      "import.meta.env.TSS_SERVER_FN_BASE": JSON.stringify("/_serverFn/"),
+    },
     // Lucid Evolution uses top-level await, so raise the browser baseline.
     build: { target: "es2022" },
     esbuild: { target: "es2022" },
     optimizeDeps: { esbuildOptions: { target: "es2022" } },
+
     plugins: [
       mcpPlugin(),
       wasm(),
