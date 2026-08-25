@@ -27,6 +27,7 @@ import {
 } from "@/lib/api-keys-store";
 import { APP_NETWORK } from "@/lib/network";
 import { SusdrContractCard } from "@/components/chain/SusdrContractCard";
+import { MultiAssetVaultCard } from "@/components/chain/MultiAssetVaultCard";
 
 export const Route = createFileRoute("/developers")({
   head: () => ({
@@ -194,7 +195,8 @@ function Developers() {
       )}
 
       {tab === "reference" && (
-        <div className="mt-4">
+        <div className="mt-4 space-y-4">
+          <MultiAssetVaultCard />
           <SusdrContractCard />
         </div>
       )}
