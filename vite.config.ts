@@ -55,15 +55,21 @@ export default defineConfig({
     build: { target: "es2022" },
     esbuild: { target: "es2022" },
     optimizeDeps: { esbuildOptions: { target: "es2022" } },
+
     plugins: [
       mcpPlugin(),
       wasm(),
       nodePolyfills({
         include: ["events", "buffer", "stream", "util"],
-        // `process` must be shimmed: Lucid pulls in readable-stream, which reads
-        // `process.version.slice(...)` at module scope and crashes without it.
-        globals: { Buffer: true, global: true, process: true },
+        // NOTE: `globals.process` must stay OFF. It injects a module-level
+        // `import process from "<shim>"` into every dependency, which shadows
+        // TanStack Start's `process.env.TSS_SERVER_FN_BASE` build-time define
+        // and makes every server-function request go to `/undefined<id>` (500).
+        // Lucid's readable-stream still needs a `process` global — that comes
+        // from `src/lib/process-shim.ts`, imported first in `src/router.tsx`.
+        globals: { Buffer: true, global: true, process: false },
       }),
     ],
+
   },
 });
