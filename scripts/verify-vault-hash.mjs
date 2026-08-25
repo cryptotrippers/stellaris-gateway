@@ -22,9 +22,11 @@ import { blake2b } from "@noble/hashes/blake2.js";
 
 const PLUTUS_PATH = resolve("contracts/vault/plutus.json");
 const SUSDR_PLUTUS_PATH = resolve("contracts/susdr-vault/plutus.json");
+const MULTI_PLUTUS_PATH = resolve("contracts/multi-asset-vault/plutus.json");
 const VAULT_TS_PATH = resolve("src/lib/vault.ts");
 const YIELD_TS_PATH = resolve("src/lib/yield-vault.ts");
 const SUSDR_TS_PATH = resolve("src/lib/susdr-vault.ts");
+const MULTI_TS_PATH = resolve("src/lib/multi-asset-vault.ts");
 
 const STRICT = process.env.VERIFY_VAULT_STRICT === "1" || process.argv.includes("--strict");
 
@@ -65,6 +67,11 @@ function findValidator(titlePrefix, purpose = ".spend") {
 const susdrValidators = existsSync(SUSDR_PLUTUS_PATH)
   ? (JSON.parse(readFileSync(SUSDR_PLUTUS_PATH, "utf8"))?.validators ?? [])
   : null;
+
+const multiValidators = existsSync(MULTI_PLUTUS_PATH)
+  ? (JSON.parse(readFileSync(MULTI_PLUTUS_PATH, "utf8"))?.validators ?? [])
+  : null;
+
 
 function readPins(path) {
   const src = readFileSync(path, "utf8");
@@ -138,6 +145,21 @@ if (susdrValidators) {
 } else {
   console.log(
     "[verify-vault-hash] contracts/susdr-vault/plutus.json not present — skipping sUSDr pins.",
+  );
+}
+
+if (multiValidators) {
+  const multiPin = readPins(MULTI_TS_PATH);
+  targets.push({
+    label: "multi_asset_vault (Wing B)",
+    onChain: findIn(multiValidators, "multi_asset_vault.multi_asset_vault"),
+    hash: multiPin("MULTI_BLUEPRINT_HASH"),
+    cbor: "__BLUEPRINT_IMPORT__",
+    file: "src/lib/multi-asset-vault.ts",
+  });
+} else {
+  console.log(
+    "[verify-vault-hash] contracts/multi-asset-vault/plutus.json not present — skipping multi-asset pins.",
   );
 }
 
