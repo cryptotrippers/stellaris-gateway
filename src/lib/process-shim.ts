@@ -13,35 +13,22 @@
  * dependency's `process.env.*` references.
  */
 
-type MinimalProcess = {
-  env: Record<string, string | undefined>;
-  version: string;
-  versions: Record<string, string>;
-  platform: string;
-  browser: boolean;
-  nextTick: (cb: (...args: unknown[]) => void, ...args: unknown[]) => void;
-  argv: string[];
-  cwd: () => string;
-};
+const g = globalThis as unknown as { process?: unknown };
 
-declare global {
-  // eslint-disable-next-line no-var
-  var process: MinimalProcess | undefined;
-}
-
-if (typeof globalThis !== "undefined" && !globalThis.process) {
-  globalThis.process = {
-    env: {},
+if (typeof globalThis !== "undefined" && !g.process) {
+  g.process = {
+    env: {} as Record<string, string | undefined>,
     version: "v20.0.0",
     versions: { node: "20.0.0" },
     platform: "browser",
     browser: true,
-    nextTick: (cb, ...args) => {
+    nextTick: (cb: (...args: unknown[]) => void, ...args: unknown[]) => {
       queueMicrotask(() => cb(...args));
     },
-    argv: [],
+    argv: [] as string[],
     cwd: () => "/",
   };
 }
 
 export {};
+
