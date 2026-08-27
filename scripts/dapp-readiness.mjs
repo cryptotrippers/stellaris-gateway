@@ -154,13 +154,22 @@ if (multiCode) {
   const units = live.length > 0 ? live : [{ symbol: "ADA", policy_id: "", asset_name_hex: "" }];
   for (const assetId of registeredVaults.map((v) => v.asset_id).concat(registeredVaults.length ? [] : ["ph-solar-01"])) {
     for (const u of units) {
+      const policy = (u.policy_id ?? "").toLowerCase();
+      // A registry row with an empty policy id *is* ADA on chain. Anything that
+      // claims to be a token but carries no policy is a placeholder, and it
+      // derives the exact same address as ADA — that is a registry bug, not a
+      // second vault, so say so rather than printing a duplicate row.
+      const placeholder = policy === "" && u.symbol !== "ADA";
       derived.push({
-        label: `multi_asset_vault / ${assetId} / ${u.symbol}`,
+        label: `multi_asset_vault / ${assetId} / ${u.symbol}${placeholder ? " (placeholder policy)" : ""}`,
+        note: placeholder
+          ? `${u.symbol} has an empty policy id in deposit_assets, so it derives the ADA address — no real token vault exists for it`
+          : null,
         cbor: applyParamsToScript(multiCode, [
           multiVersion,
           fromText(assetId),
-          (u.policy_id ?? "").toLowerCase(),
-          (u.policy_id ?? "") === "" ? "" : (u.asset_name_hex ?? "").toLowerCase(),
+          policy,
+          policy === "" ? "" : (u.asset_name_hex ?? "").toLowerCase(),
         ]),
       });
     }
