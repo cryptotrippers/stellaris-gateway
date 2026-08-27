@@ -1,6 +1,6 @@
 # dApp readiness report
 
-Generated 2026-08-27T21:56:34.874Z against **Preprod**. Produced by `bun run test:dapp` (`scripts/dapp-readiness.mjs`), read-only.
+Generated 2026-08-27T21:56:52.463Z against **Preprod**. Produced by `bun run test:dapp` (`scripts/dapp-readiness.mjs`), read-only.
 
 **Score: 12% on chain** — 4 live, 23 wired-but-unproven, 6 not implemented.
 
