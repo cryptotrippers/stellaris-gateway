@@ -197,8 +197,9 @@ const onChainAddresses = new Map();
       const address = validatorToAddress(NETWORK, validator);
       onChainAddresses.set(t.label, { hash, address });
       const meta = await bf(`/scripts/${hash}`);
+      const suffix = t.note ? ` — ${t.note}` : "";
       if (meta.status !== 200) {
-        add(GRADES.wired, t.label, `derived ${hash} — never seen on chain (addr ${address})`);
+        add(GRADES.wired, t.label, `derived ${hash} — never seen on chain (addr ${address})${suffix}`);
         continue;
       }
       const cborRes = await bf(`/scripts/${hash}/cbor`);
@@ -208,7 +209,7 @@ const onChainAddresses = new Map();
       add(
         match && count !== 0 ? GRADES.live : GRADES.wired,
         t.label,
-        `hash ${hash} · on chain · cbor ${match ? "EXACT MATCH" : "MISMATCH"} · ${count} utxo(s) at ${address}`,
+        `hash ${hash} · on chain · cbor ${match ? "EXACT MATCH" : "MISMATCH — the live script was compiled from a different blueprint than the one pinned today"} · ${count} utxo(s) at ${address}${suffix}`,
       );
     }
   }
