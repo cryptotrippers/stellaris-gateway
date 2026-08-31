@@ -16,6 +16,8 @@
     "verify:state-datum": "bun run scripts/verify-state-datum-roundtrip.ts"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^4.0.51",
+    "@ai-sdk/openai-compatible": "^3.0.41",
     "@hookform/resolvers": "^5.2.2",
     "@lovable.dev/cloud-auth-js": "^1.1.2",
     "@lovable.dev/mcp-js": "^0.22.2",
@@ -57,6 +59,7 @@
     "@tanstack/router-plugin": "^1.168.18",
     "@walletconnect/sign-client": "^2.23.10",
     "@walletconnect/utils": "^2.23.10",
+    "ai": "^7.0.84",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
