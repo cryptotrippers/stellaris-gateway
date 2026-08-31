@@ -53,7 +53,10 @@ export function createLovableAiGatewayRunIdFetch(initialRunId?: string) {
 
   return {
     // `fetch(...)` below is the global fetch — the object key introduces no binding.
-    fetch: async (input, init) => {
+fetch: async (
+      input: Parameters<typeof fetch>[0],
+      init?: Parameters<typeof fetch>[1],
+    ) => {
       const headers = new Headers(init?.headers);
       if (runId && !headers.has(LOVABLE_AIG_RUN_ID_HEADER)) {
         headers.set(LOVABLE_AIG_RUN_ID_HEADER, runId);
