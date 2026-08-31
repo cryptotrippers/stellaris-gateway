@@ -47,6 +47,7 @@ import { Route as ApiV1YieldRouteImport } from './routes/api/v1/yield'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicBlockfrostWebhookRouteImport } from './routes/api/public/blockfrost/webhook'
+import { Route as ApiV1YieldUserAddressQueueRouteImport } from './routes/api/v1/yield/user/$address/queue'
 
 const YieldRoute = YieldRouteImport.update({
   id: '/yield',
@@ -244,6 +245,12 @@ const ApiPublicBlockfrostWebhookRoute =
     path: '/api/public/blockfrost/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiV1YieldUserAddressQueueRoute =
+  ApiV1YieldUserAddressQueueRouteImport.update({
+    id: '/user/$address/queue',
+    path: '/user/$address/queue',
+    getParentRoute: () => ApiV1YieldRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -281,9 +288,10 @@ export interface FileRoutesByFullPath {
   '/learn/': typeof LearnIndexRoute
   '/upgrade/': typeof UpgradeIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
-  '/api/v1/yield': typeof ApiV1YieldRoute
+  '/api/v1/yield': typeof ApiV1YieldRouteWithChildren
   '/api/public/blockfrost/webhook': typeof ApiPublicBlockfrostWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/v1/yield/user/$address/queue': typeof ApiV1YieldUserAddressQueueRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -319,9 +327,10 @@ export interface FileRoutesByTo {
   '/learn': typeof LearnIndexRoute
   '/upgrade': typeof UpgradeIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
-  '/api/v1/yield': typeof ApiV1YieldRoute
+  '/api/v1/yield': typeof ApiV1YieldRouteWithChildren
   '/api/public/blockfrost/webhook': typeof ApiPublicBlockfrostWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/v1/yield/user/$address/queue': typeof ApiV1YieldUserAddressQueueRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -360,9 +369,10 @@ export interface FileRoutesById {
   '/learn/': typeof LearnIndexRoute
   '/upgrade/': typeof UpgradeIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
-  '/api/v1/yield': typeof ApiV1YieldRoute
+  '/api/v1/yield': typeof ApiV1YieldRouteWithChildren
   '/api/public/blockfrost/webhook': typeof ApiPublicBlockfrostWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
+  '/api/v1/yield/user/$address/queue': typeof ApiV1YieldUserAddressQueueRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -405,6 +415,7 @@ export interface FileRouteTypes {
     | '/api/v1/yield'
     | '/api/public/blockfrost/webhook'
     | '/api/public/payments/webhook'
+    | '/api/v1/yield/user/$address/queue'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -443,6 +454,7 @@ export interface FileRouteTypes {
     | '/api/v1/yield'
     | '/api/public/blockfrost/webhook'
     | '/api/public/payments/webhook'
+    | '/api/v1/yield/user/$address/queue'
   id:
     | '__root__'
     | '/'
@@ -483,6 +495,7 @@ export interface FileRouteTypes {
     | '/api/v1/yield'
     | '/api/public/blockfrost/webhook'
     | '/api/public/payments/webhook'
+    | '/api/v1/yield/user/$address/queue'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -515,7 +528,7 @@ export interface RootRouteChildren {
   FundingIndexRoute: typeof FundingIndexRoute
   LearnIndexRoute: typeof LearnIndexRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
-  ApiV1YieldRoute: typeof ApiV1YieldRoute
+  ApiV1YieldRoute: typeof ApiV1YieldRouteWithChildren
   ApiPublicBlockfrostWebhookRoute: typeof ApiPublicBlockfrostWebhookRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
@@ -788,6 +801,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicBlockfrostWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/yield/user/$address/queue': {
+      id: '/api/v1/yield/user/$address/queue'
+      path: '/user/$address/queue'
+      fullPath: '/api/v1/yield/user/$address/queue'
+      preLoaderRoute: typeof ApiV1YieldUserAddressQueueRouteImport
+      parentRoute: typeof ApiV1YieldRoute
+    }
   }
 }
 
@@ -832,6 +852,18 @@ const UpgradeRouteChildren: UpgradeRouteChildren = {
 const UpgradeRouteWithChildren =
   UpgradeRoute._addFileChildren(UpgradeRouteChildren)
 
+interface ApiV1YieldRouteChildren {
+  ApiV1YieldUserAddressQueueRoute: typeof ApiV1YieldUserAddressQueueRoute
+}
+
+const ApiV1YieldRouteChildren: ApiV1YieldRouteChildren = {
+  ApiV1YieldUserAddressQueueRoute: ApiV1YieldUserAddressQueueRoute,
+}
+
+const ApiV1YieldRouteWithChildren = ApiV1YieldRoute._addFileChildren(
+  ApiV1YieldRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRoute,
@@ -864,7 +896,7 @@ const rootRouteChildren: RootRouteChildren = {
   FundingIndexRoute: FundingIndexRoute,
   LearnIndexRoute: LearnIndexRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
-  ApiV1YieldRoute: ApiV1YieldRoute,
+  ApiV1YieldRoute: ApiV1YieldRouteWithChildren,
   ApiPublicBlockfrostWebhookRoute: ApiPublicBlockfrostWebhookRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
