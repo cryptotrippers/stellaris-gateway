@@ -63,6 +63,14 @@ export interface RwaVaultDescriptor {
 
 export interface RwaSubmittedTx {
   txHash: string;
+  /**
+   * Shares the transaction actually mints or burns, as computed by the same
+   * arithmetic the validator enforces. Present when the adapter knows it at
+   * build time; the UI must prefer this over its own projection.
+   */
+  shares?: bigint;
+  /** Share price the transaction settled at. */
+  sharePrice?: number;
 }
 
 /**
