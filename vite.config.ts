@@ -56,6 +56,19 @@ export default defineConfig({
     esbuild: { target: "es2022" },
     optimizeDeps: { esbuildOptions: { target: "es2022" } },
 
+    resolve: {
+      alias: [
+        // `stream-browserify` has no `/web` entry, so the node polyfill's
+        // mapping for `node:stream/web` breaks dep optimisation. Browsers
+        // have native WHATWG streams — use those.
+        {
+          find: /^(node:)?stream\/web$/,
+          replacement: new URL("./src/lib/stream-web-shim.ts", import.meta.url).pathname,
+        },
+      ],
+    },
+
+
     plugins: [
       mcpPlugin(),
       wasm(),
