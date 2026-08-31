@@ -28,7 +28,7 @@ export const recordVaultTransaction = createServerFn({ method: "POST" })
     const { error } = await context.supabase
       .from("transactions")
       .upsert({ ...row, user_id: context.userId } as never, {
-        onConflict: "tx_hash",
+        onConflict: "user_id,tx_hash",
         ignoreDuplicates: true,
       });
     if (error) throw new Error(error.message);
