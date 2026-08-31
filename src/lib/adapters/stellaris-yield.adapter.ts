@@ -51,6 +51,22 @@ async function registryAddressFor(assetId: string): Promise<string | null> {
 }
 
 export function createStellarisYieldAdapter(depositAsset: DepositAsset = ADA_FALLBACK): RwaVaultAdapter {
+  /**
+   * `yield_vault` v3 accounts in lovelace only. A native-token denomination
+   * needs the multi-asset validator, so refuse it loudly here rather than
+   * quietly sending `amount` to an ADA vault as if it were lovelace — that
+   * would mint shares against a deposit the depositor never made.
+   */
+  function assertAdaDenominated(): void {
+    const isAda = depositAsset.policy_id === "" && depositAsset.asset_name_hex === "";
+    if (!isAda) {
+      throw new Error(
+        `${depositAsset.symbol} deposits are not settled by this vault yet — it accounts in ADA. ` +
+          `Choose ADA, or wait for the multi-asset vault to be deployed for this project.`,
+      );
+    }
+  }
+
   return {
     adapterId: STELLARIS_YIELD_ADAPTER_ID,
 
@@ -90,20 +106,28 @@ export function createStellarisYieldAdapter(depositAsset: DepositAsset = ADA_FAL
     },
 
     async deposit(assetId: string, amount: bigint): Promise<RwaSubmittedTx> {
+      assertAdaDenominated();
       const r = await depositToYieldVault({
         assetId,
         amountLovelace: amount,
         registryAddress: await registryAddressFor(assetId),
       });
-      return { txHash: r.txHash };
+      // The builder derives minted shares from the on-chain state it just
+      // spent, so this is the settled figure, not a client-side projection.
+      return {
+        txHash: r.txHash,
+        shares: BigInt(r.mintedShares),
+        sharePrice: r.sharePrice,
+      };
     },
 
     async withdraw(assetId: string): Promise<RwaSubmittedTx> {
+      assertAdaDenominated();
       const r = await withdrawFromYieldVault({
         assetId,
         registryAddress: await registryAddressFor(assetId),
       });
-      return { txHash: r.txHash };
+      return { txHash: r.txHash, shares: BigInt(r.burnedShares) };
     },
   };
 }
