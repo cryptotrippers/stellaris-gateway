@@ -20,6 +20,7 @@
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { execFileSync } from "node:child_process";
+import { sameScriptCbor, datumKind } from "./lib/script-cbor.mjs";
 
 const TAG = "[dapp-readiness]";
 const NETWORK = "Preprod";

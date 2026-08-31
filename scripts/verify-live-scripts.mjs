@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { applyParamsToScript, validatorToAddress, validatorToScriptHash, fromText } from "@lucid-evolution/lucid";
+import { sameScriptCbor } from "./lib/script-cbor.mjs";
 const KEY = process.env.BLOCKFROST_PREPROD_PROJECT_ID;
 const BF = "https://cardano-preprod.blockfrost.io/api/v0";
 const bp = JSON.parse(readFileSync("contracts/vault/plutus.json","utf8"));
