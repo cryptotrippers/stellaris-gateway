@@ -22,6 +22,9 @@ import {
 } from "@/lib/deposit-assets.shared";
 import { createStellarisYieldAdapter } from "@/lib/adapters/stellaris-yield.adapter";
 import { MintReceipt } from "@/components/vault/MintReceipt";
+import { recordVaultTx } from "@/lib/vault-tx-history";
+import { recordVaultTransaction } from "@/lib/vault-transactions.functions";
+import { supabase } from "@/integrations/supabase/client";
 import type { RwaVaultAccounting, RwaVaultDescriptor } from "@/lib/rwa-adapter";
 
 type Step = "denomination" | "amount" | "confirm" | "done";
@@ -47,6 +50,7 @@ export function AllocationFlow({ assetId }: { assetId: string }) {
   const [mintedShares, setMintedShares] = useState<bigint | null>(null);
   const [submittedAmount, setSubmittedAmount] = useState<bigint | null>(null);
   const [submittedAt, setSubmittedAt] = useState<number | null>(null);
+  const [settledPrice, setSettledPrice] = useState<number | null>(null);
 
   const registryQ = useQuery<DepositAsset[]>({
     queryKey: ["deposit-assets"],
@@ -98,20 +102,47 @@ export function AllocationFlow({ assetId }: { assetId: string }) {
     walletReady;
 
   async function allocate() {
-    if (!adapter?.deposit) return;
+    if (!adapter?.deposit || !selected) return;
     setBusy(true);
     setError(null);
     try {
       const r = await adapter.deposit(assetId, baseAmount);
+      // Prefer the adapter's settled share count over the client projection;
+      // the projection is only a preview of what the validator will allow.
       setTxHash(r.txHash);
-      setMintedShares(projectedShares);
+      setMintedShares(r.shares ?? projectedShares);
+      setSettledPrice(r.sharePrice ?? accounting?.sharePrice ?? null);
       setSubmittedAmount(baseAmount);
       setSubmittedAt(Date.now());
       setStep("done");
+
+      // History is best effort — the deposit is already on chain either way.
+      recordVaultTx({
+        txHash: r.txHash,
+        kind: "deposit",
+        amountAda: Number(baseAmount) / 10 ** selected.decimals,
+        address: wallet.address ?? "",
+        assetId,
+        network: APP_NETWORK === "mainnet" ? "mainnet" : "preprod",
+      });
+      void persistTx(r.txHash, Number(baseAmount) / 10 ** selected.decimals);
     } catch (e) {
       setError((e as Error).message || "Allocation failed");
     } finally {
       setBusy(false);
+    }
+  }
+
+  /** Mirror the submitted deposit into the account ledger when signed in. */
+  async function persistTx(hash: string, amountAda: number) {
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) return;
+      await recordVaultTransaction({
+        data: { vaultId: assetId, type: "deposit", amountAda, txHash: hash },
+      });
+    } catch {
+      /* ledger mirroring must never surface as a failed allocation */
     }
   }
 
@@ -121,6 +152,7 @@ export function AllocationFlow({ assetId }: { assetId: string }) {
     setMintedShares(null);
     setSubmittedAmount(null);
     setSubmittedAt(null);
+    setSettledPrice(null);
     setError(null);
   }
 
@@ -318,7 +350,7 @@ export function AllocationFlow({ assetId }: { assetId: string }) {
               depositAsset: selected,
               amount: submittedAmount ?? baseAmount,
               shares: mintedShares,
-              sharePrice: accounting?.sharePrice ?? null,
+              sharePrice: settledPrice ?? accounting?.sharePrice ?? null,
               epoch: accounting?.epoch ?? null,
               submittedAt: submittedAt ?? Date.now(),
             }}
