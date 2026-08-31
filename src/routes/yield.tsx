@@ -11,6 +11,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
+import { YieldDashboard } from "@/components/YieldDashboard";
+
 import { Badge } from "@/components/ui/StatusBadge";
 import { getBlockfrostHealth, getPreprodTip } from "@/lib/blockfrost.functions";
 import { listAssetVaults, type AssetVaultRow } from "@/lib/asset-vaults.functions";
@@ -128,7 +130,12 @@ function YieldLedger() {
         </div>
       </div>
 
+      <div className="mt-6">
+        <YieldDashboard />
+      </div>
+
       <section className="mt-6 grid gap-4 lg:grid-cols-[1fr_1.2fr]">
+
         <div className="card-institutional p-5">
           <div className="text-[10px] uppercase tracking-widest text-primary">Token model</div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">

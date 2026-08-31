@@ -43,6 +43,7 @@ import { Route as FundingIdRouteImport } from './routes/funding.$id'
 import { Route as Char91DotwellKnownChar93SecurityChar91DotChar93txtRouteImport } from './routes/[.well-known]/security[.]txt'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
+import { Route as ApiV1YieldRouteImport } from './routes/api/v1/yield'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiPublicBlockfrostWebhookRouteImport } from './routes/api/public/blockfrost/webhook'
@@ -220,6 +221,11 @@ const Char91DotmcpChar93ListToolsRoute =
     path: '/.mcp/list-tools',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiV1YieldRoute = ApiV1YieldRouteImport.update({
+  id: '/api/v1/yield',
+  path: '/api/v1/yield',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const Char91DotmcpChar93InvokeToolToolRoute =
   Char91DotmcpChar93InvokeToolToolRouteImport.update({
     id: '/.mcp/invoke-tool/$tool',
@@ -275,6 +281,7 @@ export interface FileRoutesByFullPath {
   '/learn/': typeof LearnIndexRoute
   '/upgrade/': typeof UpgradeIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/v1/yield': typeof ApiV1YieldRoute
   '/api/public/blockfrost/webhook': typeof ApiPublicBlockfrostWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -312,6 +319,7 @@ export interface FileRoutesByTo {
   '/learn': typeof LearnIndexRoute
   '/upgrade': typeof UpgradeIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/v1/yield': typeof ApiV1YieldRoute
   '/api/public/blockfrost/webhook': typeof ApiPublicBlockfrostWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -352,6 +360,7 @@ export interface FileRoutesById {
   '/learn/': typeof LearnIndexRoute
   '/upgrade/': typeof UpgradeIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/v1/yield': typeof ApiV1YieldRoute
   '/api/public/blockfrost/webhook': typeof ApiPublicBlockfrostWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
 }
@@ -393,6 +402,7 @@ export interface FileRouteTypes {
     | '/learn/'
     | '/upgrade/'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/v1/yield'
     | '/api/public/blockfrost/webhook'
     | '/api/public/payments/webhook'
   fileRoutesByTo: FileRoutesByTo
@@ -430,6 +440,7 @@ export interface FileRouteTypes {
     | '/learn'
     | '/upgrade'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/v1/yield'
     | '/api/public/blockfrost/webhook'
     | '/api/public/payments/webhook'
   id:
@@ -469,6 +480,7 @@ export interface FileRouteTypes {
     | '/learn/'
     | '/upgrade/'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/v1/yield'
     | '/api/public/blockfrost/webhook'
     | '/api/public/payments/webhook'
   fileRoutesById: FileRoutesById
@@ -503,6 +515,7 @@ export interface RootRouteChildren {
   FundingIndexRoute: typeof FundingIndexRoute
   LearnIndexRoute: typeof LearnIndexRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiV1YieldRoute: typeof ApiV1YieldRoute
   ApiPublicBlockfrostWebhookRoute: typeof ApiPublicBlockfrostWebhookRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
@@ -747,6 +760,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/v1/yield': {
+      id: '/api/v1/yield'
+      path: '/api/v1/yield'
+      fullPath: '/api/v1/yield'
+      preLoaderRoute: typeof ApiV1YieldRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/.mcp/invoke-tool/$tool': {
       id: '/.mcp/invoke-tool/$tool'
       path: '/.mcp/invoke-tool/$tool'
@@ -844,6 +864,7 @@ const rootRouteChildren: RootRouteChildren = {
   FundingIndexRoute: FundingIndexRoute,
   LearnIndexRoute: LearnIndexRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiV1YieldRoute: ApiV1YieldRoute,
   ApiPublicBlockfrostWebhookRoute: ApiPublicBlockfrostWebhookRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
