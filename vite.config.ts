@@ -54,7 +54,29 @@ export default defineConfig({
     // Lucid Evolution uses top-level await, so raise the browser baseline.
     build: { target: "es2022" },
     esbuild: { target: "es2022" },
-    optimizeDeps: { esbuildOptions: { target: "es2022" } },
+    optimizeDeps: {
+      esbuildOptions: {
+        target: "es2022",
+        plugins: [
+          {
+            // Runs before the node-polyfill resolver, which maps
+            // `node:stream/web` onto a `stream-browserify/web` file that does
+            // not exist and aborts dependency optimisation.
+            name: "stellaris-stream-web-shim",
+            setup(build: {
+              onResolve: (
+                opts: { filter: RegExp },
+                cb: () => { path: string },
+              ) => void;
+            }) {
+              const shim = new URL("./src/lib/stream-web-shim.ts", import.meta.url).pathname;
+              build.onResolve({ filter: /^(node:)?stream\/web$/ }, () => ({ path: shim }));
+            },
+          },
+        ],
+      },
+    },
+
 
     resolve: {
       alias: [
