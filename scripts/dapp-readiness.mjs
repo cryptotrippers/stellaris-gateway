@@ -258,13 +258,18 @@ const onChainAddresses = new Map();
     const utxos = await bf(`/addresses/${v.script_address}/utxos`);
     const list = utxos.status === 200 ? utxos.body : [];
     const withDatum = list.filter((u) => u.inline_datum);
-    // The state UTxO is the one carrying no depositor-specific token beyond ADA
-    // plus the vault's own state marker; a healthy vault has exactly one.
-    const stateLike = withDatum.length;
+    // Only Constr 1 datums are vault State; Constr 0 datums are depositor
+    // Positions and are expected to be plentiful. Counting every datum-bearing
+    // UTxO as state made a healthy funded vault look broken.
+    const states = withDatum.filter((u) => datumKind(u.inline_datum) === "state");
+    const positions = withDatum.filter((u) => datumKind(u.inline_datum) === "position");
     add(
-      stateLike === 1 ? GRADES.live : stateLike === 0 ? GRADES.missing : GRADES.wired,
+      states.length === 1 ? GRADES.live : states.length === 0 ? GRADES.missing : GRADES.wired,
       `${v.asset_id} state UTxO`,
-      `${stateLike} datum-bearing utxo(s) of ${list.length} at ${v.script_address} · bootstrap ${v.bootstrap_tx_hash}`,
+      `${states.length} state + ${positions.length} position utxo(s) of ${list.length} at ${v.script_address} · bootstrap ${v.bootstrap_tx_hash}` +
+        (states.length > 1
+          ? ` · duplicate state: ${states.map((u) => `${u.tx_hash}#${u.output_index}`).join(", ")} — spend the superseded bootstrap state to restore the sole-state rule`
+          : ""),
     );
   }
 }
