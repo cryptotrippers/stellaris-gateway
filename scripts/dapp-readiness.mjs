@@ -203,13 +203,16 @@ const onChainAddresses = new Map();
         continue;
       }
       const cborRes = await bf(`/scripts/${hash}/cbor`);
-      const match = cborRes.status === 200 && cborRes.body?.cbor === t.cbor;
+      // Blockfrost serves the single-encoded script; the blueprint (and Lucid)
+      // carry the double-encoded form. Compare through `sameScriptCbor` so an
+      // encoding-depth difference is not reported as a blueprint drift.
+      const match = cborRes.status === 200 && sameScriptCbor(cborRes.body?.cbor, t.cbor);
       const utxos = await bf(`/addresses/${address}/utxos`);
       const count = utxos.status === 200 ? utxos.body.length : utxos.status === 404 ? 0 : `err ${utxos.status}`;
       add(
         match && count !== 0 ? GRADES.live : GRADES.wired,
         t.label,
-        `hash ${hash} · on chain · cbor ${match ? "EXACT MATCH" : "MISMATCH — the live script was compiled from a different blueprint than the one pinned today"} · ${count} utxo(s) at ${address}${suffix}`,
+        `hash ${hash} · on chain · cbor ${match ? "EXACT MATCH — live script is the pinned blueprint" : "MISMATCH — the live script was compiled from a different blueprint than the one pinned today"} · ${count} utxo(s) at ${address}${suffix}`,
       );
     }
   }
