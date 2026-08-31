@@ -58,7 +58,7 @@ export function createStellarisYieldAdapter(depositAsset: DepositAsset = ADA_FAL
    * would mint shares against a deposit the depositor never made.
    */
   function assertAdaDenominated(): void {
-    const isAda = depositAsset.policy_id === "" && depositAsset.asset_name_hex === "";
+    const isAda = depositAsset.symbol === "ADA" && depositAsset.policy_id === "";
     if (!isAda) {
       throw new Error(
         `${depositAsset.symbol} deposits are not settled by this vault yet — it accounts in ADA. ` +

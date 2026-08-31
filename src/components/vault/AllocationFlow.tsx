@@ -209,7 +209,10 @@ export function AllocationFlow({ assetId }: { assetId: string }) {
               // The Stellaris yield vault settles in lovelace. A native-token
               // denomination has no deployed vault yet, so it is shown but not
               // selectable rather than failing at signing time.
-              const adaDenominated = a.policy_id === "" && a.asset_name_hex === "";
+              // A registry row with no policy id is only ADA when it says so:
+              // the USDr stand-in also carries an empty policy, and settling it
+              // as lovelace would credit shares for a deposit never made.
+              const adaDenominated = a.symbol === "ADA" && a.policy_id === "";
               const usable = a.status !== "planned" && adaDenominated;
               return (
                 <button
@@ -233,7 +236,7 @@ export function AllocationFlow({ assetId }: { assetId: string }) {
                       {a.issuer_name} —{" "}
                       {adaDenominated
                         ? DEPOSIT_STATUS_COPY[a.status].hint
-                        : "awaiting a multi-asset vault deployment for this project"}
+                        : "awaiting a multi-asset vault deployment — this project's vault settles in ADA"}
                     </div>
                   </div>
                   <Badge tone={a.status === "live" ? "success" : a.status === "test" ? "muted" : "warning"}>
