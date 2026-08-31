@@ -206,7 +206,11 @@ export function AllocationFlow({ assetId }: { assetId: string }) {
             </p>
           ) : (
             options.map((a) => {
-              const usable = a.status !== "planned";
+              // The Stellaris yield vault settles in lovelace. A native-token
+              // denomination has no deployed vault yet, so it is shown but not
+              // selectable rather than failing at signing time.
+              const adaDenominated = a.policy_id === "" && a.asset_name_hex === "";
+              const usable = a.status !== "planned" && adaDenominated;
               return (
                 <button
                   key={a.id}
@@ -226,7 +230,10 @@ export function AllocationFlow({ assetId }: { assetId: string }) {
                       {a.symbol} · {a.display_name}
                     </div>
                     <div className="text-[11px] text-muted-foreground">
-                      {a.issuer_name} — {DEPOSIT_STATUS_COPY[a.status].hint}
+                      {a.issuer_name} —{" "}
+                      {adaDenominated
+                        ? DEPOSIT_STATUS_COPY[a.status].hint
+                        : "awaiting a multi-asset vault deployment for this project"}
                     </div>
                   </div>
                   <Badge tone={a.status === "live" ? "success" : a.status === "test" ? "muted" : "warning"}>
