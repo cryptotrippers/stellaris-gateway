@@ -20,6 +20,7 @@
 import { readFileSync, existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { execFileSync } from "node:child_process";
+import { sameScriptCbor, datumKind } from "./lib/script-cbor.mjs";
 
 const TAG = "[dapp-readiness]";
 const NETWORK = "Preprod";
@@ -203,13 +204,16 @@ const onChainAddresses = new Map();
         continue;
       }
       const cborRes = await bf(`/scripts/${hash}/cbor`);
-      const match = cborRes.status === 200 && cborRes.body?.cbor === t.cbor;
+      // Blockfrost serves the single-encoded script; the blueprint (and Lucid)
+      // carry the double-encoded form. Compare through `sameScriptCbor` so an
+      // encoding-depth difference is not reported as a blueprint drift.
+      const match = cborRes.status === 200 && sameScriptCbor(cborRes.body?.cbor, t.cbor);
       const utxos = await bf(`/addresses/${address}/utxos`);
       const count = utxos.status === 200 ? utxos.body.length : utxos.status === 404 ? 0 : `err ${utxos.status}`;
       add(
         match && count !== 0 ? GRADES.live : GRADES.wired,
         t.label,
-        `hash ${hash} · on chain · cbor ${match ? "EXACT MATCH" : "MISMATCH — the live script was compiled from a different blueprint than the one pinned today"} · ${count} utxo(s) at ${address}${suffix}`,
+        `hash ${hash} · on chain · cbor ${match ? "EXACT MATCH — live script is the pinned blueprint" : "MISMATCH — the live script was compiled from a different blueprint than the one pinned today"} · ${count} utxo(s) at ${address}${suffix}`,
       );
     }
   }
@@ -255,13 +259,18 @@ const onChainAddresses = new Map();
     const utxos = await bf(`/addresses/${v.script_address}/utxos`);
     const list = utxos.status === 200 ? utxos.body : [];
     const withDatum = list.filter((u) => u.inline_datum);
-    // The state UTxO is the one carrying no depositor-specific token beyond ADA
-    // plus the vault's own state marker; a healthy vault has exactly one.
-    const stateLike = withDatum.length;
+    // Only Constr 1 datums are vault State; Constr 0 datums are depositor
+    // Positions and are expected to be plentiful. Counting every datum-bearing
+    // UTxO as state made a healthy funded vault look broken.
+    const states = withDatum.filter((u) => datumKind(u.inline_datum) === "state");
+    const positions = withDatum.filter((u) => datumKind(u.inline_datum) === "position");
     add(
-      stateLike === 1 ? GRADES.live : stateLike === 0 ? GRADES.missing : GRADES.wired,
+      states.length === 1 ? GRADES.live : states.length === 0 ? GRADES.missing : GRADES.wired,
       `${v.asset_id} state UTxO`,
-      `${stateLike} datum-bearing utxo(s) of ${list.length} at ${v.script_address} · bootstrap ${v.bootstrap_tx_hash}`,
+      `${states.length} state + ${positions.length} position utxo(s) of ${list.length} at ${v.script_address} · bootstrap ${v.bootstrap_tx_hash}` +
+        (states.length > 1
+          ? ` · duplicate state: ${states.map((u) => `${u.tx_hash}#${u.output_index}`).join(", ")} — spend the superseded bootstrap state to restore the sole-state rule`
+          : ""),
     );
   }
 }

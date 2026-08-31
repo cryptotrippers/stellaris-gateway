@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { applyParamsToScript, validatorToAddress, validatorToScriptHash, fromText } from "@lucid-evolution/lucid";
+import { sameScriptCbor } from "./lib/script-cbor.mjs";
 const KEY = process.env.BLOCKFROST_PREPROD_PROJECT_ID;
 const BF = "https://cardano-preprod.blockfrost.io/api/v0";
 const bp = JSON.parse(readFileSync("contracts/vault/plutus.json","utf8"));
@@ -21,7 +22,7 @@ for (const t of targets){
   const utxos=await bf(`/addresses/${addr}/utxos`);
   let live="not seen on-chain", match="n/a";
   if(meta.s===200){ live=JSON.parse(meta.b).type;
-    if(cbor.s===200){const c=JSON.parse(cbor.b).cbor; match = c===t.cbor ? "EXACT MATCH" : `MISMATCH (live ${c.length} vs local ${t.cbor.length})`;}
+    if(cbor.s===200){const c=JSON.parse(cbor.b).cbor; match = sameScriptCbor(c,t.cbor) ? "EXACT MATCH" : `MISMATCH (live ${c.length} vs local ${t.cbor.length})`;}
   }
   const u = utxos.s===200 ? JSON.parse(utxos.b).length : (utxos.s===404?0:`err ${utxos.s}`);
   console.log(`${t.label}\n  hash: ${hash}\n  addr: ${addr}\n  onchain: ${live} | cbor: ${match} | utxos: ${u}\n`);
