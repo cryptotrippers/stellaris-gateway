@@ -22,6 +22,7 @@ import {
 } from "@/lib/governance-outcome.shared";
 import { getEligibleWeights } from "@/lib/governance-eligibility.functions";
 import { getMyRoles } from "@/lib/asset-vaults.functions";
+import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { finalizeProposal, recordProposalExecution } from "@/lib/governance-vault.functions";
 import type { TxChainTime } from "@/lib/governance-chain.functions";
 

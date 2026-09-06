@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, ExternalLink, Loader2, ShieldCheck, Wallet } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
+import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { Badge } from "@/components/ui/StatusBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyRoles, listAssetVaults, registerAssetVault } from "@/lib/asset-vaults.functions";

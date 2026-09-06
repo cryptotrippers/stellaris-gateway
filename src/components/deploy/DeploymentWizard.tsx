@@ -15,7 +15,8 @@
  * transaction hash or a Blockfrost read.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import {
+import { useSupabaseUser } from "@/hooks/useSupabaseUser"; useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
