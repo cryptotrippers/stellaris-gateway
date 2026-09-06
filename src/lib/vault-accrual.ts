@@ -187,14 +187,20 @@ export async function buildAccrual(params: {
   if (!ref) {
     builder = builder.attach.SpendingValidator({ type: "PlutusV3", script: script.cbor });
   }
+  // V-05: the Accrue branch does `expect Some(hi) = upper_bound_time(tx)` — a
+  // finite validity window on BOTH ends is mandatory or the script exits
+  // ("validator crashed / exited prematurely"). The lower bound anchors the
+  // fee clock; the upper bound just needs to be finite and >= `settledAt`.
+  // ~15 minutes leaves room to collect signatures and submit. Any future
+  // SetFee / ClaimFee builder must set both bounds too.
   builder = builder
     .pay.ToContract(
       script.address,
       { kind: "inline", value: nextDatum },
       { lovelace: currentLovelace + params.amountLovelace },
     )
-    // Required: the fee branch rejects an accrual without a finite lower bound.
-    .validFrom(settledAt);
+    .validFrom(settledAt)
+    .validTo(settledAt + 15 * 60_000);
   for (const s of signers) builder = builder.addSignerKey(s);
 
   const completed = await builder.complete();
