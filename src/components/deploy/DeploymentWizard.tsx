@@ -16,6 +16,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
@@ -79,7 +80,13 @@ interface Derived {
 
 export function DeploymentWizard() {
   const wallet = useWallet();
-  const rolesQ = useQuery({ queryKey: ["my-roles"], queryFn: () => getMyRoles(), retry: 0 });
+  const { user } = useSupabaseUser();
+  const rolesQ = useQuery({
+    queryKey: ["my-roles"],
+    queryFn: () => getMyRoles(),
+    retry: 0,
+    enabled: Boolean(user),
+  });
   const vaultsQ = useQuery({ queryKey: ["asset-vaults"], queryFn: () => listAssetVaults() });
 
   const [assets, setAssets] = useState<AssetLite[] | null>(null);
