@@ -75,10 +75,12 @@ function approvalReason(
 function OperatorConsole() {
   const preselect = Route.useSearch().asset ?? "";
 
+  const { user } = useSupabaseUser();
   const rolesQ = useQuery({
     queryKey: ["my-roles"],
     queryFn: () => getMyRoles(),
     retry: 0,
+    enabled: Boolean(user),
   });
 
   const vaultsQ = useQuery({

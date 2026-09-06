@@ -416,11 +416,13 @@ function FinaliseCard({ proposal }: { proposal: ProposalRow }) {
   const queryClient = useQueryClient();
   const [result, setResult] = useState<{ ok: boolean; reason: string } | null>(null);
 
+  const { user } = useSupabaseUser();
   const rolesQ = useQuery({
     queryKey: ["my-roles"],
     queryFn: () => getMyRoles(),
     staleTime: 60_000,
     retry: false,
+    enabled: Boolean(user),
   });
   const roles = rolesQ.data?.roles ?? [];
   const canFinalise = roles.includes("operator") || roles.includes("admin");
@@ -479,11 +481,13 @@ function ExecuteCard({ proposal }: { proposal: ProposalRow }) {
   const [txHash, setTxHash] = useState("");
   const [result, setResult] = useState<{ ok: boolean; reason: string } | null>(null);
 
+  const { user } = useSupabaseUser();
   const rolesQ = useQuery({
     queryKey: ["my-roles"],
     queryFn: () => getMyRoles(),
     staleTime: 60_000,
     retry: false,
+    enabled: Boolean(user),
   });
   const roles = rolesQ.data?.roles ?? [];
   const isAdmin = roles.includes("admin");

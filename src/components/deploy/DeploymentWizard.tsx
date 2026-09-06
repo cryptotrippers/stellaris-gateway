@@ -80,7 +80,13 @@ interface Derived {
 
 export function DeploymentWizard() {
   const wallet = useWallet();
-  const rolesQ = useQuery({ queryKey: ["my-roles"], queryFn: () => getMyRoles(), retry: 0 });
+  const { user } = useSupabaseUser();
+  const rolesQ = useQuery({
+    queryKey: ["my-roles"],
+    queryFn: () => getMyRoles(),
+    retry: 0,
+    enabled: Boolean(user),
+  });
   const vaultsQ = useQuery({ queryKey: ["asset-vaults"], queryFn: () => listAssetVaults() });
 
   const [assets, setAssets] = useState<AssetLite[] | null>(null);
