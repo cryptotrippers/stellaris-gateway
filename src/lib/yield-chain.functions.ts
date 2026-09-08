@@ -165,6 +165,106 @@ export const getVaultChainHistory = createServerFn({ method: "GET" })
   });
 
 /**
+ * Verify that a transaction really is the fee change a proposal authorised.
+ *
+ * A `SetFee` transaction spends and recreates the vault state at the same
+ * address, writes exactly the approved rate, moves no lovelace, does not touch
+ * the epoch, and may only grow the share supply by the treasury's fee
+ * settlement. Anything else is not this proposal's execution.
+ */
+export const verifySetFeeTx = createServerFn({ method: "GET" })
+  .inputValidator((data: { txHash: string; address: string; expectedFeeBps: number }) => {
+    if (!TX_HASH_RE.test(data?.txHash ?? "")) throw new Error("Invalid transaction hash");
+    if (!BECH32_ADDRESS_RE.test(data?.address ?? "")) {
+      throw new Error("A valid bech32 vault address is required");
+    }
+    const feeBps = Number(data?.expectedFeeBps);
+    if (!Number.isInteger(feeBps) || feeBps < 0 || feeBps > 500) {
+      throw new Error("The approved fee must be a whole number between 0 and 500 bps");
+    }
+    return { txHash: data.txHash, address: data.address, expectedFeeBps: feeBps };
+  })
+  .handler(
+    async ({
+      data,
+    }): Promise<{
+      ok: boolean;
+      reason: string;
+      feeBpsBefore: number | null;
+      feeBpsAfter: number | null;
+      feeSharesMinted: string | null;
+      epoch: number | null;
+      blockTime: number | null;
+    }> => {
+      const fail = (reason: string, after?: VaultStateDatum | null, before?: VaultStateDatum) => ({
+        ok: false,
+        reason,
+        feeBpsBefore: before?.feeBps ?? null,
+        feeBpsAfter: after?.feeBps ?? null,
+        feeSharesMinted: null,
+        epoch: after?.epoch ?? null,
+        blockTime: null,
+      });
+
+      const { bfGet } = await import("./blockfrost-fetch.server");
+      const detail = await bfGet<BfTxUtxos>(`/txs/${data.txHash}/utxos`);
+      if (!detail) return fail("Transaction not found on chain.");
+
+      const before = detail.inputs
+        .filter((i) => i.address === data.address)
+        .map((i) => readStateDatum(i.inline_datum))
+        .find((s): s is VaultStateDatum => s !== null);
+
+      const after = detail.outputs
+        .filter((o) => o.address === data.address)
+        .map((o) => readStateDatum(o.inline_datum))
+        .find((s): s is VaultStateDatum => s !== null);
+
+      if (!before || !after) {
+        return fail("This transaction does not spend and recreate the vault state at that address.");
+      }
+      if (after.feeBps !== data.expectedFeeBps) {
+        return fail(
+          `Fee mismatch: the proposal approved ${data.expectedFeeBps} bps but this transaction set ${after.feeBps} bps.`,
+          after,
+          before,
+        );
+      }
+      if (after.feeBps === before.feeBps) {
+        return fail("The management fee did not change in this transaction.", after, before);
+      }
+      if (after.epoch !== before.epoch) {
+        return fail("The vault epoch advanced — this is an accrual, not a fee change.", after, before);
+      }
+      if (BigInt(after.totalAssets) !== BigInt(before.totalAssets)) {
+        return fail("Vault assets moved — a fee change may not move money.", after, before);
+      }
+
+      const mintedShares = BigInt(after.totalShares) - BigInt(before.totalShares);
+      const mintedTreasury = BigInt(after.treasuryShares) - BigInt(before.treasuryShares);
+      if (mintedShares < 0n || mintedShares !== mintedTreasury) {
+        return fail(
+          "Share supply moved by something other than the treasury's fee settlement.",
+          after,
+          before,
+        );
+      }
+
+      const tx = await bfGet<{ block_time: number; block_height: number }>(`/txs/${data.txHash}`);
+
+      return {
+        ok: true,
+        reason: "Verified on chain.",
+        feeBpsBefore: before.feeBps,
+        feeBpsAfter: after.feeBps,
+        feeSharesMinted: mintedShares.toString(),
+        epoch: after.epoch,
+        blockTime: tx?.block_time ?? null,
+      };
+    },
+  );
+
+/**
  * Verify that a transaction really is the accrual a proposal authorised.
  * Governance execution is only ever recorded off the back of this check —
  * the client never asserts that a proposal was executed.

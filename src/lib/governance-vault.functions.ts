@@ -293,7 +293,11 @@ export const recordProposalExecution = createServerFn({ method: "POST" })
       return { ok: true, reason: `Asset "${String(created)}" created and proposal executed.` };
     }
 
-    // --- Apply the approved management fee ---------------------------------
+    // --- Apply the approved management fee on chain ------------------------
+    // A fee change IS a Cardano transaction (`SetFee` on the yield vault): it
+    // settles the fee owed under the old rate and writes the new rate into the
+    // vault's state datum. Nothing is recorded until that transaction is
+    // verified against the vault address, and the hash is stored as proof.
     if (row.kind === "set_fee") {
       await requireRole(context.supabase, context.userId, "operator");
       if (!row.asset_id) return { ok: false, reason: "This proposal names no asset." };
@@ -306,18 +310,38 @@ export const recordProposalExecution = createServerFn({ method: "POST" })
       if (!BECH32_ADDRESS_RE.test(treasuryAddress)) {
         return { ok: false, reason: "The approved treasury address is not a valid address." };
       }
+      if (!data.txHash) {
+        return {
+          ok: false,
+          reason: "A signed fee-change transaction is required before this can be executed.",
+        };
+      }
 
       const { data: feeVault, error: fvErr } = await context.supabase
         .from("asset_vaults")
-        .select("vault_version, network")
+        .select("script_address, vault_version, network")
         .eq("asset_id", row.asset_id)
         .order("vault_version", { ascending: false })
         .limit(1)
         .maybeSingle();
       if (fvErr) throw new Error(fvErr.message);
-      if (!feeVault) {
+      if (!feeVault || !BECH32_ADDRESS_RE.test(feeVault.script_address as string)) {
         return { ok: false, reason: "No bootstrapped vault is registered for this asset." };
       }
+
+      const { verifySetFeeTx } = await import("./yield-chain.functions");
+      const feeCheck = await verifySetFeeTx({
+        data: {
+          txHash: data.txHash,
+          address: feeVault.script_address as string,
+          expectedFeeBps: feeBps,
+        },
+      });
+      if (!feeCheck.ok) return { ok: false, reason: feeCheck.reason };
+
+      const feeBlockTimeIso = feeCheck.blockTime
+        ? new Date(feeCheck.blockTime * 1000).toISOString()
+        : new Date().toISOString();
 
       const { insertFeeSchedule } = await import("./asset-vaults.shared");
       await insertFeeSchedule(context.supabase, {
@@ -326,17 +350,25 @@ export const recordProposalExecution = createServerFn({ method: "POST" })
         network: (feeVault.network as string) ?? "preprod",
         feeBps,
         treasuryAddress,
+        setTxHash: data.txHash,
         proposalId: row.id,
       });
 
-      // Service-role only RPC; the operator check above already gated it.
-      const { supabaseAdmin: admin } = await import("@/integrations/supabase/client.server");
-      const { error: markErr } = await admin.rpc("mark_proposal_executed_offchain", {
-        _proposal_id: row.id,
-        _user_id: context.userId,
-      } as never);
-      if (markErr) return { ok: false, reason: markErr.message };
-      return { ok: true, reason: "New fee schedule recorded and proposal executed." };
+      const { error: feeUpdErr } = await context.supabase
+        .from("governance_proposals")
+        .update({
+          status: "executed",
+          executed_tx_hash: data.txHash,
+          executed_at: feeBlockTimeIso,
+          executed_epoch: feeCheck.epoch,
+        })
+        .eq("id", row.id);
+      if (feeUpdErr) throw new Error(feeUpdErr.message);
+
+      return {
+        ok: true,
+        reason: `Fee change verified on chain — the vault now charges ${(feeBps / 100).toFixed(2)}% / yr.`,
+      };
     }
 
     // --- Everything else is an on-chain accrual ----------------------------

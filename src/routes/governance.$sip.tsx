@@ -24,6 +24,7 @@ import { getEligibleWeights } from "@/lib/governance-eligibility.functions";
 import { getMyRoles } from "@/lib/asset-vaults.functions";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { finalizeProposal, recordProposalExecution } from "@/lib/governance-vault.functions";
+import { SetFeeExecuteCard } from "@/components/governance/SetFeeExecuteCard";
 import type { TxChainTime } from "@/lib/governance-chain.functions";
 
 export const Route = createFileRoute("/governance/$sip")({
@@ -520,6 +521,11 @@ function ExecuteCard({ proposal }: { proposal: ProposalRow }) {
           This proposal has passed and is awaiting execution by{" "}
           {proposal.kind === "fund_asset" ? "an administrator" : "an operator"}.
         </p>
+      ) : proposal.kind === "set_fee" ? (
+        <SetFeeExecuteCard
+          proposal={proposal}
+          onExecuted={() => void queryClient.invalidateQueries()}
+        />
       ) : (
         <>
           <p className="mt-2 text-xs text-muted-foreground">
