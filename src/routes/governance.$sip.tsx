@@ -520,6 +520,11 @@ function ExecuteCard({ proposal }: { proposal: ProposalRow }) {
           This proposal has passed and is awaiting execution by{" "}
           {proposal.kind === "fund_asset" ? "an administrator" : "an operator"}.
         </p>
+      ) : proposal.kind === "set_fee" ? (
+        <SetFeeExecuteCard
+          proposal={proposal}
+          onExecuted={() => void queryClient.invalidateQueries()}
+        />
       ) : (
         <>
           <p className="mt-2 text-xs text-muted-foreground">
