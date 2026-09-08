@@ -24,6 +24,7 @@ import { getEligibleWeights } from "@/lib/governance-eligibility.functions";
 import { getMyRoles } from "@/lib/asset-vaults.functions";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { finalizeProposal, recordProposalExecution } from "@/lib/governance-vault.functions";
+import { SetFeeExecuteCard } from "@/components/governance/SetFeeExecuteCard";
 import type { TxChainTime } from "@/lib/governance-chain.functions";
 
 export const Route = createFileRoute("/governance/$sip")({
