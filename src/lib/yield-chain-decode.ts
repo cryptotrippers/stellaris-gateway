@@ -116,7 +116,7 @@ type LucidDataMod = {
 /**
  * AUDIT.md O-02: the single writer for the yield-vault's State datum
  * (constructor index 1). Previously `vault-bootstrap.ts`, `vault-accrual.ts`
- * and `yield-position.ts` each hand-rolled this 11-field constructor
+ * and `yield-position.ts` each hand-rolled this 13-field constructor
  * independently; a field written in the wrong position or CBOR type produces
  * a UTxO the validator can never spend, with no build-time error to warn
  * anyone. Every writer must go through this function so its output always
