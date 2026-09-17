@@ -139,6 +139,13 @@ export function YieldVaultActionsCard({ assetId }: { assetId: string }) {
             <span className="tabular-nums text-foreground">{view.state.treasuryShares}</span>. Your
             redeemable value already reflects the fee settled so far; fee accrued since the last
             settlement is charged at the next accrual.
+            <br />
+            Deposit fee{" "}
+            <span className="text-foreground">{(view.state.entryFeeBps / 100).toFixed(2)}%</span>,
+            withdrawal fee{" "}
+            <span className="text-foreground">{(view.state.exitFeeBps / 100).toFixed(2)}%</span> — both
+            stay inside the vault as treasury shares and can only be changed by a governance-signed
+            fee change.
           </div>
 
 
