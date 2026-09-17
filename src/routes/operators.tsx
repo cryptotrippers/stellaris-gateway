@@ -258,6 +258,8 @@ function OperatorConsole() {
           vaultsQ.refetch();
         }}
       />
+
+      <ClaimTreasuryCard vaults={vaultsQ.data ?? []} disabled={!canBootstrap} />
     </AppShell>
 
 
