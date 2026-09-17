@@ -12,12 +12,18 @@
  */
 import { LUCID_NETWORK } from "./network";
 
-/** Yield vault instance version. Bumping this mints a fresh vault family. */
-export const YIELD_VAULT_VERSION = 3n;
+/**
+ * Yield vault instance version. Bumping this mints a fresh vault family.
+ *
+ * v4 (Stage 7 — revenue): the State datum carries `entry_fee_bps` and
+ * `exit_fee_bps` alongside the management `fee_bps`, and `SetFee` moves all
+ * three. v3 vaults stay spendable; depositors exit v3 and re-enter v4.
+ */
+export const YIELD_VAULT_VERSION = 4n;
 
 /** Hash of the *unapplied* yield_vault validator from plutus.json. */
 export const YIELD_BLUEPRINT_HASH =
-  "e79ee0c4c5d5e0e29d095d616046cbcb9554ab6ba64b428236e11875";
+  "53998fe4571a7a5ae6880e079204e0572e4f3d70a250c0b8d777d37d";
 
 /** Compiled CBOR of the *unapplied* yield_vault validator (PlutusV3). */
 import yieldBlueprintSource from "../../contracts/vault/plutus.json?raw";
