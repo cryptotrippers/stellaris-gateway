@@ -28,6 +28,13 @@ export function SetFeeExecuteCard({
   const [error, setError] = useState<string | null>(null);
 
   const feeBps = Number(proposal.params?.["fee_bps"] ?? NaN);
+  const optionalBps = (raw: unknown): number | undefined => {
+    if (raw === undefined || raw === null || raw === "") return undefined;
+    const n = Number(raw);
+    return Number.isInteger(n) ? n : undefined;
+  };
+  const entryFeeBps = optionalBps(proposal.params?.["entry_fee_bps"]);
+  const exitFeeBps = optionalBps(proposal.params?.["exit_fee_bps"]);
   const assetId = proposal.asset_id ?? "";
 
   const vaultQ = useQuery({
