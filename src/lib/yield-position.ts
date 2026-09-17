@@ -350,6 +350,8 @@ export interface WithdrawResult {
   address: string;
   burnedShares: string;
   paidLovelace: string;
+  /** Lovelace withheld as the vault's exit fee (0 when the rate is 0). */
+  exitFeeLovelace: string;
   remainingShares: string;
 }
 
@@ -490,6 +492,7 @@ export async function withdrawFromYieldVault(params: {
     address: script.address,
     burnedShares: shares.toString(),
     paidLovelace: paid.toString(),
+    exitFeeLovelace: exitFee.toString(),
     remainingShares: remainingShares.toString(),
   };
 }
