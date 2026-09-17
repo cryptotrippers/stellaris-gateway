@@ -68,6 +68,10 @@ export interface VaultStateDatum {
   lastFeeTime: string;
   /** Stage 6: receipt minting policy id bound to this vault (28-byte hex). */
   receiptPolicy: string;
+  /** Stage 7: entry fee in basis points, withheld from each deposit. */
+  entryFeeBps: number;
+  /** Stage 7: exit fee in basis points, withheld from each redemption. */
+  exitFeeBps: number;
 }
 
 export interface VaultPositionDatum {
