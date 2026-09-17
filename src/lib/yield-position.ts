@@ -235,6 +235,10 @@ export interface DepositResult {
   txHash: string;
   address: string;
   depositLovelace: string;
+  /** Lovelace withheld as the vault's entry fee (0 when the rate is 0). */
+  entryFeeLovelace: string;
+  /** Deposit minus the entry fee — what the depositor's shares are minted on. */
+  netDepositLovelace: string;
   mintedShares: string;
   sharePrice: number;
 }
