@@ -173,17 +173,39 @@ export const getVaultChainHistory = createServerFn({ method: "GET" })
  * settlement. Anything else is not this proposal's execution.
  */
 export const verifySetFeeTx = createServerFn({ method: "GET" })
-  .inputValidator((data: { txHash: string; address: string; expectedFeeBps: number }) => {
-    if (!TX_HASH_RE.test(data?.txHash ?? "")) throw new Error("Invalid transaction hash");
-    if (!BECH32_ADDRESS_RE.test(data?.address ?? "")) {
-      throw new Error("A valid bech32 vault address is required");
-    }
-    const feeBps = Number(data?.expectedFeeBps);
-    if (!Number.isInteger(feeBps) || feeBps < 0 || feeBps > 500) {
-      throw new Error("The approved fee must be a whole number between 0 and 500 bps");
-    }
-    return { txHash: data.txHash, address: data.address, expectedFeeBps: feeBps };
-  })
+  .inputValidator(
+    (data: {
+      txHash: string;
+      address: string;
+      expectedFeeBps: number;
+      expectedEntryFeeBps?: number;
+      expectedExitFeeBps?: number;
+    }) => {
+      if (!TX_HASH_RE.test(data?.txHash ?? "")) throw new Error("Invalid transaction hash");
+      if (!BECH32_ADDRESS_RE.test(data?.address ?? "")) {
+        throw new Error("A valid bech32 vault address is required");
+      }
+      const feeBps = Number(data?.expectedFeeBps);
+      if (!Number.isInteger(feeBps) || feeBps < 0 || feeBps > 500) {
+        throw new Error("The approved fee must be a whole number between 0 and 500 bps");
+      }
+      const actionBps = (value: unknown, label: string): number | null => {
+        if (value === undefined || value === null) return null;
+        const n = Number(value);
+        if (!Number.isInteger(n) || n < 0 || n > 200) {
+          throw new Error(`The approved ${label} must be a whole number between 0 and 200 bps`);
+        }
+        return n;
+      };
+      return {
+        txHash: data.txHash,
+        address: data.address,
+        expectedFeeBps: feeBps,
+        expectedEntryFeeBps: actionBps(data.expectedEntryFeeBps, "deposit fee"),
+        expectedExitFeeBps: actionBps(data.expectedExitFeeBps, "withdrawal fee"),
+      };
+    },
+  )
   .handler(
     async ({
       data,
@@ -192,6 +214,10 @@ export const verifySetFeeTx = createServerFn({ method: "GET" })
       reason: string;
       feeBpsBefore: number | null;
       feeBpsAfter: number | null;
+      entryFeeBpsBefore: number | null;
+      entryFeeBpsAfter: number | null;
+      exitFeeBpsBefore: number | null;
+      exitFeeBpsAfter: number | null;
       feeSharesMinted: string | null;
       epoch: number | null;
       blockTime: number | null;
@@ -201,6 +227,10 @@ export const verifySetFeeTx = createServerFn({ method: "GET" })
         reason,
         feeBpsBefore: before?.feeBps ?? null,
         feeBpsAfter: after?.feeBps ?? null,
+        entryFeeBpsBefore: before?.entryFeeBps ?? null,
+        entryFeeBpsAfter: after?.entryFeeBps ?? null,
+        exitFeeBpsBefore: before?.exitFeeBps ?? null,
+        exitFeeBpsAfter: after?.exitFeeBps ?? null,
         feeSharesMinted: null,
         epoch: after?.epoch ?? null,
         blockTime: null,
@@ -230,8 +260,29 @@ export const verifySetFeeTx = createServerFn({ method: "GET" })
           before,
         );
       }
-      if (after.feeBps === before.feeBps) {
-        return fail("The management fee did not change in this transaction.", after, before);
+      if (
+        data.expectedEntryFeeBps !== null &&
+        after.entryFeeBps !== data.expectedEntryFeeBps
+      ) {
+        return fail(
+          `Deposit fee mismatch: the proposal approved ${data.expectedEntryFeeBps} bps but this transaction set ${after.entryFeeBps} bps.`,
+          after,
+          before,
+        );
+      }
+      if (data.expectedExitFeeBps !== null && after.exitFeeBps !== data.expectedExitFeeBps) {
+        return fail(
+          `Withdrawal fee mismatch: the proposal approved ${data.expectedExitFeeBps} bps but this transaction set ${after.exitFeeBps} bps.`,
+          after,
+          before,
+        );
+      }
+      if (
+        after.feeBps === before.feeBps &&
+        after.entryFeeBps === before.entryFeeBps &&
+        after.exitFeeBps === before.exitFeeBps
+      ) {
+        return fail("No fee rate changed in this transaction.", after, before);
       }
       if (after.epoch !== before.epoch) {
         return fail("The vault epoch advanced — this is an accrual, not a fee change.", after, before);
@@ -257,6 +308,10 @@ export const verifySetFeeTx = createServerFn({ method: "GET" })
         reason: "Verified on chain.",
         feeBpsBefore: before.feeBps,
         feeBpsAfter: after.feeBps,
+        entryFeeBpsBefore: before.entryFeeBps,
+        entryFeeBpsAfter: after.entryFeeBps,
+        exitFeeBpsBefore: before.exitFeeBps,
+        exitFeeBpsAfter: after.exitFeeBps,
         feeSharesMinted: mintedShares.toString(),
         epoch: after.epoch,
         blockTime: tx?.block_time ?? null,

@@ -17,8 +17,29 @@ export const MS_PER_YEAR = 31_536_000_000n;
 /** Hard on-chain cap on the annual management fee: 5.00%/yr. */
 export const MAX_FEE_BPS = 500;
 
+/** Stage 7 caps, mirroring `stellaris/shares`: 2.00% per action. */
+export const MAX_ENTRY_FEE_BPS = 200;
+export const MAX_EXIT_FEE_BPS = 200;
+
 export function feeBpsOk(feeBps: number): boolean {
   return Number.isInteger(feeBps) && feeBps >= 0 && feeBps <= MAX_FEE_BPS;
+}
+
+export function entryFeeBpsOk(bps: number): boolean {
+  return Number.isInteger(bps) && bps >= 0 && bps <= MAX_ENTRY_FEE_BPS;
+}
+
+export function exitFeeBpsOk(bps: number): boolean {
+  return Number.isInteger(bps) && bps >= 0 && bps <= MAX_EXIT_FEE_BPS;
+}
+
+/**
+ * Floored basis points of an amount — the exact `shares.bps_of` the validator
+ * applies to a deposit (entry fee) or a gross redemption (exit fee).
+ */
+export function bpsOf(amount: bigint, bps: number): bigint {
+  if (amount <= 0n || bps <= 0) return 0n;
+  return (amount * BigInt(bps)) / 10_000n;
 }
 
 /** Lovelace of fee owed for `elapsedMs`, floored, clamped below total assets. */

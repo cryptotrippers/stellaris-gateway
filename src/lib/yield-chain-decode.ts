@@ -47,7 +47,8 @@ export interface BfTxUtxos {
 //   Position { owner, shares }                                 -> constructor 0
 //   State { total_shares, total_assets, epoch, operators,
 //           threshold, paused, fee_bps, treasury,
-//           treasury_shares, last_fee_time, receipt_policy }    -> constructor 1
+//           treasury_shares, last_fee_time, receipt_policy,
+//           entry_fee_bps, exit_fee_bps }                        -> constructor 1
 // ---------------------------------------------------------------------------
 
 export interface VaultStateDatum {
@@ -67,6 +68,10 @@ export interface VaultStateDatum {
   lastFeeTime: string;
   /** Stage 6: receipt minting policy id bound to this vault (28-byte hex). */
   receiptPolicy: string;
+  /** Stage 7: entry fee in basis points, withheld from each deposit. */
+  entryFeeBps: number;
+  /** Stage 7: exit fee in basis points, withheld from each redemption. */
+  exitFeeBps: number;
 }
 
 export interface VaultPositionDatum {
@@ -80,7 +85,7 @@ export function lovelaceOf(utxo: { amount: BfAmount[] }): bigint {
 }
 
 export function decodeState(d: PlutusData): VaultStateDatum | null {
-  if (d.kind !== "constr" || d.index !== 1 || d.fields.length !== 11) return null;
+  if (d.kind !== "constr" || d.index !== 1 || d.fields.length !== 13) return null;
   return {
     totalShares: asInt(d.fields[0]).toString(),
     totalAssets: asInt(d.fields[1]).toString(),
@@ -93,6 +98,8 @@ export function decodeState(d: PlutusData): VaultStateDatum | null {
     treasuryShares: asInt(d.fields[8]).toString(),
     lastFeeTime: asInt(d.fields[9]).toString(),
     receiptPolicy: asBytes(d.fields[10]),
+    entryFeeBps: Number(asInt(d.fields[11])),
+    exitFeeBps: Number(asInt(d.fields[12])),
   };
 }
 
@@ -109,7 +116,7 @@ type LucidDataMod = {
 /**
  * AUDIT.md O-02: the single writer for the yield-vault's State datum
  * (constructor index 1). Previously `vault-bootstrap.ts`, `vault-accrual.ts`
- * and `yield-position.ts` each hand-rolled this 11-field constructor
+ * and `yield-position.ts` each hand-rolled this 13-field constructor
  * independently; a field written in the wrong position or CBOR type produces
  * a UTxO the validator can never spend, with no build-time error to warn
  * anyone. Every writer must go through this function so its output always
@@ -131,6 +138,8 @@ export function encodeStateDatum(lucidMod: unknown, state: VaultStateDatum): str
       BigInt(state.treasuryShares),
       BigInt(state.lastFeeTime),
       state.receiptPolicy,
+      BigInt(state.entryFeeBps),
+      BigInt(state.exitFeeBps),
     ]),
   );
 }

@@ -139,6 +139,13 @@ export function YieldVaultActionsCard({ assetId }: { assetId: string }) {
             <span className="tabular-nums text-foreground">{view.state.treasuryShares}</span>. Your
             redeemable value already reflects the fee settled so far; fee accrued since the last
             settlement is charged at the next accrual.
+            <br />
+            Deposit fee{" "}
+            <span className="text-foreground">{(view.state.entryFeeBps / 100).toFixed(2)}%</span>,
+            withdrawal fee{" "}
+            <span className="text-foreground">{(view.state.exitFeeBps / 100).toFixed(2)}%</span> — both
+            stay inside the vault as treasury shares and can only be changed by a governance-signed
+            fee change.
           </div>
 
 
@@ -166,6 +173,20 @@ export function YieldVaultActionsCard({ assetId }: { assetId: string }) {
               Minimum {minAda} ADA{isBootstrapDeposit ? " for the first deposit into this vault" : ""}.
               Shares are minted at the current price; the validator re-derives every figure.
             </p>
+            {view.state.entryFeeBps > 0 && Number(amount) > 0 && (
+              <p className="text-[11px] text-muted-foreground">
+                Of {Number(amount).toLocaleString()} ADA, a{" "}
+                {(view.state.entryFeeBps / 100).toFixed(2)}% deposit fee of{" "}
+                <span className="tabular-nums text-foreground">
+                  {((Number(amount) * view.state.entryFeeBps) / 10_000).toFixed(6)} ADA
+                </span>{" "}
+                is withheld; shares are minted on the remaining{" "}
+                <span className="tabular-nums text-foreground">
+                  {(Number(amount) * (1 - view.state.entryFeeBps / 10_000)).toFixed(6)} ADA
+                </span>
+                .
+              </p>
+            )}
           </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-border pt-4">

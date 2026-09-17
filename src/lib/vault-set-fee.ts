@@ -34,6 +34,10 @@ const REDEEMER_SET_FEE = 5;
 /** The validator refuses a fee anchor reaching back further than 90 days. */
 const MAX_SETTLE_WINDOW_MS = 7_776_000_000;
 
+/** Stage 7 caps, mirroring `stellaris/shares`. */
+export const MAX_ENTRY_FEE_BPS = 200;
+export const MAX_EXIT_FEE_BPS = 200;
+
 export interface SetFeeDraft {
   /** Unsigned (or partially signed) transaction CBOR. */
   txCbor: string;
@@ -42,6 +46,10 @@ export interface SetFeeDraft {
   address: string;
   feeBpsBefore: number;
   feeBpsAfter: number;
+  entryFeeBpsBefore: number;
+  entryFeeBpsAfter: number;
+  exitFeeBpsBefore: number;
+  exitFeeBpsAfter: number;
   /** Lovelace of management fee owed under the OLD rate, settled here. */
   feeAssets: string;
   /** Shares minted to the treasury to settle that fee. */
@@ -61,10 +69,15 @@ export interface SetFeeDraft {
  * Build the fee-change transaction and partially sign it with the connected
  * wallet. `signers` must contain at least the vault's threshold of committee
  * members — the validator counts `extra_signatories`.
+ *
+ * `entryFeeBps` / `exitFeeBps` default to the vault's current rates, so an
+ * existing caller that only changes the management fee keeps working.
  */
 export async function buildSetFee(params: {
   assetId: string;
   feeBps: number;
+  entryFeeBps?: number;
+  exitFeeBps?: number;
   signers?: string[];
   registryAddress?: string | null;
 }): Promise<SetFeeDraft> {
@@ -72,6 +85,18 @@ export async function buildSetFee(params: {
   if (!pre.ok) throw new Error(pre.reason);
   if (!feeBpsOk(params.feeBps)) {
     throw new Error(`The fee must be a whole number between 0 and ${MAX_FEE_BPS} basis points.`);
+  }
+  const rateOk = (v: number | undefined, cap: number) =>
+    v === undefined || (Number.isInteger(v) && v >= 0 && v <= cap);
+  if (!rateOk(params.entryFeeBps, MAX_ENTRY_FEE_BPS)) {
+    throw new Error(
+      `The deposit fee must be a whole number between 0 and ${MAX_ENTRY_FEE_BPS} basis points.`,
+    );
+  }
+  if (!rateOk(params.exitFeeBps, MAX_EXIT_FEE_BPS)) {
+    throw new Error(
+      `The withdrawal fee must be a whole number between 0 and ${MAX_EXIT_FEE_BPS} basis points.`,
+    );
   }
 
   const { lucid, lucidMod } = await initLucidWithWallet();
@@ -101,9 +126,15 @@ export async function buildSetFee(params: {
     throw new Error("This vault has no state UTxO yet — bootstrap it before changing the fee.");
   }
 
-  if (state.feeBps === params.feeBps) {
+  const entryFeeAfter = params.entryFeeBps ?? state.entryFeeBps;
+  const exitFeeAfter = params.exitFeeBps ?? state.exitFeeBps;
+  if (
+    state.feeBps === params.feeBps &&
+    state.entryFeeBps === entryFeeAfter &&
+    state.exitFeeBps === exitFeeAfter
+  ) {
     throw new Error(
-      `This vault's fee is already ${(params.feeBps / 100).toFixed(2)}% / yr — the validator rejects a no-op change.`,
+      "These are already this vault's fee terms — the validator rejects a no-op change.",
     );
   }
 
@@ -160,8 +191,16 @@ export async function buildSetFee(params: {
     treasuryShares: fee.treasurySharesAfter.toString(),
     lastFeeTime: settledAt.toString(),
     receiptPolicy: state.receiptPolicy,
+    entryFeeBps: entryFeeAfter,
+    exitFeeBps: exitFeeAfter,
   });
-  const redeemer = Data.to(new Constr(REDEEMER_SET_FEE, [BigInt(params.feeBps)]));
+  const redeemer = Data.to(
+    new Constr(REDEEMER_SET_FEE, [
+      BigInt(params.feeBps),
+      BigInt(entryFeeAfter),
+      BigInt(exitFeeAfter),
+    ]),
+  );
 
   const currentLovelace = stateUtxo.assets["lovelace"] ?? 0n;
 
@@ -201,6 +240,10 @@ export async function buildSetFee(params: {
     address: script.address,
     feeBpsBefore: state.feeBps,
     feeBpsAfter: params.feeBps,
+    entryFeeBpsBefore: state.entryFeeBps,
+    entryFeeBpsAfter: entryFeeAfter,
+    exitFeeBpsBefore: state.exitFeeBps,
+    exitFeeBpsAfter: exitFeeAfter,
     feeAssets: fee.feeAssets.toString(),
     feeSharesMinted: fee.feeShares.toString(),
     totalSharesBefore: totalShares.toString(),

@@ -184,6 +184,46 @@ pub fn after_fee(acc: VaultAccounting, fee_shares: Int) -> VaultAccounting {
   VaultAccounting { ..acc, total_shares: acc.total_shares + fee_shares }
 }
 
+// ------------------------------------------------------------------
+// Entry / exit fees — charged per action, settled in treasury shares.
+// ------------------------------------------------------------------
+
+/// Hard cap on the entry (deposit) fee, in basis points (2.00%).
+pub const max_entry_fee_bps: Int = 200
+
+/// Hard cap on the exit (withdrawal) fee, in basis points (2.00%).
+pub const max_exit_fee_bps: Int = 200
+
+/// Is this entry fee setting acceptable?
+pub fn entry_fee_bps_ok(bps: Int) -> Bool {
+  bps >= 0 && bps <= max_entry_fee_bps
+}
+
+/// Is this exit fee setting acceptable?
+pub fn exit_fee_bps_ok(bps: Int) -> Bool {
+  bps >= 0 && bps <= max_exit_fee_bps
+}
+
+/// `bps` basis points of `amount`, floored. Rounding always favours the
+/// depositor: a fee that rounds to zero is simply not charged.
+pub fn bps_of(amount: Int, bps: Int) -> Int {
+  if amount <= 0 || bps <= 0 {
+    0
+  } else {
+    amount * bps / 10_000
+  }
+}
+
+/// Lovelace taken from a deposit as the entry fee.
+pub fn entry_fee_for(deposit: Int, entry_fee_bps: Int) -> Int {
+  bps_of(deposit, entry_fee_bps)
+}
+
+/// Lovelace withheld from a redemption as the exit fee.
+pub fn exit_fee_for(gross: Int, exit_fee_bps: Int) -> Int {
+  bps_of(gross, exit_fee_bps)
+}
+
 
 // ------------------------------------------------------------------
 // Tests — `aiken check`.
@@ -362,3 +402,50 @@ test empty_vault_accrues_no_fee() {
 
 
 // stage5: management-fee math (fee_assets_for / fee_shares_for / after_fee)
+
+// --- Entry / exit fee math -----------------------------------------
+
+test entry_fee_is_floored_bps() {
+  entry_fee_for(10_000_000, 100) == 100_000 && entry_fee_for(9_999, 100) == 99
+}
+
+test entry_fee_zero_rate_charges_nothing() {
+  entry_fee_for(10_000_000, 0) == 0 && exit_fee_for(10_000_000, 0) == 0
+}
+
+test exit_fee_is_floored_bps() {
+  exit_fee_for(5_000_000, 200) == 100_000
+}
+
+test entry_fee_caps_are_enforced() {
+  entry_fee_bps_ok(0) && entry_fee_bps_ok(max_entry_fee_bps) && !entry_fee_bps_ok(
+    max_entry_fee_bps + 1,
+  ) && !entry_fee_bps_ok(-1)
+}
+
+test exit_fee_caps_are_enforced() {
+  exit_fee_bps_ok(0) && exit_fee_bps_ok(max_exit_fee_bps) && !exit_fee_bps_ok(
+    max_exit_fee_bps + 1,
+  ) && !exit_fee_bps_ok(-1)
+}
+
+test bps_of_ignores_nonpositive_input() {
+  bps_of(0, 200) == 0 && bps_of(-5, 200) == 0 && bps_of(100, -1) == 0
+}
+
+test entry_fee_shares_redeem_to_the_fee() {
+  // A 1% entry fee on a 100 ADA deposit into a 1:1 vault of 100 ADA.
+  let deposit = 100_000_000
+  let fee = entry_fee_for(deposit, 100)
+  let acc = VaultAccounting { total_shares: 100_000_000, total_assets: 100_000_000 }
+  let minted = mint_shares(acc, deposit - fee)
+  let post = VaultAccounting {
+    total_shares: acc.total_shares + minted,
+    total_assets: acc.total_assets + deposit,
+  }
+  let fee_shares = fee_shares_for(post, fee)
+  let total = post.total_shares + fee_shares
+  // Treasury's slice redeems to (at most, and within one unit of) the fee.
+  let value = fee_shares * post.total_assets / total
+  value <= fee && value >= fee - 1
+}

@@ -28,6 +28,13 @@ export function SetFeeExecuteCard({
   const [error, setError] = useState<string | null>(null);
 
   const feeBps = Number(proposal.params?.["fee_bps"] ?? NaN);
+  const optionalBps = (raw: unknown): number | undefined => {
+    if (raw === undefined || raw === null || raw === "") return undefined;
+    const n = Number(raw);
+    return Number.isInteger(n) ? n : undefined;
+  };
+  const entryFeeBps = optionalBps(proposal.params?.["entry_fee_bps"]);
+  const exitFeeBps = optionalBps(proposal.params?.["exit_fee_bps"]);
   const assetId = proposal.asset_id ?? "";
 
   const vaultQ = useQuery({
@@ -55,6 +62,8 @@ export function SetFeeExecuteCard({
       const d = await buildSetFee({
         assetId,
         feeBps,
+        entryFeeBps,
+        exitFeeBps,
         registryAddress: vault?.script_address ?? null,
       });
       setDraft(d);
@@ -103,7 +112,13 @@ export function SetFeeExecuteCard({
 
       <div className="rounded-lg border border-border bg-muted/30 p-3">
         <Row label="Asset" value={assetId} />
-        <Row label="Approved fee" value={formatFeeBps(feeBps)} />
+        <Row label="Approved management fee" value={formatFeeBps(feeBps)} />
+        {entryFeeBps !== undefined && (
+          <Row label="Approved deposit fee" value={`${(entryFeeBps / 100).toFixed(2)}%`} />
+        )}
+        {exitFeeBps !== undefined && (
+          <Row label="Approved withdrawal fee" value={`${(exitFeeBps / 100).toFixed(2)}%`} />
+        )}
         <Row
           label="Vault address"
           value={vault?.script_address ? short(vault.script_address) : "Not registered"}
@@ -135,8 +150,16 @@ export function SetFeeExecuteCard({
 
       {draft && (
         <div className="space-y-3 rounded-lg border border-border p-3">
-          <Row label="Fee before" value={formatFeeBps(draft.feeBpsBefore)} />
-          <Row label="Fee after" value={formatFeeBps(draft.feeBpsAfter)} />
+          <Row label="Management fee before" value={formatFeeBps(draft.feeBpsBefore)} />
+          <Row label="Management fee after" value={formatFeeBps(draft.feeBpsAfter)} />
+          <Row
+            label="Deposit fee"
+            value={`${(draft.entryFeeBpsBefore / 100).toFixed(2)}% → ${(draft.entryFeeBpsAfter / 100).toFixed(2)}%`}
+          />
+          <Row
+            label="Withdrawal fee"
+            value={`${(draft.exitFeeBpsBefore / 100).toFixed(2)}% → ${(draft.exitFeeBpsAfter / 100).toFixed(2)}%`}
+          />
           <Row label="Fee settled now" value={`${lovelaceToAda(draft.feeAssets)} ₳`} />
           <Row label="Treasury shares minted" value={draft.feeSharesMinted} />
           <Row

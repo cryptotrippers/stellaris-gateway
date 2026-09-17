@@ -35,6 +35,7 @@ import {
   type VaultPositionDatum,
   type VaultStateDatum,
 } from "./yield-chain-decode";
+import { bpsOf, feeSharesFor } from "./vault-fees";
 
 /** YieldRedeemer constructor indices — mirrors yield_vault.ak. */
 const REDEEMER_DEPOSIT = 0;
@@ -182,20 +183,6 @@ async function resolveVault(
   };
 }
 
-function encodeState(
-  lucidMod: LucidBits["lucidMod"],
-  state: VaultStateDatum,
-  next: { shares: bigint; assets: bigint; epoch?: number },
-): string {
-  // Deposits and redemptions never touch the fee terms; they are copied
-  // through unchanged so the validator's continuity check passes.
-  return encodeStateDatum(lucidMod, {
-    ...state,
-    totalShares: next.shares.toString(),
-    totalAssets: next.assets.toString(),
-    epoch: next.epoch ?? state.epoch,
-  });
-}
 
 function encodePosition(lucidMod: LucidBits["lucidMod"], owner: string, shares: bigint): string {
   const { Data, Constr } = lucidMod as unknown as {
@@ -235,6 +222,10 @@ export interface DepositResult {
   txHash: string;
   address: string;
   depositLovelace: string;
+  /** Lovelace withheld as the vault's entry fee (0 when the rate is 0). */
+  entryFeeLovelace: string;
+  /** Deposit minus the entry fee — what the depositor's shares are minted on. */
+  netDepositLovelace: string;
   mintedShares: string;
   sharePrice: number;
 }
@@ -272,14 +263,32 @@ export async function depositToYieldVault(params: {
       `A position must hold at least ${Number(MIN_POSITION_VALUE) / 1e6} ADA to satisfy min-ADA.`,
     );
   }
-  const minted = mintShares(state, deposit);
+  // Stage 7: the entry fee is withheld from the deposit. Every lovelace stays
+  // in the vault; the depositor mints against the net amount and the treasury
+  // is minted shares worth the fee, exactly as the validator recomputes.
+  const entryFee = bpsOf(deposit, state.entryFeeBps);
+  const net = deposit - entryFee;
+  if (isBootstrapDeposit && net < MIN_INITIAL_DEPOSIT) {
+    throw new Error(
+      `After the deposit fee, the first deposit must still be at least ${Number(MIN_INITIAL_DEPOSIT) / 1e6} ADA.`,
+    );
+  }
+  const minted = mintShares(state, net);
   if (minted <= 0n) {
     throw new Error("This deposit is too small to mint a share at the current price.");
   }
+  const sharesAfterDepositor = BigInt(state.totalShares) + minted;
+  const assetsAfter = BigInt(state.totalAssets) + deposit;
+  const entryFeeShares = feeSharesFor(
+    { totalShares: sharesAfterDepositor, totalAssets: assetsAfter },
+    entryFee,
+  );
 
-  const nextState = encodeState(lucidMod, state, {
-    shares: BigInt(state.totalShares) + minted,
-    assets: BigInt(state.totalAssets) + deposit,
+  const nextState = encodeStateDatum(lucidMod, {
+    ...state,
+    totalShares: (sharesAfterDepositor + entryFeeShares).toString(),
+    totalAssets: assetsAfter.toString(),
+    treasuryShares: (BigInt(state.treasuryShares) + entryFeeShares).toString(),
   });
   const positionDatum = encodePosition(lucidMod, selfHash, minted);
   const { Data, Constr } = lucidMod as unknown as {
@@ -316,6 +325,8 @@ export async function depositToYieldVault(params: {
     txHash,
     address: script.address,
     depositLovelace: deposit.toString(),
+    entryFeeLovelace: entryFee.toString(),
+    netDepositLovelace: net.toString(),
     mintedShares: minted.toString(),
     sharePrice: priceOf(state),
   };
@@ -326,6 +337,8 @@ export interface WithdrawResult {
   address: string;
   burnedShares: string;
   paidLovelace: string;
+  /** Lovelace withheld as the vault's exit fee (0 when the rate is 0). */
+  exitFeeLovelace: string;
   remainingShares: string;
 }
 
@@ -381,9 +394,14 @@ export async function withdrawFromYieldVault(params: {
   }
   const remainingShares = positionShares - shares;
 
-  // What the validator will allow: paid <= redeem_value(shares).
-  const entitled = redeemValue(state, shares);
-  if (entitled <= 0n) throw new Error("These shares currently redeem to zero lovelace.");
+  // What the validator will allow: paid <= redeem_value(shares) - exit fee.
+  const gross = redeemValue(state, shares);
+  if (gross <= 0n) throw new Error("These shares currently redeem to zero lovelace.");
+  const exitFee = bpsOf(gross, state.exitFeeBps);
+  const entitled = gross - exitFee;
+  if (entitled <= 0n) {
+    throw new Error("After the withdrawal fee these shares redeem to zero lovelace.");
+  }
 
   const remainingPositionLovelace = remainingShares > 0n ? MIN_POSITION_VALUE : 0n;
   const availableToPay =
@@ -400,9 +418,19 @@ export async function withdrawFromYieldVault(params: {
 
   const nextStateLovelace =
     stateLovelace + chosen.lovelace - paid - remainingPositionLovelace;
-  const nextState = encodeState(lucidMod, state, {
-    shares: BigInt(state.totalShares) - shares,
-    assets: BigInt(state.totalAssets) - paid,
+  // Stage 7: the withheld exit fee stays in the vault and is credited to the
+  // treasury as shares at the post-withdrawal price.
+  const sharesAfterBurn = BigInt(state.totalShares) - shares;
+  const assetsAfter = BigInt(state.totalAssets) - paid;
+  const exitFeeShares = feeSharesFor(
+    { totalShares: sharesAfterBurn, totalAssets: assetsAfter },
+    exitFee,
+  );
+  const nextState = encodeStateDatum(lucidMod, {
+    ...state,
+    totalShares: (sharesAfterBurn + exitFeeShares).toString(),
+    totalAssets: assetsAfter.toString(),
+    treasuryShares: (BigInt(state.treasuryShares) + exitFeeShares).toString(),
   });
 
   const { Data, Constr } = lucidMod as unknown as {
@@ -451,6 +479,7 @@ export async function withdrawFromYieldVault(params: {
     address: script.address,
     burnedShares: shares.toString(),
     paidLovelace: paid.toString(),
+    exitFeeLovelace: exitFee.toString(),
     remainingShares: remainingShares.toString(),
   };
 }

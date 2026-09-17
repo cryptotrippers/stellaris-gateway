@@ -137,8 +137,9 @@ export async function bootstrapYieldVault(params: BootstrapParams): Promise<Boot
 
   // State { total_shares, total_assets, epoch, operators, threshold, paused,
   //         fee_bps, treasury, treasury_shares, last_fee_time,
-  //         receipt_policy }
-  // is constructor index 1 of YieldDatum.
+  //         receipt_policy, entry_fee_bps, exit_fee_bps }
+  // is constructor index 1 of YieldDatum. Entry and exit fees start at zero:
+  // only a governance-executed `SetFee` can turn them on.
   const datum = encodeStateDatum(lucidMod, {
     totalShares: "0",
     totalAssets: "0",
@@ -151,6 +152,8 @@ export async function bootstrapYieldVault(params: BootstrapParams): Promise<Boot
     treasuryShares: "0",
     lastFeeTime: lastFeeTime.toString(),
     receiptPolicy: receipt.policyId,
+    entryFeeBps: 0,
+    exitFeeBps: 0,
   });
 
   const lovelace = params.lovelace ?? 5_000_000n;
