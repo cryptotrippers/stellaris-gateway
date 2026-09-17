@@ -183,20 +183,6 @@ async function resolveVault(
   };
 }
 
-function encodeState(
-  lucidMod: LucidBits["lucidMod"],
-  state: VaultStateDatum,
-  next: { shares: bigint; assets: bigint; epoch?: number },
-): string {
-  // Deposits and redemptions never touch the fee terms; they are copied
-  // through unchanged so the validator's continuity check passes.
-  return encodeStateDatum(lucidMod, {
-    ...state,
-    totalShares: next.shares.toString(),
-    totalAssets: next.assets.toString(),
-    epoch: next.epoch ?? state.epoch,
-  });
-}
 
 function encodePosition(lucidMod: LucidBits["lucidMod"], owner: string, shares: bigint): string {
   const { Data, Constr } = lucidMod as unknown as {
