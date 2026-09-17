@@ -18,6 +18,7 @@ import {
 import { cardanoscanAddress, cardanoscanTx, short } from "@/lib/chain-format";
 import { MasterWalletGate, useMasterWallet } from "@/components/admin/MasterWalletGate";
 import { AccrueYieldCard } from "@/components/operators/AccrueYieldCard";
+import { ClaimTreasuryCard } from "@/components/operators/ClaimTreasuryCard";
 import { RebootstrapVaultCard } from "@/components/operators/RebootstrapVaultCard";
 
 
@@ -258,6 +259,8 @@ function OperatorConsole() {
           vaultsQ.refetch();
         }}
       />
+
+      <ClaimTreasuryCard vaults={vaultsQ.data ?? []} disabled={!canBootstrap} />
     </AppShell>
 
 
