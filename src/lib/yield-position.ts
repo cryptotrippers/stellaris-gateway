@@ -272,14 +272,32 @@ export async function depositToYieldVault(params: {
       `A position must hold at least ${Number(MIN_POSITION_VALUE) / 1e6} ADA to satisfy min-ADA.`,
     );
   }
-  const minted = mintShares(state, deposit);
+  // Stage 7: the entry fee is withheld from the deposit. Every lovelace stays
+  // in the vault; the depositor mints against the net amount and the treasury
+  // is minted shares worth the fee, exactly as the validator recomputes.
+  const entryFee = bpsOf(deposit, state.entryFeeBps);
+  const net = deposit - entryFee;
+  if (isBootstrapDeposit && net < MIN_INITIAL_DEPOSIT) {
+    throw new Error(
+      `After the deposit fee, the first deposit must still be at least ${Number(MIN_INITIAL_DEPOSIT) / 1e6} ADA.`,
+    );
+  }
+  const minted = mintShares(state, net);
   if (minted <= 0n) {
     throw new Error("This deposit is too small to mint a share at the current price.");
   }
+  const sharesAfterDepositor = BigInt(state.totalShares) + minted;
+  const assetsAfter = BigInt(state.totalAssets) + deposit;
+  const entryFeeShares = feeSharesFor(
+    { totalShares: sharesAfterDepositor, totalAssets: assetsAfter },
+    entryFee,
+  );
 
-  const nextState = encodeState(lucidMod, state, {
-    shares: BigInt(state.totalShares) + minted,
-    assets: BigInt(state.totalAssets) + deposit,
+  const nextState = encodeStateDatum(lucidMod, {
+    ...state,
+    totalShares: (sharesAfterDepositor + entryFeeShares).toString(),
+    totalAssets: assetsAfter.toString(),
+    treasuryShares: (BigInt(state.treasuryShares) + entryFeeShares).toString(),
   });
   const positionDatum = encodePosition(lucidMod, selfHash, minted);
   const { Data, Constr } = lucidMod as unknown as {
