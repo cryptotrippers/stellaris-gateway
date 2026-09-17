@@ -150,8 +150,16 @@ export function SetFeeExecuteCard({
 
       {draft && (
         <div className="space-y-3 rounded-lg border border-border p-3">
-          <Row label="Fee before" value={formatFeeBps(draft.feeBpsBefore)} />
-          <Row label="Fee after" value={formatFeeBps(draft.feeBpsAfter)} />
+          <Row label="Management fee before" value={formatFeeBps(draft.feeBpsBefore)} />
+          <Row label="Management fee after" value={formatFeeBps(draft.feeBpsAfter)} />
+          <Row
+            label="Deposit fee"
+            value={`${(draft.entryFeeBpsBefore / 100).toFixed(2)}% → ${(draft.entryFeeBpsAfter / 100).toFixed(2)}%`}
+          />
+          <Row
+            label="Withdrawal fee"
+            value={`${(draft.exitFeeBpsBefore / 100).toFixed(2)}% → ${(draft.exitFeeBpsAfter / 100).toFixed(2)}%`}
+          />
           <Row label="Fee settled now" value={`${lovelaceToAda(draft.feeAssets)} ₳`} />
           <Row label="Treasury shares minted" value={draft.feeSharesMinted} />
           <Row
