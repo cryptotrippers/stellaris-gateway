@@ -173,17 +173,39 @@ export const getVaultChainHistory = createServerFn({ method: "GET" })
  * settlement. Anything else is not this proposal's execution.
  */
 export const verifySetFeeTx = createServerFn({ method: "GET" })
-  .inputValidator((data: { txHash: string; address: string; expectedFeeBps: number }) => {
-    if (!TX_HASH_RE.test(data?.txHash ?? "")) throw new Error("Invalid transaction hash");
-    if (!BECH32_ADDRESS_RE.test(data?.address ?? "")) {
-      throw new Error("A valid bech32 vault address is required");
-    }
-    const feeBps = Number(data?.expectedFeeBps);
-    if (!Number.isInteger(feeBps) || feeBps < 0 || feeBps > 500) {
-      throw new Error("The approved fee must be a whole number between 0 and 500 bps");
-    }
-    return { txHash: data.txHash, address: data.address, expectedFeeBps: feeBps };
-  })
+  .inputValidator(
+    (data: {
+      txHash: string;
+      address: string;
+      expectedFeeBps: number;
+      expectedEntryFeeBps?: number;
+      expectedExitFeeBps?: number;
+    }) => {
+      if (!TX_HASH_RE.test(data?.txHash ?? "")) throw new Error("Invalid transaction hash");
+      if (!BECH32_ADDRESS_RE.test(data?.address ?? "")) {
+        throw new Error("A valid bech32 vault address is required");
+      }
+      const feeBps = Number(data?.expectedFeeBps);
+      if (!Number.isInteger(feeBps) || feeBps < 0 || feeBps > 500) {
+        throw new Error("The approved fee must be a whole number between 0 and 500 bps");
+      }
+      const actionBps = (value: unknown, label: string): number | null => {
+        if (value === undefined || value === null) return null;
+        const n = Number(value);
+        if (!Number.isInteger(n) || n < 0 || n > 200) {
+          throw new Error(`The approved ${label} must be a whole number between 0 and 200 bps`);
+        }
+        return n;
+      };
+      return {
+        txHash: data.txHash,
+        address: data.address,
+        expectedFeeBps: feeBps,
+        expectedEntryFeeBps: actionBps(data.expectedEntryFeeBps, "deposit fee"),
+        expectedExitFeeBps: actionBps(data.expectedExitFeeBps, "withdrawal fee"),
+      };
+    },
+  )
   .handler(
     async ({
       data,
