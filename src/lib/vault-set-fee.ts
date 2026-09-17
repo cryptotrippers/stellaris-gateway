@@ -34,6 +34,10 @@ const REDEEMER_SET_FEE = 5;
 /** The validator refuses a fee anchor reaching back further than 90 days. */
 const MAX_SETTLE_WINDOW_MS = 7_776_000_000;
 
+/** Stage 7 caps, mirroring `stellaris/shares`. */
+export const MAX_ENTRY_FEE_BPS = 200;
+export const MAX_EXIT_FEE_BPS = 200;
+
 export interface SetFeeDraft {
   /** Unsigned (or partially signed) transaction CBOR. */
   txCbor: string;
@@ -42,6 +46,10 @@ export interface SetFeeDraft {
   address: string;
   feeBpsBefore: number;
   feeBpsAfter: number;
+  entryFeeBpsBefore: number;
+  entryFeeBpsAfter: number;
+  exitFeeBpsBefore: number;
+  exitFeeBpsAfter: number;
   /** Lovelace of management fee owed under the OLD rate, settled here. */
   feeAssets: string;
   /** Shares minted to the treasury to settle that fee. */
@@ -61,10 +69,15 @@ export interface SetFeeDraft {
  * Build the fee-change transaction and partially sign it with the connected
  * wallet. `signers` must contain at least the vault's threshold of committee
  * members — the validator counts `extra_signatories`.
+ *
+ * `entryFeeBps` / `exitFeeBps` default to the vault's current rates, so an
+ * existing caller that only changes the management fee keeps working.
  */
 export async function buildSetFee(params: {
   assetId: string;
   feeBps: number;
+  entryFeeBps?: number;
+  exitFeeBps?: number;
   signers?: string[];
   registryAddress?: string | null;
 }): Promise<SetFeeDraft> {
@@ -72,6 +85,18 @@ export async function buildSetFee(params: {
   if (!pre.ok) throw new Error(pre.reason);
   if (!feeBpsOk(params.feeBps)) {
     throw new Error(`The fee must be a whole number between 0 and ${MAX_FEE_BPS} basis points.`);
+  }
+  const rateOk = (v: number | undefined, cap: number) =>
+    v === undefined || (Number.isInteger(v) && v >= 0 && v <= cap);
+  if (!rateOk(params.entryFeeBps, MAX_ENTRY_FEE_BPS)) {
+    throw new Error(
+      `The deposit fee must be a whole number between 0 and ${MAX_ENTRY_FEE_BPS} basis points.`,
+    );
+  }
+  if (!rateOk(params.exitFeeBps, MAX_EXIT_FEE_BPS)) {
+    throw new Error(
+      `The withdrawal fee must be a whole number between 0 and ${MAX_EXIT_FEE_BPS} basis points.`,
+    );
   }
 
   const { lucid, lucidMod } = await initLucidWithWallet();
