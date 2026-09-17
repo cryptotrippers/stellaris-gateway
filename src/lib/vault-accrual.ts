@@ -165,6 +165,9 @@ export async function buildAccrual(params: {
     treasuryShares: fee.treasurySharesAfter.toString(),
     lastFeeTime: settledAt.toString(),
     receiptPolicy: state.receiptPolicy,
+    // Accrual may not touch the fee terms; the validator enforces this.
+    entryFeeBps: state.entryFeeBps,
+    exitFeeBps: state.exitFeeBps,
   });
   const redeemer = Data.to(new Constr(REDEEMER_ACCRUE, [params.amountLovelace]));
 
