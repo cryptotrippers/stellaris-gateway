@@ -85,7 +85,7 @@ export function lovelaceOf(utxo: { amount: BfAmount[] }): bigint {
 }
 
 export function decodeState(d: PlutusData): VaultStateDatum | null {
-  if (d.kind !== "constr" || d.index !== 1 || d.fields.length !== 11) return null;
+  if (d.kind !== "constr" || d.index !== 1 || d.fields.length !== 13) return null;
   return {
     totalShares: asInt(d.fields[0]).toString(),
     totalAssets: asInt(d.fields[1]).toString(),
@@ -98,6 +98,8 @@ export function decodeState(d: PlutusData): VaultStateDatum | null {
     treasuryShares: asInt(d.fields[8]).toString(),
     lastFeeTime: asInt(d.fields[9]).toString(),
     receiptPolicy: asBytes(d.fields[10]),
+    entryFeeBps: Number(asInt(d.fields[11])),
+    exitFeeBps: Number(asInt(d.fields[12])),
   };
 }
 
