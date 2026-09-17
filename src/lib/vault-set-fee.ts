@@ -126,9 +126,15 @@ export async function buildSetFee(params: {
     throw new Error("This vault has no state UTxO yet — bootstrap it before changing the fee.");
   }
 
-  if (state.feeBps === params.feeBps) {
+  const entryFeeAfter = params.entryFeeBps ?? state.entryFeeBps;
+  const exitFeeAfter = params.exitFeeBps ?? state.exitFeeBps;
+  if (
+    state.feeBps === params.feeBps &&
+    state.entryFeeBps === entryFeeAfter &&
+    state.exitFeeBps === exitFeeAfter
+  ) {
     throw new Error(
-      `This vault's fee is already ${(params.feeBps / 100).toFixed(2)}% / yr — the validator rejects a no-op change.`,
+      "These are already this vault's fee terms — the validator rejects a no-op change.",
     );
   }
 
