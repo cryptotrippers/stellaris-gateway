@@ -35,6 +35,7 @@ import {
   type VaultPositionDatum,
   type VaultStateDatum,
 } from "./yield-chain-decode";
+import { bpsOf, feeSharesFor } from "./vault-fees";
 
 /** YieldRedeemer constructor indices — mirrors yield_vault.ak. */
 const REDEEMER_DEPOSIT = 0;
