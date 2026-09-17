@@ -334,6 +334,8 @@ export async function depositToYieldVault(params: {
     txHash,
     address: script.address,
     depositLovelace: deposit.toString(),
+    entryFeeLovelace: entryFee.toString(),
+    netDepositLovelace: net.toString(),
     mintedShares: minted.toString(),
     sharePrice: priceOf(state),
   };
