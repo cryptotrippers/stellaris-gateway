@@ -138,6 +138,8 @@ export function encodeStateDatum(lucidMod: unknown, state: VaultStateDatum): str
       BigInt(state.treasuryShares),
       BigInt(state.lastFeeTime),
       state.receiptPolicy,
+      BigInt(state.entryFeeBps),
+      BigInt(state.exitFeeBps),
     ]),
   );
 }
