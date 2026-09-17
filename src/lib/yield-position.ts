@@ -405,9 +405,14 @@ export async function withdrawFromYieldVault(params: {
   }
   const remainingShares = positionShares - shares;
 
-  // What the validator will allow: paid <= redeem_value(shares).
-  const entitled = redeemValue(state, shares);
-  if (entitled <= 0n) throw new Error("These shares currently redeem to zero lovelace.");
+  // What the validator will allow: paid <= redeem_value(shares) - exit fee.
+  const gross = redeemValue(state, shares);
+  if (gross <= 0n) throw new Error("These shares currently redeem to zero lovelace.");
+  const exitFee = bpsOf(gross, state.exitFeeBps);
+  const entitled = gross - exitFee;
+  if (entitled <= 0n) {
+    throw new Error("After the withdrawal fee these shares redeem to zero lovelace.");
+  }
 
   const remainingPositionLovelace = remainingShares > 0n ? MIN_POSITION_VALUE : 0n;
   const availableToPay =
@@ -424,9 +429,19 @@ export async function withdrawFromYieldVault(params: {
 
   const nextStateLovelace =
     stateLovelace + chosen.lovelace - paid - remainingPositionLovelace;
-  const nextState = encodeState(lucidMod, state, {
-    shares: BigInt(state.totalShares) - shares,
-    assets: BigInt(state.totalAssets) - paid,
+  // Stage 7: the withheld exit fee stays in the vault and is credited to the
+  // treasury as shares at the post-withdrawal price.
+  const sharesAfterBurn = BigInt(state.totalShares) - shares;
+  const assetsAfter = BigInt(state.totalAssets) - paid;
+  const exitFeeShares = feeSharesFor(
+    { totalShares: sharesAfterBurn, totalAssets: assetsAfter },
+    exitFee,
+  );
+  const nextState = encodeStateDatum(lucidMod, {
+    ...state,
+    totalShares: (sharesAfterBurn + exitFeeShares).toString(),
+    totalAssets: assetsAfter.toString(),
+    treasuryShares: (BigInt(state.treasuryShares) + exitFeeShares).toString(),
   });
 
   const { Data, Constr } = lucidMod as unknown as {
