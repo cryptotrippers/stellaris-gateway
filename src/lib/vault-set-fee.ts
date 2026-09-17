@@ -191,8 +191,16 @@ export async function buildSetFee(params: {
     treasuryShares: fee.treasurySharesAfter.toString(),
     lastFeeTime: settledAt.toString(),
     receiptPolicy: state.receiptPolicy,
+    entryFeeBps: entryFeeAfter,
+    exitFeeBps: exitFeeAfter,
   });
-  const redeemer = Data.to(new Constr(REDEEMER_SET_FEE, [BigInt(params.feeBps)]));
+  const redeemer = Data.to(
+    new Constr(REDEEMER_SET_FEE, [
+      BigInt(params.feeBps),
+      BigInt(entryFeeAfter),
+      BigInt(exitFeeAfter),
+    ]),
+  );
 
   const currentLovelace = stateUtxo.assets["lovelace"] ?? 0n;
 
