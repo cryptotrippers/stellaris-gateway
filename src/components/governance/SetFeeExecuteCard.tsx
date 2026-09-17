@@ -62,6 +62,8 @@ export function SetFeeExecuteCard({
       const d = await buildSetFee({
         assetId,
         feeBps,
+        entryFeeBps,
+        exitFeeBps,
         registryAddress: vault?.script_address ?? null,
       });
       setDraft(d);
@@ -110,7 +112,13 @@ export function SetFeeExecuteCard({
 
       <div className="rounded-lg border border-border bg-muted/30 p-3">
         <Row label="Asset" value={assetId} />
-        <Row label="Approved fee" value={formatFeeBps(feeBps)} />
+        <Row label="Approved management fee" value={formatFeeBps(feeBps)} />
+        {entryFeeBps !== undefined && (
+          <Row label="Approved deposit fee" value={`${(entryFeeBps / 100).toFixed(2)}%`} />
+        )}
+        {exitFeeBps !== undefined && (
+          <Row label="Approved withdrawal fee" value={`${(exitFeeBps / 100).toFixed(2)}%`} />
+        )}
         <Row
           label="Vault address"
           value={vault?.script_address ? short(vault.script_address) : "Not registered"}
