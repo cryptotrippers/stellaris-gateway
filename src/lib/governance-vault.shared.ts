@@ -95,9 +95,25 @@ export function validateProposalParams(
     if (!Number.isInteger(feeBps) || feeBps < 0 || feeBps > MAX_FEE_BPS) {
       throw new Error(`The management fee must be a whole number between 0 and ${MAX_FEE_BPS} bps.`);
     }
+    // Stage 7: per-action fees. Omitted means "leave this rate as it is".
+    const actionBps = (raw: unknown, label: string): number | null => {
+      if (raw === undefined || raw === null || raw === "") return null;
+      const n = Number(raw);
+      if (!Number.isInteger(n) || n < 0 || n > 200) {
+        throw new Error(`The ${label} must be a whole number between 0 and 200 bps.`);
+      }
+      return n;
+    };
+    const entryFeeBps = actionBps(params?.["entry_fee_bps"], "deposit fee");
+    const exitFeeBps = actionBps(params?.["exit_fee_bps"], "withdrawal fee");
     const treasury = String(params?.["treasury_address"] ?? "").trim();
     if (!treasury) throw new Error("A fee proposal must name the treasury address that receives it.");
-    return { fee_bps: feeBps, treasury_address: treasury };
+    return {
+      fee_bps: feeBps,
+      treasury_address: treasury,
+      ...(entryFeeBps === null ? {} : { entry_fee_bps: entryFeeBps }),
+      ...(exitFeeBps === null ? {} : { exit_fee_bps: exitFeeBps }),
+    };
   }
 
   if (kind === "accrue") {

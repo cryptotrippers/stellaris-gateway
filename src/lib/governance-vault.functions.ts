@@ -329,12 +329,20 @@ export const recordProposalExecution = createServerFn({ method: "POST" })
         return { ok: false, reason: "No bootstrapped vault is registered for this asset." };
       }
 
+      const actionBps = (raw: unknown): number | undefined => {
+        if (raw === undefined || raw === null || raw === "") return undefined;
+        const n = Number(raw);
+        return Number.isInteger(n) && n >= 0 && n <= 200 ? n : undefined;
+      };
+
       const { verifySetFeeTx } = await import("./yield-chain.functions");
       const feeCheck = await verifySetFeeTx({
         data: {
           txHash: data.txHash,
           address: feeVault.script_address as string,
           expectedFeeBps: feeBps,
+          expectedEntryFeeBps: actionBps(row.params?.["entry_fee_bps"]),
+          expectedExitFeeBps: actionBps(row.params?.["exit_fee_bps"]),
         },
       });
       if (!feeCheck.ok) return { ok: false, reason: feeCheck.reason };
