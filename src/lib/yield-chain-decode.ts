@@ -47,7 +47,8 @@ export interface BfTxUtxos {
 //   Position { owner, shares }                                 -> constructor 0
 //   State { total_shares, total_assets, epoch, operators,
 //           threshold, paused, fee_bps, treasury,
-//           treasury_shares, last_fee_time, receipt_policy }    -> constructor 1
+//           treasury_shares, last_fee_time, receipt_policy,
+//           entry_fee_bps, exit_fee_bps }                        -> constructor 1
 // ---------------------------------------------------------------------------
 
 export interface VaultStateDatum {
