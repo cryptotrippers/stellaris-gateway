@@ -9,6 +9,7 @@ import { quoteBuy, quoteRedeem, type OfferingDatum } from "@/lib/offering-chain"
 import { unitOfDepositAsset } from "@/lib/fraction-vault";
 import { buyFractions, loadOffering, redeemFractions } from "@/lib/offering-tx";
 import { OFFERING_STATUS_COPY } from "@/lib/offerings.shared";
+import { recordFractionEvent } from "@/lib/fraction-events.functions";
 
 interface Props {
   assetId: string;
@@ -61,6 +62,9 @@ export function BuyFractionsCard({ assetId, depositAsset, registryAddress }: Pro
           ? await buyFractions({ assetId, unit, qty: amount, registryAddress })
           : await redeemFractions({ assetId, unit, qty: amount, registryAddress });
       setTxHash(result.txHash);
+      // Recorded only once Blockfrost can see the transaction, and only from
+      // what the chain itself says the offering's counters moved by.
+      void recordFractionEvent({ data: { assetId, txHash: result.txHash } }).catch(() => {});
       await view.refetch();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
