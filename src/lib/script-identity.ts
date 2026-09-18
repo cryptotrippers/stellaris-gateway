@@ -15,6 +15,11 @@
 import { VAULT_BLUEPRINT_HASH, VAULT_VERSION } from "./vault";
 import { RECEIPT_BLUEPRINT_HASH, YIELD_BLUEPRINT_HASH, YIELD_VAULT_VERSION } from "./yield-vault";
 import { SUSDR_BLUEPRINT_HASH, SUSDR_VAULT_VERSION } from "./susdr-vault";
+import {
+  FRACTION_BLUEPRINT_HASH,
+  FRACTION_POLICY_BLUEPRINT_HASH,
+  FRACTION_VAULT_VERSION,
+} from "./fraction-vault";
 import { APP_NETWORK } from "./network";
 
 /** Stable, human-readable fingerprint of the scripts this build can derive. */
@@ -26,6 +31,8 @@ export const SCRIPT_BUILD_ID = [
   YIELD_BLUEPRINT_HASH.slice(0, 12),
   `r${RECEIPT_BLUEPRINT_HASH.slice(0, 12)}`,
   `s${String(SUSDR_VAULT_VERSION)}${SUSDR_BLUEPRINT_HASH.slice(0, 12)}`,
+  `f${String(FRACTION_VAULT_VERSION)}${FRACTION_BLUEPRINT_HASH.slice(0, 12)}`,
+  `fp${FRACTION_POLICY_BLUEPRINT_HASH.slice(0, 12)}`,
 ].join("-");
 
 const STORAGE_KEY = "stellaris.script-build-id";
