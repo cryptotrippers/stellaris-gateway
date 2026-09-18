@@ -91,6 +91,11 @@ function OperatorConsole() {
     queryFn: () => listAssetVaults(),
   });
 
+  const offeringsQ = useQuery({
+    queryKey: ["offerings"],
+    queryFn: () => listOfferings(),
+  });
+
   const [assets, setAssets] = useState<AssetLite[] | null>(null);
   const [approvedIds, setApprovedIds] = useState<Set<string>>(new Set());
   useEffect(() => {
