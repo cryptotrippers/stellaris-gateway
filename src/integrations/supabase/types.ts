@@ -255,6 +255,69 @@ export type Database = {
         }
         Relationships: []
       }
+      fraction_events: {
+        Row: {
+          amount: number
+          asset_id: string
+          block_time: string | null
+          counterparty_address: string | null
+          created_at: string
+          event_type: string
+          fee_amount: number
+          fractions: number
+          id: string
+          network: string
+          offering_id: string
+          slot: number | null
+          tx_hash: string
+        }
+        Insert: {
+          amount?: number
+          asset_id: string
+          block_time?: string | null
+          counterparty_address?: string | null
+          created_at?: string
+          event_type: string
+          fee_amount?: number
+          fractions?: number
+          id?: string
+          network?: string
+          offering_id: string
+          slot?: number | null
+          tx_hash: string
+        }
+        Update: {
+          amount?: number
+          asset_id?: string
+          block_time?: string | null
+          counterparty_address?: string | null
+          created_at?: string
+          event_type?: string
+          fee_amount?: number
+          fractions?: number
+          id?: string
+          network?: string
+          offering_id?: string
+          slot?: number | null
+          tx_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fraction_events_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fraction_events_offering_id_fkey"
+            columns: ["offering_id"]
+            isOneToOne: false
+            referencedRelation: "offerings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       funding_request_checklist: {
         Row: {
           created_at: string
@@ -673,6 +736,96 @@ export type Database = {
           verifier?: string
         }
         Relationships: []
+      }
+      offerings: {
+        Row: {
+          asset_id: string
+          bootstrap_tx_hash: string | null
+          bootstrapped_at: string | null
+          created_at: string
+          deposit_asset_id: string | null
+          fraction_asset_name_hex: string
+          fraction_policy_id: string
+          id: string
+          issuer_name: string
+          mint_fee_bps: number
+          network: string
+          operator_key_hashes: string[]
+          price_per_fraction: number
+          redeem_fee_bps: number
+          script_address: string
+          script_hash: string
+          signature_threshold: number
+          status: string
+          total_fractions: number
+          treasury_address: string | null
+          updated_at: string
+          vault_version: number
+        }
+        Insert: {
+          asset_id: string
+          bootstrap_tx_hash?: string | null
+          bootstrapped_at?: string | null
+          created_at?: string
+          deposit_asset_id?: string | null
+          fraction_asset_name_hex: string
+          fraction_policy_id: string
+          id?: string
+          issuer_name: string
+          mint_fee_bps?: number
+          network?: string
+          operator_key_hashes?: string[]
+          price_per_fraction: number
+          redeem_fee_bps?: number
+          script_address: string
+          script_hash: string
+          signature_threshold?: number
+          status?: string
+          total_fractions: number
+          treasury_address?: string | null
+          updated_at?: string
+          vault_version?: number
+        }
+        Update: {
+          asset_id?: string
+          bootstrap_tx_hash?: string | null
+          bootstrapped_at?: string | null
+          created_at?: string
+          deposit_asset_id?: string | null
+          fraction_asset_name_hex?: string
+          fraction_policy_id?: string
+          id?: string
+          issuer_name?: string
+          mint_fee_bps?: number
+          network?: string
+          operator_key_hashes?: string[]
+          price_per_fraction?: number
+          redeem_fee_bps?: number
+          script_address?: string
+          script_hash?: string
+          signature_threshold?: number
+          status?: string
+          total_fractions?: number
+          treasury_address?: string | null
+          updated_at?: string
+          vault_version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offerings_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offerings_deposit_asset_id_fkey"
+            columns: ["deposit_asset_id"]
+            isOneToOne: false
+            referencedRelation: "deposit_assets"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       oracle_feeds: {
         Row: {

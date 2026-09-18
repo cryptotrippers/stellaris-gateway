@@ -23,6 +23,8 @@ import { blake2b } from "@noble/hashes/blake2.js";
 const PLUTUS_PATH = resolve("contracts/vault/plutus.json");
 const SUSDR_PLUTUS_PATH = resolve("contracts/susdr-vault/plutus.json");
 const MULTI_PLUTUS_PATH = resolve("contracts/multi-asset-vault/plutus.json");
+const FRACTION_PLUTUS_PATH = resolve("contracts/fraction-vault/plutus.json");
+const FRACTION_TS_PATH = resolve("src/lib/fraction-vault.ts");
 const VAULT_TS_PATH = resolve("src/lib/vault.ts");
 const YIELD_TS_PATH = resolve("src/lib/yield-vault.ts");
 const SUSDR_TS_PATH = resolve("src/lib/susdr-vault.ts");
@@ -160,6 +162,34 @@ if (multiValidators) {
 } else {
   console.log(
     "[verify-vault-hash] contracts/multi-asset-vault/plutus.json not present — skipping multi-asset pins.",
+  );
+}
+
+const fractionValidators = existsSync(FRACTION_PLUTUS_PATH)
+  ? (JSON.parse(readFileSync(FRACTION_PLUTUS_PATH, "utf8"))?.validators ?? [])
+  : null;
+
+if (fractionValidators) {
+  const fractionPin = readPins(FRACTION_TS_PATH);
+  targets.push(
+    {
+      label: "fraction_vault (offering)",
+      onChain: findIn(fractionValidators, "fraction_vault.fraction_vault"),
+      hash: fractionPin("FRACTION_BLUEPRINT_HASH"),
+      cbor: "__BLUEPRINT_IMPORT__",
+      file: "src/lib/fraction-vault.ts",
+    },
+    {
+      label: "fraction (token policy)",
+      onChain: findIn(fractionValidators, "fraction.fraction", ".mint"),
+      hash: fractionPin("FRACTION_POLICY_BLUEPRINT_HASH"),
+      cbor: "__BLUEPRINT_IMPORT__",
+      file: "src/lib/fraction-vault.ts",
+    },
+  );
+} else {
+  console.log(
+    "[verify-vault-hash] contracts/fraction-vault/plutus.json not present — skipping fraction pins.",
   );
 }
 

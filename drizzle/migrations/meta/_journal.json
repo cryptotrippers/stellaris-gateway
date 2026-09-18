@@ -22,6 +22,13 @@
       "when": 1788815655164,
       "tag": "0002_grant_has_role_execute_to_anon",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789768890973,
+      "tag": "0003_create_fraction_offerings",
+      "breakpoints": true
     }
   ]
 }
