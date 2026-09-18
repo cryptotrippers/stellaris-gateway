@@ -170,7 +170,7 @@ export function OpenOfferingCard({
           <select
             value={assetId}
             onChange={(e) => setAssetId(e.target.value)}
-            className="input-base"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
             disabled={disabled}
           >
             <option value="">Choose an asset…</option>
@@ -185,7 +185,7 @@ export function OpenOfferingCard({
           <select
             value={denomId}
             onChange={(e) => setDenomId(e.target.value)}
-            className="input-base"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
             disabled={disabled}
           >
             {denominations.map((d) => (
@@ -199,7 +199,7 @@ export function OpenOfferingCard({
           <input
             value={totalFractions}
             onChange={(e) => setTotalFractions(e.target.value.replace(/[^0-9]/g, ""))}
-            className="input-base"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
             disabled={disabled}
             inputMode="numeric"
           />
@@ -208,7 +208,7 @@ export function OpenOfferingCard({
           <input
             value={priceAda}
             onChange={(e) => setPriceAda(e.target.value.replace(/[^0-9.]/g, ""))}
-            className="input-base"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
             disabled={disabled}
             inputMode="decimal"
           />
@@ -217,7 +217,7 @@ export function OpenOfferingCard({
           <input
             value={mintFeeBps}
             onChange={(e) => setMintFeeBps(e.target.value.replace(/[^0-9]/g, ""))}
-            className="input-base"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
             disabled={disabled}
             inputMode="numeric"
           />
@@ -226,7 +226,7 @@ export function OpenOfferingCard({
           <input
             value={redeemFeeBps}
             onChange={(e) => setRedeemFeeBps(e.target.value.replace(/[^0-9]/g, ""))}
-            className="input-base"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
             disabled={disabled}
             inputMode="numeric"
           />
@@ -235,7 +235,7 @@ export function OpenOfferingCard({
           <input
             value={issuerName}
             onChange={(e) => setIssuerName(e.target.value)}
-            className="input-base"
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
             disabled={disabled}
             placeholder="Stellaris"
           />
@@ -246,7 +246,7 @@ export function OpenOfferingCard({
               readOnly
               value={keyHash ?? ""}
               placeholder="Not read yet"
-              className="input-base font-mono text-[11px]"
+              className="w-full rounded-md border border-border bg-background px-3 py-2 font-mono text-[11px] text-foreground"
             />
             <button
               type="button"
