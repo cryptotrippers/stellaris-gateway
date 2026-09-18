@@ -16,6 +16,7 @@ export function TopAppBar() {
 
         <nav className="hidden md:flex items-center gap-1 ml-6">
           <NavItem to="/">Home</NavItem>
+          <NavItem to="/offerings">Own a fraction</NavItem>
           <NavItem to="/marketplace">Invest</NavItem>
           <NavItem to="/app">My Portfolio</NavItem>
           <NavItem to="/governance">Vote</NavItem>

@@ -29,10 +29,12 @@ import { Route as AssetsRouteImport } from './routes/assets'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UpgradeIndexRouteImport } from './routes/upgrade.index'
+import { Route as OfferingsIndexRouteImport } from './routes/offerings.index'
 import { Route as LearnIndexRouteImport } from './routes/learn.index'
 import { Route as GovernanceIndexRouteImport } from './routes/governance.index'
 import { Route as FundingIndexRouteImport } from './routes/funding.index'
 import { Route as UpgradeReturnRouteImport } from './routes/upgrade.return'
+import { Route as OfferingsIdRouteImport } from './routes/offerings.$id'
 import { Route as MarketplaceIdRouteImport } from './routes/marketplace.$id'
 import { Route as LearnTopicRouteImport } from './routes/learn.$topic'
 import { Route as IssuersIdRouteImport } from './routes/issuers.$id'
@@ -149,6 +151,11 @@ const UpgradeIndexRoute = UpgradeIndexRouteImport.update({
   path: '/',
   getParentRoute: () => UpgradeRoute,
 } as any)
+const OfferingsIndexRoute = OfferingsIndexRouteImport.update({
+  id: '/offerings/',
+  path: '/offerings/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LearnIndexRoute = LearnIndexRouteImport.update({
   id: '/learn/',
   path: '/learn/',
@@ -168,6 +175,11 @@ const UpgradeReturnRoute = UpgradeReturnRouteImport.update({
   id: '/return',
   path: '/return',
   getParentRoute: () => UpgradeRoute,
+} as any)
+const OfferingsIdRoute = OfferingsIdRouteImport.update({
+  id: '/offerings/$id',
+  path: '/offerings/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const MarketplaceIdRoute = MarketplaceIdRouteImport.update({
   id: '/$id',
@@ -282,10 +294,12 @@ export interface FileRoutesByFullPath {
   '/issuers/$id': typeof IssuersIdRoute
   '/learn/$topic': typeof LearnTopicRoute
   '/marketplace/$id': typeof MarketplaceIdRoute
+  '/offerings/$id': typeof OfferingsIdRoute
   '/upgrade/return': typeof UpgradeReturnRoute
   '/funding/': typeof FundingIndexRoute
   '/governance/': typeof GovernanceIndexRoute
   '/learn/': typeof LearnIndexRoute
+  '/offerings/': typeof OfferingsIndexRoute
   '/upgrade/': typeof UpgradeIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/v1/yield': typeof ApiV1YieldRouteWithChildren
@@ -321,10 +335,12 @@ export interface FileRoutesByTo {
   '/issuers/$id': typeof IssuersIdRoute
   '/learn/$topic': typeof LearnTopicRoute
   '/marketplace/$id': typeof MarketplaceIdRoute
+  '/offerings/$id': typeof OfferingsIdRoute
   '/upgrade/return': typeof UpgradeReturnRoute
   '/funding': typeof FundingIndexRoute
   '/governance': typeof GovernanceIndexRoute
   '/learn': typeof LearnIndexRoute
+  '/offerings': typeof OfferingsIndexRoute
   '/upgrade': typeof UpgradeIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/v1/yield': typeof ApiV1YieldRouteWithChildren
@@ -363,10 +379,12 @@ export interface FileRoutesById {
   '/issuers/$id': typeof IssuersIdRoute
   '/learn/$topic': typeof LearnTopicRoute
   '/marketplace/$id': typeof MarketplaceIdRoute
+  '/offerings/$id': typeof OfferingsIdRoute
   '/upgrade/return': typeof UpgradeReturnRoute
   '/funding/': typeof FundingIndexRoute
   '/governance/': typeof GovernanceIndexRoute
   '/learn/': typeof LearnIndexRoute
+  '/offerings/': typeof OfferingsIndexRoute
   '/upgrade/': typeof UpgradeIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/v1/yield': typeof ApiV1YieldRouteWithChildren
@@ -406,10 +424,12 @@ export interface FileRouteTypes {
     | '/issuers/$id'
     | '/learn/$topic'
     | '/marketplace/$id'
+    | '/offerings/$id'
     | '/upgrade/return'
     | '/funding/'
     | '/governance/'
     | '/learn/'
+    | '/offerings/'
     | '/upgrade/'
     | '/.mcp/invoke-tool/$tool'
     | '/api/v1/yield'
@@ -445,10 +465,12 @@ export interface FileRouteTypes {
     | '/issuers/$id'
     | '/learn/$topic'
     | '/marketplace/$id'
+    | '/offerings/$id'
     | '/upgrade/return'
     | '/funding'
     | '/governance'
     | '/learn'
+    | '/offerings'
     | '/upgrade'
     | '/.mcp/invoke-tool/$tool'
     | '/api/v1/yield'
@@ -486,10 +508,12 @@ export interface FileRouteTypes {
     | '/issuers/$id'
     | '/learn/$topic'
     | '/marketplace/$id'
+    | '/offerings/$id'
     | '/upgrade/return'
     | '/funding/'
     | '/governance/'
     | '/learn/'
+    | '/offerings/'
     | '/upgrade/'
     | '/.mcp/invoke-tool/$tool'
     | '/api/v1/yield'
@@ -525,8 +549,10 @@ export interface RootRouteChildren {
   FundingNewRoute: typeof FundingNewRoute
   IssuersIdRoute: typeof IssuersIdRoute
   LearnTopicRoute: typeof LearnTopicRoute
+  OfferingsIdRoute: typeof OfferingsIdRoute
   FundingIndexRoute: typeof FundingIndexRoute
   LearnIndexRoute: typeof LearnIndexRoute
+  OfferingsIndexRoute: typeof OfferingsIndexRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiV1YieldRoute: typeof ApiV1YieldRouteWithChildren
   ApiPublicBlockfrostWebhookRoute: typeof ApiPublicBlockfrostWebhookRoute
@@ -675,6 +701,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UpgradeIndexRouteImport
       parentRoute: typeof UpgradeRoute
     }
+    '/offerings/': {
+      id: '/offerings/'
+      path: '/offerings'
+      fullPath: '/offerings/'
+      preLoaderRoute: typeof OfferingsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/learn/': {
       id: '/learn/'
       path: '/learn'
@@ -702,6 +735,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/upgrade/return'
       preLoaderRoute: typeof UpgradeReturnRouteImport
       parentRoute: typeof UpgradeRoute
+    }
+    '/offerings/$id': {
+      id: '/offerings/$id'
+      path: '/offerings/$id'
+      fullPath: '/offerings/$id'
+      preLoaderRoute: typeof OfferingsIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/marketplace/$id': {
       id: '/marketplace/$id'
@@ -893,8 +933,10 @@ const rootRouteChildren: RootRouteChildren = {
   FundingNewRoute: FundingNewRoute,
   IssuersIdRoute: IssuersIdRoute,
   LearnTopicRoute: LearnTopicRoute,
+  OfferingsIdRoute: OfferingsIdRoute,
   FundingIndexRoute: FundingIndexRoute,
   LearnIndexRoute: LearnIndexRoute,
+  OfferingsIndexRoute: OfferingsIndexRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiV1YieldRoute: ApiV1YieldRouteWithChildren,
   ApiPublicBlockfrostWebhookRoute: ApiPublicBlockfrostWebhookRoute,
