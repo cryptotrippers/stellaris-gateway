@@ -20,6 +20,8 @@ import { MasterWalletGate, useMasterWallet } from "@/components/admin/MasterWall
 import { AccrueYieldCard } from "@/components/operators/AccrueYieldCard";
 import { ClaimTreasuryCard } from "@/components/operators/ClaimTreasuryCard";
 import { RebootstrapVaultCard } from "@/components/operators/RebootstrapVaultCard";
+import { OpenOfferingCard } from "@/components/operators/OpenOfferingCard";
+import { listOfferings } from "@/lib/offerings.functions";
 
 
 
@@ -87,6 +89,11 @@ function OperatorConsole() {
   const vaultsQ = useQuery({
     queryKey: ["asset-vaults"],
     queryFn: () => listAssetVaults(),
+  });
+
+  const offeringsQ = useQuery({
+    queryKey: ["offerings"],
+    queryFn: () => listOfferings(),
   });
 
   const [assets, setAssets] = useState<AssetLite[] | null>(null);
@@ -261,6 +268,15 @@ function OperatorConsole() {
       />
 
       <ClaimTreasuryCard vaults={vaultsQ.data ?? []} disabled={!canBootstrap} />
+
+      <OpenOfferingCard
+        assets={(assets ?? []).map((a) => ({ id: a.id, name: a.name }))}
+        registeredAssetIds={new Set((offeringsQ.data ?? []).map((o) => o.asset_id))}
+        disabled={!canBootstrap}
+        onDone={() => {
+          offeringsQ.refetch();
+        }}
+      />
     </AppShell>
 
 
