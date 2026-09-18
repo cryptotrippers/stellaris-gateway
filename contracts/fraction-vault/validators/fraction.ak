@@ -211,8 +211,10 @@ test minting_under_the_wrong_token_name_is_rejected() {
   )
 }
 
-test minting_against_another_offering_is_rejected() {
-  !fraction.mint(
+// No offering of ours is being spent, so there is nothing to derive the
+// supply from and the policy must crash rather than return a verdict.
+test minting_against_another_offering_is_rejected() fail {
+  fraction.mint(
     ohash,
     t_asset,
     Void,
