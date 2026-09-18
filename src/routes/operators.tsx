@@ -268,6 +268,15 @@ function OperatorConsole() {
       />
 
       <ClaimTreasuryCard vaults={vaultsQ.data ?? []} disabled={!canBootstrap} />
+
+      <OpenOfferingCard
+        assets={(assets ?? []).map((a) => ({ id: a.id, name: a.name }))}
+        registeredAssetIds={new Set((offeringsQ.data ?? []).map((o) => o.asset_id))}
+        disabled={!canBootstrap}
+        onDone={() => {
+          offeringsQ.refetch();
+        }}
+      />
     </AppShell>
 
 
