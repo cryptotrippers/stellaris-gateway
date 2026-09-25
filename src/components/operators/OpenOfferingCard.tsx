@@ -5,7 +5,7 @@ import { TxConfirmationBadge } from "@/components/vault/TxConfirmationBadge";
 import { listDepositAssets } from "@/lib/deposit-assets.functions";
 import { depositAssetUnit, isAdaAsset, type DepositAsset } from "@/lib/deposit-assets.shared";
 import { getConnectedOperatorKeyHash } from "@/lib/vault-bootstrap";
-import { unitOf } from "@/lib/fraction-vault";
+import { deriveOffering, unitOf } from "@/lib/fraction-vault";
 import { openOffering } from "@/lib/offering-tx";
 import { registerOffering } from "@/lib/offerings.functions";
 import { recordFractionEvent } from "@/lib/fraction-events.functions";
@@ -62,6 +62,19 @@ export function OpenOfferingCard({
 
   const denom: DepositAsset | null = denominations.find((d) => d.id === denomId) ?? null;
 
+  const [preview, setPreview] = useState<{ address: string; unit: string } | null>(null);
+  useEffect(() => {
+    setPreview(null);
+    if (!assetId || !denom) return;
+    let live = true;
+    deriveOffering(assetId, unitOf(denom))
+      .then((s) => live && setPreview({ address: s.address, unit: s.fractionUnit }))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [assetId, denom]);
+
   const priceBase = (() => {
     const n = Number(priceAda);
     if (!Number.isFinite(n) || n <= 0) return 0n;
@@ -105,27 +118,38 @@ export function OpenOfferingCard({
         redeemFeeBps: Number(redeemFeeBps),
       });
 
-      await registerOffering({
-        data: {
-          assetId,
-          network: APP_NETWORK,
-          vaultVersion: 1,
-          scriptHash: opened.scriptHash,
-          scriptAddress: opened.address,
-          fractionPolicyId: opened.policyId,
-          fractionAssetNameHex: opened.assetNameHex,
-          depositAssetId: denom.id,
-          totalFractions: Number(fractions),
-          pricePerFraction: Number(priceBase),
-          mintFeeBps: Number(mintFeeBps),
-          redeemFeeBps: Number(redeemFeeBps),
-          issuerName: issuerName.trim() || "Stellaris",
-          treasuryAddress: null,
-          operatorKeyHashes: [keyHash],
-          signatureThreshold: 1,
-          bootstrapTxHash: opened.txHash,
-        },
-      });
+      const payload = {
+        assetId,
+        network: APP_NETWORK,
+        vaultVersion: 1,
+        scriptHash: opened.scriptHash,
+        scriptAddress: opened.address,
+        fractionPolicyId: opened.policyId,
+        fractionAssetNameHex: opened.assetNameHex,
+        depositAssetId: denom.id,
+        totalFractions: Number(fractions),
+        pricePerFraction: Number(priceBase),
+        mintFeeBps: Number(mintFeeBps),
+        redeemFeeBps: Number(redeemFeeBps),
+        issuerName: issuerName.trim() || "Stellaris",
+        treasuryAddress: null,
+        operatorKeyHashes: [keyHash],
+        signatureThreshold: 1,
+        bootstrapTxHash: opened.txHash,
+      };
+      // List only once the chain confirms the opening (up to ~5 minutes).
+      for (let i = 0; ; i++) {
+        try {
+          await registerOffering({ data: payload });
+          break;
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          if (!msg.includes("NOT_CONFIRMED") || i >= 30) throw e;
+          setError("Submitted — waiting for Preprod to confirm before listing…");
+          await new Promise((r) => setTimeout(r, 10_000));
+        }
+      }
+      setError(null);
 
       // Best effort: the chain record is written as soon as the tx is visible.
       recordFractionEvent({ data: { assetId, txHash: opened.txHash } }).catch(() => {});
@@ -260,6 +284,17 @@ export function OpenOfferingCard({
         </Field>
       </div>
 
+      {preview && (
+        <div className="mt-4 rounded-md border border-border p-3 text-[11px] text-muted-foreground">
+          <p>Check before signing:</p>
+          <p className="mt-1 break-all">
+            Contract address: <span className="font-mono text-foreground">{preview.address}</span>
+          </p>
+          <p className="mt-1 break-all">
+            Fraction token ID: <span className="font-mono text-foreground">{preview.unit}</span>
+          </p>
+        </div>
+      )}
       <p className="mt-4 text-xs text-muted-foreground">
         If every fraction sells, this offering takes in{" "}
         <span className="text-foreground">

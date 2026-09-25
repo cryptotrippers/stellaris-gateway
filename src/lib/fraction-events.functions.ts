@@ -106,7 +106,26 @@ export const recordFractionEvent = createServerFn({ method: "POST" })
     }
 
     const { eventType, fractions, amount, fee } = classify(before, after);
-    const meta = await bfGet<{ block_time: number }>(`/txs/${data.txHash}`);
+    const meta = await bfGet<{ block_time: number; asset_mint_or_burn_count?: number }>(
+      `/txs/${data.txHash}`,
+    );
+
+    // The fraction tokens actually minted/burned must equal the change in
+    // outstanding fractions — never trust counters alone.
+    const outstandingDelta = BigInt(after.outstanding) - BigInt(before.outstanding);
+    if (outstandingDelta !== 0n) {
+      const unit = `${offering.fraction_policy_id}${offering.fraction_asset_name_hex}`;
+      const hist = await bfGet<Array<{ tx_hash: string; action: string; amount: string }>>(
+        `/assets/${unit}/history?order=desc&count=100`,
+      );
+      const entry = (hist ?? []).find((h) => h.tx_hash === data.txHash);
+      const moved = entry ? BigInt(entry.amount) * (entry.action === "burned" ? -1n : 1n) : 0n;
+      if (moved !== outstandingDelta) {
+        throw new Error(
+          "The fraction tokens minted in that transaction do not match the offering's counters.",
+        );
+      }
+    }
 
     return await insert(offering, {
       eventType,
