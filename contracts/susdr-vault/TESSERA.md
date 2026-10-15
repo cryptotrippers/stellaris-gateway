@@ -20,8 +20,14 @@ token we own. The redesign is three pieces, in dependency order.
 
 ## 2. Token — `Tessera` (working ticker `TSR`) + `sTessera`
 
+**Scope (decided):** Tessera is Stellaris's own token with **no tie to sUSDr or
+RealFi**. It is a new package, `contracts/tessera/`, not a rename of
+`susdr-vault`. The sUSDr stand-in stays untouched and is retired once Tessera
+ships; Tessera may reuse its *patterns* (sole-State rule, share math), never
+its names, hashes or token identifiers.
+
 * **Tessera** is the stable unit (1 TSR = 1 USD target). **sTessera** is the
-  yield-bearing share, i.e. today's sUSDr renamed; its vault logic is kept.
+  yield-bearing share, a new vault modelled on `susdr_vault.ak`'s accounting.
 * Replace `usdr.ak` with a policy that mints only inside a transaction that
   also spends the **Reserve State** UTxO (same pattern the vault already uses
   to bind sUSDr supply to share accounting). No bare issuer key.
@@ -78,9 +84,9 @@ instead of returning `entries: []`.
 
 ## 5. Phases and tests
 
-1. **Rename + spec** (no behaviour change): sUSDr → sTessera, USDr → Tessera,
-   regenerate `plutus.json`, update `SUSDR_BLUEPRINT_HASH` and run
-   `scripts/verify-vault-hash.mjs`. Pure mechanical, shippable alone.
+1. **Scaffold `contracts/tessera/`** with its own `aiken.toml`, a spec, and a
+   `scripts/verify-vault-hash.mjs` entry so CI pins its blueprint. Port
+   `exchange.ak` math with the Tessera names; no dependency on `susdr-vault`.
 2. **Reserve State + Tessera policy.** Tests: mint above cap, mint above
    attestation, stale attestation, two Reserve States, mint without spending
    Reserve State, committee below threshold, replayed epoch.
@@ -106,7 +112,6 @@ and licensing path are confirmed.
 1. **Collateral model** — A (reserve-backed), B or C? (Section 3)
 2. **Queue** — daily buckets with instant buffer as above, or a simpler
    fixed 7-day delay for everything? (Section 4)
-3. **Naming** — is Tessera your own token (full policy build) or the label for
-   an integration with RealFi's sUSDr (then only phase 4 applies)?
+3. ~~Naming~~ — **resolved:** Tessera is independent of sUSDr; full build.
 4. **Reserve asset and custodian** — which stable/T-bill custodian and which
    on-chain asset pays redemptions? This sets the attestation format.
