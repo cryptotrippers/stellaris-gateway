@@ -1,6 +1,6 @@
 # Tessera — stablecoin rail redesign (draft for decision)
 
-Status: **design only, no contract code yet.** Written 2026-10-15 against the
+Status: **design + scaffold (`contracts/tessera/`); no validators yet.** Written 2026-10-15 against the
 code in `contracts/susdr-vault/`. Items marked **DECISION** block
 implementation; everything else follows from the current code.
 
