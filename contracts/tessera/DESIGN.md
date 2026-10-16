@@ -30,7 +30,9 @@ its names, hashes or token identifiers.
   yield-bearing share, a new vault modelled on `susdr_vault.ak`'s accounting.
 * Replace `usdr.ak` with a policy that mints only inside a transaction that
   also spends the **Reserve State** UTxO (same pattern the vault already uses
-  to bind sUSDr supply to share accounting). No bare issuer key.
+  to bind sUSDr supply to share accounting). No bare issuer key. The Reserve
+  State must carry a one-shot NFT: because the reserve is attested off-chain,
+  an unmarked State could be planted to mint real TSR (see SPEC.md §1).
 * Reserve State datum: `minted_supply`, `attested_reserve`, `mint_cap`,
   `attestation_epoch`, `paused`, committee + threshold. Mint requires
   `minted_supply + qty <= min(attested_reserve, mint_cap)`; burn is always

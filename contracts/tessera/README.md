@@ -12,7 +12,9 @@ mainnet stays gated by `NETWORK.md`.
 ```
 aiken.toml                 Aiken project (plutus v3, stdlib v2.2.0)
 lib/tessera/exchange.ak    Share-price math for sTessera (ported, renamed)
-validators/                (empty) reserve, tessera policy, vault, queue
+lib/tessera/rules.ak       Reserve-gate rules (caps, freshness, windows) + tests
+validators/reserve.ak      Reserve State + TSR mint policy (one script)
+validators/state_nft.ak    One-shot NFT marking the genuine Reserve State
 DESIGN.md                  Design draft + decisions
 SPEC.md                    State transitions and invariants (to be filled)
 ```
@@ -21,8 +23,8 @@ SPEC.md                    State transitions and invariants (to be filled)
 
 | File | Role |
 |---|---|
-| `validators/reserve.ak` | Reserve State UTxO: attested reserve, mint cap, committee |
-| `validators/tessera.ak` | TSR mint/burn policy, bound to the Reserve State |
+| `validators/reserve.ak` | **Written, uncompiled.** Reserve State + TSR policy |
+| `validators/state_nft.ak` | **Written, uncompiled.** One-shot State NFT |
 | `validators/stessera_vault.ak` | Yield vault; `ReportYield` requires delivered funds |
 | `validators/redeem_queue.ak` | Request UTxOs, daily buckets, permissionless settlement |
 
@@ -36,7 +38,9 @@ aiken build     # writes plutus.json; commit it, CI will diff it
 
 ## Not yet done
 
-* No validators, so no `plutus.json` and no blueprint pin in
+* `reserve.ak` and `state_nft.ak` have never been compiled or run (no `aiken`
+  binary here); expect a few compile fixes on the first `aiken check`.
+* No `plutus.json` and no blueprint pin in
   `scripts/verify-vault-hash.mjs`.
 * No CI job in `.github/workflows/contracts.yml` (add together with the first
   validator, mirroring the `verify-susdr-blueprint` job).
