@@ -10,6 +10,7 @@ import {
 
 /** Secondary destinations, grouped so the main bar stays down to four choices. */
 export const MORE_LINKS: { to: string; label: string; hint: string }[] = [
+  { to: "/transparency", label: "Transparency", hint: "Reserves & protection (preview)" },
   { to: "/pipeline", label: "Project pipeline", hint: "What's being verified now" },
   { to: "/assets", label: "Accepted assets", hint: "Which Cardano assets plug in" },
   { to: "/learn", label: "Learn", hint: "Short plain-language guides" },
