@@ -11,9 +11,11 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as YieldRouteImport } from './routes/yield'
 import { Route as UpgradeRouteImport } from './routes/upgrade'
+import { Route as TransparencyRouteImport } from './routes/transparency'
 import { Route as TestnetRouteImport } from './routes/testnet'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as StewardshipRouteImport } from './routes/stewardship'
+import { Route as StakeRouteImport } from './routes/stake'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SecurityRouteImport } from './routes/security'
 import { Route as PipelineRouteImport } from './routes/pipeline'
@@ -61,6 +63,11 @@ const UpgradeRoute = UpgradeRouteImport.update({
   path: '/upgrade',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TransparencyRoute = TransparencyRouteImport.update({
+  id: '/transparency',
+  path: '/transparency',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TestnetRoute = TestnetRouteImport.update({
   id: '/testnet',
   path: '/testnet',
@@ -74,6 +81,11 @@ const TermsRoute = TermsRouteImport.update({
 const StewardshipRoute = StewardshipRouteImport.update({
   id: '/stewardship',
   path: '/stewardship',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StakeRoute = StakeRouteImport.update({
+  id: '/stake',
+  path: '/stake',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
@@ -279,9 +291,11 @@ export interface FileRoutesByFullPath {
   '/pipeline': typeof PipelineRoute
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/stake': typeof StakeRoute
   '/stewardship': typeof StewardshipRoute
   '/terms': typeof TermsRoute
   '/testnet': typeof TestnetRoute
+  '/transparency': typeof TransparencyRoute
   '/upgrade': typeof UpgradeRouteWithChildren
   '/yield': typeof YieldRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
@@ -321,9 +335,11 @@ export interface FileRoutesByTo {
   '/pipeline': typeof PipelineRoute
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/stake': typeof StakeRoute
   '/stewardship': typeof StewardshipRoute
   '/terms': typeof TermsRoute
   '/testnet': typeof TestnetRoute
+  '/transparency': typeof TransparencyRoute
   '/yield': typeof YieldRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -364,9 +380,11 @@ export interface FileRoutesById {
   '/pipeline': typeof PipelineRoute
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/stake': typeof StakeRoute
   '/stewardship': typeof StewardshipRoute
   '/terms': typeof TermsRoute
   '/testnet': typeof TestnetRoute
+  '/transparency': typeof TransparencyRoute
   '/upgrade': typeof UpgradeRouteWithChildren
   '/yield': typeof YieldRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
@@ -409,9 +427,11 @@ export interface FileRouteTypes {
     | '/pipeline'
     | '/security'
     | '/sitemap.xml'
+    | '/stake'
     | '/stewardship'
     | '/terms'
     | '/testnet'
+    | '/transparency'
     | '/upgrade'
     | '/yield'
     | '/.mcp/list-tools'
@@ -451,9 +471,11 @@ export interface FileRouteTypes {
     | '/pipeline'
     | '/security'
     | '/sitemap.xml'
+    | '/stake'
     | '/stewardship'
     | '/terms'
     | '/testnet'
+    | '/transparency'
     | '/yield'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -493,9 +515,11 @@ export interface FileRouteTypes {
     | '/pipeline'
     | '/security'
     | '/sitemap.xml'
+    | '/stake'
     | '/stewardship'
     | '/terms'
     | '/testnet'
+    | '/transparency'
     | '/upgrade'
     | '/yield'
     | '/.mcp/list-tools'
@@ -537,9 +561,11 @@ export interface RootRouteChildren {
   PipelineRoute: typeof PipelineRoute
   SecurityRoute: typeof SecurityRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  StakeRoute: typeof StakeRoute
   StewardshipRoute: typeof StewardshipRoute
   TermsRoute: typeof TermsRoute
   TestnetRoute: typeof TestnetRoute
+  TransparencyRoute: typeof TransparencyRoute
   UpgradeRoute: typeof UpgradeRouteWithChildren
   YieldRoute: typeof YieldRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
@@ -575,6 +601,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UpgradeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/transparency': {
+      id: '/transparency'
+      path: '/transparency'
+      fullPath: '/transparency'
+      preLoaderRoute: typeof TransparencyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/testnet': {
       id: '/testnet'
       path: '/testnet'
@@ -594,6 +627,13 @@ declare module '@tanstack/react-router' {
       path: '/stewardship'
       fullPath: '/stewardship'
       preLoaderRoute: typeof StewardshipRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stake': {
+      id: '/stake'
+      path: '/stake'
+      fullPath: '/stake'
+      preLoaderRoute: typeof StakeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sitemap.xml': {
@@ -919,9 +959,11 @@ const rootRouteChildren: RootRouteChildren = {
   PipelineRoute: PipelineRoute,
   SecurityRoute: SecurityRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  StakeRoute: StakeRoute,
   StewardshipRoute: StewardshipRoute,
   TermsRoute: TermsRoute,
   TestnetRoute: TestnetRoute,
+  TransparencyRoute: TransparencyRoute,
   UpgradeRoute: UpgradeRouteWithChildren,
   YieldRoute: YieldRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
