@@ -1,3 +1,4 @@
+import { BRAND } from "@/config/brand";
 import { useEffect, useState } from "react";
 import { FileCode2, ShieldCheck, AlertTriangle } from "lucide-react";
 import {
@@ -44,7 +45,7 @@ export function SusdrContractCard() {
   return (
     <div className="card-institutional p-6">
       <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-        <FileCode2 className="h-4 w-4 text-primary" /> sUSDr stablecoin vault — contract identity
+        <FileCode2 className="h-4 w-4 text-primary" /> {BRAND.staked.ticker} stablecoin vault — contract identity
       </h3>
       <p className="mt-1 text-xs text-muted-foreground">
         Preprod reference implementation. Blueprint hashes are pinned in the app and re-checked at
@@ -55,10 +56,10 @@ export function SusdrContractCard() {
         <Row label="Network" value={`cardano-${APP_NETWORK}`} />
         <Row label="Vault version" value={String(SUSDR_VAULT_VERSION)} />
         <Row label="Pinned vault blueprint (unapplied)" value={SUSDR_BLUEPRINT_HASH} />
-        <Row label="Pinned USDr policy blueprint (unapplied)" value={USDR_BLUEPRINT_HASH} />
+        <Row label={`Pinned ${BRAND.base.ticker} policy blueprint (unapplied)`} value={USDR_BLUEPRINT_HASH} />
         {applied && <Row label="Applied script hash" value={applied.scriptHash} />}
         {applied && <Row label="Applied address" value={applied.address} />}
-        {applied && <Row label="sUSDr share token policy" value={applied.policyId} />}
+        {applied && <Row label={`${BRAND.staked.ticker} share token policy`} value={applied.policyId} />}
       </div>
 
       {error ? (

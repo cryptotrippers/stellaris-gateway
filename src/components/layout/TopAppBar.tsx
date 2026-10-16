@@ -20,6 +20,7 @@ export function TopAppBar() {
           <NavItem to="/marketplace">Invest</NavItem>
           <NavItem to="/app">My Portfolio</NavItem>
           <NavItem to="/governance">Vote</NavItem>
+          <NavItem to="/transparency">Transparency</NavItem>
           <MoreMenu />
         </nav>
 
