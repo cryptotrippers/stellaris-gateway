@@ -1,3 +1,4 @@
+import { BRAND } from "@/config/brand";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -40,7 +41,7 @@ export const Route = createFileRoute("/yield")({
       { property: "og:title", content: "Stellaris · Vault Yield Ledger" },
       {
         property: "og:description",
-        content: "Trace observed sUSDR accruals to the Cardano transactions that produced them.",
+        content: `Trace observed ${BRAND.staked.ticker} accruals to the Cardano transactions that produced them.`,
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -91,10 +92,10 @@ function YieldLedger() {
         <div>
           <div className="text-[11px] uppercase tracking-[0.22em] text-primary">Yield ledger</div>
           <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground">
-            USDR stays stable. sUSDR earns from the portfolio.
+            {BRAND.base.ticker} stays stable. {BRAND.staked.ticker} earns from the portfolio.
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            USDR is the dollar-referenced holding and does not accrue yield. sUSDR represents the
+            {BRAND.base.ticker} is the dollar-referenced holding and does not accrue yield. {BRAND.staked.ticker} represents the
             yield-bearing position. Every observed accrual below is decoded from a vault state UTxO;
             nothing is projected or filled in.
           </p>
@@ -139,8 +140,8 @@ function YieldLedger() {
         <div className="card-institutional p-5">
           <div className="text-[10px] uppercase tracking-widest text-primary">Token model</div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-            <TokenRow token="USDR" description="Dollar-referenced. Holding USDR alone does not accrue yield." />
-            <TokenRow token="sUSDR" description="Yield-bearing position. Share price changes only after a verified portfolio accrual." accent />
+            <TokenRow token={BRAND.base.ticker} description={`Dollar-referenced. Holding ${BRAND.base.ticker} alone does not accrue yield.`} />
+            <TokenRow token={BRAND.staked.ticker} description="Yield-bearing position. Share price changes only after a verified portfolio accrual." accent />
           </div>
         </div>
         <div className="card-institutional p-5">
@@ -182,7 +183,7 @@ function YieldLedger() {
           <div className="text-sm font-medium text-foreground">No vault has been bootstrapped yet</div>
           <p className="max-w-xl text-sm text-muted-foreground">
             A yield vault only exists once its ledger UTxO is created on chain. Until then there is
-            no share price or sUSDR accrual to report. Admins can create one from the operator console.
+            no share price or {BRAND.staked.ticker} accrual to report. Admins can create one from the operator console.
           </p>
           <Link
             to="/operators"
@@ -330,14 +331,14 @@ function VaultLedgerCard({
       {state && !state.found && (
         <div className="flex items-start gap-3 p-5 text-sm text-muted-foreground">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-          <div>No state UTxO found at this address. The vault is registered but has no share price or sUSDR accrual yet.</div>
+          <div>No state UTxO found at this address. The vault is registered but has no share price or {BRAND.staked.ticker} accrual yet.</div>
         </div>
       )}
 
       {state?.found && state.state && (
         <>
           <div className="grid grid-cols-2 gap-px bg-border md:grid-cols-5">
-            <Metric label="sUSDR share price" value={formatSharePrice(state.sharePrice)} />
+            <Metric label={`${BRAND.staked.ticker} share price`} value={formatSharePrice(state.sharePrice)} />
             <Metric label="Epoch" value={String(state.state.epoch)} />
             <Metric label="Total assets" value={`${lovelaceToAda(state.state.totalAssets)} ADA`} />
             <Metric label="Shares issued" value={Number(state.state.totalShares).toLocaleString()} />
@@ -350,7 +351,7 @@ function VaultLedgerCard({
 
           <div className="border-t border-border p-5">
             <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-sm font-medium text-foreground">Verified sUSDR accrual history</h3>
+              <h3 className="text-sm font-medium text-foreground">Verified {BRAND.staked.ticker} accrual history</h3>
               <span className="text-[11px] text-muted-foreground">
                 {state.positions.length} open position{state.positions.length === 1 ? "" : "s"} · {lovelaceToAda(state.lockedLovelace)} ADA locked
               </span>
@@ -358,7 +359,7 @@ function VaultLedgerCard({
             {historyQ.isLoading && <div className="text-sm text-muted-foreground">Scanning vault transactions…</div>}
             {history && accruals.length === 0 && (
               <div className="rounded-md border border-dashed border-border p-4 text-sm text-muted-foreground">
-                No verified accruals yet — share price {formatSharePrice(state.sharePrice)}. USDR remains non-yield-bearing; sUSDR yield appears only after an approved on-chain accrual.
+                No verified accruals yet — share price {formatSharePrice(state.sharePrice)}. {BRAND.base.ticker} remains non-yield-bearing; {BRAND.staked.ticker} yield appears only after an approved on-chain accrual.
               </div>
             )}
             {accruals.length > 0 && (
