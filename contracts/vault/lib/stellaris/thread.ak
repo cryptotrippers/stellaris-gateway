@@ -14,6 +14,10 @@
 //// then requires the spent State AND the returned State to carry it, so a
 //// State without the token can never be spent at all.
 ////
+//// Positions get the same treatment: a `marker` token minted by each
+//// `Deposit` under the same policy and conserved at the script address
+//// (AUDIT.md F-4), so only Positions the vault itself created can be redeemed.
+////
 //// This module is duplicated verbatim in each Aiken project that uses it
 //// (Aiken projects cannot share a lib). Keep the copies identical.
 
@@ -31,6 +35,21 @@ pub const thread_name: ByteArray = "state"
 /// The exact non-ADA value a State UTxO must carry: one thread token.
 pub fn thread_value(policy: PolicyId) -> Value {
   assets.from_asset(policy, thread_name, 1)
+}
+
+/// Asset name of the position marker, under the same policy (AUDIT.md F-4).
+/// Every Position UTxO created by a `Deposit` carries exactly one; a Position
+/// datum anyone else pays to the address has none and can never be redeemed.
+pub const marker_name: ByteArray = "position"
+
+/// The exact non-ADA value a Position must carry (beside its deposit unit).
+pub fn marker_value(policy: PolicyId) -> Value {
+  assets.from_asset(policy, marker_name, 1)
+}
+
+/// True iff `value` holds exactly one position marker of `policy`.
+pub fn holds_marker(value: Value, policy: PolicyId) -> Bool {
+  assets.quantity_of(value, policy, marker_name) == 1
 }
 
 /// True iff `value` holds exactly one thread token of `policy`.

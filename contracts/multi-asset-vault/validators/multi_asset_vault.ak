@@ -30,7 +30,14 @@
 //// a `seed` OutputReference and mints a one-shot state-thread token into the
 //// State at bootstrap. Every transition requires the spent and the returned
 //// State to carry it, so a State datum paid here by anyone else is inert.
+////
+//// Position identity (AUDIT.md F-4): each `Deposit` mints one position
+//// marker into the Position it creates; markers are conserved at the script
+//// and only a marked Position can be withdrawn. Without it a Position datum
+//// anyone pays here could be withdrawn against the State for nothing — this
+//// vault has no receipt token to burn.
 
+use aiken/collection/dict
 use aiken/collection/list
 use cardano/address.{Address, Script, VerificationKey}
 use cardano/assets.{PolicyId}
@@ -39,9 +46,11 @@ use cardano/transaction.{
 }
 use stellaris/shares.{
   VaultAccounting, after_accrue, after_deposit, after_withdraw, deposit_ok,
-  mint_shares, redeem_value, solvent, withdraw_ok,
+  mint_shares, redeem_value, withdraw_ok,
 }
-use stellaris/thread.{holds_thread, one_shot_mint, thread_name}
+use stellaris/thread.{
+  holds_marker, holds_thread, marker_name, one_shot_mint, thread_name,
+}
 use stellaris/units.{rider_ok, unit_of, value_clean}
 
 pub type MultiDatum {
@@ -176,6 +185,19 @@ fn sole_state(outs: List<Output>) -> Option<MultiDatum> {
   }
 }
 
+/// F-4: every Position among `outs` carries exactly one position marker.
+fn positions_marked(outs: List<Output>, policy: PolicyId) -> Bool {
+  list.all(
+    outs,
+    fn(o) {
+      when datum_of(o) is {
+        Some(Position { .. }) -> holds_marker(o.value, policy)
+        _ -> True
+      }
+    },
+  )
+}
+
 /// A valid initial ledger: empty books, a sane committee and deposit floor.
 fn bootstrap_ok(d: MultiDatum) -> Bool {
   when d is {
@@ -202,7 +224,11 @@ fn outputs_well_formed(
     fn(o) {
       let clean = fn(v) { value_clean(v, policy, name) && rider_ok(v) }
       when datum_of(o) is {
-        Some(Position { shares, .. }) -> clean(o.value) && shares > 0
+        // F-4: a Position carries exactly one marker beside lovelace + unit.
+        Some(Position { shares, .. }) ->
+          holds_marker(o.value, own) && clean(
+            assets.add(o.value, own, marker_name, -1),
+          ) && shares > 0
         // The State carries exactly one thread token beside lovelace + unit.
         Some(State { .. }) ->
           holds_thread(o.value, own) && clean(
@@ -242,16 +268,31 @@ validator multi_asset_vault(
   seed: OutputReference,
 ) {
   /// Bootstrap: mint the one-shot state-thread token into the initial State.
+  /// Position markers (F-4) need the GENUINE State spent alongside; its
+  /// accounting branch fixes the exact quantity.
   mint(_redeemer: Data, policy_id: PolicyId, tx: Transaction) {
-    let outs = script_outputs(tx, policy_id)
-    expect [boot] = outs
-    expect Some(boot_datum) = datum_of(boot)
-    one_shot_mint(tx, policy_id, seed) && script_inputs(tx, policy_id) == [] && outputs_well_formed(
-      outs,
-      policy_id,
-      unit_policy,
-      unit_name,
-    ) && bootstrap_ok(boot_datum)
+    when dict.to_pairs(assets.tokens(tx.mint, policy_id)) is {
+      [Pair(name, _)] ->
+        if name == thread_name {
+          let outs = script_outputs(tx, policy_id)
+          expect [boot] = outs
+          expect Some(boot_datum) = datum_of(boot)
+          one_shot_mint(tx, policy_id, seed) && script_inputs(tx, policy_id) == [] && outputs_well_formed(
+            outs,
+            policy_id,
+            unit_policy,
+            unit_name,
+          ) && bootstrap_ok(boot_datum)
+        } else if name == marker_name {
+          when sole_state_output(script_inputs(tx, policy_id)) is {
+            Some(s) -> holds_thread(s.value, policy_id)
+            None -> False
+          }
+        } else {
+          False
+        }
+      _ -> False
+    }
   }
 
   spend(
@@ -271,6 +312,10 @@ validator multi_asset_vault(
       // Spending a depositor position.
       // --------------------------------------------------------
       Position { owner, .. } -> {
+        // F-4: only a Position the vault minted a marker into is spendable.
+        expect Some(own_in) =
+          list.find(tx.inputs, fn(i) { i.output_reference == own_ref })
+        let marked = holds_marker(own_in.output.value, hash)
         let owner_signed = list.has(tx.extra_signatories, owner)
         let owner_paid =
           list.any(
@@ -289,7 +334,7 @@ validator multi_asset_vault(
             Some(s) -> holds_thread(s.value, hash)
             None -> False
           }
-        owner_signed && owner_paid && state_present
+        marked && owner_signed && owner_paid && state_present
       }
 
       // --------------------------------------------------------
@@ -335,12 +380,20 @@ validator multi_asset_vault(
         let shares_out = position_shares(outs)
         let shares_delta = shares_out - shares_in
 
+        // F-4: markers are conserved at the script — they can only leave by
+        // being burned — so positions_out - positions_in == minted markers.
+        let marker_delta = assets.quantity_of(tx.mint, hash, marker_name)
+        let markers_conserved =
+          positions_marked(ins, hash) && list.length(position_datums(outs)) - list.length(
+            position_datums(ins),
+          ) == marker_delta
+
         // Structural rules that hold for EVERY action. The committee, the
         // deposit floor, and the epoch counter are immutable through ordinary
         // spending; the returned state must stay solvent against the unit
         // balance actually locked in this transaction.
         let structural =
-          genuine && outputs_well_formed(outs, hash, unit_policy, unit_name) && n_operators == operators && n_threshold == threshold && n_min_deposit == min_deposit && min_deposit > 0 && operators_valid(
+          genuine && markers_conserved && outputs_well_formed(outs, hash, unit_policy, unit_name) && n_operators == operators && n_threshold == threshold && n_min_deposit == min_deposit && min_deposit > 0 && operators_valid(
               operators,
               threshold,
             ) && n_shares >= 0 && n_assets >= 0
@@ -351,7 +404,8 @@ validator multi_asset_vault(
             Deposit -> {
               let minted = mint_shares(acc, value_delta)
               let expected = after_deposit(acc, value_delta, minted)
-              !paused && value_delta >= min_deposit && deposit_ok(
+              // F-4: exactly one new, marked Position; none spent.
+              marker_delta == 1 && position_datums(ins) == [] && !paused && value_delta >= min_deposit && deposit_ok(
                 acc,
                 value_delta,
               ) && minted > 0 && shares_delta == minted && n_shares == expected.total_shares && n_assets == expected.total_assets && n_epoch == epoch && n_paused == paused
@@ -396,16 +450,11 @@ validator multi_asset_vault(
               threshold_met(operators, threshold, tx.extra_signatories) && n_paused == want && value_delta == 0 && shares_delta == 0 && n_shares == total_shares && n_assets == total_assets && n_epoch == epoch
           }
 
-        // Solvency: the accounted balance may never exceed the units actually
-        // locked by the outputs of this transaction plus the positions that
-        // were not touched (which is exactly `n_assets - held_out` claims
-        // carried inductively by untouched UTxOs).
-        let solvency = solvent(
-          VaultAccounting { total_shares: n_shares, total_assets: n_assets },
-          n_assets,
-        )
-
-        structural && transition && solvency
+        // AUDIT.md M-1: a `solvent(.., n_assets)` check used to sit here. It
+        // compared `n_assets <= n_assets`, i.e. checked nothing. As in
+        // yield_vault (V-07), solvency is inductive: every branch above ties
+        // `n_assets` to the exact unit delta at the script address.
+        structural && transition
       }
     }
   }
@@ -476,7 +525,7 @@ fn t_out(lovelace: Int, d: MultiDatum) -> Output {
   let o = t_bare(lovelace, d)
   when d is {
     State { .. } -> Output { ..o, value: assets.add(o.value, t_hash, thread_name, 1) }
-    _ -> o
+    Position { .. } -> Output { ..o, value: assets.add(o.value, t_hash, marker_name, 1) }
   }
 }
 
@@ -500,8 +549,20 @@ fn t_in(ix: Int, o: Output) -> Input {
   Input { output_reference: t_ref(ix), output: o }
 }
 
+/// The marker mint implied by the fixture: one per Position created, minus
+/// one per Position consumed.
 fn t_tx(ins: List<Input>, outs: List<Output>, signers: List<ByteArray>) -> Transaction {
-  Transaction { ..placeholder, inputs: ins, outputs: outs, extra_signatories: signers }
+  let created =
+    list.length(position_datums(outs)) - list.length(
+      position_datums(list.map(ins, fn(i) { i.output })),
+    )
+  Transaction {
+    ..placeholder,
+    inputs: ins,
+    outputs: outs,
+    extra_signatories: signers,
+    mint: assets.from_asset(t_hash, marker_name, created),
+  }
 }
 
 /// Spend the input at index `ix` holding datum `d`. ADA-denominated vault.
@@ -638,4 +699,142 @@ test position_cannot_be_withdrawn_against_a_planted_state() {
       [t_mallory],
     )
   !t_spend(p, Withdraw { shares: 10_000_000 }, 1, t)
+}
+
+/// F-4: the attack this vault had no defence against at all. A Position datum
+/// paid here by Mallory (no marker) claims 10M shares; withdrawing it would
+/// take 10 ADA out of the State's balance for nothing.
+fn t_f4(position: Output) -> Transaction {
+  t_tx(
+    [t_in(0, t_out(12_000_000, t_state(10_000_000, 10_000_000))), t_in(1, position)],
+    // 10 ADA of shares paid out: 2 from the Position, 8 from the State.
+    [t_out(4_000_000, t_state(0, 0)), t_key(t_mallory, 10_000_000)],
+    [t_mallory],
+  )
+}
+
+test planted_position_cannot_be_withdrawn() {
+  let p = Position { owner: t_mallory, shares: 10_000_000 }
+  !t_spend(p, Withdraw { shares: 10_000_000 }, 1, t_f4(t_bare(2_000_000, p))) && !t_spend(
+    t_state(10_000_000, 10_000_000),
+    Withdraw { shares: 10_000_000 },
+    0,
+    t_f4(t_bare(2_000_000, p)),
+  )
+}
+
+/// Control: the same withdrawal of a marked Position is accepted by BOTH
+/// branches, so the test above fails for exactly one reason — the marker.
+test marked_position_with_the_same_shape_is_withdrawn() {
+  let p = Position { owner: t_mallory, shares: 10_000_000 }
+  let t = t_f4(t_out(2_000_000, p))
+  t_spend(p, Withdraw { shares: 10_000_000 }, 1, t) && t_spend(
+    t_state(10_000_000, 10_000_000),
+    Withdraw { shares: 10_000_000 },
+    0,
+    t,
+  )
+}
+
+test deposit_must_mint_exactly_one_marker() {
+  let s0 = t_state(10_000_000, 10_000_000)
+  let base =
+    t_tx(
+      [t_in(0, t_out(2_000_000, s0))],
+      [
+        t_out(2_000_000, t_state(20_000_000, 20_000_000)),
+        t_out(10_000_000, Position { owner: t_alice, shares: 10_000_000 }),
+      ],
+      [t_alice],
+    )
+  let none = Transaction { ..base, mint: assets.zero }
+  t_spend(s0, Deposit, 0, base) && !t_spend(s0, Deposit, 0, none)
+}
+
+test deposit_cannot_send_the_marker_to_a_wallet() {
+  let s0 = t_state(10_000_000, 10_000_000)
+  let leaked =
+    Output {
+      ..t_key(t_mallory, 2_000_000),
+      value: assets.add(assets.from_lovelace(2_000_000), t_hash, marker_name, 1),
+    }
+  let t =
+    Transaction {
+      ..t_tx(
+        [t_in(0, t_out(2_000_000, s0))],
+        [
+          t_out(2_000_000, t_state(20_000_000, 20_000_000)),
+          t_bare(10_000_000, Position { owner: t_alice, shares: 10_000_000 }),
+          leaked,
+        ],
+        [t_alice],
+      ),
+      mint: assets.from_asset(t_hash, marker_name, 1),
+    }
+  !t_spend(s0, Deposit, 0, t)
+}
+
+test markers_need_the_genuine_state_to_be_spent() {
+  let outs =
+    [
+      t_out(2_000_000, t_state(20_000_000, 20_000_000)),
+      t_out(10_000_000, Position { owner: t_alice, shares: 10_000_000 }),
+    ]
+  let genuine = t_tx([t_in(0, t_out(2_000_000, t_state(10_000_000, 10_000_000)))], outs, [t_alice])
+  let planted = t_tx([t_in(0, t_bare(2_000_000, t_state(10_000_000, 10_000_000)))], outs, [t_alice])
+  t_mint(genuine) && !t_mint(planted)
+}
+
+/// A full close must burn the marker, not carry it off to a wallet.
+test full_withdraw_must_burn_the_marker() {
+  let p = Position { owner: t_alice, shares: 10_000_000 }
+  let s0 = t_state(10_000_000, 10_000_000)
+  let carried =
+    Output {
+      ..t_key(t_alice, 10_000_000),
+      value: assets.add(assets.from_lovelace(10_000_000), t_hash, marker_name, 1),
+    }
+  let t =
+    Transaction {
+      ..t_tx(
+        [t_in(0, t_out(2_000_000, s0)), t_in(1, t_out(10_000_000, p))],
+        [t_out(2_000_000, t_state(0, 0)), carried],
+        [t_alice],
+      ),
+      mint: assets.zero,
+    }
+  !t_spend(s0, Withdraw { shares: 10_000_000 }, 0, t)
+}
+
+/// A deposit creates exactly ONE Position.
+test deposit_cannot_create_two_positions() {
+  let s0 = t_state(10_000_000, 10_000_000)
+  let t =
+    t_tx(
+      [t_in(0, t_out(2_000_000, s0))],
+      [
+        t_out(2_000_000, t_state(20_000_000, 20_000_000)),
+        t_out(5_000_000, Position { owner: t_alice, shares: 5_000_000 }),
+        t_out(5_000_000, Position { owner: t_alice, shares: 5_000_000 }),
+      ],
+      [t_alice],
+    )
+  !t_spend(s0, Deposit, 0, t)
+}
+
+/// A deposit spends no existing Position.
+test deposit_cannot_spend_an_existing_position() {
+  let s0 = t_state(10_000_000, 10_000_000)
+  let mine = Position { owner: t_alice, shares: 10_000_000 }
+  let t =
+    t_tx(
+      [t_in(0, t_out(2_000_000, s0)), t_in(1, t_out(10_000_000, mine))],
+      [
+        t_out(2_000_000, t_state(20_000_000, 20_000_000)),
+        t_out(10_000_000, mine),
+        t_out(10_000_000, Position { owner: t_alice, shares: 10_000_000 }),
+      ],
+      [t_alice],
+    )
+  !t_spend(s0, Deposit, 0, t)
 }

@@ -20,7 +20,8 @@
          encoder/decoder round-trip
       5. Live Preprod scripts match the local build (verify-live-scripts)
       6. Security rules present in source: fee/deposit caps, state-thread
-         token on every shared-State validator (AUDIT.md F-1), sUSDr frozen
+         token on every shared-State validator (AUDIT.md F-1), position
+         markers (F-4), sUSDr frozen
       7. Mainnet refused: no tracked env file targets mainnet AND
          src/lib/network.ts hard-refuses it
       8. No secret/live keys in TRACKED env files
@@ -240,8 +241,12 @@ $rules = @(
     @{ File = 'contracts/vault/validators/yield_vault.ak'; Pattern = 'one_shot_mint(tx, policy_id, seed)'; Label = 'yield_vault state-thread mint (F-1)' }
     @{ File = 'contracts/vault/validators/yield_vault.ak'; Pattern = 'holds_thread(own_in.output.value, hash)'; Label = 'yield_vault spends only the genuine State (F-1)' }
     @{ File = 'contracts/vault/validators/yield_vault.ak'; Pattern = 'expect Some(_only_state_in) = sole_state(ins)'; Label = 'yield_vault sole State input (V-01)' }
+    @{ File = 'contracts/vault/validators/yield_vault.ak'; Pattern = 'genuine && markers_conserved'; Label = 'yield_vault position markers conserved (F-4)' }
+    @{ File = 'contracts/vault/validators/yield_vault.ak'; Pattern = 'marked && owner_signed'; Label = 'yield_vault spends only marked Positions (F-4)' }
     @{ File = 'contracts/vault/validators/receipt.ak'; Pattern = 'use stellaris/yield_datum.{State, YieldDatum}'; Label = 'receipt shares the vault datum type (F-2)' }
     @{ File = 'contracts/multi-asset-vault/validators/multi_asset_vault.ak'; Pattern = 'one_shot_mint(tx, policy_id, seed)'; Label = 'multi_asset_vault state-thread mint (F-1)' }
+    @{ File = 'contracts/multi-asset-vault/validators/multi_asset_vault.ak'; Pattern = 'genuine && markers_conserved'; Label = 'multi_asset_vault position markers conserved (F-4)' }
+    @{ File = 'contracts/multi-asset-vault/validators/multi_asset_vault.ak'; Pattern = 'marked && owner_signed'; Label = 'multi_asset_vault spends only marked Positions (F-4)' }
     @{ File = 'contracts/fraction-vault/validators/fraction_vault.ak'; Pattern = 'one_shot_mint(tx, policy_id, seed)'; Label = 'fraction_vault state-thread mint (F-1)' }
     @{ File = 'contracts/susdr-vault/README.md'; Pattern = 'DO NOT BOOTSTRAP'; Label = 'susdr_vault frozen notice (F-1)' }
 )
@@ -253,7 +258,7 @@ foreach ($r in $rules) {
     }
 }
 if ($missingRules.Count) { Add-Result '6. Security rules present in source' 'FAIL' ("Changed or missing: " + ($missingRules -join '; ')) }
-else { Add-Result '6. Security rules present in source' 'PASS' "$($rules.Count) caps/guards intact, incl. state-thread token on all 3 shared-State validators" }
+else { Add-Result '6. Security rules present in source' 'PASS' "$($rules.Count) caps/guards intact, incl. state-thread token on all 3 shared-State validators and position markers on both Position vaults" }
 
 # ---------------------------------------------------------------------------
 # 7. Mainnet refused - in tracked env files AND in code
