@@ -29,6 +29,7 @@ import {
   type OfferingDatum,
   type OfferingStatus,
 } from "./offering-chain";
+import type { VaultSeed } from "./vault-instances";
 
 /** FractionRedeemer constructor indices — mirrors fraction_vault.ak. */
 const R_BUY = 0;
@@ -54,11 +55,15 @@ async function connect(
   assetId: string,
   unit: DepositUnit,
   registryAddress?: string | null,
+  /** Only `openOffering` passes a seed; everything else uses the pinned one. */
+  seed?: VaultSeed,
 ): Promise<Session> {
   const pre = checkVaultPreconditions();
   if (!pre.ok) throw new Error(pre.reason);
   const { lucid, lucidMod } = await initLucidWithWallet();
-  const scripts = getOfferingScripts(lucidMod, assetId, unit);
+  const scripts = seed
+    ? getOfferingScripts(lucidMod, assetId, unit, seed)
+    : getOfferingScripts(lucidMod, assetId, unit);
   if (registryAddress && registryAddress !== scripts.address) {
     throw new Error(
       `This build derives a different offering address than the one on record. ` +
@@ -94,7 +99,11 @@ async function resolveOffering(
   session: Session,
 ): Promise<{ utxo: LucidUtxo; datum: OfferingDatum; held: bigint; lovelace: bigint }> {
   const utxos = (await session.lucid.utxosAt(session.scripts.address)) as unknown as LucidUtxo[];
+  // F-1: the live offering is the one carrying its state-thread token. Anyone
+  // can pay an Offering-shaped datum here; those are ignored, never spent.
+  const thread = session.scripts.threadUnit;
   const found = utxos
+    .filter((u) => (u.assets[thread] ?? 0n) === 1n)
     .map((u) => ({ utxo: u, datum: readOfferingDatum(u.datum ?? null) }))
     .filter((c): c is { utxo: LucidUtxo; datum: OfferingDatum } => c.datum !== null);
 
@@ -102,10 +111,10 @@ async function resolveOffering(
     throw new Error("This offering has not been opened on chain yet.");
   }
   if (found.length > 1) {
-    // The validator spends exactly one state per transaction, so a second one
-    // is unspendable noise; refuse rather than guess which is the live ledger.
+    // Only one UTxO can ever hold the thread token; anything else means the
+    // data is not from the chain. Refuse rather than guess.
     throw new Error(
-      "More than one offering state was found at this address. An operator must resolve it before anyone transacts.",
+      "More than one UTxO claims this offering's state token. Refusing to transact.",
     );
   }
   const chosen = found[0]!;
@@ -153,10 +162,14 @@ function dataMod(lucidMod: Session["lucidMod"]) {
   };
 }
 
-/** Value map for the script output: the rider in lovelace plus the unit. */
-function scriptValue(unit: DepositUnit, lovelace: bigint, unitAmount: bigint) {
-  if (unit.policyId === "") return { lovelace: unitAmount };
-  return { lovelace, [lucidUnitOf(unit)]: unitAmount };
+/**
+ * Value map for the offering output: the rider in lovelace plus the unit,
+ * and always the offering's state-thread token (F-1).
+ */
+function scriptValue(scripts: AppliedOffering, lovelace: bigint, unitAmount: bigint) {
+  const thread = { [scripts.threadUnit]: 1n };
+  if (scripts.unit.policyId === "") return { lovelace: unitAmount, ...thread };
+  return { lovelace, [lucidUnitOf(scripts.unit)]: unitAmount, ...thread };
 }
 
 // ---------------------------------------------------------------------------
@@ -187,12 +200,19 @@ export interface OpenOfferingResult {
   fractionUnit: string;
   assetNameHex: string;
   datum: OfferingDatum;
+  /** UTxO consumed to mint the offering's state token. Pin it in vault-instances.ts. */
+  seed: VaultSeed;
 }
 
 /**
- * Create the offering's one and only state UTxO. No script runs here — this
- * is an ordinary payment into the script address — so everything the offering
- * will forever be bound by is decided in this transaction.
+ * Create the offering's one and only state UTxO and mint its one-shot
+ * state-thread token (AUDIT.md F-1). The offering validator doubles as the
+ * token's minting policy: it checks the seed is consumed and that the output
+ * is a valid, empty, open offering carrying the token. Everything the
+ * offering will forever be bound by is decided in this transaction.
+ *
+ * The seed is a wallet UTxO, so each call creates a new offering at a new
+ * address; pin the returned seed to make it the live one.
  */
 export async function openOffering(params: OpenOfferingParams): Promise<OpenOfferingResult> {
   const operators = params.operators.map((o) => o.trim().toLowerCase());
@@ -221,11 +241,19 @@ export async function openOffering(params: OpenOfferingParams): Promise<OpenOffe
     }
   }
 
-  const session = await connect(params.assetId, params.unit);
-  const existing = (await session.lucid.utxosAt(session.scripts.address)) as unknown as LucidUtxo[];
-  if (existing.some((u) => readOfferingDatum(u.datum ?? null))) {
-    throw new Error("This offering already exists on chain — it cannot be opened twice.");
-  }
+  // Pick the seed from the connected wallet, deterministically. The offering's
+  // address depends on it, so it is chosen before anything is derived.
+  const probe = await initLucidWithWallet();
+  const walletUtxos = (await probe.lucid.wallet().getUtxos()) as unknown as LucidUtxo[];
+  const seedUtxo = [...walletUtxos].sort((a, b) =>
+    `${a.txHash}#${String(a.outputIndex).padStart(5, "0")}`.localeCompare(
+      `${b.txHash}#${String(b.outputIndex).padStart(5, "0")}`,
+    ),
+  )[0];
+  if (!seedUtxo) throw new Error("The connected wallet has no UTxO to use as the offering seed.");
+  const seed: VaultSeed = { txHash: seedUtxo.txHash, outputIndex: seedUtxo.outputIndex };
+
+  const session = await connect(params.assetId, params.unit, undefined, seed);
 
   const rider = params.riderLovelace ?? MIN_RIDER_LOVELACE;
   if (rider < MIN_RIDER_LOVELACE) {
@@ -249,13 +277,17 @@ export async function openOffering(params: OpenOfferingParams): Promise<OpenOffe
     fractionPolicy: session.scripts.policyId,
   };
 
+  const { Data, Constr } = dataMod(session.lucidMod);
   const completed = await session.lucid
     .newTx()
+    .collectFrom([seedUtxo as never])
+    .mintAssets({ [session.scripts.threadUnit]: 1n }, Data.to(new Constr(0, [])))
+    .attach.MintingPolicy({ type: "PlutusV3", script: session.scripts.cbor })
     .pay.ToContract(
       session.scripts.address,
       { kind: "inline", value: encodeOfferingDatum(session.lucidMod, datum) },
       // Pool and fees both start at zero, so the UTxO holds only the rider.
-      scriptValue(params.unit, rider, params.unit.policyId === "" ? rider : 0n),
+      scriptValue(session.scripts, rider, params.unit.policyId === "" ? rider : 0n),
     )
     .complete();
   const txHash = await (await completed.sign.withWallet().complete()).submit();
@@ -268,6 +300,7 @@ export async function openOffering(params: OpenOfferingParams): Promise<OpenOffe
     fractionUnit: session.scripts.fractionUnit,
     assetNameHex: session.scripts.assetNameHex,
     datum,
+    seed,
   };
 }
 
@@ -327,7 +360,7 @@ export async function buyFractions(params: {
     .pay.ToContract(
       session.scripts.address,
       { kind: "inline", value: encodeOfferingDatum(session.lucidMod, next) },
-      scriptValue(params.unit, lovelace, held + quote.cost),
+      scriptValue(session.scripts, lovelace, held + quote.cost),
     )
     .complete();
 
@@ -400,7 +433,7 @@ export async function redeemFractions(params: {
     .pay.ToContract(
       session.scripts.address,
       { kind: "inline", value: encodeOfferingDatum(session.lucidMod, next) },
-      scriptValue(params.unit, lovelace, nextHeld),
+      scriptValue(session.scripts, lovelace, nextHeld),
     )
     .complete();
 
@@ -446,7 +479,7 @@ export async function distributeIncome(params: {
     .pay.ToContract(
       session.scripts.address,
       { kind: "inline", value: encodeOfferingDatum(session.lucidMod, next) },
-      scriptValue(params.unit, lovelace, held + params.amount),
+      scriptValue(session.scripts, lovelace, held + params.amount),
     )
     .complete();
   const txHash = await (await completed.sign.withWallet().complete()).submit();
@@ -500,7 +533,7 @@ export async function setOfferingStatus(params: {
     datum,
     Data.to(new Constr(R_SET_STATUS, [new Constr(statusIndex(params.status), [])])),
     { ...datum, status: params.status },
-    scriptValue(params.unit, lovelace, held),
+    scriptValue(session.scripts, lovelace, held),
   );
   return { txHash, status: params.status };
 }
@@ -532,7 +565,7 @@ export async function setOfferingFees(params: {
       new Constr(R_SET_FEES, [BigInt(params.mintFeeBps), BigInt(params.redeemFeeBps)]),
     ),
     { ...datum, mintFeeBps: params.mintFeeBps, redeemFeeBps: params.redeemFeeBps },
-    scriptValue(params.unit, lovelace, held),
+    scriptValue(session.scripts, lovelace, held),
   );
   return { txHash };
 }
@@ -577,7 +610,7 @@ export async function claimOfferingFees(params: {
     datum,
     Data.to(new Constr(R_CLAIM_FEE, [amount])),
     { ...datum, fees: (accrued - amount).toString() },
-    scriptValue(params.unit, lovelace, nextHeld),
+    scriptValue(session.scripts, lovelace, nextHeld),
     (b) => (b as { pay: { ToAddress: (a: string, v: unknown) => unknown } }).pay.ToAddress(
       params.treasuryAddress,
       payout,

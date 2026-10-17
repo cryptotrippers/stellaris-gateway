@@ -30,8 +30,7 @@ import { getRefInputIfPublished } from "./ref-scripts";
 import {
   encodeStateDatum,
   readPositionDatum,
-  readStateDatum,
-  selectCanonicalState,
+  genuineLucidState,
   type VaultPositionDatum,
   type VaultStateDatum,
 } from "./yield-chain-decode";
@@ -139,19 +138,13 @@ interface ResolvedUtxos {
 
 async function resolveVault(
   lucid: LucidBits["lucid"],
-  address: string,
+  script: Pick<LucidBits["script"], "address" | "threadUnit">,
   owner?: string,
 ): Promise<ResolvedUtxos> {
-  const utxos = await lucid.utxosAt(address);
-  const stateCandidates: Array<{ utxo: (typeof utxos)[number]; state: VaultStateDatum }> = [];
+  const utxos = await lucid.utxosAt(script.address);
   const positions: ResolvedUtxos["positions"] = [];
 
   for (const u of utxos) {
-    const asState = readStateDatum(u.datum ?? null);
-    if (asState) {
-      stateCandidates.push({ utxo: u, state: asState });
-      continue;
-    }
     const asPosition = readPositionDatum(u.datum ?? null);
     if (asPosition && (!owner || asPosition.owner.toLowerCase() === owner.toLowerCase())) {
       positions.push({
@@ -161,14 +154,9 @@ async function resolveVault(
       });
     }
   }
-  // A vault bootstrapped twice leaves a second, never-used State UTxO here.
-  // The validator spends exactly one State per tx, so pick the live ledger with
-  // the same deterministic rule the readers use instead of refusing to build.
-  const chosen = selectCanonicalState(stateCandidates, (c) => ({
-    txHash: c.utxo.txHash,
-    outputIndex: c.utxo.outputIndex,
-    state: c.state,
-  }));
+  // F-1: the genuine State is the one carrying this instance's thread token;
+  // a State-shaped datum anyone else paid here is ignored, whatever it claims.
+  const chosen = genuineLucidState(utxos, script.threadUnit, script.address);
   const stateUtxo = chosen?.utxo ?? null;
   const state = chosen?.state ?? null;
   if (!stateUtxo || !state) {
@@ -198,7 +186,7 @@ export async function loadMyVaultView(
   registryAddress?: string | null,
 ): Promise<VaultView> {
   const { lucid, script, selfHash } = await connect(assetId, registryAddress);
-  const resolved = await resolveVault(lucid, script.address, selfHash);
+  const resolved = await resolveVault(lucid, script, selfHash);
   return {
     address: script.address,
     state: resolved.state,
@@ -245,7 +233,7 @@ export async function depositToYieldVault(params: {
     params.assetId,
     params.registryAddress,
   );
-  const { stateUtxo, state, stateLovelace } = await resolveVault(lucid, script.address);
+  const { stateUtxo, state, stateLovelace } = await resolveVault(lucid, script);
   assertReceiptPolicy(receipt, state.receiptPolicy);
 
   if (state.paused) {
@@ -316,7 +304,11 @@ export async function depositToYieldVault(params: {
     builder = builder.attach.MintingPolicy({ type: "PlutusV3", script: receipt.cbor });
   }
   const completed = await builder
-    .pay.ToContract(script.address, { kind: "inline", value: nextState }, { lovelace: stateLovelace })
+    .pay.ToContract(
+      script.address,
+      { kind: "inline", value: nextState },
+      { lovelace: stateLovelace, [script.threadUnit]: 1n },
+    )
     .pay.ToContract(script.address, { kind: "inline", value: positionDatum }, { lovelace: deposit })
     .complete();
 
@@ -363,11 +355,7 @@ export async function withdrawFromYieldVault(params: {
     params.assetId,
     params.registryAddress,
   );
-  const { stateUtxo, state, stateLovelace, positions } = await resolveVault(
-    lucid,
-    script.address,
-    selfHash,
-  );
+  const { stateUtxo, state, stateLovelace, positions } = await resolveVault(lucid, script, selfHash);
   assertReceiptPolicy(receipt, state.receiptPolicy);
   if (positions.length === 0) {
     throw new Error("This wallet holds no position in this vault.");
@@ -457,7 +445,7 @@ export async function withdrawFromYieldVault(params: {
     .pay.ToContract(
       script.address,
       { kind: "inline", value: nextState },
-      { lovelace: nextStateLovelace },
+      { lovelace: nextStateLovelace, [script.threadUnit]: 1n },
     )
     // The validator requires an output paying the position's owner.
     .pay.ToAddress(walletAddress, { lovelace: paid })

@@ -5,6 +5,12 @@
  * single State UTxO exists: the aggregate ledger every later transaction
  * balances against. This module builds that one-time transaction.
  *
+ * Phase 1 (AUDIT.md F-1): bootstrap also mints the vault's one-shot
+ * state-thread token. It spends a wallet UTxO (the `seed`), and the seed is a
+ * parameter of the validator — so the vault's address is only fixed once the
+ * seed is chosen here. The returned `seed` must be pinned in
+ * `src/lib/vault-instances.ts` before the rest of the app can address the vault.
+ *
  * Browser-only — Lucid is dynamically imported so it never enters an SSR
  * bundle, and the wallet must be connected on the app's network.
  */
@@ -13,6 +19,7 @@ import { checkVaultPreconditions, initLucidWithWallet } from "./vault";
 import { getReceiptPolicy, getYieldVaultScript, YIELD_VAULT_VERSION } from "./yield-vault";
 import { feeBpsOk, MAX_FEE_BPS } from "./vault-fees";
 import { encodeStateDatum } from "./yield-chain-decode";
+import type { VaultSeed } from "./vault-instances";
 
 export interface BootstrapParams {
   assetId: string;
@@ -41,6 +48,10 @@ export interface BootstrapResult {
   lastFeeTime: number;
   /** Receipt minting policy id written into the vault's state datum. */
   receiptPolicy: string;
+  /** The UTxO consumed to mint the state-thread token. Pin it in vault-instances.ts. */
+  seed: VaultSeed;
+  /** Lucid unit of the state-thread token now held by the State UTxO. */
+  threadUnit: string;
 }
 
 const HEX28 = /^[0-9a-f]{56}$/;
@@ -83,7 +94,11 @@ export async function getConnectedOperatorKeyHash(): Promise<string> {
   return cred.hash;
 }
 
-/** Derive a yield vault address for an asset without signing anything. */
+/**
+ * Derive a bootstrapped yield vault's address without signing anything.
+ * Throws `VaultNotBootstrappedError` when the asset has no pinned seed: since
+ * Phase 1 an address cannot exist before its bootstrap seed is chosen.
+ */
 export async function deriveYieldVaultAddress(assetId: string) {
   const lucidMod = await import("@lucid-evolution/lucid");
   return getYieldVaultScript(lucidMod, assetId);
@@ -93,9 +108,9 @@ export async function deriveYieldVaultAddress(assetId: string) {
  * Create the vault's State UTxO: zero shares, zero assets, epoch zero, the
  * operator committee and its threshold, unpaused.
  *
- * Running this twice for the same asset would create a second state UTxO and
- * break the "exactly one ledger" invariant, so the caller must confirm the
- * vault is not already bootstrapped (see `getVaultChainState`).
+ * Each run spends a different seed and therefore creates a brand-new vault
+ * instance at a new address — it can never add a second State to an existing
+ * vault. Pin the returned seed to make the new instance the live one.
  */
 export async function bootstrapYieldVault(params: BootstrapParams): Promise<BootstrapResult> {
   const pre = checkVaultPreconditions();
@@ -112,8 +127,19 @@ export async function bootstrapYieldVault(params: BootstrapParams): Promise<Boot
   // a new address after the registry's old one has drifted. Callers that
   // spend an *existing* state UTxO (deposit/withdraw/accrue) are the ones
   // that must verify against the registry; see assertYieldVaultAddress.
-  const script = getYieldVaultScript(lucidMod, params.assetId);
-  const receipt = getReceiptPolicy(lucidMod, params.assetId);
+  // The seed: any wallet UTxO, chosen deterministically. Spending it is what
+  // makes the thread-token mint one-shot.
+  const walletUtxos = await lucid.wallet().getUtxos();
+  const seedUtxo = [...walletUtxos].sort((a, b) =>
+    `${a.txHash}#${String(a.outputIndex).padStart(5, "0")}`.localeCompare(
+      `${b.txHash}#${String(b.outputIndex).padStart(5, "0")}`,
+    ),
+  )[0];
+  if (!seedUtxo) throw new Error("The connected wallet has no UTxO to use as the vault seed.");
+  const seed: VaultSeed = { txHash: seedUtxo.txHash, outputIndex: seedUtxo.outputIndex };
+
+  const script = getYieldVaultScript(lucidMod, params.assetId, seed);
+  const receipt = getReceiptPolicy(lucidMod, params.assetId, seed);
 
   const feeBps = params.feeBps ?? 0;
   if (!feeBpsOk(feeBps)) {
@@ -158,9 +184,24 @@ export async function bootstrapYieldVault(params: BootstrapParams): Promise<Boot
 
   const lovelace = params.lovelace ?? 5_000_000n;
 
+  const { Data, Constr } = lucidMod as unknown as {
+    Data: { to: (v: unknown) => string };
+    Constr: new (index: number, fields: unknown[]) => unknown;
+  };
+
+  // The vault script is its own thread-token policy (same hash). Its mint
+  // handler checks: seed consumed, exactly one token, no State spent, and the
+  // State output is a valid empty ledger carrying the token.
   const tx = await lucid
     .newTx()
-    .pay.ToContract(script.address, { kind: "inline", value: datum }, { lovelace })
+    .collectFrom([seedUtxo])
+    .mintAssets({ [script.threadUnit]: 1n }, Data.to(new Constr(0, [])))
+    .attach.MintingPolicy({ type: "PlutusV3", script: script.cbor })
+    .pay.ToContract(
+      script.address,
+      { kind: "inline", value: datum },
+      { lovelace, [script.threadUnit]: 1n },
+    )
     .complete();
   const signed = await tx.sign.withWallet().complete();
   const txHash = await signed.submit();
@@ -177,5 +218,7 @@ export async function bootstrapYieldVault(params: BootstrapParams): Promise<Boot
     treasuryPkh,
     lastFeeTime,
     receiptPolicy: receipt.policyId,
+    seed,
+    threadUnit: script.threadUnit,
   };
 }

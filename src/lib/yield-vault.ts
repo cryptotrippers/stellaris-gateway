@@ -5,12 +5,22 @@
  * (`src/lib/vault.ts`). It is deliberately kept separate: the Stage 3 vault
  * stays live and spendable while the yield vault is proven on Preprod.
  *
- * The validator is parameterized by `(version, asset_id)`, exactly like the
- * Stage 3 vault, so every marketplace asset derives its own script hash and
- * address. `scripts/verify-vault-hash.mjs` fails the build if the pinned
- * blueprint drifts from `contracts/vault/plutus.json`.
+ * The validator is parameterized by `(version, asset_id, seed)`. `seed` is the
+ * OutputReference consumed at bootstrap to mint the vault's one-shot
+ * state-thread token (AUDIT.md F-1), so an instance's address is only known
+ * once it has been bootstrapped and its seed pinned in `vault-instances.ts`.
+ * `scripts/verify-vault-hash.mjs` fails the build if the pinned blueprint
+ * drifts from `contracts/vault/plutus.json`.
  */
 import { LUCID_NETWORK } from "./network";
+import {
+  YIELD_VAULT_SEEDS,
+  pinnedSeed,
+  seedKey,
+  seedToData,
+  threadUnit,
+  type VaultSeed,
+} from "./vault-instances";
 
 /**
  * Yield vault instance version. Bumping this mints a fresh vault family.
@@ -18,12 +28,17 @@ import { LUCID_NETWORK } from "./network";
  * v4 (Stage 7 — revenue): the State datum carries `entry_fee_bps` and
  * `exit_fee_bps` alongside the management `fee_bps`, and `SetFee` moves all
  * three. v3 vaults stay spendable; depositors exit v3 and re-enter v4.
+ *
+ * v5 (Phase 1 — security): the State is identified by a one-shot
+ * state-thread token minted at bootstrap from a `seed` UTxO (AUDIT.md F-1),
+ * and the receipt policy decodes the real 13-field State (F-2). No v4
+ * instance was ever bootstrapped from the v4 blueprint, so nothing migrates.
  */
-export const YIELD_VAULT_VERSION = 4n;
+export const YIELD_VAULT_VERSION = 5n;
 
 /** Hash of the *unapplied* yield_vault validator from plutus.json. */
 export const YIELD_BLUEPRINT_HASH =
-  "53998fe4571a7a5ae6880e079204e0572e4f3d70a250c0b8d777d37d";
+  "0a5dc204ddaf1bb9f74daf8a4e3bc05a0c68c178ff2d27a12f11c7b4";
 
 /** Compiled CBOR of the *unapplied* yield_vault validator (PlutusV3). */
 import yieldBlueprintSource from "../../contracts/vault/plutus.json?raw";
@@ -49,10 +64,10 @@ export const YIELD_BLUEPRINT_CBOR = yieldValidator.compiledCode;
  * the vault in turn stores the resulting policy id in its State datum, so a
  * deposit MUST mint and a withdrawal MUST burn exactly the depositor-share
  * delta. There is no hash cycle: the vault's own hash depends only on
- * `(version, asset_id)`.
+ * `(version, asset_id, seed)`.
  */
 export const RECEIPT_BLUEPRINT_HASH =
-  "ae6bf02ede5ed0aa23d619400208fca63f4dba372a69b7ae7e01862d";
+  "13307bd7c2fbed1b7c1f7748b75b7ef6f67c8500e53d1e358b20017a";
 
 const receiptValidator = yieldBlueprint.validators?.find(
   (validator) => validator.title === "receipt.receipt.mint",
@@ -69,6 +84,10 @@ export interface AppliedYieldVault {
   scriptHash: string;
   address: string;
   assetId: string;
+  /** Bootstrap seed this instance is parameterised by. */
+  seed: VaultSeed;
+  /** Lucid unit of the state-thread token the genuine State carries. */
+  threadUnit: string;
   type: "PlutusV3";
 }
 
@@ -84,14 +103,22 @@ type LucidModLike = {
   validatorToAddress: (network: typeof LUCID_NETWORK, v: { type: "PlutusV3"; script: string }) => string;
   validatorToScriptHash: (v: { type: "PlutusV3"; script: string }) => string;
   fromText: (s: string) => string;
+  Constr: new (index: number, fields: unknown[]) => unknown;
 };
 
 /**
- * Apply `(YIELD_VAULT_VERSION, assetId)` to the yield blueprint and return the
- * applied script + its address on the active network. Cached per asset.
+ * Apply `(YIELD_VAULT_VERSION, assetId, seed)` to the yield blueprint and
+ * return the applied script + its address on the active network. `seed`
+ * defaults to the instance pinned in `vault-instances.ts`; only the bootstrap
+ * builder passes one explicitly. Throws `VaultNotBootstrappedError` when the
+ * asset has no pinned instance. Cached per asset and seed.
  */
-export function getYieldVaultScript(lucidMod: unknown, assetId: string): AppliedYieldVault {
-  const cacheKey = `${YIELD_BLUEPRINT_HASH}:${String(YIELD_VAULT_VERSION)}:${assetId}`;
+export function getYieldVaultScript(
+  lucidMod: unknown,
+  assetId: string,
+  seed: VaultSeed = pinnedSeed("yield_vault", YIELD_VAULT_SEEDS, assetId),
+): AppliedYieldVault {
+  const cacheKey = `${YIELD_BLUEPRINT_HASH}:${String(YIELD_VAULT_VERSION)}:${assetId}:${seedKey(seed)}`;
   const cached = appliedCache.get(cacheKey);
   if (cached) return cached;
 
@@ -115,12 +142,21 @@ export function getYieldVaultScript(lucidMod: unknown, assetId: string): Applied
   const cbor = applyParamsToScript(YIELD_BLUEPRINT_CBOR, [
     YIELD_VAULT_VERSION,
     fromText(assetId),
+    seedToData(lucidMod, seed),
   ]);
   const validator = { type: "PlutusV3" as const, script: cbor };
   const scriptHash = validatorToScriptHash(validator);
   const address = validatorToAddress(LUCID_NETWORK, validator);
 
-  const applied: AppliedYieldVault = { cbor, scriptHash, address, assetId, type: "PlutusV3" };
+  const applied: AppliedYieldVault = {
+    cbor,
+    scriptHash,
+    address,
+    assetId,
+    seed,
+    threadUnit: threadUnit(scriptHash),
+    type: "PlutusV3",
+  };
   appliedCache.set(cacheKey, applied);
   console.info(
     `[yield-vault] blueprint=${YIELD_BLUEPRINT_HASH} v${String(YIELD_VAULT_VERSION)} ` +
@@ -146,8 +182,12 @@ const receiptCache = new Map<string, AppliedReceiptPolicy>();
  * unapplied blueprint is re-hashed and checked against the pin first, exactly
  * like the vault, so a stale artifact can never be attached to a signed tx.
  */
-export function getReceiptPolicy(lucidMod: unknown, assetId: string): AppliedReceiptPolicy {
-  const cacheKey = `${RECEIPT_BLUEPRINT_HASH}:${YIELD_BLUEPRINT_HASH}:${String(YIELD_VAULT_VERSION)}:${assetId}`;
+export function getReceiptPolicy(
+  lucidMod: unknown,
+  assetId: string,
+  seed: VaultSeed = pinnedSeed("yield_vault", YIELD_VAULT_SEEDS, assetId),
+): AppliedReceiptPolicy {
+  const cacheKey = `${RECEIPT_BLUEPRINT_HASH}:${YIELD_BLUEPRINT_HASH}:${String(YIELD_VAULT_VERSION)}:${assetId}:${seedKey(seed)}`;
   const cached = receiptCache.get(cacheKey);
   if (cached) return cached;
 
@@ -165,7 +205,7 @@ export function getReceiptPolicy(lucidMod: unknown, assetId: string): AppliedRec
     );
   }
 
-  const vault = getYieldVaultScript(lucidMod, assetId);
+  const vault = getYieldVaultScript(lucidMod, assetId, seed);
   const assetNameHex = fromText(assetId);
   const cbor = applyParamsToScript(RECEIPT_BLUEPRINT_CBOR, [vault.scriptHash, assetNameHex]);
   const policyId = validatorToScriptHash({ type: "PlutusV3", script: cbor });

@@ -10,7 +10,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { publicSupabase } from "./asset-vaults.shared";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertRole } from "./asset-vaults.shared";
-import { readOfferingDatum } from "./offering-chain";
+import { genuineOfferingAt } from "./offering-chain";
 import {
   OFFERING_COLS,
   type FractionHolder,
@@ -66,23 +66,22 @@ export const readOfferingChainState = createServerFn({ method: "GET" })
     const unit = data.unit && data.unit !== "lovelace" ? data.unit : "lovelace";
     const utxos = (await bfGet<BfUtxo[]>(`/addresses/${data.address}/utxos`)) ?? [];
 
-    const states = utxos
-      .map((u) => ({ utxo: u, datum: readOfferingDatum(u.inline_datum) }))
-      .filter((c) => c.datum !== null);
-
-    const chosen = states[0];
-    const held =
-      chosen?.utxo.amount.find((a) => a.unit === unit)?.quantity ?? "0";
+    // F-1: the live offering is the UTxO carrying its state-thread token. The
+    // old rule displayed whichever Offering datum came first, so a planted
+    // datum could fake the counters (O-03, offering side).
+    const genuine = genuineOfferingAt(utxos, data.address);
+    const chosen = genuine.index >= 0 ? utxos[genuine.index] : undefined;
+    const held = chosen?.amount.find((a) => a.unit === unit)?.quantity ?? "0";
 
     return {
       address: data.address,
-      datum: chosen?.datum ?? null,
+      datum: genuine.datum,
       held,
       source: "blockfrost",
       readAt: Date.now(),
       warning:
-        states.length > 1
-          ? "More than one offering state exists at this address — an operator must resolve it."
+        genuine.planted > 0
+          ? `${String(genuine.planted)} Offering-shaped UTxO(s) without the offering's state token sit at this address. They are ignored and can never be spent.`
           : null,
     };
   });
@@ -141,14 +140,20 @@ export const registerOffering = createServerFn({ method: "POST" })
     // offering address with a fresh datum matching exactly what was entered.
     const { bfGet } = await import("./blockfrost-fetch.server");
     const io = await bfGet<{
-      outputs: Array<{ address: string; inline_datum: string | null }>;
+      outputs: Array<{
+        address: string;
+        amount: Array<{ unit: string; quantity: string }>;
+        inline_datum: string | null;
+      }>;
     }>(`/txs/${data.bootstrapTxHash}/utxos`);
     if (!io) throw new Error("NOT_CONFIRMED: the opening transaction is not on chain yet.");
-    const d = io.outputs
-      .filter((o) => o.address === data.scriptAddress)
-      .map((o) => readOfferingDatum(o.inline_datum))
-      .find((x) => x !== null);
-    if (!d) throw new Error("The opening transaction has no offering state at that address.");
+    // F-1: the opening output must carry the offering's state-thread token.
+    const d = genuineOfferingAt(io.outputs, data.scriptAddress).datum;
+    if (!d) {
+      throw new Error(
+        "The opening transaction has no offering state carrying the state token at that address.",
+      );
+    }
     const mismatches: string[] = [];
     if (d.minted !== "0" || d.outstanding !== "0") mismatches.push("fractions already minted");
     if (d.totalFractions !== String(data.totalFractions)) mismatches.push("total fractions");

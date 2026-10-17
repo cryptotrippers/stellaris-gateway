@@ -24,10 +24,16 @@
 ////   * the committee, the treasury, the issuer, the total supply and the
 ////     bound fraction policy are immutable through ordinary spending;
 ////   * fee rates are capped and only a committee M-of-N can move them;
-////   * the treasury is the only address `ClaimFee` may pay.
+////   * the treasury is the only address `ClaimFee` may pay;
+////   * the offering is identified by a one-shot state-thread token minted at
+////     opening (validator parameter `seed`, AUDIT.md F-1). An Offering datum
+////     paid here by anyone else has no token and can never be spent, so it
+////     cannot be used to mint cheap fractions that redeem against the real
+////     pool.
 
 use aiken/collection/dict
 use aiken/collection/list
+use aiken/primitive/bytearray
 use cardano/address.{Script, VerificationKey}
 use cardano/assets.{PolicyId, Value}
 use cardano/transaction.{
@@ -37,6 +43,7 @@ use stellaris/offering.{
   Closed, Offering, OfferingDatum, Open, Redeeming, Status, bps_of, buy_cost,
   fee_bps_ok, operators_valid, redeem_gross, supply_ok, threshold_met,
 }
+use stellaris/thread.{holds_thread, one_shot_mint, thread_name}
 use stellaris/units.{is_ada, min_rider_lovelace, rider_ok, unit_of, value_clean}
 
 pub type FractionRedeemer {
@@ -163,6 +170,52 @@ fn values_clean(outs: List<Output>, policy: PolicyId, name: ByteArray) -> Bool {
   )
 }
 
+/// The offering output carries exactly one thread token and, beside it, only
+/// lovelace and the deposit unit, with a min-ADA rider.
+fn offering_value_ok(
+  out: Output,
+  own: PolicyId,
+  policy: PolicyId,
+  name: ByteArray,
+) -> Bool {
+  let rest = assets.add(out.value, own, thread_name, -1)
+  holds_thread(out.value, own) && values_clean(
+    [Output { ..out, value: rest }],
+    policy,
+    name,
+  )
+}
+
+/// A freshly opened offering: nothing sold, nothing pooled, open for buying,
+/// a well-formed committee and supply, fees inside the caps.
+fn opening_ok(d: OfferingDatum) -> Bool {
+  let Offering {
+    total_fractions,
+    minted,
+    outstanding,
+    price,
+    pool,
+    fees,
+    operators,
+    threshold,
+    status,
+    mint_fee_bps,
+    redeem_fee_bps,
+    fraction_policy,
+    ..
+  } = d
+  minted == 0 && outstanding == 0 && pool == 0 && fees == 0 && status == Open && supply_ok(
+    total_fractions,
+    minted,
+    outstanding,
+    pool,
+    fees,
+    price,
+  ) && operators_valid(operators, threshold) && fee_bps_ok(mint_fee_bps) && fee_bps_ok(
+    redeem_fee_bps,
+  ) && bytearray.length(fraction_policy) == 28
+}
+
 fn unit_total(outs: List<Output>, policy: PolicyId, name: ByteArray) -> Int {
   list.foldr(outs, 0, fn(o: Output, acc) { acc + unit_of(o.value, policy, name) })
 }
@@ -176,7 +229,21 @@ validator fraction_vault(
   asset_id: ByteArray,
   unit_policy: PolicyId,
   unit_name: ByteArray,
+  seed: OutputReference,
 ) {
+  /// Opening: mint the one-shot state-thread token into the initial
+  /// Offering. The seed can be spent once, so this succeeds at most once.
+  mint(_redeemer: Data, policy_id: PolicyId, tx: Transaction) {
+    expect [boot] = script_outputs(tx, policy_id)
+    expect Some(boot_datum) = datum_of(boot)
+    one_shot_mint(tx, policy_id, seed) && script_inputs(tx, policy_id) == [] && offering_value_ok(
+      boot,
+      policy_id,
+      unit_policy,
+      unit_name,
+    ) && opening_ok(boot_datum)
+  }
+
   spend(
     datum: Option<OfferingDatum>,
     redeemer: FractionRedeemer,
@@ -189,10 +256,12 @@ validator fraction_vault(
     let ins = script_inputs(tx, hash)
     let outs = script_outputs(tx, hash)
 
-    // Exactly one state in, exactly one state out.
-    expect [_only_in] = ins
+    // Exactly one state in, exactly one state out — and both are the GENUINE
+    // offering, carrying the thread token (F-1).
+    expect [only_in] = ins
     expect Some(state_out) = sole_offering(outs)
     expect Some(next) = datum_of(state_out)
+    let genuine = holds_thread(only_in.value, hash)
 
     let Offering {
       total_fractions,
@@ -235,7 +304,7 @@ validator fraction_vault(
 
     // Facts that hold for EVERY action.
     let structural =
-      values_clean(outs, unit_policy, unit_name) && n_total == total_fractions && n_issuer == issuer && n_treasury == treasury && n_operators == operators && n_threshold == threshold && n_fraction_policy == fraction_policy && n_price == price && operators_valid(
+      genuine && offering_value_ok(state_out, hash, unit_policy, unit_name) && n_total == total_fractions && n_issuer == issuer && n_treasury == treasury && n_operators == operators && n_threshold == threshold && n_fraction_policy == fraction_policy && n_price == price && operators_valid(
         operators,
         threshold,
       ) && supply_ok(n_total, n_minted, n_outstanding, n_pool, n_fees, n_price) && fee_bps_ok(
@@ -387,7 +456,14 @@ fn offering(
   }
 }
 
+/// The genuine offering UTxO: carries the state-thread token.
 fn script_utxo(lovelace: Int, d: OfferingDatum) -> Output {
+  let o = bare_utxo(lovelace, d)
+  Output { ..o, value: assets.add(o.value, vhash, thread_name, 1) }
+}
+
+/// An Offering datum WITHOUT the thread token: what anyone can pay here.
+fn bare_utxo(lovelace: Int, d: OfferingDatum) -> Output {
   Output {
     address: address.Address {
       payment_credential: Script(vhash),
@@ -398,6 +474,13 @@ fn script_utxo(lovelace: Int, d: OfferingDatum) -> Output {
     reference_script: None,
   }
 }
+
+/// The opening seed the fixture offering is parameterised by.
+const t_seed: OutputReference =
+  OutputReference {
+    transaction_id: #"5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed",
+    output_index: 0,
+  }
 
 fn key_utxo(pkh: ByteArray, lovelace: Int) -> Output {
   Output {
@@ -446,6 +529,7 @@ fn run(
     t_asset,
     #"",
     #"",
+    t_seed,
     Some(before),
     r,
     own_ref_0,
@@ -660,5 +744,168 @@ test the_committee_cannot_rewrite_the_supply_or_the_treasury() {
     assets.zero,
     [op1, op2],
     SetStatus { status: Closed },
+  )
+}
+
+// --- Phase 1: state-thread token (AUDIT.md F-1) ------------------------
+
+fn seed_input() -> Input {
+  Input { output_reference: t_seed, output: key_utxo(issuer_pkh, 50_000_000) }
+}
+
+fn opening_tx(ins: List<Input>, outs: List<Output>, minted: Int) -> Transaction {
+  Transaction {
+    ..transaction.placeholder,
+    inputs: ins,
+    outputs: outs,
+    mint: assets.from_asset(vhash, thread_name, minted),
+    extra_signatories: [issuer_pkh],
+  }
+}
+
+fn open(tx: Transaction) -> Bool {
+  fraction_vault.mint(0, t_asset, #"", #"", t_seed, Void, vhash, tx)
+}
+
+test opening_mints_the_thread_token_into_an_empty_offering() {
+  open(
+    opening_tx(
+      [seed_input()],
+      [script_utxo(rider, offering(0, 0, 0, 0, Open, 100, 100))],
+      1,
+    ),
+  )
+}
+
+test opening_without_the_seed_is_rejected() {
+  let other =
+    Input {
+      output_reference: OutputReference { ..t_seed, output_index: 7 },
+      output: key_utxo(issuer_pkh, 50_000_000),
+    }
+  !open(
+    opening_tx(
+      [other],
+      [script_utxo(rider, offering(0, 0, 0, 0, Open, 100, 100))],
+      1,
+    ),
+  )
+}
+
+test opening_cannot_start_with_fractions_already_sold() {
+  !open(
+    opening_tx(
+      [seed_input()],
+      [script_utxo(rider + 100_000_000, offering(4, 4, 100_000_000, 0, Open, 100, 100))],
+      1,
+    ),
+  )
+}
+
+test opening_cannot_start_in_redeeming() {
+  !open(
+    opening_tx(
+      [seed_input()],
+      [script_utxo(rider, offering(0, 0, 0, 0, Redeeming, 100, 100))],
+      1,
+    ),
+  )
+}
+
+test opening_cannot_happen_while_an_offering_is_spent() {
+  let live = offering(4, 4, 99_000_000, 1_000_000, Open, 100, 100)
+  !open(
+    opening_tx(
+      [
+        seed_input(),
+        Input { output_reference: own_ref_0, output: script_utxo(rider + 100_000_000, live) },
+      ],
+      [script_utxo(rider, offering(0, 0, 0, 0, Open, 100, 100))],
+      1,
+    ),
+  )
+}
+
+test opening_cannot_burn_the_thread_token() {
+  !open(
+    opening_tx(
+      [seed_input()],
+      [script_utxo(rider, offering(0, 0, 0, 0, Open, 100, 100))],
+      -1,
+    ),
+  )
+}
+
+/// F-1 on the fraction vault: an Offering datum paid to the address with a
+/// cheap price would let an attacker buy fractions for almost nothing and
+/// redeem them against the genuine pool. Without the token it is unspendable.
+test planted_offering_cannot_sell_fractions() {
+  // Price 1 lovelace per fraction instead of 25 ADA.
+  let planted = Offering { ..offering(0, 0, 0, 0, Open, 0, 0), price: 1 }
+  let after = Offering { ..offering(500, 500, 500, 0, Open, 0, 0), price: 1 }
+  let t =
+    spend_tx(
+      bare_utxo(rider, planted),
+      [script_utxo(rider + 500, after)],
+      assets.from_asset(fpolicy, t_asset, 500),
+      [],
+    )
+  !fraction_vault.spend(0, t_asset, #"", #"", t_seed, Some(planted), Buy { qty: 500 }, own_ref_0, t)
+}
+
+/// Control for the test above: the identical purchase against the genuine
+/// offering is accepted, so the only difference is the thread token.
+test genuine_offering_with_the_same_terms_sells_fractions() {
+  let genuine = Offering { ..offering(0, 0, 0, 0, Open, 0, 0), price: 1 }
+  let after = Offering { ..offering(500, 500, 500, 0, Open, 0, 0), price: 1 }
+  let t =
+    spend_tx(
+      script_utxo(rider, genuine),
+      [script_utxo(rider + 500, after)],
+      assets.from_asset(fpolicy, t_asset, 500),
+      [],
+    )
+  fraction_vault.spend(0, t_asset, #"", #"", t_seed, Some(genuine), Buy { qty: 500 }, own_ref_0, t)
+}
+
+/// F-1: the offering may not shed its token on the way out.
+test offering_must_keep_its_thread_token() {
+  let before = offering(0, 0, 0, 0, Open, 100, 100)
+  let after = offering(4, 4, 99_000_000, 1_000_000, Open, 100, 100)
+  !run(
+    before,
+    rider,
+    [bare_utxo(rider + 100_000_000, after)],
+    assets.from_asset(fpolicy, t_asset, 4),
+    [],
+    Buy { qty: 4 },
+  )
+}
+
+/// The thread token is the ONLY extra the offering output may carry.
+test offering_cannot_carry_junk_beside_its_thread_token() {
+  let before = offering(0, 0, 0, 0, Open, 100, 100)
+  let after = offering(4, 4, 99_000_000, 1_000_000, Open, 100, 100)
+  let o = script_utxo(rider + 100_000_000, after)
+  let junked = Output { ..o, value: assets.add(o.value, fpolicy, #"ff", 1) }
+  !run(
+    before,
+    rider,
+    [junked],
+    assets.from_asset(fpolicy, t_asset, 4),
+    [],
+    Buy { qty: 4 },
+  )
+}
+
+/// Opening cannot pre-mint a supply even with an empty pool: fractions sold
+/// before the offering exists would be unbacked claims on later buyers.
+test opening_cannot_claim_minted_fractions_with_an_empty_pool() {
+  !open(
+    opening_tx(
+      [seed_input()],
+      [script_utxo(rider, offering(4, 4, 0, 0, Open, 100, 100))],
+      1,
+    ),
   )
 }

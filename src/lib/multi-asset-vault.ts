@@ -8,19 +8,35 @@
  * `aiken build`.
  *
  * The validator is parameterised by
- * `(version, asset_id, unit_policy, unit_name)`, so one compiled script yields
- * a distinct Preprod address per project AND per deposit denomination. ADA is
+ * `(version, asset_id, unit_policy, unit_name, seed)`, so one compiled script
+ * yields a distinct Preprod address per project AND per deposit denomination.
+ * `seed` is the UTxO consumed at bootstrap to mint the vault's one-shot
+ * state-thread token (AUDIT.md F-1); an instance's address is only known once
+ * it has been bootstrapped and its seed pinned in `vault-instances.ts`. ADA is
  * expressed as the empty policy with the empty name, exactly as on chain, so
  * the same derivation covers ADA and native tokens (USDr, USDM, iUSD, …).
  */
 import { LUCID_NETWORK } from "./network";
 import type { DepositAsset } from "./deposit-assets.shared";
+import {
+  MULTI_VAULT_SEEDS,
+  pinnedSeed,
+  seedKey,
+  seedToData,
+  threadUnit,
+  type VaultSeed,
+} from "./vault-instances";
 
-/** Vault instance version. Bumping this mints a fresh, empty vault instance. */
-export const MULTI_VAULT_VERSION = 1n;
+/**
+ * Vault instance version. Bumping this mints a fresh, empty vault instance.
+ *
+ * v2 (Phase 1 — security): one-shot state-thread token from a `seed` UTxO
+ * (AUDIT.md F-1). No v1 instance was ever bootstrapped, so nothing migrates.
+ */
+export const MULTI_VAULT_VERSION = 2n;
 
 /** Hash of the *unapplied* multi_asset_vault validator from plutus.json. */
-export const MULTI_BLUEPRINT_HASH = "024fe73af2d6defe8d54b2ca75551763eded748cd041368283d276df";
+export const MULTI_BLUEPRINT_HASH = "e0c3f420437fc4b65efd02baf86fe0ba4d68ee4ca63e37444d9403d4";
 
 import multiBlueprintSource from "../../contracts/multi-asset-vault/plutus.json?raw";
 
@@ -47,6 +63,7 @@ type LucidModLike = {
   ) => string;
   validatorToScriptHash: (v: { type: "PlutusV3"; script: string }) => string;
   fromText: (text: string) => string;
+  Constr: new (index: number, fields: unknown[]) => unknown;
 };
 
 /** The on-chain deposit unit: `(policy_id, asset_name_hex)`; ADA is `("", "")`. */
@@ -81,7 +98,16 @@ export interface AppliedMultiVault {
   assetId: string;
   unit: DepositUnit;
   version: bigint;
+  /** Bootstrap seed this instance is parameterised by. */
+  seed: VaultSeed;
+  /** Lucid unit of the state-thread token the genuine State carries. */
+  threadUnit: string;
   type: "PlutusV3";
+}
+
+/** Key of an instance in `MULTI_VAULT_SEEDS`: asset id + deposit unit. */
+export function multiVaultSeedKey(assetId: string, unit: DepositUnit): string {
+  return `${assetId}:${unit.policyId}${unit.assetNameHex}`;
 }
 
 const cache = new Map<string, AppliedMultiVault>();
@@ -89,13 +115,20 @@ const cache = new Map<string, AppliedMultiVault>();
 const HEX = /^[0-9a-f]*$/;
 
 /**
- * Apply `(version, asset_id, unit_policy, unit_name)` to the blueprint and
- * return the applied script, its hash, and its address on the active network.
+ * Apply `(version, asset_id, unit_policy, unit_name, seed)` to the blueprint
+ * and return the applied script, its hash, and its address on the active
+ * network. `seed` defaults to the pinned instance; throws
+ * `VaultNotBootstrappedError` when there is none.
  */
 export function getMultiVaultScript(
   lucidMod: unknown,
   assetId: string,
   unit: DepositUnit,
+  seed: VaultSeed = pinnedSeed(
+    "multi_asset_vault",
+    MULTI_VAULT_SEEDS,
+    multiVaultSeedKey(assetId, unit),
+  ),
 ): AppliedMultiVault {
   if (!HEX.test(unit.policyId) || !HEX.test(unit.assetNameHex)) {
     throw new Error("The deposit unit policy id and asset name must be hex.");
@@ -104,7 +137,7 @@ export function getMultiVaultScript(
     throw new Error("A native-token policy id must be 56 hex characters.");
   }
 
-  const cacheKey = `${MULTI_BLUEPRINT_HASH}:${String(MULTI_VAULT_VERSION)}:${assetId}:${unit.policyId}:${unit.assetNameHex}`;
+  const cacheKey = `${MULTI_BLUEPRINT_HASH}:${String(MULTI_VAULT_VERSION)}:${assetId}:${unit.policyId}:${unit.assetNameHex}:${seedKey(seed)}`;
   const cached = cache.get(cacheKey);
   if (cached) return cached;
 
@@ -126,15 +159,19 @@ export function getMultiVaultScript(
     mod.fromText(assetId),
     unit.policyId,
     unit.assetNameHex,
+    seedToData(lucidMod, seed),
   ]);
   const validator = { type: "PlutusV3" as const, script: cbor };
+  const scriptHash = mod.validatorToScriptHash(validator);
   const applied: AppliedMultiVault = {
     cbor,
-    scriptHash: mod.validatorToScriptHash(validator),
+    scriptHash,
     address: mod.validatorToAddress(LUCID_NETWORK, validator),
     assetId,
     unit,
     version: MULTI_VAULT_VERSION,
+    seed,
+    threadUnit: threadUnit(scriptHash),
     type: "PlutusV3",
   };
   cache.set(cacheKey, applied);
