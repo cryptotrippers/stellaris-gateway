@@ -32,8 +32,7 @@ export const Route = createFileRoute("/api/v1/yield")({
             BECH32_ADDRESS_RE,
             annualisedReturnPct,
             deriveAccruals,
-            readStateDatum,
-            selectCanonicalState,
+            genuineStateAt,
             sharePriceOf,
           } = await import("@/lib/yield-chain-decode");
           type StateDatum = VaultStateDatum;
@@ -60,22 +59,17 @@ export const Route = createFileRoute("/api/v1/yield")({
             const points: Array<{ tx: BfAddressTx; state: StateDatum }> = [];
             for (const tx of txs) {
               const detail = await bfGet<{
-                outputs: Array<{ address: string; inline_datum: string | null }>;
+                outputs: Array<{
+                  address: string;
+                  amount: Array<{ unit: string; quantity: string }>;
+                  inline_datum: string | null;
+                }>;
               }>(`/txs/${tx.tx_hash}/utxos`);
               if (!detail) continue;
-              const decoded: Array<{
-                txHash: string;
-                outputIndex: number;
-                state: StateDatum;
-              }> = [];
-              detail.outputs.forEach((out, index) => {
-                if (out.address !== address) return;
-                const state = readStateDatum(out.inline_datum);
-                if (state) decoded.push({ txHash: tx.tx_hash, outputIndex: index, state });
-              });
-              const canonical = selectCanonicalState(decoded, (c) => c);
-
-              if (canonical) points.push({ tx, state: canonical.state });
+              // F-1: the history point is the State output carrying the
+              // state-thread token; planted State-shaped outputs are ignored.
+              const genuine = genuineStateAt(detail.outputs, address);
+              if (genuine) points.push({ tx, state: genuine });
             }
 
 

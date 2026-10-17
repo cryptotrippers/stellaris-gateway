@@ -18,13 +18,20 @@
 ////   * spending the State requires the transition to balance, and for
 ////     `Accrue` / `SetPaused` additionally M-of-N operator signatures.
 ////
+//// State identity (Phase 1, AUDIT.md F-1): the validator is parameterised by
+//// a `seed` OutputReference and is also the minting policy of a one-shot
+//// state-thread token. Bootstrap consumes the seed and mints the token into
+//// the initial State; every later transition requires the spent and the
+//// returned State to carry it. A State-shaped datum paid to this address by
+//// anyone else has no token and can never be spent.
+////
 //// All share arithmetic lives in `stellaris/shares` and is tested there.
 
 use aiken/collection/list
 use aiken/interval.{Finite}
 use aiken/primitive/bytearray
 use cardano/address.{Address, Script, VerificationKey}
-use cardano/assets
+use cardano/assets.{PolicyId}
 use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, placeholder,
 }
@@ -33,45 +40,8 @@ use stellaris/shares.{
   exit_fee_for, fee_assets_for, fee_bps_ok, fee_shares_for, max_settle_window,
   min_position_value, mint_shares, redeem_value, withdraw_ok,
 }
-
-pub type YieldDatum {
-  /// A single depositor's stake.
-  Position { owner: ByteArray, shares: Int }
-  /// The vault's aggregate ledger. Exactly one per vault.
-  ///
-  /// Fee fields (Stage 5): the management fee is an annual rate in basis
-  /// points charged on accounted assets, prorated by wall-clock time and
-  /// settled by MINTING shares to the treasury rather than paying lovelace
-  /// out. `treasury_shares` is the treasury's unclaimed slice of
-  /// `total_shares`; `last_fee_time` is the POSIX ms up to which fee has
-  /// already been charged.
-  State {
-    total_shares: Int,
-    total_assets: Int,
-    epoch: Int,
-    operators: List<ByteArray>,
-    threshold: Int,
-    paused: Bool,
-    fee_bps: Int,
-    treasury: ByteArray,
-    treasury_shares: Int,
-    last_fee_time: Int,
-    /// Stage 6: the receipt minting policy bound to this vault, written once
-    /// at bootstrap and immutable afterwards. Every `Deposit` must mint, and
-    /// every `Withdraw` must burn, exactly the depositor-share delta under
-    /// this policy with token name = `asset_id`; every other action must move
-    /// zero receipts. Must be a 28-byte script hash.
-    receipt_policy: ByteArray,
-    /// Stage 7 (revenue): per-action fees, in basis points, charged on the
-    /// deposited amount and on the gross redemption respectively. The
-    /// withheld lovelace never leaves the vault — it is credited to the
-    /// treasury as shares, exactly like the management fee. Both start at 0
-    /// at bootstrap and can only move through `SetFee`, within the caps in
-    /// `stellaris/shares`.
-    entry_fee_bps: Int,
-    exit_fee_bps: Int,
-  }
-}
+use stellaris/thread.{holds_thread, one_shot_mint, thread_value}
+use stellaris/yield_datum.{Position, State, YieldDatum}
 
 pub type YieldRedeemer {
   /// Add lovelace, mint shares at the current price.
@@ -196,20 +166,27 @@ fn positions_well_formed(outs: List<Output>) -> Bool {
   )
 }
 
-/// Outputs returned to the vault must be pure lovelace. Without this an
-/// attacker can park arbitrary native tokens (or an NFT) in a Position or in
-/// the State UTxO, inflating its min-ADA requirement until the accounted
-/// lovelace can no longer be paid out — a permanent lock on real funds.
-fn values_pure(outs: List<Output>) -> Bool {
+/// Outputs returned to the vault carry nothing but lovelace — except the State,
+/// which carries exactly its one state-thread token. Without this an attacker
+/// can park arbitrary native tokens (or an NFT) in a Position or in the State
+/// UTxO, inflating its min-ADA requirement until the accounted lovelace can no
+/// longer be paid out — a permanent lock on real funds.
+fn values_pure(outs: List<Output>, policy: PolicyId) -> Bool {
   list.all(
     outs,
-    fn(o) { assets.without_lovelace(o.value) == assets.zero },
+    fn(o) {
+      let extra = assets.without_lovelace(o.value)
+      when datum_of(o) is {
+        Some(State { .. }) -> extra == thread_value(policy)
+        _ -> extra == assets.zero
+      }
+    },
   )
 }
 
-
-/// The single State datum among `outs`, or None if there isn't exactly one.
-fn sole_state(outs: List<Output>) -> Option<YieldDatum> {
+/// The single State-shaped output among `outs`, or None if there isn't
+/// exactly one. Shape only — callers check the thread token separately.
+fn sole_state_output(outs: List<Output>) -> Option<Output> {
   let states =
     list.filter(
       outs,
@@ -221,8 +198,43 @@ fn sole_state(outs: List<Output>) -> Option<YieldDatum> {
       },
     )
   when states is {
-    [only] -> datum_of(only)
+    [only] -> Some(only)
     _ -> None
+  }
+}
+
+/// The single State datum among `outs`, or None if there isn't exactly one.
+fn sole_state(outs: List<Output>) -> Option<YieldDatum> {
+  when sole_state_output(outs) is {
+    Some(o) -> datum_of(o)
+    None -> None
+  }
+}
+
+/// A valid initial ledger: empty books, a well-formed committee, fees inside
+/// the caps, and a receipt policy that is a script hash. The only State the
+/// thread token can ever be minted into.
+fn bootstrap_ok(d: YieldDatum) -> Bool {
+  when d is {
+    State {
+      total_shares,
+      total_assets,
+      operators,
+      threshold,
+      fee_bps,
+      treasury_shares,
+      receipt_policy,
+      entry_fee_bps,
+      exit_fee_bps,
+      ..
+    } ->
+      total_shares == 0 && total_assets == 0 && treasury_shares == 0 && operators_valid(
+        operators,
+        threshold,
+      ) && fee_bps_ok(fee_bps) && entry_fee_bps_ok(entry_fee_bps) && exit_fee_bps_ok(
+        exit_fee_bps,
+      ) && bytearray.length(receipt_policy) == 28
+    _ -> False
   }
 }
 
@@ -288,7 +300,21 @@ fn fee_anchor_ok(now: Int, hi: Int, last_fee_time: Int) -> Bool {
 // Validator
 // ------------------------------------------------------------------
 
-validator yield_vault(_version: Int, asset_id: ByteArray) {
+validator yield_vault(_version: Int, asset_id: ByteArray, seed: OutputReference) {
+  /// Bootstrap: mint the one-shot state-thread token into the initial State.
+  /// The seed can be spent once, so this can succeed at most once per
+  /// applied script, and no State may be spent alongside it.
+  mint(_redeemer: Data, policy_id: PolicyId, tx: Transaction) {
+    let outs = script_outputs(tx, policy_id)
+    expect Some(boot) = sole_state_output(outs)
+    expect Some(boot_datum) = datum_of(boot)
+    one_shot_mint(tx, policy_id, seed) && script_inputs(tx, policy_id) == [] && list.length(
+      outs,
+    ) == 1 && holds_thread(boot.value, policy_id) && values_pure(outs, policy_id) && bootstrap_ok(
+      boot_datum,
+    )
+  }
+
   spend(
     datum: Option<YieldDatum>,
     redeemer: YieldRedeemer,
@@ -317,11 +343,12 @@ validator yield_vault(_version: Int, asset_id: ByteArray) {
               }
             },
           )
-        // The State UTxO must be spent in the same tx, which is what forces
-        // the accounting branch below to run and balance the books.
+        // The GENUINE State UTxO (the one carrying the thread token) must be
+        // spent in the same tx, which is what forces the accounting branch
+        // below to run and balance the books.
         let state_present =
-          when sole_state(ins) is {
-            Some(_) -> True
+          when sole_state_output(ins) is {
+            Some(s) -> holds_thread(s.value, hash)
             None -> False
           }
         owner_signed && owner_paid && state_present
@@ -352,7 +379,16 @@ validator yield_vault(_version: Int, asset_id: ByteArray) {
         // the script unaccounted. The output side was already constrained by
         // `sole_state(outs)`; this mirrors it on the input side.
         expect Some(_only_state_in) = sole_state(ins)
-        expect Some(next) = sole_state(outs)
+        // F-1: this State must be the genuine one, and so must its successor.
+        expect Some(own_in) =
+          list.find(tx.inputs, fn(i) { i.output_reference == own_ref })
+        expect Some(next_out) = sole_state_output(outs)
+        expect Some(next) = datum_of(next_out)
+        let genuine =
+          holds_thread(own_in.output.value, hash) && holds_thread(
+            next_out.value,
+            hash,
+          )
         expect State {
           total_shares: n_shares,
           total_assets: n_assets,
@@ -399,10 +435,10 @@ validator yield_vault(_version: Int, asset_id: ByteArray) {
         // treasury's unclaimed shares can never exceed the total supply, and
         // the fee clock can only move forward.
         let structural =
-          operators_valid(operators, threshold) && operators_valid(
+          genuine && operators_valid(operators, threshold) && operators_valid(
             n_operators,
             n_threshold,
-          ) && positions_well_formed(outs) && values_pure(outs) && n_shares >= 0 && n_assets >= 0 && locked_out >= 0 && n_epoch >= epoch && fee_bps_ok(
+          ) && positions_well_formed(outs) && values_pure(outs, hash) && n_shares >= 0 && n_assets >= 0 && locked_out >= 0 && n_epoch >= epoch && fee_bps_ok(
             n_fee_bps,
           ) && entry_fee_bps_ok(n_entry_fee_bps) && exit_fee_bps_ok(
             n_exit_fee_bps,
@@ -613,6 +649,13 @@ const op2: ByteArray = #"bb22222222222222222222222222222222222222222222222222222
 
 const t_version: Int = 1
 
+/// The bootstrap seed the fixture vault is parameterised by.
+const t_seed: OutputReference =
+  OutputReference {
+    transaction_id: #"5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed5eed",
+    output_index: 0,
+  }
+
 // "sfm-01"
 const t_asset: ByteArray = #"73666d2d3031"
 
@@ -624,7 +667,27 @@ fn user_addr(pkh: ByteArray) -> Address {
   Address { payment_credential: VerificationKey(pkh), stake_credential: None }
 }
 
+/// Fixture output. A State at the vault address carries the genuine
+/// state-thread token, so every legacy test keeps exercising the property it
+/// was written for; tests about planted States use `bare_out`.
 fn out(addr: Address, lovelace: Int, datum: YieldDatum) -> Output {
+  let base = assets.from_lovelace(lovelace)
+  let value =
+    when datum is {
+      State { .. } ->
+        if addr == vault_addr() {
+          assets.merge(base, thread_value(vhash))
+        } else {
+          base
+        }
+      _ -> base
+    }
+  Output { address: addr, value, datum: InlineDatum(datum), reference_script: None }
+}
+
+/// Fixture output with NO thread token: what a third party can pay to the
+/// vault address.
+fn bare_out(addr: Address, lovelace: Int, datum: YieldDatum) -> Output {
   Output {
     address: addr,
     value: assets.from_lovelace(lovelace),
@@ -737,7 +800,7 @@ test deposit_bootstraps_shares_one_to_one() {
       ],
       [alice],
     )
-  yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+  yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Deposit, state_ref, t)
 }
 
 test deposit_fails_when_minting_more_shares_than_paid_for() {
@@ -751,7 +814,7 @@ test deposit_fails_when_minting_more_shares_than_paid_for() {
       ],
       [alice],
     )
-  !yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Deposit, state_ref, t)
 }
 
 test deposit_below_bootstrap_minimum_is_rejected() {
@@ -765,7 +828,7 @@ test deposit_below_bootstrap_minimum_is_rejected() {
       ],
       [alice],
     )
-  !yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Deposit, state_ref, t)
 }
 
 test deposit_fails_while_paused() {
@@ -779,7 +842,7 @@ test deposit_fails_while_paused() {
       ],
       [alice],
     )
-  !yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Deposit, state_ref, t)
 }
 
 // --- Accrue --------------------------------------------------------
@@ -803,6 +866,7 @@ test accrue_ok_with_full_operator_threshold() {
   yield_vault.spend(
     t_version,
     t_asset,
+    t_seed,
     Some(s0),
     Accrue { amount: 2_000_000 },
     state_ref,
@@ -815,6 +879,7 @@ test accrue_fails_below_operator_threshold() {
   !yield_vault.spend(
     t_version,
     t_asset,
+    t_seed,
     Some(s0),
     Accrue { amount: 2_000_000 },
     state_ref,
@@ -827,6 +892,7 @@ test accrue_fails_when_a_non_operator_signs() {
   !yield_vault.spend(
     t_version,
     t_asset,
+    t_seed,
     Some(s0),
     Accrue { amount: 2_000_000 },
     state_ref,
@@ -839,6 +905,7 @@ test accrue_must_bump_the_epoch() {
   !yield_vault.spend(
     t_version,
     t_asset,
+    t_seed,
     Some(s0),
     Accrue { amount: 2_000_000 },
     state_ref,
@@ -861,7 +928,7 @@ test accrue_fails_without_a_matching_value_increase() {
       ],
       [op1, op2],
     )
-  !yield_vault.spend(t_version, t_asset, Some(s0), Accrue { amount: 2_000_000 }, state_ref, t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Accrue { amount: 2_000_000 }, state_ref, t)
 }
 
 // --- Withdraw ------------------------------------------------------
@@ -877,7 +944,7 @@ test full_withdraw_burns_shares_and_drains_assets() {
       [out(vault_addr(), 2_000_000, state(0, 0, 7, False)), plain_out(alice, 10_000_000)],
       [alice],
     )
-  yield_vault.spend(t_version, t_asset, Some(s0), Withdraw { shares: 10_000_000 }, state_ref, t)
+  yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Withdraw { shares: 10_000_000 }, state_ref, t)
 }
 
 test withdraw_cannot_take_more_than_the_share_price_allows() {
@@ -891,7 +958,7 @@ test withdraw_cannot_take_more_than_the_share_price_allows() {
       [out(vault_addr(), 1_000_000, state(0, -1_000_000, 7, False)), plain_out(alice, 11_000_000)],
       [alice],
     )
-  !yield_vault.spend(t_version, t_asset, Some(s0), Withdraw { shares: 10_000_000 }, state_ref, t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Withdraw { shares: 10_000_000 }, state_ref, t)
 }
 
 test partial_withdraw_leaves_a_viable_position() {
@@ -910,7 +977,7 @@ test partial_withdraw_leaves_a_viable_position() {
       ],
       [alice],
     )
-  yield_vault.spend(t_version, t_asset, Some(s0), Withdraw { shares: 4_000_000 }, state_ref, t)
+  yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Withdraw { shares: 4_000_000 }, state_ref, t)
 }
 
 test partial_withdraw_stranding_a_dust_position_is_rejected() {
@@ -928,7 +995,7 @@ test partial_withdraw_stranding_a_dust_position_is_rejected() {
       ],
       [alice],
     )
-  !yield_vault.spend(t_version, t_asset, Some(s0), Withdraw { shares: 9_500_000 }, state_ref, t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Withdraw { shares: 9_500_000 }, state_ref, t)
 }
 
 test withdraw_is_still_allowed_while_paused() {
@@ -942,7 +1009,7 @@ test withdraw_is_still_allowed_while_paused() {
       [out(vault_addr(), 2_000_000, state(0, 0, 7, True)), plain_out(alice, 10_000_000)],
       [alice],
     )
-  yield_vault.spend(t_version, t_asset, Some(s0), Withdraw { shares: 10_000_000 }, state_ref, t)
+  yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Withdraw { shares: 10_000_000 }, state_ref, t)
 }
 
 // --- Position spends -----------------------------------------------
@@ -963,6 +1030,7 @@ test position_spend_ok_when_owner_signs_and_is_paid() {
   yield_vault.spend(
     t_version,
     t_asset,
+    t_seed,
     Some(p),
     Withdraw { shares: 10_000_000 },
     ref_at(1),
@@ -975,6 +1043,7 @@ test position_spend_fails_when_owner_did_not_sign() {
   !yield_vault.spend(
     t_version,
     t_asset,
+    t_seed,
     Some(p),
     Withdraw { shares: 10_000_000 },
     ref_at(1),
@@ -987,6 +1056,7 @@ test position_spend_fails_when_funds_go_to_a_stranger() {
   !yield_vault.spend(
     t_version,
     t_asset,
+    t_seed,
     Some(p),
     Withdraw { shares: 10_000_000 },
     ref_at(1),
@@ -1003,7 +1073,7 @@ test position_spend_fails_without_the_state_utxo() {
       [plain_out(alice, 10_000_000)],
       [alice],
     )
-  !yield_vault.spend(t_version, t_asset, Some(p), Withdraw { shares: 10_000_000 }, ref_at(1), t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(p), Withdraw { shares: 10_000_000 }, ref_at(1), t)
 }
 
 // --- Pause / committee ---------------------------------------------
@@ -1016,7 +1086,7 @@ test operators_can_pause() {
       [out(vault_addr(), 2_000_000, state(10_000_000, 10_000_000, 7, True))],
       [op1, op2],
     )
-  yield_vault.spend(t_version, t_asset, Some(s0), SetPaused { paused: True }, state_ref, t)
+  yield_vault.spend(t_version, t_asset, t_seed, Some(s0), SetPaused { paused: True }, state_ref, t)
 }
 
 test a_single_operator_cannot_pause() {
@@ -1027,7 +1097,7 @@ test a_single_operator_cannot_pause() {
       [out(vault_addr(), 2_000_000, state(10_000_000, 10_000_000, 7, True))],
       [op1],
     )
-  !yield_vault.spend(t_version, t_asset, Some(s0), SetPaused { paused: True }, state_ref, t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), SetPaused { paused: True }, state_ref, t)
 }
 
 test committee_cannot_be_swapped_during_a_deposit() {
@@ -1057,7 +1127,7 @@ test committee_cannot_be_swapped_during_a_deposit() {
       ],
       [alice],
     )
-  !yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Deposit, state_ref, t)
 }
 
 // Two state outputs leave no single ledger to continue from, so the
@@ -1074,7 +1144,7 @@ test state_must_be_recreated_exactly_once() fail {
       ],
       [alice],
     )
-  !yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Deposit, state_ref, t)
 }
 
 // --- Committee rotation --------------------------------------------
@@ -1117,6 +1187,7 @@ test committee_can_be_rotated_by_the_outgoing_quorum() {
   yield_vault.spend(
     t_version,
     t_asset,
+    t_seed,
     Some(s0),
     RotateCommittee { operators: [op1, op3], threshold: 2 },
     state_ref,
@@ -1136,6 +1207,7 @@ test rotation_needs_the_outgoing_threshold() {
   !yield_vault.spend(
     t_version,
     t_asset,
+    t_seed,
     Some(s0),
     RotateCommittee { operators: [mallory], threshold: 1 },
     state_ref,
@@ -1155,6 +1227,7 @@ test rotation_redeemer_must_match_the_written_committee() {
   !yield_vault.spend(
     t_version,
     t_asset,
+    t_seed,
     Some(s0),
     RotateCommittee { operators: [op1, op3], threshold: 2 },
     state_ref,
@@ -1174,6 +1247,7 @@ test rotation_cannot_install_an_unsatisfiable_committee() {
   !yield_vault.spend(
     t_version,
     t_asset,
+    t_seed,
     Some(s0),
     RotateCommittee { operators: [op1, op3], threshold: 3 },
     state_ref,
@@ -1193,6 +1267,7 @@ test rotation_cannot_move_funds() {
   !yield_vault.spend(
     t_version,
     t_asset,
+    t_seed,
     Some(s0),
     RotateCommittee { operators: [op1, op3], threshold: 2 },
     state_ref,
@@ -1231,7 +1306,7 @@ test a_deposit_cannot_park_native_tokens_in_a_position() {
       ],
       [alice],
     )
-  !yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Deposit, state_ref, t)
 }
 
 // --- Management fee --------------------------------------------------
@@ -1281,7 +1356,7 @@ test accrue_settles_the_management_fee_in_shares() {
       [out(vault_addr(), 1_002_000_000, s1)],
       [op1, op2],
     )
-  yield_vault.spend(t_version, t_asset, Some(s0), Accrue { amount: 2_000_000 }, state_ref, t)
+  yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Accrue { amount: 2_000_000 }, state_ref, t)
 }
 
 test accrue_cannot_skip_the_fee() {
@@ -1293,7 +1368,7 @@ test accrue_cannot_skip_the_fee() {
       [out(vault_addr(), 1_002_000_000, s1)],
       [op1, op2],
     )
-  !yield_vault.spend(t_version, t_asset, Some(s0), Accrue { amount: 2_000_000 }, state_ref, t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Accrue { amount: 2_000_000 }, state_ref, t)
 }
 
 test accrue_cannot_overcharge_the_fee() {
@@ -1306,7 +1381,7 @@ test accrue_cannot_overcharge_the_fee() {
       [out(vault_addr(), 1_002_000_000, s1)],
       [op1, op2],
     )
-  !yield_vault.spend(t_version, t_asset, Some(s0), Accrue { amount: 2_000_000 }, state_ref, t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Accrue { amount: 2_000_000 }, state_ref, t)
 }
 
 test accrue_needs_a_bounded_validity_range() fail {
@@ -1323,7 +1398,7 @@ test accrue_needs_a_bounded_validity_range() fail {
       outputs: [out(vault_addr(), 1_002_000_000, s1)],
       extra_signatories: [op1, op2],
     }
-  yield_vault.spend(t_version, t_asset, Some(s0), Accrue { amount: 2_000_000 }, state_ref, t)
+  yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Accrue { amount: 2_000_000 }, state_ref, t)
 }
 
 test fee_rate_can_be_set_within_the_cap() {
@@ -1336,7 +1411,7 @@ test fee_rate_can_be_set_within_the_cap() {
       [out(vault_addr(), 1_000_000_000, s1)],
       [op1, op2],
     )
-  yield_vault.spend(t_version, t_asset, Some(s0), SetFee { fee_bps: 250, entry_fee_bps: 0, exit_fee_bps: 0 }, state_ref, t)
+  yield_vault.spend(t_version, t_asset, t_seed, Some(s0), SetFee { fee_bps: 250, entry_fee_bps: 0, exit_fee_bps: 0 }, state_ref, t)
 }
 
 test fee_rate_above_the_cap_is_rejected() {
@@ -1348,7 +1423,7 @@ test fee_rate_above_the_cap_is_rejected() {
       [out(vault_addr(), 1_000_000_000, s1)],
       [op1, op2],
     )
-  !yield_vault.spend(t_version, t_asset, Some(s0), SetFee { fee_bps: 900, entry_fee_bps: 0, exit_fee_bps: 0 }, state_ref, t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), SetFee { fee_bps: 900, entry_fee_bps: 0, exit_fee_bps: 0 }, state_ref, t)
 }
 
 test fee_rate_needs_the_operator_threshold() {
@@ -1360,7 +1435,7 @@ test fee_rate_needs_the_operator_threshold() {
       [out(vault_addr(), 1_000_000_000, s1)],
       [op1],
     )
-  !yield_vault.spend(t_version, t_asset, Some(s0), SetFee { fee_bps: 250, entry_fee_bps: 0, exit_fee_bps: 0 }, state_ref, t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), SetFee { fee_bps: 250, entry_fee_bps: 0, exit_fee_bps: 0 }, state_ref, t)
 }
 
 test fee_rate_cannot_be_changed_during_a_deposit() {
@@ -1375,7 +1450,7 @@ test fee_rate_cannot_be_changed_during_a_deposit() {
       ],
       [alice],
     )
-  !yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Deposit, state_ref, t)
 }
 
 // --- Fee claims -------------------------------------------------------
@@ -1400,7 +1475,7 @@ test treasury_can_claim_its_fee_shares() {
       ],
       [op1, op2],
     )
-  yield_vault.spend(t_version, t_asset, Some(s0), ClaimFee { shares: fee_year_shares }, state_ref, t)
+  yield_vault.spend(t_version, t_asset, t_seed, Some(s0), ClaimFee { shares: fee_year_shares }, state_ref, t)
 }
 
 test fee_claim_must_pay_the_recorded_treasury() {
@@ -1415,7 +1490,7 @@ test fee_claim_must_pay_the_recorded_treasury() {
       ],
       [op1, op2],
     )
-  !yield_vault.spend(t_version, t_asset, Some(s0), ClaimFee { shares: fee_year_shares }, state_ref, t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), ClaimFee { shares: fee_year_shares }, state_ref, t)
 }
 
 test fee_claim_cannot_exceed_the_accrued_fee_shares() {
@@ -1433,6 +1508,7 @@ test fee_claim_cannot_exceed_the_accrued_fee_shares() {
   !yield_vault.spend(
     t_version,
     t_asset,
+    t_seed,
     Some(s0),
     ClaimFee { shares: fee_year_shares + 1 },
     state_ref,
@@ -1456,6 +1532,7 @@ test depositors_cannot_withdraw_against_treasury_shares() {
   !yield_vault.spend(
     t_version,
     t_asset,
+    t_seed,
     Some(s0),
     Withdraw { shares: 1_002_471_847 },
     state_ref,
@@ -1481,7 +1558,7 @@ test deposit_must_mint_matching_receipts() {
       [alice],
       10_000_000,
     )
-  yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+  yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Deposit, state_ref, t)
 }
 
 test deposit_without_receipts_is_rejected() {
@@ -1496,7 +1573,7 @@ test deposit_without_receipts_is_rejected() {
       [alice],
       0,
     )
-  !yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Deposit, state_ref, t)
 }
 
 test deposit_over_minting_receipts_is_rejected() {
@@ -1511,7 +1588,7 @@ test deposit_over_minting_receipts_is_rejected() {
       [alice],
       10_000_001,
     )
-  !yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Deposit, state_ref, t)
 }
 
 test withdraw_must_burn_the_receipts() {
@@ -1529,7 +1606,7 @@ test withdraw_must_burn_the_receipts() {
       [alice],
       -10_000_000,
     )
-  yield_vault.spend(t_version, t_asset, Some(s0), Withdraw { shares: 10_000_000 }, state_ref, t)
+  yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Withdraw { shares: 10_000_000 }, state_ref, t)
 }
 
 test withdraw_without_burning_receipts_is_rejected() {
@@ -1547,7 +1624,7 @@ test withdraw_without_burning_receipts_is_rejected() {
       [alice],
       0,
     )
-  !yield_vault.spend(t_version, t_asset, Some(s0), Withdraw { shares: 10_000_000 }, state_ref, t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Withdraw { shares: 10_000_000 }, state_ref, t)
 }
 
 test accrue_cannot_mint_receipts() {
@@ -1565,7 +1642,7 @@ test accrue_cannot_mint_receipts() {
       [op1, op2],
       1,
     )
-  !yield_vault.spend(t_version, t_asset, Some(s0), Accrue { amount: 2_000_000 }, state_ref, t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Accrue { amount: 2_000_000 }, state_ref, t)
 }
 
 /// The bound policy is immutable: a state output may not re-point the vault
@@ -1598,7 +1675,7 @@ test receipt_policy_cannot_be_swapped() {
       [alice],
       10_000_000,
     )
-  !yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Deposit, state_ref, t)
 }
 
 
@@ -1624,7 +1701,7 @@ test two_state_inputs_are_rejected() fail {
       ],
       [mallory],
     )
-  yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+  yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Deposit, state_ref, t)
 }
 
 /// V-03: a partial withdrawal may not re-datum the remainder to another key.
@@ -1644,7 +1721,7 @@ test partial_withdraw_must_preserve_owner() {
       ],
       [alice],
     )
-  !yield_vault.spend(t_version, t_asset, Some(s0), Withdraw { shares: 4_000_000 }, state_ref, t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Withdraw { shares: 4_000_000 }, state_ref, t)
 }
 
 /// V-03: two owners' positions spent together let the aggregate share delta
@@ -1670,7 +1747,7 @@ test batched_withdraw_cannot_reshuffle_shares() {
       ],
       [alice, mallory],
     )
-  !yield_vault.spend(t_version, t_asset, Some(s0), Withdraw { shares: 4_000_000 }, state_ref, t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Withdraw { shares: 4_000_000 }, state_ref, t)
 }
 
 /// V-05: the fee anchor must sit inside the transaction's own validity
@@ -1690,7 +1767,7 @@ test accrue_rejects_future_anchor() fail {
       mint: assets.from_asset(rpolicy, t_asset, 0),
       validity_range: interval.after(t0),
     }
-  yield_vault.spend(t_version, t_asset, Some(s0), Accrue { amount: 2_000_000 }, state_ref, t)
+  yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Accrue { amount: 2_000_000 }, state_ref, t)
 }
 
 /// V-05: a single settlement may not reach back further than 90 days.
@@ -1714,7 +1791,7 @@ test accrue_rejects_oversized_settle_window() {
       [out(vault_addr(), 1_002_000_000, s1)],
       [op1, op2],
     )
-  !yield_vault.spend(t_version, t_asset, Some(s0), Accrue { amount: 2_000_000 }, state_ref, t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Accrue { amount: 2_000_000 }, state_ref, t)
 }
 
 // --- Stage 7: entry / exit fees --------------------------------------
@@ -1757,7 +1834,7 @@ test deposit_credits_the_entry_fee_to_the_treasury() {
       ],
       [alice],
     )
-  yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+  yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Deposit, state_ref, t)
 }
 
 test deposit_cannot_skip_the_entry_fee() {
@@ -1771,7 +1848,7 @@ test deposit_cannot_skip_the_entry_fee() {
       ],
       [alice],
     )
-  !yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Deposit, state_ref, t)
 }
 
 test withdraw_withholds_the_exit_fee() {
@@ -1791,7 +1868,7 @@ test withdraw_withholds_the_exit_fee() {
       ],
       [alice],
     )
-  yield_vault.spend(t_version, t_asset, Some(s0), Withdraw { shares: 5_000_000 }, state_ref, t)
+  yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Withdraw { shares: 5_000_000 }, state_ref, t)
 }
 
 test withdraw_cannot_pay_out_the_exit_fee() {
@@ -1809,7 +1886,7 @@ test withdraw_cannot_pay_out_the_exit_fee() {
       ],
       [alice],
     )
-  !yield_vault.spend(t_version, t_asset, Some(s0), Withdraw { shares: 5_000_000 }, state_ref, t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Withdraw { shares: 5_000_000 }, state_ref, t)
 }
 
 test set_fee_can_move_the_entry_and_exit_rates() {
@@ -1824,6 +1901,7 @@ test set_fee_can_move_the_entry_and_exit_rates() {
   yield_vault.spend(
     t_version,
     t_asset,
+    t_seed,
     Some(s0),
     SetFee { fee_bps: 0, entry_fee_bps: 50, exit_fee_bps: 75 },
     state_ref,
@@ -1843,6 +1921,7 @@ test set_fee_rejects_an_entry_rate_above_the_cap() {
   !yield_vault.spend(
     t_version,
     t_asset,
+    t_seed,
     Some(s0),
     SetFee { fee_bps: 0, entry_fee_bps: 500, exit_fee_bps: 0 },
     state_ref,
@@ -1861,5 +1940,289 @@ test deposit_cannot_change_the_fee_terms() {
       ],
       [alice],
     )
-  !yield_vault.spend(t_version, t_asset, Some(s0), Deposit, state_ref, t)
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Deposit, state_ref, t)
+}
+
+// --- Phase 1: state-thread token (AUDIT.md F-1) and V-01 / V-03 regressions
+
+/// A wallet UTxO standing in for the bootstrap seed.
+fn seed_input() -> Input {
+  Input { output_reference: t_seed, output: plain_out(op1, 50_000_000) }
+}
+
+fn bootstrap_tx(ins: List<Input>, outs: List<Output>, minted: Int) -> Transaction {
+  Transaction {
+    ..placeholder,
+    inputs: ins,
+    outputs: outs,
+    extra_signatories: [op1],
+    mint: assets.from_asset(vhash, "state", minted),
+  }
+}
+
+test bootstrap_mints_the_thread_token_into_an_empty_state() {
+  let t =
+    bootstrap_tx(
+      [seed_input()],
+      [out(vault_addr(), 5_000_000, state(0, 0, 0, False))],
+      1,
+    )
+  yield_vault.mint(t_version, t_asset, t_seed, Void, vhash, t)
+}
+
+test bootstrap_without_the_seed_is_rejected() {
+  let other =
+    Input { output_reference: ref_at(9), output: plain_out(op1, 50_000_000) }
+  let t =
+    bootstrap_tx([other], [out(vault_addr(), 5_000_000, state(0, 0, 0, False))], 1)
+  !yield_vault.mint(t_version, t_asset, t_seed, Void, vhash, t)
+}
+
+test bootstrap_cannot_start_with_assets_on_the_books() {
+  let t =
+    bootstrap_tx(
+      [seed_input()],
+      [out(vault_addr(), 5_000_000, state(10_000_000, 10_000_000, 0, False))],
+      1,
+    )
+  !yield_vault.mint(t_version, t_asset, t_seed, Void, vhash, t)
+}
+
+test bootstrap_cannot_mint_two_thread_tokens() {
+  let two =
+    Output {
+      ..out(vault_addr(), 5_000_000, state(0, 0, 0, False)),
+      value: assets.merge(
+        assets.from_lovelace(5_000_000),
+        assets.from_asset(vhash, "state", 2),
+      ),
+    }
+  !yield_vault.mint(
+    t_version,
+    t_asset,
+    t_seed,
+    Void,
+    vhash,
+    bootstrap_tx([seed_input()], [two], 2),
+  )
+}
+
+test bootstrap_cannot_create_a_second_state_output() fail {
+  let t =
+    bootstrap_tx(
+      [seed_input()],
+      [
+        out(vault_addr(), 5_000_000, state(0, 0, 0, False)),
+        bare_out(vault_addr(), 5_000_000, state(0, 0, 0, False)),
+      ],
+      1,
+    )
+  yield_vault.mint(t_version, t_asset, t_seed, Void, vhash, t)
+}
+
+test thread_token_cannot_be_minted_while_spending_a_state() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let t =
+    bootstrap_tx(
+      [seed_input(), input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [out(vault_addr(), 2_000_000, state(0, 0, 0, False))],
+      1,
+    )
+  !yield_vault.mint(t_version, t_asset, t_seed, Void, vhash, t)
+}
+
+test thread_token_can_never_be_burned_by_the_vault() {
+  let t =
+    bootstrap_tx(
+      [seed_input()],
+      [out(vault_addr(), 5_000_000, state(0, 0, 0, False))],
+      -1,
+    )
+  !yield_vault.mint(t_version, t_asset, t_seed, Void, vhash, t)
+}
+
+/// F-1, the exploit found in Phase 0: a State-shaped datum paid to the vault
+/// address with a cheap share price, spent ALONE to mint shares. It carries
+/// no thread token, so it can never be spent.
+test planted_state_cannot_be_spent_alone() {
+  let planted = state(9_000_000_000, 1_000_000_000, 7, False)
+  let after = state(9_000_000_000 + 90_000_000, 1_000_000_000 + 10_000_000, 7, False)
+  let t =
+    tx(
+      [input_at(0, bare_out(vault_addr(), 2_000_000, planted))],
+      [
+        out(vault_addr(), 2_000_000, after),
+        out(vault_addr(), 10_000_000, Position { owner: mallory, shares: 90_000_000 }),
+      ],
+      [mallory],
+    )
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(planted), Deposit, state_ref, t)
+}
+
+/// F-1: the honest control for the test above. The same deposit against the
+/// genuine (token-carrying) State at the same price is accepted, so the test
+/// above fails for exactly one reason: the missing token.
+test genuine_state_deposit_with_the_same_shape_is_accepted() {
+  let s = state(9_000_000_000, 1_000_000_000, 7, False)
+  let after = state(9_000_000_000 + 90_000_000, 1_000_000_000 + 10_000_000, 7, False)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 2_000_000, s))],
+      [
+        out(vault_addr(), 2_000_000, after),
+        out(vault_addr(), 10_000_000, Position { owner: mallory, shares: 90_000_000 }),
+      ],
+      [mallory],
+    )
+  yield_vault.spend(t_version, t_asset, t_seed, Some(s), Deposit, state_ref, t)
+}
+
+/// F-1: a planted State cannot stand in for the genuine one when a Position
+/// is spent, so laundered shares can never be redeemed.
+test position_cannot_be_spent_against_a_planted_state() {
+  let planted = state(100_000_000, 100_000_000, 9, False)
+  let p = Position { owner: mallory, shares: 90_000_000 }
+  let t =
+    tx(
+      [
+        input_at(0, bare_out(vault_addr(), 52_000_000, planted)),
+        input_at(1, out(vault_addr(), 10_000_000, p)),
+      ],
+      [
+        out(vault_addr(), 2_000_000, state(10_000_000, 40_000_000, 9, False)),
+        plain_out(mallory, 60_000_000),
+      ],
+      [mallory],
+    )
+  !yield_vault.spend(
+    t_version,
+    t_asset,
+    t_seed,
+    Some(p),
+    Withdraw { shares: 90_000_000 },
+    ref_at(1),
+    t,
+  )
+}
+
+/// F-1: the State may not leave the vault without its token.
+test state_must_keep_its_thread_token() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [
+        bare_out(vault_addr(), 2_000_000, state(20_000_000, 20_000_000, 7, False)),
+        out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 }),
+      ],
+      [alice],
+    )
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Deposit, state_ref, t)
+}
+
+/// V-01 fixture. The duplicate State carries a (fabricated) thread token too,
+/// so these tests isolate the sole-State input rule from the token rule.
+fn v01_tx(with_duplicate: Bool) -> Transaction {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let base = [input_at(0, out(vault_addr(), 2_000_000, s0))]
+  let ins =
+    if with_duplicate {
+      list.concat(base, [input_at(1, out(vault_addr(), 2_000_000, s0))])
+    } else {
+      base
+    }
+  let state_lovelace =
+    if with_duplicate {
+      4_000_000
+    } else {
+      2_000_000
+    }
+  tx(
+    ins,
+    [
+      out(vault_addr(), state_lovelace, state(20_000_000, 20_000_000, 7, False)),
+      out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 }),
+    ],
+    [alice],
+  )
+}
+
+/// V-01 regression, control half: a single-State deposit is accepted.
+test v01_single_state_deposit_is_accepted() {
+  yield_vault.spend(
+    t_version,
+    t_asset,
+    t_seed,
+    Some(state(10_000_000, 10_000_000, 7, False)),
+    Deposit,
+    state_ref,
+    v01_tx(False),
+  )
+}
+
+/// V-01 regression, the half that matters: the same deposit with a second
+/// State input merged into the single output must be rejected. Verified to
+/// FAIL when `expect Some(_only_state_in) = sole_state(ins)` is removed.
+test v01_two_state_inputs_merged_into_one_are_rejected() fail {
+  yield_vault.spend(
+    t_version,
+    t_asset,
+    t_seed,
+    Some(state(10_000_000, 10_000_000, 7, False)),
+    Deposit,
+    state_ref,
+    v01_tx(True),
+  )
+}
+
+/// V-03: `shares.withdraw_ok` is the only rule that values the REMAINING
+/// shares at the current price. Here the returned Position holds 2 ADA of
+/// lovelace (so `positions_well_formed` is satisfied) but its 1M shares are
+/// worth only 1 ADA. Verified to PASS if the `withdraw_ok` call is removed.
+test partial_withdraw_cannot_leave_shares_worth_less_than_the_floor() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let t =
+    tx(
+      [
+        input_at(0, out(vault_addr(), 2_000_000, s0)),
+        input_at(1, out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 })),
+      ],
+      [
+        out(vault_addr(), 2_000_000, state(1_000_000, 2_000_000, 7, False)),
+        out(vault_addr(), 2_000_000, Position { owner: alice, shares: 1_000_000 }),
+        plain_out(alice, 8_000_000),
+      ],
+      [alice],
+    )
+  !yield_vault.spend(
+    t_version,
+    t_asset,
+    t_seed,
+    Some(s0),
+    Withdraw { shares: 9_000_000 },
+    state_ref,
+    t,
+  )
+}
+
+/// F-1 / min-ADA grief: the State output carries its thread token and
+/// NOTHING else, so junk tokens cannot ride along beside the NFT.
+test state_cannot_carry_junk_beside_its_thread_token() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let s1 = out(vault_addr(), 2_000_000, state(20_000_000, 20_000_000, 7, False))
+  let junked =
+    Output {
+      ..s1,
+      value: assets.merge(s1.value, assets.from_asset(junk_policy, #"deadbeef", 1)),
+    }
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [
+        junked,
+        out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 }),
+      ],
+      [alice],
+    )
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Deposit, state_ref, t)
 }

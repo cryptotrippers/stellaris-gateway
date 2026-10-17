@@ -21,8 +21,10 @@ import {
   readPositionDatum,
   readStateDatum,
   sharePriceOf,
-  selectCanonicalState,
-  soleStateOrThrow,
+  genuineStateAt,
+  quantityOf,
+  selectThreadState,
+  threadUnitOfAddress,
 
   type BfAddressTx,
   type BfTxUtxos,
@@ -58,8 +60,10 @@ export const getVaultChainState = createServerFn({ method: "GET" })
 
     const stateCandidates: Array<{
       state: VaultStateDatum;
+      holdsThread: boolean;
       utxo: NonNullable<VaultChainState["stateUtxo"]>;
     }> = [];
+    const unit = threadUnitOfAddress(data.address);
     const positions: VaultChainState["positions"] = [];
     let locked = 0n;
 
@@ -69,6 +73,7 @@ export const getVaultChainState = createServerFn({ method: "GET" })
       if (asState) {
         stateCandidates.push({
           state: asState,
+          holdsThread: unit !== null && quantityOf(u.amount, unit) === 1n,
           utxo: {
             txHash: u.tx_hash,
             outputIndex: u.output_index,
@@ -88,14 +93,14 @@ export const getVaultChainState = createServerFn({ method: "GET" })
       }
     }
 
-    // A vault bootstrapped twice leaves a second, never-used State UTxO at the
-    // same address. Both are readable; only one is the live ledger. Pick it
-    // deterministically so reads and transaction builders agree.
-    const sole = selectCanonicalState(stateCandidates, (c) => ({
-      txHash: c.utxo.txHash,
-      outputIndex: c.utxo.outputIndex,
-      state: c.state,
-    }));
+    // F-1: the live ledger is the State carrying the thread token. Anyone can
+    // pay a State-shaped datum here; those are ignored (and counted in
+    // `stateCount`) so a planted State can never drive the displayed price.
+    const { genuine: sole } = selectThreadState(
+      stateCandidates,
+      (c) => c.holdsThread,
+      data.address,
+    );
     const state = sole?.state ?? null;
     const stateUtxo = sole?.utxo ?? null;
 
@@ -140,13 +145,9 @@ export const getVaultChainHistory = createServerFn({ method: "GET" })
     for (const tx of txs) {
       const detail = await bfGet<BfTxUtxos>(`/txs/${tx.tx_hash}/utxos`);
       if (!detail) continue;
-      // O-03: a transaction that pays two State-shaped outputs to the vault
-      // address is not a history point to guess at — refuse it loudly.
-      const decoded = detail.outputs
-        .filter((out) => out.address === data.address)
-        .map((out) => readStateDatum(out.inline_datum))
-        .filter((s): s is VaultStateDatum => s !== null);
-      const sole = soleStateOrThrow(decoded, data.address);
+      // F-1 / O-03: a history point is the State output carrying the thread
+      // token; planted State-shaped outputs in the same tx are ignored.
+      const sole = genuineStateAt(detail.outputs, data.address);
       if (sole) points.push({ tx, state: sole });
     }
 
@@ -240,15 +241,9 @@ export const verifySetFeeTx = createServerFn({ method: "GET" })
       const detail = await bfGet<BfTxUtxos>(`/txs/${data.txHash}/utxos`);
       if (!detail) return fail("Transaction not found on chain.");
 
-      const before = detail.inputs
-        .filter((i) => i.address === data.address)
-        .map((i) => readStateDatum(i.inline_datum))
-        .find((s): s is VaultStateDatum => s !== null);
-
-      const after = detail.outputs
-        .filter((o) => o.address === data.address)
-        .map((o) => readStateDatum(o.inline_datum))
-        .find((s): s is VaultStateDatum => s !== null);
+      // F-1: only the token-carrying State counts as the vault's state.
+      const before = genuineStateAt(detail.inputs, data.address);
+      const after = genuineStateAt(detail.outputs, data.address);
 
       if (!before || !after) {
         return fail("This transaction does not spend and recreate the vault state at that address.");
@@ -358,15 +353,9 @@ export const verifyAccrualTx = createServerFn({ method: "GET" })
         };
       }
 
-      const before = detail.inputs
-        .filter((i) => i.address === data.address)
-        .map((i) => readStateDatum(i.inline_datum))
-        .find((s): s is VaultStateDatum => s !== null);
-
-      const after = detail.outputs
-        .filter((o) => o.address === data.address)
-        .map((o) => readStateDatum(o.inline_datum))
-        .find((s): s is VaultStateDatum => s !== null);
+      // F-1: only the token-carrying State counts as the vault's state.
+      const before = genuineStateAt(detail.inputs, data.address);
+      const after = genuineStateAt(detail.outputs, data.address);
 
       if (!before || !after) {
         return {
@@ -473,11 +462,7 @@ export const listVaultReturns = createServerFn({ method: "GET" }).handler(
       for (const tx of txs) {
         const detail = await bfGet<BfTxUtxos>(`/txs/${tx.tx_hash}/utxos`);
         if (!detail) continue;
-        const decoded = detail.outputs
-          .filter((out) => out.address === address)
-          .map((out) => readStateDatum(out.inline_datum))
-          .filter((s): s is VaultStateDatum => s !== null);
-        const sole = soleStateOrThrow(decoded, address);
+        const sole = genuineStateAt(detail.outputs, address);
         if (sole) points.push({ tx, state: sole });
       }
       const accruals = deriveAccruals(points);

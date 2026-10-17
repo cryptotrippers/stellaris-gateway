@@ -13,10 +13,9 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   BECH32_ADDRESS_RE,
   TX_HASH_RE,
-  readStateDatum,
+  genuineStateAt,
   sharePriceOf,
   type BfTxUtxos,
-  type VaultStateDatum,
 } from "./yield-chain-decode";
 import { publicSupabase } from "./asset-vaults.shared";
 
@@ -96,14 +95,9 @@ export const recordYieldAccrual = createServerFn({ method: "POST" })
     const detail = await bfGet<BfTxUtxos>(`/txs/${data.txHash}/utxos`);
     if (!detail) throw new Error("Transaction not found on chain yet — wait for confirmation.");
 
-    const before = detail.inputs
-      .filter((i) => i.address === data.address)
-      .map((i) => readStateDatum(i.inline_datum))
-      .find((s): s is VaultStateDatum => s !== null);
-    const after = detail.outputs
-      .filter((o) => o.address === data.address)
-      .map((o) => readStateDatum(o.inline_datum))
-      .find((s): s is VaultStateDatum => s !== null);
+    // F-1: only the State carrying the thread token is the vault's own.
+    const before = genuineStateAt(detail.inputs, data.address);
+    const after = genuineStateAt(detail.outputs, data.address);
 
     if (!before || !after) {
       throw new Error("This transaction does not spend and recreate the vault state.");

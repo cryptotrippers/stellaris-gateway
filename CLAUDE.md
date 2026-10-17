@@ -32,12 +32,23 @@ bun run format                           # prettier --write .
 There is no JS/TS unit test suite (no vitest/jest config, no `test` script) — the only
 automated tests in the repo are the Aiken validator tests under `contracts/vault/`.
 
-### Smart contract commands (`contracts/vault/`)
+### Smart contract commands
+
+Four Aiken projects live under `contracts/` (`vault`, `fraction-vault`,
+`multi-asset-vault`, `susdr-vault`), each with its own `plutus.json`. Their `build/`
+folders are git-ignored.
 
 ```bash
-cd contracts/vault
+cd contracts/<project>
 aiken check                              # run validator unit tests
 aiken build                              # compile validators -> plutus.json
+```
+
+Before every push, run the full verification from the repo root (PowerShell; 9 checks
+across all four projects, including CI's drift guard and datum round-trip):
+
+```powershell
+.\scripts\verify-stellaris-contracts.ps1            # add -SkipLive without a Blockfrost key
 ```
 
 After changing the Aiken source, **always run `aiken build` and commit the regenerated
@@ -49,6 +60,7 @@ node scripts/verify-vault-hash.mjs [--strict]   # blueprint drift guard (same ch
 node scripts/verify-live-scripts.mjs            # verify live/published script state
 node scripts/verify-ref-scripts.mjs             # verify published reference-script UTxOs are unspent
 node scripts/derive-vault-addresses.mjs         # derive per-asset script hash/address from the pinned blueprint
+npx tsx scripts/live-state-check.ts             # read-only Preprod inventory of every script address
 ```
 
 ## Architecture
@@ -121,10 +133,19 @@ The Aiken source lives in `contracts/vault/` (`validators/vault.ak`,
 `contracts/vault/plutus.json`. The app never re-derives the validator from source —
 it pins the **unapplied** blueprint (hash + CBOR) from `plutus.json` directly in
 `src/lib/vault.ts` (`VAULT_BLUEPRINT_*`) and `src/lib/yield-vault.ts`
-(`YIELD_BLUEPRINT_*`). The validator is parameterized by `(version, asset_id)`;
-`@lucid-evolution/lucid`'s `applyParamsToScript` derives the applied script hash and
-Preprod address **in the browser at runtime** — bumping `VAULT_VERSION` mints a new
-vault instance without touching Aiken source. `scripts/verify-vault-hash.mjs` (run in
+(`YIELD_BLUEPRINT_*`). `@lucid-evolution/lucid`'s `applyParamsToScript` derives the
+applied script hash and Preprod address **in the browser at runtime**.
+
+The legacy per-user `vault.ak` is parameterized by `(version, asset_id)`. The
+shared-State validators (`yield_vault`, `multi_asset_vault`, `fraction_vault`) also
+take a `seed` OutputReference and double as the minting policy of a one-shot
+**state-thread token** that marks their genuine State (AUDIT.md F-1). Consequences:
+an instance's address exists only after bootstrap, which consumes the seed; the
+returned seed must be pinned in `src/lib/vault-instances.ts` (reviewed commit) before
+the app can address that vault; and every reader/builder must select the State by
+its thread token (`genuineStateAt` / `genuineLucidState` / `genuineOfferingAt`),
+never by datum shape, epoch or position in a list. `susdr-vault` is frozen
+(do not bootstrap). Tx building uses Lucid Evolution, not Mesh. `scripts/verify-vault-hash.mjs` (run in
 CI) fails the build if the pinned blueprints drift from a fresh `aiken build`. See
 `contracts/vault/SPEC.md` for state transitions/invariants and `CHANGELOG.md` for the
 staged history (Stage 1 per-user vault → Stage 2 per-asset shared vault → Stage 3

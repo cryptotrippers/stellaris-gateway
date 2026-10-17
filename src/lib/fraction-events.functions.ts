@@ -8,7 +8,7 @@
  */
 
 import { createServerFn } from "@tanstack/react-start";
-import { readOfferingDatum, type OfferingDatum } from "./offering-chain";
+import { genuineOfferingAt, type OfferingDatum } from "./offering-chain";
 import { publicSupabase } from "./asset-vaults.shared";
 import { OFFERING_COLS, type OfferingRow } from "./offerings.shared";
 
@@ -22,8 +22,16 @@ export interface RecordedFractionEvent {
 }
 
 interface BfTxIo {
-  inputs: Array<{ address: string; inline_datum: string | null }>;
-  outputs: Array<{ address: string; inline_datum: string | null }>;
+  inputs: Array<{
+    address: string;
+    amount: Array<{ unit: string; quantity: string }>;
+    inline_datum: string | null;
+  }>;
+  outputs: Array<{
+    address: string;
+    amount: Array<{ unit: string; quantity: string }>;
+    inline_datum: string | null;
+  }>;
 }
 
 function classify(
@@ -83,14 +91,9 @@ export const recordFractionEvent = createServerFn({ method: "POST" })
     const io = await bfGet<BfTxIo>(`/txs/${data.txHash}/utxos`);
     if (!io) return null; // Not yet visible on chain; the caller can retry.
 
-    const before = io.inputs
-      .filter((i) => i.address === offering.script_address)
-      .map((i) => readOfferingDatum(i.inline_datum))
-      .find((d): d is OfferingDatum => d !== null);
-    const after = io.outputs
-      .filter((o) => o.address === offering.script_address)
-      .map((o) => readOfferingDatum(o.inline_datum))
-      .find((d): d is OfferingDatum => d !== null);
+    // F-1: only the token-carrying offering UTxO counts on either side.
+    const before = genuineOfferingAt(io.inputs, offering.script_address).datum;
+    const after = genuineOfferingAt(io.outputs, offering.script_address).datum;
 
     if (!after) throw new Error("That transaction does not touch this offering.");
     if (!before) {
