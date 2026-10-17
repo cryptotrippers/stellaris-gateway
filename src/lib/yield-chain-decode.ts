@@ -33,7 +33,7 @@ export interface BfAddressTx {
 
 export interface BfTxUtxos {
   hash: string;
-  inputs: Array<{ address: string; inline_datum: string | null }>;
+  inputs: Array<{ address: string; amount: BfAmount[]; inline_datum: string | null }>;
   outputs: Array<{
     address: string;
     amount: BfAmount[];
@@ -164,65 +164,144 @@ export function readPositionDatum(datumHex: string | null): VaultPositionDatum |
   }
 }
 
+// ---------------------------------------------------------------------------
+// Genuine-State selection (AUDIT.md F-1, O-03)
+// ---------------------------------------------------------------------------
+
+/** Asset name (hex) of every state-thread token: UTF-8 "state". */
+const THREAD_NAME_HEX = "7374617465";
+
+const BECH32_CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+
+function bech32Polymod(values: number[]): number {
+  const gen = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3];
+  let chk = 1;
+  for (const v of values) {
+    const top = chk >>> 25;
+    chk = ((chk & 0x1ffffff) << 5) ^ v;
+    for (let i = 0; i < 5; i++) if ((top >>> i) & 1) chk ^= gen[i];
+  }
+  return chk;
+}
+
 /**
- * AUDIT.md O-03: never silently trust the first State-shaped UTxO found at a
- * vault address. With V-01 fixed a planted State is unspendable on-chain, but
- * the decoder must not read one for display or for transaction building —
- * a second State means the address is ambiguous and the operator has to look.
+ * Script hash (hex) of a script-locked Shelley address, or null for anything
+ * else. A tiny checksum-verifying bech32 decoder, so server readers can derive
+ * a vault's thread-token unit without importing Lucid into the SSR bundle.
  */
-export function soleStateOrThrow<T>(candidates: T[], address: string): T | null {
-  if (candidates.length > 1) {
+export function scriptHashOfAddress(address: string): string | null {
+  const lower = address.toLowerCase();
+  const sep = lower.lastIndexOf("1");
+  if (sep < 1 || lower.length - sep < 7) return null;
+  const hrp = lower.slice(0, sep);
+  const data: number[] = [];
+  for (const ch of lower.slice(sep + 1)) {
+    const v = BECH32_CHARSET.indexOf(ch);
+    if (v < 0) return null;
+    data.push(v);
+  }
+  const expanded = [
+    ...[...hrp].map((c) => c.charCodeAt(0) >> 5),
+    0,
+    ...[...hrp].map((c) => c.charCodeAt(0) & 31),
+  ];
+  if (bech32Polymod([...expanded, ...data]) !== 1) return null;
+  // 5-bit groups -> bytes, dropping the 6-character checksum.
+  const bytes: number[] = [];
+  let acc = 0;
+  let bits = 0;
+  for (const v of data.slice(0, -6)) {
+    acc = (acc << 5) | v;
+    bits += 5;
+    if (bits >= 8) {
+      bits -= 8;
+      bytes.push((acc >> bits) & 0xff);
+    }
+  }
+  // Header: high nibble 1/3/5/7 = script payment credential (CIP-19).
+  const header = bytes[0];
+  if (header === undefined || bytes.length < 29 || ((header >> 4) & 1) !== 1) return null;
+  return bytes
+    .slice(1, 29)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/** Lucid/Blockfrost unit of the state-thread token at a script address. */
+export function threadUnitOfAddress(address: string): string | null {
+  const hash = scriptHashOfAddress(address);
+  return hash ? `${hash}${THREAD_NAME_HEX}` : null;
+}
+
+/** Quantity of `unit` in a Blockfrost amount list. */
+export function quantityOf(amount: BfAmount[] | undefined, unit: string): bigint {
+  const entry = (amount ?? []).find((a) => a.unit === unit);
+  return entry ? BigInt(entry.quantity) : 0n;
+}
+
+/**
+ * F-1: the genuine State is the one carrying the instance's state-thread
+ * token. Anyone can pay a State-shaped datum to a vault address, so shape and
+ * "most advanced epoch" prove nothing — an attacker picks those freely, which
+ * is why the old `selectCanonicalState` (highest epoch wins) was unsafe for
+ * building transactions (O-03 regression). Token-less candidates are ignored
+ * and counted as `planted` so callers can surface them.
+ *
+ * At most one UTxO can ever hold the token on-chain; more than one means the
+ * data is not from the chain (or the unit is wrong), so this throws rather than
+ * guess.
+ */
+export function selectThreadState<T>(
+  candidates: T[],
+  holdsThread: (c: T) => boolean,
+  address: string,
+): { genuine: T | null; planted: number } {
+  const genuine = candidates.filter(holdsThread);
+  if (genuine.length > 1) {
     throw new Error(
-      `Vault state ambiguous: found ${String(candidates.length)} State UTxOs at ${address}, ` +
-        `expected exactly one. A duplicate or planted vault state is present — ` +
-        `it cannot be spent on-chain, but no balance or transaction may be built ` +
-        `from this address until an operator identifies the genuine state UTxO.`,
+      `Vault state ambiguous: ${String(genuine.length)} UTxOs at ${address} claim the state-thread ` +
+        `token, which the validator makes impossible. Refusing to read or build from this address.`,
     );
   }
-  return candidates[0] ?? null;
+  return { genuine: genuine[0] ?? null, planted: candidates.length - genuine.length };
 }
 
 /**
- * Pick the live ledger when an address carries more than one State UTxO — the
- * usual cause being a vault that was bootstrapped twice, which leaves a second,
- * never-used State sitting at the same script address.
- *
- * The validator only ever spends ONE State per transaction, so duplicates are
- * harmless on-chain; what matters is that every reader and every transaction
- * builder agrees on the SAME one. The ordering below is fully deterministic:
- *
- *   1. the most advanced ledger wins (epoch, then accounted assets, then
- *      shares, then fee clock) — a used vault beats an untouched bootstrap;
- *   2. ties go to the State descended from the registered bootstrap tx;
- *   3. remaining ties break lexicographically on `txHash#index`.
+ * The genuine State datum among Blockfrost items (UTxOs, tx inputs or tx
+ * outputs) at `address`: State-shaped AND carrying the thread token. Null when
+ * there is none — including when only planted, token-less States exist.
  */
-export function selectCanonicalState<T>(
-  candidates: T[],
-  ref: (c: T) => { txHash: string; outputIndex: number; state: VaultStateDatum },
-  opts: { bootstrapTxHash?: string | null } = {},
-): T | null {
-  if (candidates.length <= 1) return candidates[0] ?? null;
-  const boot = (opts.bootstrapTxHash ?? "").toLowerCase();
-  const scored = candidates.map((c) => ({ c, r: ref(c) }));
-  scored.sort((a, b) => {
-    const sa = a.r.state;
-    const sb = b.r.state;
-    if (sb.epoch !== sa.epoch) return sb.epoch - sa.epoch;
-    const cmp = (x: string, y: string) => (BigInt(y) > BigInt(x) ? 1 : BigInt(y) < BigInt(x) ? -1 : 0);
-    const assets = cmp(sa.totalAssets, sb.totalAssets);
-    if (assets !== 0) return assets;
-    const shares = cmp(sa.totalShares, sb.totalShares);
-    if (shares !== 0) return shares;
-    const clock = cmp(sa.lastFeeTime, sb.lastFeeTime);
-    if (clock !== 0) return clock;
-    const ba = a.r.txHash.toLowerCase() === boot ? 0 : 1;
-    const bb = b.r.txHash.toLowerCase() === boot ? 0 : 1;
-    if (ba !== bb) return ba - bb;
-    return `${a.r.txHash}#${a.r.outputIndex}`.localeCompare(`${b.r.txHash}#${b.r.outputIndex}`);
-  });
-  return scored[0]?.c ?? null;
+export function genuineStateAt(
+  items: Array<{ address?: string; amount?: BfAmount[]; inline_datum: string | null }>,
+  address: string,
+): VaultStateDatum | null {
+  const unit = threadUnitOfAddress(address);
+  if (!unit) return null;
+  const candidates = items
+    .filter((i) => i.address === undefined || i.address === address)
+    .map((i) => ({ state: readStateDatum(i.inline_datum), amount: i.amount }))
+    .filter((c): c is { state: VaultStateDatum; amount: BfAmount[] | undefined } => c.state !== null);
+  return selectThreadState(candidates, (c) => quantityOf(c.amount, unit) === 1n, address).genuine
+    ?.state ?? null;
 }
 
+/**
+ * Transaction builders' version of `genuineStateAt`, over Lucid UTxOs: pick
+ * the State UTxO carrying the instance's thread token (`threadUnit`). Returns
+ * null when the vault has no genuine State; planted token-less States are
+ * never returned, whatever epoch or price they claim (F-1, O-03).
+ */
+export function genuineLucidState<
+  U extends { txHash: string; outputIndex: number; datum?: string | null; assets: Record<string, bigint> },
+>(utxos: U[], threadUnit: string, address: string): { utxo: U; state: VaultStateDatum } | null {
+  const candidates: Array<{ utxo: U; state: VaultStateDatum }> = [];
+  for (const u of utxos) {
+    const state = readStateDatum(u.datum ?? null);
+    if (state) candidates.push({ utxo: u, state });
+  }
+  return selectThreadState(candidates, (c) => (c.utxo.assets[threadUnit] ?? 0n) === 1n, address)
+    .genuine;
+}
 
 /** Share price = total_assets / total_shares; exactly 1.0 before any deposit. */
 export function sharePriceOf(state: { totalAssets: string; totalShares: string }): number {

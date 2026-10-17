@@ -21,17 +21,20 @@
 //// minted against asset B's vault, and the token name is fixed to the asset
 //// id for the same reason.
 ////
-//// NOTE (kept deliberately non-breaking): `yield_vault` does not yet REQUIRE
-//// this policy to run. Wiring the requirement into the vault is Step 2 and
-//// moves the vault blueprint hash, so it needs a redeploy. Until then the
-//// receipt supply is enforced one-way: no receipt can exist without a
-//// matching vault transition, but a vault transition can still happen
-//// without receipts.
+//// The vault REQUIRES this policy to run (Stage 6 Step 2, see RECEIPT.md):
+//// every `Deposit` must mint and every `Withdraw` must burn exactly the
+//// depositor-share delta. Receipt supply and depositor shares therefore move
+//// together in both directions.
 ////
-//// `VaultStateMirror` is a STRUCTURAL MIRROR of `YieldDatum` in
-//// `validators/yield_vault.ak`. Aiken cannot import types across validator
-//// modules, so the shape is duplicated. It must stay field-for-field
-//// identical; `mirror_matches_yield_vault_state` guards that.
+//// The datum type is imported from `stellaris/yield_datum`, the same module
+//// `yield_vault` uses. A hand-copied mirror used to live here and fell behind
+//// when Stage 7 widened `State` to 13 fields, which made every mint crash
+//// (AUDIT.md F-2); sharing the type makes that drift a compile error instead.
+////
+//// Planted States: this policy reads whichever single State sits at
+//// `vault_hash` among the inputs/outputs. It does not need to check the
+//// state-thread token itself, because spending that input runs `yield_vault`,
+//// which rejects any State without the token (AUDIT.md F-1).
 
 use aiken/collection/dict
 use aiken/collection/list
@@ -40,24 +43,7 @@ use cardano/assets.{PolicyId, Value}
 use cardano/transaction.{
   InlineDatum, Input, Output, OutputReference, Transaction, placeholder,
 }
-
-/// Structural mirror of `yield_vault.YieldDatum`.
-pub type VaultDatumMirror {
-  Position { owner: ByteArray, shares: Int }
-  State {
-    total_shares: Int,
-    total_assets: Int,
-    epoch: Int,
-    operators: List<ByteArray>,
-    threshold: Int,
-    paused: Bool,
-    fee_bps: Int,
-    treasury: ByteArray,
-    treasury_shares: Int,
-    last_fee_time: Int,
-    receipt_policy: ByteArray,
-  }
-}
+use stellaris/yield_datum.{State, YieldDatum}
 
 fn at_script(o: Output, hash: ByteArray) -> Bool {
   when o.address.payment_credential is {
@@ -66,10 +52,10 @@ fn at_script(o: Output, hash: ByteArray) -> Bool {
   }
 }
 
-fn datum_of(o: Output) -> Option<VaultDatumMirror> {
+fn datum_of(o: Output) -> Option<YieldDatum> {
   when o.datum is {
     InlineDatum(raw) -> {
-      expect d: VaultDatumMirror = raw
+      expect d: YieldDatum = raw
       Some(d)
     }
     _ -> None
@@ -146,7 +132,7 @@ const alice: ByteArray =
 const treas: ByteArray =
   #"44444444444444444444444444444444444444444444444444444444"
 
-fn state(total_shares: Int, treasury_shares: Int) -> VaultDatumMirror {
+fn state(total_shares: Int, treasury_shares: Int) -> YieldDatum {
   State {
     total_shares,
     total_assets: total_shares,
@@ -159,10 +145,12 @@ fn state(total_shares: Int, treasury_shares: Int) -> VaultDatumMirror {
     treasury_shares,
     last_fee_time: 1_700_000_000_000,
     receipt_policy: #"ca06d650b0ff77c959b3776771c3438bb61fe99a072eeb59d8cedb18",
+    entry_fee_bps: 0,
+    exit_fee_bps: 0,
   }
 }
 
-fn vault_out(hash: ByteArray, lovelace: Int, d: VaultDatumMirror) -> Output {
+fn vault_out(hash: ByteArray, lovelace: Int, d: YieldDatum) -> Output {
   Output {
     address: Address {
       payment_credential: Script(hash),
@@ -310,10 +298,67 @@ test two_state_outputs_are_rejected() fail {
   receipt.mint(vhash, t_asset, Void, policy, t)
 }
 
-/// The mirror type must decode a datum produced with `yield_vault`'s field
-/// order. If someone reorders `YieldDatum`, this round-trip breaks.
-test mirror_matches_yield_vault_state() {
-  let s = state(10_000_000, 50_000)
-  expect State { total_shares, treasury_shares, .. } = s
-  total_shares == 10_000_000 && treasury_shares == 50_000
+/// F-2 regression: an honest deposit against the State shape `yield_vault`
+/// actually writes (13 fields, Stage 7) must mint. Before the shared type,
+/// this exact transaction crashed the policy at `expect d: ... = raw`.
+test mint_accepts_the_13_field_state_yield_vault_writes() {
+  let as_data: Data = state(10_000_000, 0)
+  expect State { entry_fee_bps, exit_fee_bps, .. }: YieldDatum = as_data
+  let t =
+    tx_with(
+      [input_at(0, vault_out(vhash, 2_000_000, state(0, 0)))],
+      [vault_out(vhash, 2_000_000, state(10_000_000, 0))],
+      assets.from_asset(policy, t_asset, 10_000_000),
+    )
+  entry_fee_bps == 0 && exit_fee_bps == 0 && receipt.mint(vhash, t_asset, Void, policy, t)
+}
+
+/// The pre-Stage-7 11-field State no longer decodes: a vault datum of the old
+/// width can never be mistaken for the current one.
+type LegacyState11 {
+  Pos11 { owner: ByteArray, shares: Int }
+  State11 {
+    total_shares: Int,
+    total_assets: Int,
+    epoch: Int,
+    operators: List<ByteArray>,
+    threshold: Int,
+    paused: Bool,
+    fee_bps: Int,
+    treasury: ByteArray,
+    treasury_shares: Int,
+    last_fee_time: Int,
+    receipt_policy: ByteArray,
+  }
+}
+
+test an_11_field_legacy_state_is_rejected() fail {
+  let legacy: Data =
+    State11 {
+      total_shares: 0,
+      total_assets: 0,
+      epoch: 1,
+      operators: [alice],
+      threshold: 1,
+      paused: False,
+      fee_bps: 0,
+      treasury: treas,
+      treasury_shares: 0,
+      last_fee_time: 1_700_000_000_000,
+      receipt_policy: #"ca06d650b0ff77c959b3776771c3438bb61fe99a072eeb59d8cedb18",
+    }
+  let legacy_out =
+    Output {
+      address: Address { payment_credential: Script(vhash), stake_credential: None },
+      value: assets.from_lovelace(2_000_000),
+      datum: InlineDatum(legacy),
+      reference_script: None,
+    }
+  let t =
+    tx_with(
+      [input_at(0, legacy_out)],
+      [vault_out(vhash, 2_000_000, state(10_000_000, 0))],
+      assets.from_asset(policy, t_asset, 10_000_000),
+    )
+  receipt.mint(vhash, t_asset, Void, policy, t)
 }

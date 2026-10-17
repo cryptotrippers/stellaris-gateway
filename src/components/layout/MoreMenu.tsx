@@ -1,3 +1,4 @@
+import { BRAND } from "@/config/brand";
 import { Link } from "@tanstack/react-router";
 import { MoreHorizontal } from "lucide-react";
 import {
@@ -9,10 +10,12 @@ import {
 
 /** Secondary destinations, grouped so the main bar stays down to four choices. */
 export const MORE_LINKS: { to: string; label: string; hint: string }[] = [
+  { to: "/transparency", label: "Transparency", hint: "Reserves & protection (preview)" },
   { to: "/pipeline", label: "Project pipeline", hint: "What's being verified now" },
   { to: "/assets", label: "Accepted assets", hint: "Which Cardano assets plug in" },
   { to: "/learn", label: "Learn", hint: "Short plain-language guides" },
   { to: "/yield", label: "Earnings", hint: "How returns are paid out" },
+  { to: "/stake", label: `Stake ${BRAND.staked.ticker}`, hint: "7-day or 30-day staking (preview)" },
   { to: "/stewardship", label: "Impact", hint: "What your money does" },
 
   { to: "/security", label: "Security", hint: "Account & protections" },

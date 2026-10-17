@@ -1,0 +1,15 @@
+# Normalise text files to LF in the repository; check out with the
+# platform's native endings unless a rule below pins them.
+* text=auto
+
+# Aiken sources and build artifacts must be byte-identical across Windows and
+# the Linux CI runner: CI diffs a fresh `aiken build` against the committed
+# plutus.json, and the drift guard hashes compiled code read from it.
+*.ak text eol=lf
+**/plutus.json text eol=lf
+**/aiken.lock text eol=lf
+**/aiken.toml text eol=lf
+
+# Shell scripts run on Linux; PowerShell scripts are edited on Windows.
+*.sh text eol=lf
+*.ps1 text eol=crlf

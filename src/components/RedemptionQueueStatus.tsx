@@ -1,3 +1,4 @@
+import { BRAND } from "@/config/brand";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -91,7 +92,7 @@ export function RedemptionQueueStatus({ address }: { address: string | null }) {
     <section className="flex flex-col gap-4">
       <header className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <div className="text-[11px] uppercase tracking-[0.22em] text-primary">sUSDr</div>
+          <div className="text-[11px] uppercase tracking-[0.22em] text-primary">{BRAND.staked.ticker}</div>
           <h2 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
             Redemption queue
           </h2>

@@ -10,7 +10,8 @@
 import { REF_SCRIPT_HOME_ADDRESS, isPlaceholderHome, type ValidatorKey } from "./ref-scripts.shared";
 import { YIELD_VAULT_VERSION } from "./yield-vault";
 import { VAULT_VERSION } from "./vault-params";
-import { readStateDatum } from "./yield-chain-decode";
+import { genuineStateAt } from "./yield-chain-decode";
+import { YIELD_VAULT_SEEDS, seedToData } from "./vault-instances";
 import blueprintSource from "../../contracts/vault/plutus.json?raw";
 
 const blueprint = JSON.parse(blueprintSource) as {
@@ -40,6 +41,7 @@ function textToHex(s: string): string {
 interface LucidLike {
   applyParamsToScript: (cbor: string, params: unknown[]) => string;
   validatorToScriptHash: (v: { type: "PlutusV3"; script: string }) => string;
+  Constr: new (index: number, fields: unknown[]) => unknown;
 }
 
 /**
@@ -63,9 +65,15 @@ async function deriveApplied(
       return { cbor, hash: mod.validatorToScriptHash({ type: "PlutusV3", script: cbor }) };
     }
 
+    // Since Phase 1 the yield vault is parameterised by its bootstrap seed
+    // (AUDIT.md F-1); without a pinned seed there is nothing to derive, and the
+    // caller falls back to the registry hash.
+    const seed = YIELD_VAULT_SEEDS[assetId];
+    if (!seed) return null;
     const yieldCbor = mod.applyParamsToScript(unappliedCbor("yield_vault"), [
       YIELD_VAULT_VERSION,
       assetNameHex,
+      seedToData(mod, seed),
     ]);
     const yieldHash = mod.validatorToScriptHash({ type: "PlutusV3", script: yieldCbor });
     if (key === "yield_vault") return { cbor: yieldCbor, hash: yieldHash };
@@ -94,13 +102,13 @@ async function expectedHashFallback(
   if (key === "receipt") {
     const { bfGet } = await import("./blockfrost-fetch.server");
     const utxos =
-      (await bfGet<Array<{ inline_datum: string | null }>>(
+      (await bfGet<Array<{ inline_datum: string | null; amount: Array<{ unit: string; quantity: string }> }>>(
         `/addresses/${vault.script_address}/utxos?count=100`,
       )) ?? [];
-    for (const u of utxos) {
-      const state = readStateDatum(u.inline_datum);
-      if (state?.receiptPolicy) return state.receiptPolicy.toLowerCase();
-    }
+    // F-1: only the State carrying the thread token is the vault's; a planted
+    // State could otherwise nominate an arbitrary "receipt policy" here.
+    const state = genuineStateAt(utxos, vault.script_address);
+    if (state?.receiptPolicy) return state.receiptPolicy.toLowerCase();
     throw new Error(
       "The receipt policy cannot be verified: this vault has no readable State UTxO on chain yet. Bootstrap it before publishing its receipt reference script.",
     );

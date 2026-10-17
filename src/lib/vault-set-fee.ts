@@ -22,8 +22,7 @@ import { assertYieldVaultAddress, getYieldVaultScript, YIELD_VAULT_VERSION } fro
 import { getRefInputIfPublished } from "./ref-scripts";
 import {
   encodeStateDatum,
-  readStateDatum,
-  selectCanonicalState,
+  genuineLucidState,
   type VaultStateDatum,
 } from "./yield-chain-decode";
 import { settleFee, feeBpsOk, MAX_FEE_BPS } from "./vault-fees";
@@ -110,16 +109,8 @@ export async function buildSetFee(params: {
 
   // --- locate the live State UTxO ---------------------------------------
   const utxos = await lucid.utxosAt(script.address);
-  const candidates: Array<{ utxo: (typeof utxos)[number]; state: VaultStateDatum }> = [];
-  for (const u of utxos) {
-    const decoded = readStateDatum(u.datum ?? null);
-    if (decoded) candidates.push({ utxo: u, state: decoded });
-  }
-  const chosen = selectCanonicalState(candidates, (c) => ({
-    txHash: c.utxo.txHash,
-    outputIndex: c.utxo.outputIndex,
-    state: c.state,
-  }));
+  // F-1: the genuine State is the one carrying this instance's thread token.
+  const chosen = genuineLucidState(utxos, script.threadUnit, script.address);
   const stateUtxo = chosen?.utxo ?? null;
   const state = chosen?.state ?? null;
   if (!stateUtxo || !state) {
@@ -224,7 +215,7 @@ export async function buildSetFee(params: {
     .pay.ToContract(
       script.address,
       { kind: "inline", value: nextDatum },
-      { lovelace: currentLovelace },
+      { lovelace: currentLovelace, [script.threadUnit]: 1n },
     )
     .validFrom(settledAt)
     .validTo(settledAt + 15 * 60_000);

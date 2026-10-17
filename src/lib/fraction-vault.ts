@@ -6,8 +6,11 @@
  *
  *   * `fraction_vault.spend` — the offering. One UTxO holds the counters and
  *     the units paid in. Parameterised by
- *     `(version, asset_id, unit_policy, unit_name)`, so ADA (the empty policy)
- *     and any native token share one compiled script.
+ *     `(version, asset_id, unit_policy, unit_name, seed)`, so ADA (the empty
+ *     policy) and any native token share one compiled script. `seed` is the
+ *     UTxO consumed at opening to mint the offering's one-shot state-thread
+ *     token (AUDIT.md F-1); an offering's address is only known once it is
+ *     opened and its seed pinned in `vault-instances.ts`.
  *   * `fraction.mint` — the fraction token itself. Parameterised by the
  *     APPLIED offering script hash plus the asset id, so a fraction of asset A
  *     can never be minted against asset B. The token name IS the asset id.
@@ -19,16 +22,30 @@
 import { LUCID_NETWORK } from "./network";
 import type { DepositAsset } from "./deposit-assets.shared";
 import { type DepositUnit, lucidUnitOf, unitOfDepositAsset } from "./multi-asset-vault";
+import {
+  OFFERING_SEEDS,
+  pinnedSeed,
+  seedKey,
+  seedToData,
+  threadUnit,
+  type VaultSeed,
+} from "./vault-instances";
 
 export { lucidUnitOf, unitOfDepositAsset };
 export type { DepositUnit };
 
-/** Offering instance version. Bumping this yields a fresh, empty offering. */
-export const FRACTION_VAULT_VERSION = 1n;
+/**
+ * Offering instance version. Bumping this yields a fresh, empty offering.
+ *
+ * v2 (Phase 1 — security): offerings carry a one-shot state-thread token
+ * minted at opening from a `seed` UTxO (AUDIT.md F-1). No v1 offering was
+ * ever opened on Preprod, so nothing migrates.
+ */
+export const FRACTION_VAULT_VERSION = 2n;
 
 /** Hash of the *unapplied* fraction_vault validator from plutus.json. */
 export const FRACTION_BLUEPRINT_HASH =
-  "adb3467c4fa9b8c8b77279d23b9db7009ed5098b77f8464b5d2744fc";
+  "1360f2208e2a2ba81185727a162cac4f1a06123d93818a1859e254a4";
 
 /** Hash of the *unapplied* fraction mint policy from plutus.json. */
 export const FRACTION_POLICY_BLUEPRINT_HASH =
@@ -63,6 +80,7 @@ type LucidModLike = {
   validatorToScriptHash: (v: { type: "PlutusV3"; script: string }) => string;
   mintingPolicyToId: (v: { type: "PlutusV3"; script: string }) => string;
   fromText: (text: string) => string;
+  Constr: new (index: number, fields: unknown[]) => unknown;
 };
 
 export interface AppliedOffering {
@@ -80,7 +98,16 @@ export interface AppliedOffering {
   assetId: string;
   unit: DepositUnit;
   version: bigint;
+  /** Opening seed this offering is parameterised by. */
+  seed: VaultSeed;
+  /** Lucid unit of the state-thread token the genuine offering UTxO carries. */
+  threadUnit: string;
   type: "PlutusV3";
+}
+
+/** Key of an offering in `OFFERING_SEEDS`: asset id + deposit unit. */
+export function offeringSeedKey(assetId: string, unit: DepositUnit): string {
+  return `${assetId}:${unit.policyId}${unit.assetNameHex}`;
 }
 
 const cache = new Map<string, AppliedOffering>();
@@ -91,11 +118,16 @@ const HEX = /^[0-9a-f]*$/;
  * Apply the offering parameters, then bind the mint policy to the resulting
  * applied script hash. Order matters: the policy depends on the offering
  * hash, never the other way round, so there is no circular parameter.
+ *
+ * `seed` defaults to the offering pinned in `vault-instances.ts`; only the
+ * opening builder passes one explicitly. Throws `VaultNotBootstrappedError`
+ * when the offering has no pinned seed.
  */
 export function getOfferingScripts(
   lucidMod: unknown,
   assetId: string,
   unit: DepositUnit,
+  seed: VaultSeed = pinnedSeed("fraction_vault", OFFERING_SEEDS, offeringSeedKey(assetId, unit)),
 ): AppliedOffering {
   if (!HEX.test(unit.policyId) || !HEX.test(unit.assetNameHex)) {
     throw new Error("The deposit unit policy id and asset name must be hex.");
@@ -105,7 +137,7 @@ export function getOfferingScripts(
   }
   if (!assetId) throw new Error("An offering needs an asset id.");
 
-  const cacheKey = `${FRACTION_BLUEPRINT_HASH}:${String(FRACTION_VAULT_VERSION)}:${assetId}:${unit.policyId}:${unit.assetNameHex}`;
+  const cacheKey = `${FRACTION_BLUEPRINT_HASH}:${String(FRACTION_VAULT_VERSION)}:${assetId}:${unit.policyId}:${unit.assetNameHex}:${seedKey(seed)}`;
   const cached = cache.get(cacheKey);
   if (cached) return cached;
 
@@ -140,6 +172,7 @@ export function getOfferingScripts(
     assetNameHex,
     unit.policyId,
     unit.assetNameHex,
+    seedToData(lucidMod, seed),
   ]);
   const validator = { type: "PlutusV3" as const, script: cbor };
   const scriptHash = mod.validatorToScriptHash(validator);
@@ -162,19 +195,27 @@ export function getOfferingScripts(
     assetId,
     unit,
     version: FRACTION_VAULT_VERSION,
+    seed,
+    threadUnit: threadUnit(scriptHash),
     type: "PlutusV3",
   };
   cache.set(cacheKey, applied);
   return applied;
 }
 
-/** Lazily load Lucid in the browser and derive an offering's scripts. */
+/**
+ * Lazily load Lucid in the browser and derive an opened offering's scripts.
+ * Throws `VaultNotBootstrappedError` for an offering that has no pinned seed.
+ */
 export async function deriveOffering(
   assetId: string,
   unit: DepositUnit,
+  seed?: VaultSeed,
 ): Promise<AppliedOffering> {
   const lucid = await import("@lucid-evolution/lucid");
-  return getOfferingScripts(lucid, assetId, unit);
+  return seed
+    ? getOfferingScripts(lucid, assetId, unit, seed)
+    : getOfferingScripts(lucid, assetId, unit);
 }
 
 /** ADA, expressed as the empty policy — the launch denomination. */
