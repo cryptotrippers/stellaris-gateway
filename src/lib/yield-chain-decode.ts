@@ -227,6 +227,15 @@ export function scriptHashOfAddress(address: string): string | null {
     .join("");
 }
 
+/** Asset name (hex) of every position marker: UTF-8 "position" (F-4). */
+const MARKER_NAME_HEX = "706f736974696f6e";
+
+/** Lucid/Blockfrost unit of the position marker at a script address. */
+export function markerUnitOfAddress(address: string): string | null {
+  const hash = scriptHashOfAddress(address);
+  return hash ? `${hash}${MARKER_NAME_HEX}` : null;
+}
+
 /** Lucid/Blockfrost unit of the state-thread token at a script address. */
 export function threadUnitOfAddress(address: string): string | null {
   const hash = scriptHashOfAddress(address);

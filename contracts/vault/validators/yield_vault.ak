@@ -25,8 +25,15 @@
 //// returned State to carry it. A State-shaped datum paid to this address by
 //// anyone else has no token and can never be spent.
 ////
+//// Position identity (AUDIT.md F-4): each `Deposit` also mints one position
+//// marker into the Position it creates. Markers are conserved at the script
+//// address (they can only leave by being burned on a full withdrawal), and
+//// only a marked Position can be spent, so a Position datum paid here by
+//// anyone else can never be redeemed against the vault.
+////
 //// All share arithmetic lives in `stellaris/shares` and is tested there.
 
+use aiken/collection/dict
 use aiken/collection/list
 use aiken/interval.{Finite}
 use aiken/primitive/bytearray
@@ -40,7 +47,10 @@ use stellaris/shares.{
   exit_fee_for, fee_assets_for, fee_bps_ok, fee_shares_for, max_settle_window,
   min_position_value, mint_shares, redeem_value, withdraw_ok,
 }
-use stellaris/thread.{holds_thread, one_shot_mint, thread_value}
+use stellaris/thread.{
+  holds_marker, holds_thread, marker_name, marker_value, one_shot_mint,
+  thread_name, thread_value,
+}
 use stellaris/yield_datum.{Position, State, YieldDatum}
 
 pub type YieldRedeemer {
@@ -166,8 +176,9 @@ fn positions_well_formed(outs: List<Output>) -> Bool {
   )
 }
 
-/// Outputs returned to the vault carry nothing but lovelace — except the State,
-/// which carries exactly its one state-thread token. Without this an attacker
+/// Outputs returned to the vault carry nothing but lovelace and their identity
+/// token: the State exactly one state-thread token, each Position exactly one
+/// position marker (F-1, F-4). Without this an attacker
 /// can park arbitrary native tokens (or an NFT) in a Position or in the State
 /// UTxO, inflating its min-ADA requirement until the accounted lovelace can no
 /// longer be paid out — a permanent lock on real funds.
@@ -178,7 +189,8 @@ fn values_pure(outs: List<Output>, policy: PolicyId) -> Bool {
       let extra = assets.without_lovelace(o.value)
       when datum_of(o) is {
         Some(State { .. }) -> extra == thread_value(policy)
-        _ -> extra == assets.zero
+        Some(Position { .. }) -> extra == marker_value(policy)
+        None -> extra == assets.zero
       }
     },
   )
@@ -209,6 +221,19 @@ fn sole_state(outs: List<Output>) -> Option<YieldDatum> {
     Some(o) -> datum_of(o)
     None -> None
   }
+}
+
+/// F-4: every Position among `outs` carries exactly one position marker.
+fn positions_marked(outs: List<Output>, policy: PolicyId) -> Bool {
+  list.all(
+    outs,
+    fn(o) {
+      when datum_of(o) is {
+        Some(Position { .. }) -> holds_marker(o.value, policy)
+        _ -> True
+      }
+    },
+  )
 }
 
 /// A valid initial ledger: empty books, a well-formed committee, fees inside
@@ -304,15 +329,34 @@ validator yield_vault(_version: Int, asset_id: ByteArray, seed: OutputReference)
   /// Bootstrap: mint the one-shot state-thread token into the initial State.
   /// The seed can be spent once, so this can succeed at most once per
   /// applied script, and no State may be spent alongside it.
+  ///
+  /// Position markers (F-4) are minted by `Deposit` and burned by a full
+  /// `Withdraw`. Here it is enough that the GENUINE State is spent in the same
+  /// transaction: that spend runs the accounting branch, which fixes the exact
+  /// marker quantity.
   mint(_redeemer: Data, policy_id: PolicyId, tx: Transaction) {
-    let outs = script_outputs(tx, policy_id)
-    expect Some(boot) = sole_state_output(outs)
-    expect Some(boot_datum) = datum_of(boot)
-    one_shot_mint(tx, policy_id, seed) && script_inputs(tx, policy_id) == [] && list.length(
-      outs,
-    ) == 1 && holds_thread(boot.value, policy_id) && values_pure(outs, policy_id) && bootstrap_ok(
-      boot_datum,
-    )
+    when dict.to_pairs(assets.tokens(tx.mint, policy_id)) is {
+      [Pair(name, _)] ->
+        if name == thread_name {
+          let outs = script_outputs(tx, policy_id)
+          expect Some(boot) = sole_state_output(outs)
+          expect Some(boot_datum) = datum_of(boot)
+          one_shot_mint(tx, policy_id, seed) && script_inputs(tx, policy_id) == [] && list.length(
+            outs,
+          ) == 1 && holds_thread(boot.value, policy_id) && values_pure(
+            outs,
+            policy_id,
+          ) && bootstrap_ok(boot_datum)
+        } else if name == marker_name {
+          when sole_state_output(script_inputs(tx, policy_id)) is {
+            Some(s) -> holds_thread(s.value, policy_id)
+            None -> False
+          }
+        } else {
+          False
+        }
+      _ -> False
+    }
   }
 
   spend(
@@ -332,6 +376,10 @@ validator yield_vault(_version: Int, asset_id: ByteArray, seed: OutputReference)
       // Spending a depositor position.
       // ----------------------------------------------------------
       Position { owner, .. } -> {
+        // F-4: only a Position the vault minted a marker into is spendable.
+        expect Some(own_in) =
+          list.find(tx.inputs, fn(i) { i.output_reference == own_ref })
+        let marked = holds_marker(own_in.output.value, hash)
         let owner_signed = list.has(tx.extra_signatories, owner)
         let owner_paid =
           list.any(
@@ -351,7 +399,7 @@ validator yield_vault(_version: Int, asset_id: ByteArray, seed: OutputReference)
             Some(s) -> holds_thread(s.value, hash)
             None -> False
           }
-        owner_signed && owner_paid && state_present
+        marked && owner_signed && owner_paid && state_present
       }
 
       // ----------------------------------------------------------
@@ -415,6 +463,16 @@ validator yield_vault(_version: Int, asset_id: ByteArray, seed: OutputReference)
 
         // Stage 6: net receipts minted (positive) or burned (negative) under
         // the vault's bound policy, for this vault's token name.
+        // F-4: position markers minted (+) or burned (-) by this transaction.
+        // Every Position in and out carries exactly one, so conservation of
+        // markers at the script is: positions_out - positions_in == delta.
+        // A marker can therefore never leave the script except by burning.
+        let marker_delta = assets.quantity_of(tx.mint, hash, marker_name)
+        let markers_conserved =
+          positions_marked(ins, hash) && list.length(position_datums(outs)) - list.length(
+            position_datums(ins),
+          ) == marker_delta
+
         let receipt_delta =
           assets.quantity_of(tx.mint, receipt_policy, asset_id)
 
@@ -435,7 +493,7 @@ validator yield_vault(_version: Int, asset_id: ByteArray, seed: OutputReference)
         // treasury's unclaimed shares can never exceed the total supply, and
         // the fee clock can only move forward.
         let structural =
-          genuine && operators_valid(operators, threshold) && operators_valid(
+          genuine && markers_conserved && operators_valid(operators, threshold) && operators_valid(
             n_operators,
             n_threshold,
           ) && positions_well_formed(outs) && values_pure(outs, hash) && n_shares >= 0 && n_assets >= 0 && locked_out >= 0 && n_epoch >= epoch && fee_bps_ok(
@@ -492,7 +550,11 @@ validator yield_vault(_version: Int, asset_id: ByteArray, seed: OutputReference)
                   total_assets: total_assets + deposit,
                 }
               let fee_shares = fee_shares_for(post, entry_fee)
-              same_committee && action_fee_frozen(fee_shares) && !paused && n_paused == paused && n_epoch == epoch && deposit_ok(
+              // F-4: a deposit creates exactly one new, marked Position and
+              // spends none.
+              marker_delta == 1 && position_datums(ins) == [] && same_committee && action_fee_frozen(
+                fee_shares,
+              ) && !paused && n_paused == paused && n_epoch == epoch && deposit_ok(
                 acc,
                 net,
               ) && shares_delta == minted && receipt_delta == minted && n_shares == total_shares + minted + fee_shares && n_assets == total_assets + deposit
@@ -673,20 +735,20 @@ fn user_addr(pkh: ByteArray) -> Address {
 fn out(addr: Address, lovelace: Int, datum: YieldDatum) -> Output {
   let base = assets.from_lovelace(lovelace)
   let value =
-    when datum is {
-      State { .. } ->
-        if addr == vault_addr() {
-          assets.merge(base, thread_value(vhash))
-        } else {
-          base
-        }
-      _ -> base
+    if addr == vault_addr() {
+      when datum is {
+        State { .. } -> assets.merge(base, thread_value(vhash))
+        // F-4: a Position the vault created carries its marker.
+        Position { .. } -> assets.merge(base, marker_value(vhash))
+      }
+    } else {
+      base
     }
   Output { address: addr, value, datum: InlineDatum(datum), reference_script: None }
 }
 
-/// Fixture output with NO thread token: what a third party can pay to the
-/// vault address.
+/// Fixture output with NO identity token (no thread token on a State, no
+/// marker on a Position): what a third party can pay to the vault address.
 fn bare_out(addr: Address, lovelace: Int, datum: YieldDatum) -> Output {
   Output {
     address: addr,
@@ -781,9 +843,22 @@ fn tx_minting(
     inputs: ins,
     outputs: outs,
     extra_signatories: signers,
-    mint: assets.from_asset(rpolicy, t_asset, receipts),
+    mint: assets.merge(
+      assets.from_asset(rpolicy, t_asset, receipts),
+      fixture_markers(ins, outs),
+    ),
     validity_range: interval.between(t0, t0 + 3_600_000),
   }
+}
+
+/// F-4: the marker mint implied by the fixture — one per Position created,
+/// minus one per Position consumed — so legacy tests keep exercising exactly
+/// the property they were written for. Marker tests build their mint by hand.
+fn fixture_markers(ins: List<Input>, outs: List<Output>) -> assets.Value {
+  let in_positions =
+    list.length(position_datums(list.map(ins, fn(i) { i.output })))
+  let out_positions = list.length(position_datums(outs))
+  assets.from_asset(vhash, marker_name, out_positions - in_positions)
 }
 
 
@@ -2225,4 +2300,243 @@ test state_cannot_carry_junk_beside_its_thread_token() {
       [alice],
     )
   !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Deposit, state_ref, t)
+}
+
+// --- Phase 1: position markers (AUDIT.md F-4) ------------------------------
+
+/// The F-4 drain: Mallory holds receipts (from her own honest deposit) and a
+/// Position datum she paid to the vault herself, with 2 ADA in it. Withdrawing
+/// it would pay her out of the State UTxO's lovelace — everyone's accrued
+/// yield — while her real Position, holding the principal, stays put.
+fn f4_withdraw_tx(position: Output) -> Transaction {
+  let s0 = state(100_000_000, 100_000_000, 9, False)
+  tx(
+    [input_at(0, out(vault_addr(), 52_000_000, s0)), input_at(1, position)],
+    [
+      // 10 ADA of shares paid out: 2 ADA from the Position, 8 from the pool.
+      out(vault_addr(), 44_000_000, state(90_000_000, 90_000_000, 9, False)),
+      plain_out(mallory, 10_000_000),
+    ],
+    [mallory],
+  )
+}
+
+test planted_position_cannot_be_withdrawn() {
+  let p = Position { owner: mallory, shares: 10_000_000 }
+  !yield_vault.spend(
+    t_version,
+    t_asset,
+    t_seed,
+    Some(state(100_000_000, 100_000_000, 9, False)),
+    Withdraw { shares: 10_000_000 },
+    state_ref,
+    f4_withdraw_tx(bare_out(vault_addr(), 2_000_000, p)),
+  )
+}
+
+/// The Position branch refuses an unmarked Position on its own, too.
+test planted_position_cannot_be_spent_by_its_owner() {
+  let p = Position { owner: mallory, shares: 10_000_000 }
+  !yield_vault.spend(
+    t_version,
+    t_asset,
+    t_seed,
+    Some(p),
+    Withdraw { shares: 10_000_000 },
+    ref_at(1),
+    f4_withdraw_tx(bare_out(vault_addr(), 2_000_000, p)),
+  )
+}
+
+/// Control: the same withdrawal of a marked Position is accepted, so the two
+/// tests above fail for exactly one reason — the missing marker.
+test marked_position_with_the_same_shape_is_withdrawn() {
+  let p = Position { owner: mallory, shares: 10_000_000 }
+  yield_vault.spend(
+    t_version,
+    t_asset,
+    t_seed,
+    Some(state(100_000_000, 100_000_000, 9, False)),
+    Withdraw { shares: 10_000_000 },
+    state_ref,
+    f4_withdraw_tx(out(vault_addr(), 2_000_000, p)),
+  )
+}
+
+fn deposit_ins() -> List<Input> {
+  [input_at(0, out(vault_addr(), 2_000_000, state(10_000_000, 10_000_000, 7, False)))]
+}
+
+fn deposit_mint(markers: Int) -> assets.Value {
+  assets.merge(
+    assets.from_asset(rpolicy, t_asset, 10_000_000),
+    assets.from_asset(vhash, marker_name, markers),
+  )
+}
+
+fn deposit_with(outs: List<Output>, mint: assets.Value) -> Bool {
+  yield_vault.spend(
+    t_version,
+    t_asset,
+    t_seed,
+    Some(state(10_000_000, 10_000_000, 7, False)),
+    Deposit,
+    state_ref,
+    Transaction { ..tx(deposit_ins(), outs, [alice]), mint: mint },
+  )
+}
+
+fn deposit_outs(position: Output) -> List<Output> {
+  [out(vault_addr(), 2_000_000, state(20_000_000, 20_000_000, 7, False)), position]
+}
+
+test deposit_must_mint_a_marker() {
+  let p = out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 })
+  deposit_with(deposit_outs(p), deposit_mint(1)) && !deposit_with(
+    deposit_outs(p),
+    deposit_mint(0),
+  )
+}
+
+test deposit_cannot_mint_two_markers() {
+  let p = out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 })
+  let extra = Output { ..plain_out(mallory, 2_000_000), value: marker_value(vhash) }
+  !deposit_with([extra, ..deposit_outs(p)], deposit_mint(2))
+}
+
+/// The marker cannot be minted and walked out to a wallet (to be put into a
+/// planted Position later): the new Position must hold it.
+test deposit_cannot_send_the_marker_to_a_wallet() {
+  let unmarked =
+    bare_out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 })
+  let leaked =
+    Output {
+      ..plain_out(mallory, 2_000_000),
+      value: assets.merge(assets.from_lovelace(2_000_000), marker_value(vhash)),
+    }
+  !deposit_with([leaked, ..deposit_outs(unmarked)], deposit_mint(1))
+}
+
+test deposit_cannot_spend_an_existing_position() {
+  let mine = Position { owner: alice, shares: 10_000_000 }
+  let t =
+    Transaction {
+      ..tx(
+        [
+          input_at(0, out(vault_addr(), 2_000_000, state(10_000_000, 10_000_000, 7, False))),
+          input_at(1, out(vault_addr(), 10_000_000, mine)),
+        ],
+        [
+          out(vault_addr(), 2_000_000, state(20_000_000, 20_000_000, 7, False)),
+          out(vault_addr(), 10_000_000, mine),
+          out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 }),
+        ],
+        [alice],
+      ),
+      mint: deposit_mint(1),
+    }
+  !yield_vault.spend(
+    t_version,
+    t_asset,
+    t_seed,
+    Some(state(10_000_000, 10_000_000, 7, False)),
+    Deposit,
+    state_ref,
+    t,
+  )
+}
+
+/// A full close must burn the marker, not carry it off.
+test full_withdraw_must_burn_the_marker() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let p = Position { owner: alice, shares: 10_000_000 }
+  let base =
+    tx(
+      [input_at(0, out(vault_addr(), 2_000_000, s0)), input_at(1, out(vault_addr(), 10_000_000, p))],
+      [
+        out(vault_addr(), 2_000_000, state(0, 0, 7, False)),
+        Output {
+          ..plain_out(alice, 10_000_000),
+          value: assets.merge(assets.from_lovelace(10_000_000), marker_value(vhash)),
+        },
+      ],
+      [alice],
+    )
+  let kept = Transaction { ..base, mint: assets.from_asset(rpolicy, t_asset, -10_000_000) }
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Withdraw { shares: 10_000_000 }, state_ref, kept)
+}
+
+/// A partial withdrawal keeps the marker in the remainder Position.
+test partial_withdraw_must_keep_the_marker_in_the_remainder() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let base =
+    tx(
+      [
+        input_at(0, out(vault_addr(), 2_000_000, s0)),
+        input_at(1, out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 })),
+      ],
+      [
+        out(vault_addr(), 2_000_000, state(6_000_000, 6_000_000, 7, False)),
+        bare_out(vault_addr(), 6_000_000, Position { owner: alice, shares: 6_000_000 }),
+        plain_out(alice, 4_000_000),
+      ],
+      [alice],
+    )
+  let burned =
+    Transaction {
+      ..base,
+      mint: assets.merge(
+        assets.from_asset(rpolicy, t_asset, -4_000_000),
+        assets.from_asset(vhash, marker_name, -1),
+      ),
+    }
+  !yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Withdraw { shares: 4_000_000 }, state_ref, burned)
+}
+
+/// The policy side: markers can only be minted while the GENUINE State is
+/// spent (its accounting branch then fixes the quantity).
+test markers_need_the_genuine_state_to_be_spent() {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let outs = deposit_outs(out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 }))
+  let genuine =
+    Transaction { ..tx(deposit_ins(), outs, [alice]), mint: deposit_mint(1) }
+  let planted =
+    Transaction {
+      ..tx([input_at(0, bare_out(vault_addr(), 2_000_000, s0))], outs, [alice]),
+      mint: deposit_mint(1),
+    }
+  yield_vault.mint(t_version, t_asset, t_seed, Void, vhash, genuine) && !yield_vault.mint(
+    t_version,
+    t_asset,
+    t_seed,
+    Void,
+    vhash,
+    planted,
+  )
+}
+
+/// The thread token and a marker can never be minted in one transaction.
+test thread_token_and_marker_cannot_be_minted_together() {
+  let t =
+    Transaction {
+      ..bootstrap_tx(
+        [seed_input()],
+        [out(vault_addr(), 5_000_000, state(0, 0, 0, False))],
+        1,
+      ),
+      mint: assets.merge(thread_value(vhash), marker_value(vhash)),
+    }
+  !yield_vault.mint(t_version, t_asset, t_seed, Void, vhash, t)
+}
+
+/// A deposit creates exactly ONE Position (and so one marker). Splitting the
+/// minted shares across two marked Positions is rejected.
+test deposit_cannot_create_two_positions() {
+  let outs =
+    [
+      out(vault_addr(), 2_000_000, state(20_000_000, 20_000_000, 7, False)),
+      out(vault_addr(), 5_000_000, Position { owner: alice, shares: 5_000_000 }),
+      out(vault_addr(), 5_000_000, Position { owner: alice, shares: 5_000_000 }),
+    ]
+  !deposit_with(outs, deposit_mint(2))
 }

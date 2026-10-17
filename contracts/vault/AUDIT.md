@@ -484,33 +484,58 @@ only checks the UTxO's lovelace). Test:
 `partial_withdraw_cannot_leave_shares_worth_less_than_the_floor`. On a full
 close the call is redundant with other rules (an equivalent mutant).
 
-### F-4 — Position UTxOs are not authenticated — MEDIUM — **OPEN**
+### F-4 — Position UTxOs are not authenticated — HIGH — **FIXED**
 
 Like a planted State, a Position datum can be paid to the vault by anyone. With
 F-1 fixed it can only be redeemed against the genuine State, and `Withdraw`
 must burn receipts equal to its shares — so whoever holds receipts can create a
 Position for themselves and redeem it, paid from the State UTxO's lovelace,
 while the original depositor's Position becomes unredeemable. Receipts are
-transferable on-chain (V-04), so this is reachable only if a depositor parts
-with their receipts, which the UI tells them not to do. Not fixed in Phase 1:
-the coherent fix is the bearer-token model (receipts ARE the claim, no Position
-UTxOs), which is what the Phase 3 TSRA/sTSRA design uses.
+transferable on-chain (V-04).
 
-### F-5 — Legacy yield v3 instances are unreachable and pre-F-1 — MEDIUM — **OPEN**
+**Severity corrected to HIGH:** no victim cooperation is needed. An attacker
+deposits honestly (Position A + receipts), plants Position B claiming the same
+shares with 2 ADA, and withdraws B with those receipts — the payout comes from
+the State UTxO, i.e. everyone's accrued yield, while A's principal stays put.
+A second deposit supplies fresh receipts to withdraw A. Net ≈ (shares' value −
+2 ADA) taken from the shared pool per round, repeatable; later honest
+withdrawals are shorted. `multi_asset_vault` has no receipt at all, so there a
+planted Position was directly withdrawable.
+
+**Fix (Phase 1).** `yield_vault` and `multi_asset_vault` mint a **position
+marker** (`"position"`, same policy as the thread token) into every Position a
+`Deposit` creates. Every Position in and out must carry exactly one; markers
+are conserved at the script (`positions_out − positions_in == minted markers`),
+so one can only leave by being burned on a full withdrawal; `Deposit` creates
+exactly one Position and spends none; the mint handler requires the genuine
+State to be spent. An unmarked Position can never be spent. Tests include
+`planted_position_cannot_be_withdrawn` with the control
+`marked_position_with_the_same_shape_is_withdrawn` (both vaults),
+`deposit_cannot_send_the_marker_to_a_wallet`, `full_withdraw_must_burn_the_marker`,
+`markers_need_the_genuine_state_to_be_spent`. Bearer-token redemption (V-04
+option b) remains the Phase 3 model for TSRA/sTSRA.
+
+### F-5 — Legacy yield v3 instances are unreachable and pre-F-1 — MEDIUM — **MITIGATED (exit script)**
 
 The v4 change (2026-09-17) dropped the v3 blueprint from the app, so v3 UTxOs
 cannot be spent from the UI. Preprod on 2026-10-17: `ph-solar-01` v3 holds one
 Position of 1,000 tADA (owner = the operator key) plus a duplicate empty State;
 `sfm-01`/`sfm-02` v3 hold only empty States. v3 is subject to F-1, so a griefer
-could break its books and lock that Position. Recommended: a one-off v3 exit
-builder pinned to the frozen v3 blueprint, then retire v3.
+could break its books and lock that Position. `scripts/exit-yield-v3.ts` is an
+operator script pinned to the frozen v3 blueprint
+(`scripts/legacy/yield-v3.blueprint.json`, from git 19672af^): it verifies the
+blueprint hashes, the derived address and the receipt policy, dry-runs by
+default (both scripts evaluated locally against the exact transaction), and
+only signs with `--submit` and the owner's key from the environment. The empty
+v3 States hold 20 tADA of min-ADA that v3 offers no way to release.
 
-### M-1 — `multi_asset_vault` solvency check is a tautology — LOW — **OPEN**
+### M-1 — `multi_asset_vault` solvency check is a tautology — LOW — **FIXED**
 
 `solvent(VaultAccounting { .., total_assets: n_assets }, n_assets)` compares
 `n_assets <= n_assets`. Solvency rests on the per-branch value-delta rules, as
-in `yield_vault` (V-07). The vault has no off-chain builder; recorded so the
-check is not mistaken for a guard.
+in `yield_vault` (V-07). It could not lose funds by itself (every branch ties
+`n_assets` to the exact unit delta), but it read as a guard; it is removed and
+replaced by a comment stating where solvency actually comes from.
 
 ### Tooling found broken in Phase 0/1
 
