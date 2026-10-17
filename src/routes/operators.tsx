@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, ExternalLink, Loader2, ShieldCheck, Wallet } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, Copy, ExternalLink, Loader2, ShieldCheck, Wallet } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { Badge } from "@/components/ui/StatusBadge";
@@ -546,5 +546,34 @@ function BootstrapForm({
         {busy === "submit" ? "Awaiting wallet signature…" : "Bootstrap vault ledger"}
       </button>
     </section>
+  );
+}
+
+function CopyRow({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // clipboard unavailable — the value is still selectable
+    }
+  };
+  return (
+    <div>
+      <div className="text-muted-foreground">{label}</div>
+      <div className="mt-0.5 flex items-start gap-2">
+        <span className="break-all font-mono text-foreground">{value}</span>
+        <button
+          type="button"
+          onClick={copy}
+          aria-label={`Copy ${label}`}
+          className="shrink-0 rounded border border-border p-1 text-muted-foreground hover:text-foreground"
+        >
+          {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+        </button>
+      </div>
+    </div>
   );
 }
