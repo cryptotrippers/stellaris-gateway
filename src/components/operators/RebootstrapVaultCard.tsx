@@ -18,7 +18,9 @@ import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
   ArrowRight,
+  Check,
   CheckCircle2,
+  Copy,
   ExternalLink,
   Loader2,
   RefreshCw,
@@ -65,9 +67,17 @@ export function RebootstrapVaultCard({
     (async () => {
       const out: Drift[] = [];
       for (const v of vaults) {
-        const script = await deriveYieldVaultAddress(v.asset_id);
-        if (script.address !== v.script_address || script.scriptHash !== v.script_hash) {
-          out.push({ vault: v, newAddress: script.address, newScriptHash: script.scriptHash });
+        try {
+          const script = await deriveYieldVaultAddress(v.asset_id);
+          if (script.address !== v.script_address || script.scriptHash !== v.script_hash) {
+            out.push({ vault: v, newAddress: script.address, newScriptHash: script.scriptHash });
+          }
+        } catch (e) {
+          // No pinned seed means this build cannot derive the vault's address —
+          // treat it as "no pinned instance" and skip it rather than failing
+          // the whole scan.
+          if (e instanceof Error && e.name === "VaultNotBootstrappedError") continue;
+          throw e;
         }
       }
       if (!cancelled) setDrifted(out);
@@ -138,6 +148,7 @@ function DriftRow({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
+  const [seedInfo, setSeedInfo] = useState<{ seed: string; threadUnit: string } | null>(null);
 
   const oldState = useQuery({
     queryKey: ["vault-chain-state", vault.script_address],
@@ -171,6 +182,10 @@ function DriftRow({
         },
       });
       setTxHash(res.txHash);
+      setSeedInfo({
+        seed: `${res.seed.txHash}#${res.seed.outputIndex}`,
+        threadUnit: res.threadUnit,
+      });
       onDone();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -282,6 +297,18 @@ function DriftRow({
               View transaction
             </a>
           </span>
+          {seedInfo && (
+            <div className="mt-3 w-full text-xs">
+              <CopyLine label="Seed" value={seedInfo.seed} />
+              <CopyLine label="State token" value={seedInfo.threadUnit} />
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                Developer step: pin this seed in src/lib/vault-instances.ts under
+                YIELD_VAULT_SEEDS[&quot;{vault.asset_id}&quot;] as{" "}
+                {"{ txHash: \"...\", outputIndex: N }"}. Until that commit is deployed, deposits
+                and withdrawals for this vault are unavailable.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -299,6 +326,33 @@ function DriftRow({
           Requires the admin role and the registered master wallet connected.
         </div>
       )}
+    </div>
+  );
+}
+
+function CopyLine({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // clipboard unavailable — the value is still selectable
+    }
+  };
+  return (
+    <div className="mt-1 flex items-start gap-2">
+      <span className="shrink-0 text-muted-foreground">{label}:</span>
+      <span className="break-all font-mono text-foreground">{value}</span>
+      <button
+        type="button"
+        onClick={copy}
+        aria-label={`Copy ${label}`}
+        className="shrink-0 rounded border border-border p-1 text-muted-foreground hover:text-foreground"
+      >
+        {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+      </button>
     </div>
   );
 }

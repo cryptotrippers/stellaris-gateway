@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, ExternalLink, Loader2, ShieldCheck, Wallet } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, Copy, ExternalLink, Loader2, ShieldCheck, Wallet } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { Badge } from "@/components/ui/StatusBadge";
@@ -11,10 +11,10 @@ import { MAX_FEE_BPS, formatFeeBps } from "@/lib/vault-fees";
 import { recordVaultFeeSchedule } from "@/lib/asset-vaults.functions";
 import {
   bootstrapYieldVault,
-  deriveYieldVaultAddress,
   getConnectedOperatorKeyHash,
   validateCommittee,
 } from "@/lib/vault-bootstrap";
+import type { VaultSeed } from "@/lib/vault-instances";
 import { cardanoscanAddress, cardanoscanTx, short } from "@/lib/chain-format";
 import { MasterWalletGate, useMasterWallet } from "@/components/admin/MasterWalletGate";
 import { AccrueYieldCard } from "@/components/operators/AccrueYieldCard";
@@ -301,10 +301,15 @@ function BootstrapForm({
   const [feeBps, setFeeBps] = useState(0);
   const [treasuryPkh, setTreasuryPkh] = useState("");
 
-  const [address, setAddress] = useState<string | null>(null);
-  const [busy, setBusy] = useState<null | "derive" | "wallet" | "submit">(null);
+  const [busy, setBusy] = useState<null | "wallet" | "submit">(null);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ txHash: string; address: string } | null>(null);
+  const [result, setResult] = useState<{
+    txHash: string;
+    address: string;
+    scriptHash: string;
+    seed: VaultSeed;
+    threadUnit: string;
+  } | null>(null);
 
   const operators = operatorsText
     .split(/[\s,]+/)
@@ -312,25 +317,8 @@ function BootstrapForm({
     .filter(Boolean);
 
   useEffect(() => {
-    setAddress(null);
     setResult(null);
     setError(null);
-    if (!assetId) return;
-    let cancelled = false;
-    setBusy("derive");
-    deriveYieldVaultAddress(assetId)
-      .then((s) => {
-        if (!cancelled) setAddress(s.address);
-      })
-      .catch((e: unknown) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
-      })
-      .finally(() => {
-        if (!cancelled) setBusy(null);
-      });
-    return () => {
-      cancelled = true;
-    };
   }, [assetId]);
 
   const addSelf = async () => {
@@ -383,7 +371,13 @@ function BootstrapForm({
           setTxHash: res.txHash,
         },
       });
-      setResult({ txHash: res.txHash, address: res.address });
+      setResult({
+        txHash: res.txHash,
+        address: res.address,
+        scriptHash: res.scriptHash,
+        seed: res.seed,
+        threadUnit: res.threadUnit,
+      });
       onDone();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -396,8 +390,8 @@ function BootstrapForm({
     <section className="mt-10 card-institutional p-6">
       <h2 className="text-sm font-medium text-foreground">Bootstrap a vault ledger</h2>
       <p className="mt-1 text-sm text-muted-foreground">
-        One transaction per asset. It cannot be repeated — a second state UTxO would break the
-        vault&apos;s accounting invariant.
+        Each bootstrap creates a new, separate vault. Only the one pinned in the build is used by
+        the app.
       </p>
 
       <div className="mt-5 grid gap-5 md:grid-cols-2">
@@ -489,10 +483,9 @@ function BootstrapForm({
         />
       </div>
 
-      {address && (
-        <div className="mt-4 rounded-md border border-border bg-secondary/20 p-3 text-xs">
-          <div className="text-muted-foreground">Derived vault address for this asset</div>
-          <div className="mt-1 break-all font-mono text-foreground">{address}</div>
+      {assetId && !result && (
+        <div className="mt-4 rounded-md border border-border bg-secondary/20 p-3 text-xs text-muted-foreground">
+          The vault address is fixed by the bootstrap transaction and shown once it confirms.
         </div>
       )}
 
@@ -504,19 +497,42 @@ function BootstrapForm({
       )}
 
       {result && (
-        <div className="mt-4 flex items-start gap-2 rounded-md border border-success/40 bg-success/10 p-3 text-sm text-success">
-          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>
-            Vault ledger created.{" "}
-            <a
-              href={cardanoscanTx(result.txHash)}
-              target="_blank"
-              rel="noreferrer"
-              className="underline"
-            >
-              View transaction
-            </a>
-          </span>
+        <div className="mt-4 rounded-md border border-success/40 bg-success/10 p-3 text-sm">
+          <div className="flex items-start gap-2 text-success">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>
+              Vault ledger created.{" "}
+              <a
+                href={cardanoscanTx(result.txHash)}
+                target="_blank"
+                rel="noreferrer"
+                className="underline"
+              >
+                View transaction
+              </a>
+            </span>
+          </div>
+          <div className="mt-3 grid gap-2 text-xs">
+            <div>
+              <div className="text-muted-foreground">Vault address</div>
+              <div className="mt-0.5 break-all font-mono text-foreground">{result.address}</div>
+            </div>
+            <div>
+              <div className="text-muted-foreground">Script hash</div>
+              <div className="mt-0.5 break-all font-mono text-foreground">{result.scriptHash}</div>
+            </div>
+            <CopyRow
+              label="Seed"
+              value={`${result.seed.txHash}#${result.seed.outputIndex}`}
+            />
+            <CopyRow label="State token" value={result.threadUnit} />
+          </div>
+          <p className="mt-3 text-[11px] text-muted-foreground">
+            Developer step: pin this seed in src/lib/vault-instances.ts under
+            YIELD_VAULT_SEEDS[&quot;{assetId}&quot;] as {"{ txHash: \"...\", outputIndex: N }"}.
+            Until that commit is deployed, deposits and withdrawals for this vault are
+            unavailable.
+          </p>
         </div>
       )}
 
@@ -530,5 +546,34 @@ function BootstrapForm({
         {busy === "submit" ? "Awaiting wallet signature…" : "Bootstrap vault ledger"}
       </button>
     </section>
+  );
+}
+
+function CopyRow({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // clipboard unavailable — the value is still selectable
+    }
+  };
+  return (
+    <div>
+      <div className="text-muted-foreground">{label}</div>
+      <div className="mt-0.5 flex items-start gap-2">
+        <span className="break-all font-mono text-foreground">{value}</span>
+        <button
+          type="button"
+          onClick={copy}
+          aria-label={`Copy ${label}`}
+          className="shrink-0 rounded border border-border p-1 text-muted-foreground hover:text-foreground"
+        >
+          {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+        </button>
+      </div>
+    </div>
   );
 }
