@@ -61,6 +61,7 @@ node scripts/verify-live-scripts.mjs            # verify live/published script s
 node scripts/verify-ref-scripts.mjs             # verify published reference-script UTxOs are unspent
 node scripts/derive-vault-addresses.mjs         # derive per-asset script hash/address from the pinned blueprint
 npx tsx scripts/live-state-check.ts             # read-only Preprod inventory of every script address
+npx tsx scripts/exit-yield-v3.ts                # operator: exit a legacy yield v3 Position (dry run by default)
 ```
 
 ## Architecture
@@ -144,7 +145,10 @@ an instance's address exists only after bootstrap, which consumes the seed; the
 returned seed must be pinned in `src/lib/vault-instances.ts` (reviewed commit) before
 the app can address that vault; and every reader/builder must select the State by
 its thread token (`genuineStateAt` / `genuineLucidState` / `genuineOfferingAt`),
-never by datum shape, epoch or position in a list. `susdr-vault` is frozen
+never by datum shape, epoch or position in a list. Positions in `yield_vault` and
+`multi_asset_vault` likewise carry a **position marker** minted by `Deposit`
+(AUDIT.md F-4); builders mint it into new Positions, burn it on a full close,
+and ignore unmarked Positions. `susdr-vault` is frozen
 (do not bootstrap). Tx building uses Lucid Evolution, not Mesh. `scripts/verify-vault-hash.mjs` (run in
 CI) fails the build if the pinned blueprints drift from a fresh `aiken build`. See
 `contracts/vault/SPEC.md` for state transitions/invariants and `CHANGELOG.md` for the

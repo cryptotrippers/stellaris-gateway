@@ -20,6 +20,7 @@ import { LUCID_NETWORK } from "./network";
 import type { DepositAsset } from "./deposit-assets.shared";
 import {
   MULTI_VAULT_SEEDS,
+  markerUnit,
   pinnedSeed,
   seedKey,
   seedToData,
@@ -36,7 +37,7 @@ import {
 export const MULTI_VAULT_VERSION = 2n;
 
 /** Hash of the *unapplied* multi_asset_vault validator from plutus.json. */
-export const MULTI_BLUEPRINT_HASH = "e0c3f420437fc4b65efd02baf86fe0ba4d68ee4ca63e37444d9403d4";
+export const MULTI_BLUEPRINT_HASH = "a7f9a45e1f1ac8efbffe2eaa1b1371297dbfe7cad99096212dee649a";
 
 import multiBlueprintSource from "../../contracts/multi-asset-vault/plutus.json?raw";
 
@@ -102,6 +103,8 @@ export interface AppliedMultiVault {
   seed: VaultSeed;
   /** Lucid unit of the state-thread token the genuine State carries. */
   threadUnit: string;
+  /** Lucid unit of the marker every genuine Position carries (F-4). */
+  markerUnit: string;
   type: "PlutusV3";
 }
 
@@ -172,6 +175,7 @@ export function getMultiVaultScript(
     version: MULTI_VAULT_VERSION,
     seed,
     threadUnit: threadUnit(scriptHash),
+    markerUnit: markerUnit(scriptHash),
     type: "PlutusV3",
   };
   cache.set(cacheKey, applied);

@@ -25,6 +25,7 @@ import {
   quantityOf,
   selectThreadState,
   threadUnitOfAddress,
+  markerUnitOfAddress,
 
   type BfAddressTx,
   type BfTxUtxos,
@@ -64,6 +65,8 @@ export const getVaultChainState = createServerFn({ method: "GET" })
       utxo: NonNullable<VaultChainState["stateUtxo"]>;
     }> = [];
     const unit = threadUnitOfAddress(data.address);
+    // F-4: only Positions carrying the vault's marker are real positions.
+    const marker = markerUnitOfAddress(data.address);
     const positions: VaultChainState["positions"] = [];
     let locked = 0n;
 
@@ -83,7 +86,7 @@ export const getVaultChainState = createServerFn({ method: "GET" })
         continue;
       }
       const asPosition = readPositionDatum(u.inline_datum);
-      if (asPosition) {
+      if (asPosition && marker !== null && quantityOf(u.amount, marker) === 1n) {
         positions.push({
           ...asPosition,
           txHash: u.tx_hash,

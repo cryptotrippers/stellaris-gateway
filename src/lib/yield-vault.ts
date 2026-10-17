@@ -15,6 +15,7 @@
 import { LUCID_NETWORK } from "./network";
 import {
   YIELD_VAULT_SEEDS,
+  markerUnit,
   pinnedSeed,
   seedKey,
   seedToData,
@@ -38,7 +39,7 @@ export const YIELD_VAULT_VERSION = 5n;
 
 /** Hash of the *unapplied* yield_vault validator from plutus.json. */
 export const YIELD_BLUEPRINT_HASH =
-  "0a5dc204ddaf1bb9f74daf8a4e3bc05a0c68c178ff2d27a12f11c7b4";
+  "de8b9dd1a05be3549ee04ef8e6e3b4057bb0e09e16939c5b289fb69b";
 
 /** Compiled CBOR of the *unapplied* yield_vault validator (PlutusV3). */
 import yieldBlueprintSource from "../../contracts/vault/plutus.json?raw";
@@ -88,6 +89,8 @@ export interface AppliedYieldVault {
   seed: VaultSeed;
   /** Lucid unit of the state-thread token the genuine State carries. */
   threadUnit: string;
+  /** Lucid unit of the marker every genuine Position carries (F-4). */
+  markerUnit: string;
   type: "PlutusV3";
 }
 
@@ -155,6 +158,7 @@ export function getYieldVaultScript(
     assetId,
     seed,
     threadUnit: threadUnit(scriptHash),
+    markerUnit: markerUnit(scriptHash),
     type: "PlutusV3",
   };
   appliedCache.set(cacheKey, applied);

@@ -98,7 +98,13 @@ VITE_BLOCKFROST_NETWORK." Keep the red styling. Remove the branch that describes
 occur.
 ```
 
-## Prompt 5 — Legacy yield v3 exit (ONLY after the v3 exit builder is approved and merged)
+## No prompt for the legacy yield v3 exit
 
-Not ready: depends on a `src/lib` v3 exit builder that has not been written
-(AUDIT.md F-5). Do not paste until that lands.
+By decision, the v3 exit is an operator-only script
+(`scripts/exit-yield-v3.ts`), not a UI feature. Do not add a button for it.
+
+## No prompt for position markers (AUDIT.md F-4)
+
+Deposits now mint a marker token into each new Position and full withdrawals
+burn it. That is entirely inside `src/lib` builders and readers; positions
+without a marker are simply not listed. No UI change is needed.

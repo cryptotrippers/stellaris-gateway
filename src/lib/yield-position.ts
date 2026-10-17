@@ -138,7 +138,7 @@ interface ResolvedUtxos {
 
 async function resolveVault(
   lucid: LucidBits["lucid"],
-  script: Pick<LucidBits["script"], "address" | "threadUnit">,
+  script: Pick<LucidBits["script"], "address" | "threadUnit" | "markerUnit">,
   owner?: string,
 ): Promise<ResolvedUtxos> {
   const utxos = await lucid.utxosAt(script.address);
@@ -146,7 +146,14 @@ async function resolveVault(
 
   for (const u of utxos) {
     const asPosition = readPositionDatum(u.datum ?? null);
-    if (asPosition && (!owner || asPosition.owner.toLowerCase() === owner.toLowerCase())) {
+    // F-4: a Position without the vault's marker was not created by a deposit
+    // and can never be redeemed — never offer it to the user.
+    const marked = (u.assets[script.markerUnit] ?? 0n) === 1n;
+    if (
+      asPosition &&
+      marked &&
+      (!owner || asPosition.owner.toLowerCase() === owner.toLowerCase())
+    ) {
       positions.push({
         utxo: u,
         datum: asPosition,
@@ -303,13 +310,23 @@ export async function depositToYieldVault(params: {
   if (!mintRef) {
     builder = builder.attach.MintingPolicy({ type: "PlutusV3", script: receipt.cbor });
   }
+  // F-4: the vault script is also the marker policy; the new Position carries
+  // exactly one marker. A published reference script covers both purposes.
+  builder = builder.mintAssets({ [script.markerUnit]: 1n }, mintRedeemer);
+  if (!spendRef) {
+    builder = builder.attach.MintingPolicy({ type: "PlutusV3", script: script.cbor });
+  }
   const completed = await builder
     .pay.ToContract(
       script.address,
       { kind: "inline", value: nextState },
       { lovelace: stateLovelace, [script.threadUnit]: 1n },
     )
-    .pay.ToContract(script.address, { kind: "inline", value: positionDatum }, { lovelace: deposit })
+    .pay.ToContract(
+      script.address,
+      { kind: "inline", value: positionDatum },
+      { lovelace: deposit, [script.markerUnit]: 1n },
+    )
     .complete();
 
   const txHash = await (await completed.sign.withWallet().complete()).submit();
@@ -441,6 +458,14 @@ export async function withdrawFromYieldVault(params: {
   if (!mintRef) {
     builder = builder.attach.MintingPolicy({ type: "PlutusV3", script: receipt.cbor });
   }
+  // F-4: a full close burns the Position's marker; a partial one keeps it in
+  // the remainder Position below.
+  if (remainingShares === 0n) {
+    builder = builder.mintAssets({ [script.markerUnit]: -1n }, Data.to(new Constr(0, [])));
+    if (!spendRef) {
+      builder = builder.attach.MintingPolicy({ type: "PlutusV3", script: script.cbor });
+    }
+  }
   builder = builder
     .pay.ToContract(
       script.address,
@@ -455,7 +480,7 @@ export async function withdrawFromYieldVault(params: {
     builder = builder.pay.ToContract(
       script.address,
       { kind: "inline", value: encodePosition(lucidMod, selfHash, remainingShares) },
-      { lovelace: remainingPositionLovelace },
+      { lovelace: remainingPositionLovelace, [script.markerUnit]: 1n },
     );
   }
 

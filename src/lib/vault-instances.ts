@@ -101,3 +101,14 @@ export const THREAD_TOKEN_NAME_HEX = "7374617465";
 export function threadUnit(scriptHash: string): string {
   return `${scriptHash}${THREAD_TOKEN_NAME_HEX}`;
 }
+
+/** Asset name (hex) of every position marker: UTF-8 "position" (AUDIT.md F-4). */
+export const MARKER_TOKEN_NAME_HEX = "706f736974696f6e";
+
+/**
+ * Lucid unit of an instance's position marker. Every Position UTxO a deposit
+ * creates carries exactly one; Positions without it are not the vault's.
+ */
+export function markerUnit(scriptHash: string): string {
+  return `${scriptHash}${MARKER_TOKEN_NAME_HEX}`;
+}
