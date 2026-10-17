@@ -1,5 +1,16 @@
 # sUSDr — stablecoin yield vault (Cardano-first, EVM secondary)
 
+> **FROZEN — DO NOT BOOTSTRAP (Phase 1, 2026-10-17).** This validator has no
+> state-thread token, so a State-shaped datum anyone pays to the vault address
+> can be spent on its own: a planted State with a cheap exchange rate mints
+> sUSDr that redeems against the genuine State. A Phase 0 probe drained a
+> 100 USDr pool with 11 USDr (AUDIT.md F-1). It was never bootstrapped on
+> Preprod and no sUSDr was ever minted, so nothing is at risk. It is kept,
+> unchanged, as a reference implementation only; the Tessera rebuild
+> (Phase 3) replaces it with TSRA/sTSRA validators that carry a thread token
+> from day one. The strategy note below ("integrate RealFi's sUSDr") is
+> superseded: Stellaris is independent and is building its own rail.
+
 **⚠️ Read this first — naming and strategy.** "USDr"/"sUSDr" are RealFi's
 product names. This code is a **Preprod stand-in and reference
 implementation** built so the vault mechanics can be developed and tested

@@ -18,14 +18,16 @@ import {
 } from "@lucid-evolution/lucid";
 
 const src = readFileSync(new URL("../src/lib/vault.ts", import.meta.url), "utf8");
+// VAULT_VERSION moved to vault-params.ts (vault.ts only re-exports it).
+const paramsSrc = readFileSync(new URL("../src/lib/vault-params.ts", import.meta.url), "utf8");
 
 function pin(name) {
   const m = src.match(new RegExp(`${name}\\s*=\\s*\\n?\\s*"([0-9a-fA-F]+)"`));
   if (!m) throw new Error(`Could not read ${name} from src/lib/vault.ts`);
   return m[1];
 }
-const versionMatch = src.match(/VAULT_VERSION\s*=\s*(\d+)n/);
-if (!versionMatch) throw new Error("Could not read VAULT_VERSION from src/lib/vault.ts");
+const versionMatch = paramsSrc.match(/VAULT_VERSION\s*=\s*(\d+)n/);
+if (!versionMatch) throw new Error("Could not read VAULT_VERSION from src/lib/vault-params.ts");
 
 const VERSION = BigInt(versionMatch[1]);
 const HASH = pin("VAULT_BLUEPRINT_HASH");
@@ -66,10 +68,22 @@ console.log(`[derive-yield-addresses] version=${Y_VERSION}`);
 console.log(`[derive-yield-addresses] blueprint hash=${Y_HASH}`);
 console.log(`[derive-yield-addresses] blueprint cbor=${Y_CBOR.length} chars\n`);
 
+// Since Phase 1 the yield vault is also parameterised by its bootstrap seed
+// (AUDIT.md F-1), so only instances pinned in src/lib/vault-instances.ts have
+// an address at all.
+const { Constr } = await import("@lucid-evolution/lucid");
+const { readVaultSeeds, seedData } = await import("./lib/vault-seeds.mjs");
+const yieldSeeds = readVaultSeeds().yield;
 for (const assetId of assetIds) {
-  const script = applyParamsToScript(Y_CBOR, [Y_VERSION, fromText(assetId)]);
+  const seed = yieldSeeds[assetId];
+  if (!seed) {
+    console.log(`yield asset=${assetId}\n  not bootstrapped (no seed pinned in vault-instances.ts)\n`);
+    continue;
+  }
+  const script = applyParamsToScript(Y_CBOR, [Y_VERSION, fromText(assetId), seedData(Constr, seed)]);
   const validator = { type: "PlutusV3", script };
   console.log(`yield asset=${assetId}`);
+  console.log(`  seed:       ${seed.txHash}#${seed.outputIndex}`);
   console.log(`  scriptHash: ${validatorToScriptHash(validator)}`);
   console.log(`  preprod:    ${validatorToAddress("Preprod", validator)}\n`);
 }

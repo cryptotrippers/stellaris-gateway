@@ -18,8 +18,7 @@ import { getRefInputIfPublished } from "./ref-scripts";
 import { LUCID_NETWORK } from "./network";
 import {
   encodeStateDatum,
-  readStateDatum,
-  selectCanonicalState,
+  genuineLucidState,
   type VaultStateDatum,
 } from "./yield-chain-decode";
 import { redeemValue } from "./yield-position";
@@ -75,16 +74,8 @@ export async function buildTreasuryClaim(params: {
 
   // --- locate the live State UTxO ---------------------------------------
   const utxos = await lucid.utxosAt(script.address);
-  const candidates: Array<{ utxo: (typeof utxos)[number]; state: VaultStateDatum }> = [];
-  for (const u of utxos) {
-    const decoded = readStateDatum(u.datum ?? null);
-    if (decoded) candidates.push({ utxo: u, state: decoded });
-  }
-  const chosen = selectCanonicalState(candidates, (c) => ({
-    txHash: c.utxo.txHash,
-    outputIndex: c.utxo.outputIndex,
-    state: c.state,
-  }));
+  // F-1: the genuine State is the one carrying this instance's thread token.
+  const chosen = genuineLucidState(utxos, script.threadUnit, script.address);
   if (!chosen) throw new Error("This vault has no state UTxO yet — there is nothing to claim.");
   const stateUtxo = chosen.utxo;
   const state = chosen.state;
@@ -175,7 +166,7 @@ export async function buildTreasuryClaim(params: {
     .pay.ToContract(
       script.address,
       { kind: "inline", value: nextDatum },
-      { lovelace: stateLovelace - paid },
+      { lovelace: stateLovelace - paid, [script.threadUnit]: 1n },
     )
     .pay.ToAddress(treasuryAddress, { lovelace: paid })
     .validFrom(from)

@@ -13,6 +13,9 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   BECH32_ADDRESS_RE,
   TX_HASH_RE,
+  genuineStateAt,
+  scriptHashOfAddress,
+  type BfTxUtxos,
 } from "./yield-chain-decode";
 import {
   publicSupabase,
@@ -140,7 +143,21 @@ export const registerAssetVault = createServerFn({ method: "POST" })
       );
     }
 
-
+    // F-1: only register what the chain confirms. The address must belong to
+    // the claimed script, and the bootstrap transaction must have created a
+    // State there carrying the vault's state-thread token — a State-shaped
+    // datum anyone could pay to the address does not qualify.
+    if (scriptHashOfAddress(data.scriptAddress) !== data.scriptHash) {
+      throw new Error("The vault address does not belong to the claimed script hash.");
+    }
+    const { bfGet } = await import("./blockfrost-fetch.server");
+    const io = await bfGet<BfTxUtxos>(`/txs/${data.bootstrapTxHash}/utxos`);
+    if (!io) throw new Error("NOT_CONFIRMED: the bootstrap transaction is not on chain yet.");
+    if (!genuineStateAt(io.outputs, data.scriptAddress)) {
+      throw new Error(
+        "The bootstrap transaction created no vault State carrying the state-thread token at that address.",
+      );
+    }
 
     const { data: row, error } = await context.supabase
       .from("asset_vaults")

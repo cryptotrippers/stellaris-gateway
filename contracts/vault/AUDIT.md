@@ -13,6 +13,13 @@ mitigated on-chain, V-04 is decided as (a). **Close-out (2026-08-11):** O-01
 and O-02 are fixed — the last two open off-chain findings. Per-finding status
 is recorded in its own section.
 
+**Phase 1 re-verification (2026-10-17).** Every "FIXED" claim below was
+re-checked against the code with mutation tests (remove the fix, see whether a
+test fails). Two contract-level defects this scan missed were found and fixed,
+one fix had regressed, and one regression test did not test anything. See
+**Phase 1 findings** at the end of this document; corrections are also noted
+inline under V-01, V-02 and O-03.
+
 Status legend: **FIXED** (shipped, with a regression test), **MITIGATED-ON-CHAIN**
 (cannot be prevented, but cannot be exploited), **DECIDED-(x)** (design call
 recorded), **OPEN** (accepted, not yet fixed), **INFO** (recorded, no action).
@@ -31,6 +38,15 @@ from the current addresses first.
 > State UTxOs can never be spent together. Regression test:
 > `two_state_inputs_are_rejected` in `validators/yield_vault.ak`. Blueprint hash
 > moved to `e79ee0c4c5d5e0e29d095d616046cbcb9554ab6ba64b428236e11875`.
+>
+> **Phase 1 correction:** the guard was in place, but `two_state_inputs_are_rejected`
+> still passed with the guard deleted: its `Deposit` with a negative value delta
+> fails for unrelated reasons. Replaced by a control/attack pair,
+> `v01_single_state_deposit_is_accepted` and
+> `v01_two_state_inputs_merged_into_one_are_rejected`, verified to fail when the
+> guard is removed. With F-1 fixed, the state-thread token makes a second genuine
+> State impossible, so this guard is now defence in depth; the test fabricates a
+> second token to keep it isolated.
 
 **Where:** `yield_vault.ak`, `State` branch, around the `expect Some(next) =
 sole_state(outs)` line.
@@ -73,6 +89,12 @@ fail. Today it does not.
 
 ## V-02 — Anyone can create a State-shaped output at the vault address — HIGH — **MITIGATED-ON-CHAIN**
 
+> **Phase 1 correction: the mitigation below was wrong; now FIXED by F-1.**
+> V-01 only forbids spending two States *together*. A planted State spent
+> *alone* passed every rule, so it was not "permanently unspendable"; it was a
+> fully working fake vault (see F-1). It is now inert because it lacks the
+> state-thread token.
+>
 > **Mitigated.** A planted State can still be *created* (nothing can stop a
 > third party paying an inline datum to an address), but with V-01 fixed it is
 > permanently unspendable: any transaction spending it alongside the genuine
@@ -346,7 +368,16 @@ time to warn anyone. Fix: a single shared `encodeStateDatum(state)` used by both
 writers, plus a round-trip test that encodes a state, decodes it with the
 production decoder, and asserts field-for-field equality.
 
-**O-03 — decoder picks the first State — FIXED.** `yield-chain-decode.ts` now
+**O-03 — decoder picks the first State — REGRESSED, re-FIXED in Phase 1.**
+> **Phase 1:** by 2026-09-17 every transaction builder (`yield-position.ts`,
+> `vault-accrual.ts`, `vault-set-fee.ts`, `treasury-claim.ts`) and two readers
+> had moved to `selectCanonicalState`, which picks the State with the *highest
+> epoch*, a value the planter of a fake State chooses. Both helpers are gone:
+> `selectThreadState` / `genuineStateAt` / `genuineLucidState` select the State
+> carrying the state-thread token and ignore (and count) the rest, so a planted
+> State can neither be built against nor displayed.
+
+Original note: `yield-chain-decode.ts` now
 exports `soleStateOrThrow`, which collects every State-shaped UTxO at the
 address and throws a descriptive "Vault state ambiguous" error when more than
 one exists. Both `getVaultChainState` and `getVaultChainHistory` in
@@ -369,3 +400,123 @@ never be silently trusted for display or for transaction building.
 
 Steps 3-5 are one atomic migration. Do not start step 3 until step 1 is
 finished, so the rebuild happens exactly once.
+
+---
+
+## Phase 1 findings (2026-10-17)
+
+Found during the Phase 0 recon of the Tessera rebuild and verified with Aiken
+probe tests before any fix. All fixes ship in one rebuild; every affected
+shared-State address was empty on Preprod (`scripts/live-state-check.ts`), so
+no live position had to migrate, except the legacy yield v3 one noted in F-5.
+
+### F-1 — No state identity: a planted State can be spent alone — CRITICAL — **FIXED**
+
+**Where:** `yield_vault.ak`, `multi_asset_vault.ak`, `fraction_vault.ak`
+(fixed); `susdr_vault.ak` (frozen, see below).
+
+**What it enables.** Nothing marked the genuine State, and the V-01 rule only
+counts States within one transaction. An attacker pays a State datum copied
+from the genuine one but with a cheap share price, spends it on its own in a
+`Deposit` (every rule passes), and receives a Position for far more shares than
+the deposit is worth. Positions are not bound to the State they were minted
+under, so those shares are then withdrawn against the genuine State at its real
+price. Probe results: `yield_vault` 10 ADA in, 60 ADA out; `susdr_vault` 11 USDr
+in, the whole 100 USDr pool out (its mint handler accepted the planted State
+too). The genuine books are left owing the remaining depositors more than they
+hold.
+
+**Fix.** Each shared-State validator takes a `seed: OutputReference` parameter
+and doubles as the minting policy of a one-shot **state-thread token**
+(`lib/stellaris/thread.ak`). Bootstrap must consume the seed, mint exactly one
+token, spend no State, and create a valid empty ledger carrying it; the token
+can never be burned. Every State transition requires the spent and the
+returned State to carry it, the Position branch requires the State input to
+carry it, and the State may carry nothing else beside it. Consequence: an
+instance's address depends on its seed, so it exists only once bootstrapped and
+is pinned in `src/lib/vault-instances.ts`.
+
+**Tests.** `yield_vault`: `planted_state_cannot_be_spent_alone` with its control
+`genuine_state_deposit_with_the_same_shape_is_accepted`,
+`position_cannot_be_spent_against_a_planted_state`,
+`state_must_keep_its_thread_token`,
+`state_cannot_carry_junk_beside_its_thread_token`, and seven bootstrap-mint
+tests. Equivalent sets in `fraction_vault` (including
+`planted_offering_cannot_sell_fractions`) and `multi_asset_vault` (which had no
+validator tests at all before). Mutation-checked: removing any thread-token rule
+fails at least one test, except two equivalent mutants recorded in the Phase 1
+report.
+
+**`susdr_vault`: FROZEN, not fixed.** Never bootstrapped, nothing minted; the
+Phase 3 TSRA/sTSRA validators replace it. Its README carries a do-not-bootstrap
+notice.
+
+### F-2 — Receipt policy cannot decode the State the vault writes — HIGH — **FIXED**
+
+`receipt.ak` decoded the vault datum through a hand-copied 11-field mirror.
+Stage 7 (2026-09-17) widened `State` to 13 fields, so `expect d: Mirror = raw`
+crashed on every real State: no `Deposit` (which must mint receipts) or
+`Withdraw` (which must burn them) could validate on the v4 blueprint. The
+"mirror matches" test built a mirror value and read it back, so it could never
+fail. Nothing was stranded only because no v4 instance was ever bootstrapped.
+
+**Fix.** `YieldDatum` moved to `lib/stellaris/yield_datum.ak`, imported by both
+validators, so drift is now a compile error. Tests:
+`mint_accepts_the_13_field_state_yield_vault_writes`,
+`an_11_field_legacy_state_is_rejected`. **F-2 must never ship without F-1:**
+while receipts could not be minted, the F-1 drain was blocked end to end by
+accident.
+
+### F-3 — Offering reader displays the first Offering datum — MEDIUM — **FIXED**
+
+`readOfferingChainState` (`offerings.functions.ts`) returned `states[0]`, so a
+planted Offering could fake the public counters; `registerOffering` and the
+fraction event recorder likewise took the first match. All three now use
+`genuineOfferingAt` (thread-token based). `offering-tx.ts` refused to build when
+two Offerings existed, which made a planted datum a permanent denial of
+service; it now ignores token-less Offerings.
+
+### V-03 addendum — `withdraw_ok` had no discriminating test — LOW — **FIXED**
+
+Removing the `withdraw_ok` call left every test passing. Its distinct job is
+valuing the *remaining* shares at the current price (`positions_well_formed`
+only checks the UTxO's lovelace). Test:
+`partial_withdraw_cannot_leave_shares_worth_less_than_the_floor`. On a full
+close the call is redundant with other rules (an equivalent mutant).
+
+### F-4 — Position UTxOs are not authenticated — MEDIUM — **OPEN**
+
+Like a planted State, a Position datum can be paid to the vault by anyone. With
+F-1 fixed it can only be redeemed against the genuine State, and `Withdraw`
+must burn receipts equal to its shares — so whoever holds receipts can create a
+Position for themselves and redeem it, paid from the State UTxO's lovelace,
+while the original depositor's Position becomes unredeemable. Receipts are
+transferable on-chain (V-04), so this is reachable only if a depositor parts
+with their receipts, which the UI tells them not to do. Not fixed in Phase 1:
+the coherent fix is the bearer-token model (receipts ARE the claim, no Position
+UTxOs), which is what the Phase 3 TSRA/sTSRA design uses.
+
+### F-5 — Legacy yield v3 instances are unreachable and pre-F-1 — MEDIUM — **OPEN**
+
+The v4 change (2026-09-17) dropped the v3 blueprint from the app, so v3 UTxOs
+cannot be spent from the UI. Preprod on 2026-10-17: `ph-solar-01` v3 holds one
+Position of 1,000 tADA (owner = the operator key) plus a duplicate empty State;
+`sfm-01`/`sfm-02` v3 hold only empty States. v3 is subject to F-1, so a griefer
+could break its books and lock that Position. Recommended: a one-off v3 exit
+builder pinned to the frozen v3 blueprint, then retire v3.
+
+### M-1 — `multi_asset_vault` solvency check is a tautology — LOW — **OPEN**
+
+`solvent(VaultAccounting { .., total_assets: n_assets }, n_assets)` compares
+`n_assets <= n_assets`. Solvency rests on the per-branch value-delta rules, as
+in `yield_vault` (V-07). The vault has no off-chain builder; recorded so the
+check is not mistaken for a guard.
+
+### Tooling found broken in Phase 0/1
+
+* `scripts/verify-live-scripts.mjs` crashed: `VAULT_VERSION` moved to
+  `vault-params.ts`. `derive-vault-addresses.mjs` failed the same way, and
+  `dapp-readiness.mjs` silently fell back to version 1 and checked the wrong
+  legacy vault. All three are fixed and seed-aware.
+* `src/lib/network.ts` claimed to refuse mainnet but only logged an error; it
+  now never resolves to mainnet config while `MAINNET_NOT_ALLOWED` is true.

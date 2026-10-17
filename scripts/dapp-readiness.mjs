@@ -110,7 +110,12 @@ const {
   validatorToAddress,
   validatorToScriptHash,
   fromText,
+  Constr,
 } = await import("@lucid-evolution/lucid");
+const { readVaultSeeds, seedData } = await import("./lib/vault-seeds.mjs");
+// Phase 1 (AUDIT.md F-1): shared-State vaults are parameterised by their
+// bootstrap seed, so only pinned instances can be derived.
+const seeds = readVaultSeeds();
 
 function src(path) {
   return readFileSync(resolve(path), "utf8");
@@ -124,7 +129,9 @@ function compiled(pkg, title) {
   return bp.validators.find((v) => v.title === title)?.compiledCode ?? null;
 }
 
-const vaultVersion = pinnedNumber("src/lib/vault.ts", "VAULT_VERSION");
+// VAULT_VERSION lives in vault-params.ts (vault.ts only re-exports it); the
+// old path silently fell back to 1n and checked the wrong legacy vault.
+const vaultVersion = pinnedNumber("src/lib/vault-params.ts", "VAULT_VERSION");
 const yieldVersion = pinnedNumber("src/lib/yield-vault.ts", "YIELD_VAULT_VERSION");
 const multiVersion = pinnedNumber("src/lib/multi-asset-vault.ts", "MULTI_VAULT_VERSION");
 
@@ -135,10 +142,15 @@ const assetIds = [...new Set([...registeredVaults.map((v) => v.asset_id), "sfm-0
 const derived = [];
 for (const assetId of assetIds) {
   const yieldCode = compiled("contracts/vault", "yield_vault.yield_vault.spend");
-  if (yieldCode) {
+  const yieldSeed = seeds.yield[assetId];
+  if (yieldCode && yieldSeed) {
     derived.push({
       label: `yield_vault / ${assetId}`,
-      cbor: applyParamsToScript(yieldCode, [yieldVersion, fromText(assetId)]),
+      cbor: applyParamsToScript(yieldCode, [
+        yieldVersion,
+        fromText(assetId),
+        seedData(Constr, yieldSeed),
+      ]),
     });
   }
   const vaultCode = compiled("contracts/vault", "vault.vault.spend");
@@ -161,6 +173,9 @@ if (multiCode) {
       // derives the exact same address as ADA — that is a registry bug, not a
       // second vault, so say so rather than printing a duplicate row.
       const placeholder = policy === "" && u.symbol !== "ADA";
+      const nameHex = policy === "" ? "" : (u.asset_name_hex ?? "").toLowerCase();
+      const multiSeed = seeds.multi[`${assetId}:${policy}${nameHex}`];
+      if (!multiSeed) continue;
       derived.push({
         label: `multi_asset_vault / ${assetId} / ${u.symbol}${placeholder ? " (placeholder policy)" : ""}`,
         note: placeholder
@@ -170,7 +185,8 @@ if (multiCode) {
           multiVersion,
           fromText(assetId),
           policy,
-          policy === "" ? "" : (u.asset_name_hex ?? "").toLowerCase(),
+          nameHex,
+          seedData(Constr, multiSeed),
         ]),
       });
     }

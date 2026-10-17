@@ -1,33 +1,43 @@
 /**
  * Central network configuration.
  *
- * Reads `VITE_BLOCKFROST_NETWORK` (preprod | mainnet) and the matching
- * `VITE_BLOCKFROST_PROJECT_ID`. Every transaction-signing action MUST call
- * `assertWalletMatchesAppNetwork()` before building/submitting a tx.
+ * Reads `VITE_BLOCKFROST_NETWORK` and the matching `VITE_BLOCKFROST_PROJECT_ID`.
+ * Every transaction-signing action MUST call `assertWalletMatchesAppNetwork()`
+ * before building/submitting a tx.
+ *
+ * This project is Preprod-only, and that is enforced HERE rather than trusted
+ * to the environment: a request for mainnet never resolves to mainnet config.
+ * Previously a `VITE_BLOCKFROST_NETWORK=mainnet` env flipped the Blockfrost URL,
+ * the Lucid network and the wallet guard to mainnet and only logged an error.
  */
 
 export type AppNetwork = "mainnet" | "preprod";
 
+/**
+ * Hard guard — do not weaken (CLAUDE.md, NETWORK.md). While true, the app can
+ * only ever resolve to Preprod; lifting it is a reviewed mainnet-launch change.
+ */
+export const MAINNET_NOT_ALLOWED = true;
+
+function requestedNetwork(): string {
+  return (import.meta.env.VITE_BLOCKFROST_NETWORK ?? "preprod").toString().trim().toLowerCase();
+}
+
+/** True when the environment ASKED for mainnet. The app still runs on Preprod. */
+export const IS_UNEXPECTED_MAINNET = MAINNET_NOT_ALLOWED && requestedNetwork() === "mainnet";
+
 function readNetwork(): AppNetwork {
-  const raw = (import.meta.env.VITE_BLOCKFROST_NETWORK ?? "preprod").toString().toLowerCase();
-  if (raw === "mainnet") return "mainnet";
+  if (requestedNetwork() === "mainnet" && !MAINNET_NOT_ALLOWED) return "mainnet";
   return "preprod";
 }
 
 export const APP_NETWORK: AppNetwork = readNetwork();
 
-/**
- * This project is Preprod-only. Resolving to mainnet is treated as a
- * misconfiguration: we shout about it and force the network badge red.
- */
-export const MAINNET_NOT_ALLOWED = true;
-export const IS_UNEXPECTED_MAINNET = MAINNET_NOT_ALLOWED && APP_NETWORK === "mainnet";
-
 if (IS_UNEXPECTED_MAINNET) {
-  // eslint-disable-next-line no-console
   console.error(
-    "[network] CONFIGURATION ERROR: APP_NETWORK resolved to \"mainnet\" but this deployment is Preprod-only. " +
-      "Set VITE_BLOCKFROST_NETWORK=\"preprod\" in the environment. Real-ADA transactions must not be attempted.",
+    '[network] CONFIGURATION ERROR: VITE_BLOCKFROST_NETWORK="mainnet" was refused — this deployment is Preprod-only. ' +
+      "The app stays on Preprod (Blockfrost URL, Lucid network and wallet guard) and the network badge is red. " +
+      'Set VITE_BLOCKFROST_NETWORK="preprod".',
   );
 }
 

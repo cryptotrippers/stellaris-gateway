@@ -11,6 +11,7 @@
  */
 
 import { decodePlutusDatum, asInt, asBytes, asList, type PlutusData } from "./plutus-cbor";
+import { quantityOf, selectThreadState, threadUnitOfAddress } from "./yield-chain-decode";
 
 /** Hard cap on either fee rate, mirroring `offering.max_fee_bps`. */
 export const MAX_OFFERING_FEE_BPS = 500;
@@ -86,6 +87,36 @@ export function readOfferingDatum(datumHex: string | null | undefined): Offering
   } catch {
     return null;
   }
+}
+
+/**
+ * The genuine offering datum among Blockfrost items (UTxOs, tx inputs or tx
+ * outputs) at `address`: Offering-shaped AND carrying the offering's
+ * state-thread token (AUDIT.md F-1). Planted, token-less Offering datums are
+ * ignored and counted. Null when there is no genuine offering.
+ */
+export function genuineOfferingAt(
+  items: Array<{
+    address?: string;
+    amount?: Array<{ unit: string; quantity: string }>;
+    inline_datum: string | null;
+  }>,
+  address: string,
+): { datum: OfferingDatum | null; index: number; planted: number } {
+  const unit = threadUnitOfAddress(address);
+  const candidates = items
+    .map((item, index) => ({ item, index, datum: readOfferingDatum(item.inline_datum) }))
+    .filter(
+      (c): c is { item: (typeof items)[number]; index: number; datum: OfferingDatum } =>
+        c.datum !== null && (c.item.address === undefined || c.item.address === address),
+    );
+  if (!unit) return { datum: null, index: -1, planted: candidates.length };
+  const { genuine, planted } = selectThreadState(
+    candidates,
+    (c) => quantityOf(c.item.amount, unit) === 1n,
+    address,
+  );
+  return { datum: genuine?.datum ?? null, index: genuine?.index ?? -1, planted };
 }
 
 type LucidDataMod = {
