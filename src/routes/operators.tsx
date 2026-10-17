@@ -11,10 +11,10 @@ import { MAX_FEE_BPS, formatFeeBps } from "@/lib/vault-fees";
 import { recordVaultFeeSchedule } from "@/lib/asset-vaults.functions";
 import {
   bootstrapYieldVault,
-  deriveYieldVaultAddress,
   getConnectedOperatorKeyHash,
   validateCommittee,
 } from "@/lib/vault-bootstrap";
+import type { VaultSeed } from "@/lib/vault-instances";
 import { cardanoscanAddress, cardanoscanTx, short } from "@/lib/chain-format";
 import { MasterWalletGate, useMasterWallet } from "@/components/admin/MasterWalletGate";
 import { AccrueYieldCard } from "@/components/operators/AccrueYieldCard";
@@ -301,10 +301,15 @@ function BootstrapForm({
   const [feeBps, setFeeBps] = useState(0);
   const [treasuryPkh, setTreasuryPkh] = useState("");
 
-  const [address, setAddress] = useState<string | null>(null);
-  const [busy, setBusy] = useState<null | "derive" | "wallet" | "submit">(null);
+  const [busy, setBusy] = useState<null | "wallet" | "submit">(null);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ txHash: string; address: string } | null>(null);
+  const [result, setResult] = useState<{
+    txHash: string;
+    address: string;
+    scriptHash: string;
+    seed: VaultSeed;
+    threadUnit: string;
+  } | null>(null);
 
   const operators = operatorsText
     .split(/[\s,]+/)
