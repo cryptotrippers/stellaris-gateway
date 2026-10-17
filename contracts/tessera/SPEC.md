@@ -47,11 +47,20 @@ Known gaps:
   the only way out is a new State NFT and a new script. Phase 2 must add a
   `Rotate` redeemer (current committee M-of-N, plus `operators_valid` on the
   new committee) before anything leaves Preprod.
-* **Genesis datum is not checked on-chain.** `state_nft.ak` only checks the
-  seed and the quantity; it does not check where the NFT goes or the initial
-  datum. A bad bootstrap (e.g. `threshold: 0`) produces a State that every
-  redeemer rejects (`operators_valid`), so it fails closed, but the bootstrap
-  builder must validate the datum, and off-chain readers must verify it.
+* **Genesis validation at bootstrap — Phase 2 must-have.** `state_nft.ak`
+  only checks the seed and the quantity; it does not check where the NFT goes
+  or the initial datum. A bad bootstrap (e.g. `threshold: 0`) produces a State
+  that every redeemer rejects (`operators_valid`), so it fails closed — but
+  that includes Burn, so TSRA could never be redeemed against it, and a NFT
+  sent anywhere but the reserve address leaves no genuine State at all.
+  Phase 2 must make the NFT mint check the genesis output on-chain: exactly
+  one output at the reserve script address holding the NFT, ADA only besides
+  it, and an inline `ReserveState` with `minted_supply == 0`,
+  `attestation_epoch == 0`, `epoch == 0`, `attested_reserve >= 0`,
+  `mint_cap >= 0`, and `operators_valid`. (The NFT policy needs the reserve
+  script hash for this, but the reserve script is parameterised by the NFT
+  policy, so one of the two has to change shape — e.g. merge the one-shot
+  mint into `reserve.ak` as the other vaults' thread token does.)
 * Every burn spends the single State UTxO, so burns serialise (the queue
   batches them).
 

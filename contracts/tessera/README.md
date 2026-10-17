@@ -39,7 +39,7 @@ aiken build     # writes plutus.json; commit it, CI will diff it
 ## Not yet done
 
 * The `ReserveState` datum is provisional until counsel answers (SPEC.md §1);
-  committee rotation is a Phase 2 must-have.
+  committee rotation and on-chain genesis validation are Phase 2 must-haves.
 * No `plutus.json` and no blueprint pin in
   `scripts/verify-vault-hash.mjs`.
 * No CI job in `.github/workflows/contracts.yml` (add together with the first
