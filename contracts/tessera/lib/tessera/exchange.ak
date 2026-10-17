@@ -3,15 +3,15 @@
 //// Mirrors the conventions of stellaris/shares.ak: floor rounding always in
 //// the protocol's favour, no transaction/datum access, standalone testable.
 ////
-//// Units: `tsr` amounts are in the stablecoin's smallest unit (1e-6 TSR,
+//// Units: `tsra` amounts are in the stablecoin's smallest unit (1e-6 TSRA,
 //// matching Cardano native-asset integer quantities). `shares` are sTessera
 //// units, same precision.
 
-/// Minimum first deposit: 10 TSR. Blocks the classic first-depositor
+/// Minimum first deposit: 10 TSRA. Blocks the classic first-depositor
 /// share-price inflation attack (mint 1 share cheap, donate to skew rate).
 pub const min_initial_deposit: Int = 10_000_000
 
-/// Minimum surviving position value in TSR units after a partial
+/// Minimum surviving position value in TSRA units after a partial
 /// redemption; below this the position must close fully.
 pub const min_position_value: Int = 2_000_000
 
@@ -20,7 +20,7 @@ pub const min_position_value: Int = 2_000_000
 /// only: zero yield reported => zero fee, ever.
 pub const max_yield_fee_bps: Int = 2000
 
-/// sTessera minted for a TSR deposit at the current exchange rate.
+/// sTessera minted for a TSRA deposit at the current exchange rate.
 /// Bootstrap is exactly 1:1.
 pub fn mint_shares(deposit: Int, total_shares: Int, total_assets: Int) -> Int {
   if total_shares == 0 {
@@ -30,7 +30,7 @@ pub fn mint_shares(deposit: Int, total_shares: Int, total_assets: Int) -> Int {
   }
 }
 
-/// TSR paid out for redeeming `shares` sTessera.
+/// TSRA paid out for redeeming `shares` sTessera.
 pub fn redeem_value(shares: Int, total_shares: Int, total_assets: Int) -> Int {
   if shares >= total_shares {
     total_assets
@@ -39,7 +39,7 @@ pub fn redeem_value(shares: Int, total_shares: Int, total_assets: Int) -> Int {
   }
 }
 
-/// Exchange rate scaled by 1e6: TSR units per 1e6 sTessera units.
+/// Exchange rate scaled by 1e6: TSRA units per 1e6 sTessera units.
 /// Starts at 1_000_000 (1:1) and increases as yield accrues.
 pub fn exchange_rate_e6(total_shares: Int, total_assets: Int) -> Int {
   if total_shares == 0 {
@@ -49,7 +49,7 @@ pub fn exchange_rate_e6(total_shares: Int, total_assets: Int) -> Int {
   }
 }
 
-/// Protocol fee in TSR units on a reported yield amount.
+/// Protocol fee in TSRA units on a reported yield amount.
 pub fn yield_fee(gross_yield: Int, fee_bps: Int) -> Int {
   gross_yield * fee_bps / 10_000
 }
@@ -111,7 +111,7 @@ test rate_starts_at_par() {
 }
 
 test yield_raises_rate_without_minting() {
-  // 100 TSR in, 8 TSR yield reported: rate becomes 1.08
+  // 100 TSRA in, 8 TSRA yield reported: rate becomes 1.08
   exchange_rate_e6(100_000_000, 108_000_000) == 1_080_000
 }
 
@@ -121,7 +121,7 @@ test redeem_includes_accrued_yield() {
 }
 
 test second_depositor_pays_the_accrued_rate() {
-  // At rate 1.08, 108 TSR mints exactly 100 shares
+  // At rate 1.08, 108 TSRA mints exactly 100 shares
   mint_shares(108_000_000, 100_000_000, 108_000_000) == 100_000_000
 }
 
@@ -143,7 +143,7 @@ test fee_cap_is_enforced() {
 }
 
 test fee_is_taken_on_yield_not_assets() {
-  // 10 TSR yield at 10% fee = 1 TSR fee, regardless of pool size
+  // 10 TSRA yield at 10% fee = 1 TSRA fee, regardless of pool size
   yield_fee(10_000_000, 1000) == 1_000_000
 }
 

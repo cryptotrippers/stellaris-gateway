@@ -18,7 +18,11 @@ implementation; everything else follows from the current code.
 So today there is a yield wrapper but no collateral model, no queue, and no
 token we own. The redesign is three pieces, in dependency order.
 
-## 2. Token — `Tessera` (working ticker `TSR`) + `sTessera`
+## 2. Token — `Tessera` (ticker `TSRA`) + `sTessera` (ticker `sTSRA`)
+
+Names and tickers follow `src/config/brand.ts` (on `main` and
+`feature/tessera-rebuild`), the single source of truth. On-chain asset names:
+`TSRA` (the token) and `TSRA-STATE` (the Reserve State NFT).
 
 **Scope (decided):** Tessera is Stellaris's own token with **no tie to sUSDr or
 RealFi**. It is a new package, `contracts/tessera/`, not a rename of
@@ -26,13 +30,13 @@ RealFi**. It is a new package, `contracts/tessera/`, not a rename of
 ships; Tessera may reuse its *patterns* (sole-State rule, share math), never
 its names, hashes or token identifiers.
 
-* **Tessera** is the stable unit (1 TSR = 1 USD target). **sTessera** is the
+* **Tessera** is the stable unit (1 TSRA = 1 USD target). **sTessera** is the
   yield-bearing share, a new vault modelled on `susdr_vault.ak`'s accounting.
 * Replace `usdr.ak` with a policy that mints only inside a transaction that
   also spends the **Reserve State** UTxO (same pattern the vault already uses
   to bind sUSDr supply to share accounting). No bare issuer key. The Reserve
   State must carry a one-shot NFT: because the reserve is attested off-chain,
-  an unmarked State could be planted to mint real TSR (see SPEC.md §1).
+  an unmarked State could be planted to mint real TSRA (see SPEC.md §1).
 * Reserve State datum: `minted_supply`, `attested_reserve`, `mint_cap`,
   `attestation_epoch`, `paused`, committee + threshold. Mint requires
   `minted_supply + qty <= min(attested_reserve, mint_cap)`; burn is always
@@ -66,7 +70,7 @@ Proposed design (on-chain, replacing the stub feed):
 
 1. **Instant tier.** Redeem up to the current `buffer` held in the Reserve
    State, no wait, fee `instant_fee_bps`.
-2. **Queued tier.** Above the buffer, the holder locks TSR in a **Request
+2. **Queued tier.** Above the buffer, the holder locks TSRA in a **Request
    UTxO** (datum: `owner`, `amount`, `requested_at`, `bucket`). Owner can
    cancel any time before settlement.
 3. **Daily buckets, not strict FIFO.** eUTxO makes a single ordered queue a

@@ -1,10 +1,10 @@
 //// One-shot NFT that marks the genuine Tessera Reserve State UTxO.
 ////
-//// Why it exists: the reserve validator is also the TSR minting policy, and
+//// Why it exists: the reserve validator is also the TSRA minting policy, and
 //// the reserve's backing is attested off-chain, so nothing on-chain would
 //// stop an attacker from planting their OWN State-shaped UTxO at the script
 //// address (a committee of their own, an enormous `attested_reserve`) and
-//// spending it to mint real TSR. The reserve validator therefore only
+//// spending it to mint real TSRA. The reserve validator therefore only
 //// recognises a State that carries this NFT. It can be minted exactly once,
 //// because it requires spending a specific seed UTxO.
 

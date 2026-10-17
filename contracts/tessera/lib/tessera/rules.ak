@@ -1,14 +1,14 @@
 //// Pure rules for the Tessera reserve gate. No transaction or datum access,
 //// so every rule is unit-testable on its own.
 ////
-//// Units: TSR quantities are in 1e-6 TSR, matching Cardano native-asset
+//// Units: TSRA quantities are in 1e-6 TSRA, matching Cardano native-asset
 //// integers. Times are POSIX milliseconds, as in a transaction validity range.
 
-/// Asset name of the TSR token minted under the reserve script's policy.
-pub const tsr_name: ByteArray = "TSR"
+/// Asset name of the TSRA token minted under the reserve script's policy.
+pub const tsra_name: ByteArray = "TSRA"
 
 /// Asset name of the one-shot NFT that marks the genuine Reserve State UTxO.
-pub const state_nft_name: ByteArray = "TSR-STATE"
+pub const state_nft_name: ByteArray = "TSRA-STATE"
 
 /// A reserve attestation older than this blocks new minting: 7 days.
 pub const max_attestation_age: Int = 604_800_000
@@ -17,7 +17,7 @@ pub const max_attestation_age: Int = 604_800_000
 /// recorded `attested_at` is within a day of real time.
 pub const max_attest_window: Int = 86_400_000
 
-/// Minting `qty` more TSR is allowed only while total minted supply stays at
+/// Minting `qty` more TSRA is allowed only while total minted supply stays at
 /// or below BOTH the attested reserve and the committee's mint cap.
 pub fn mint_allowed(
   minted_supply: Int,
@@ -71,4 +71,8 @@ test attestation_cannot_go_backwards() {
 
 test attestation_window_is_bounded() {
   window_ok(0, max_attest_window, 0) && !window_ok(0, max_attest_window + 1, 0)
+}
+
+test inverted_window_is_rejected() {
+  !window_ok(3_000, 2_000, 0)
 }

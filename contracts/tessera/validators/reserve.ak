@@ -1,16 +1,16 @@
-//// Tessera Reserve State — the on-chain gate for minting and burning TSR.
+//// Tessera Reserve State — the on-chain gate for minting and burning TSRA.
 ////
 //// One State UTxO, identified by a one-shot NFT (`state_nft.ak`), records how
-//// much TSR exists, how much reserve the operator committee has attested to,
+//// much TSRA exists, how much reserve the operator committee has attested to,
 //// and a committee-set mint cap. This script is BOTH the spending validator
-//// for that State and the minting policy for TSR (policy id = script hash),
-//// so TSR can only move in a transaction that also transitions the State.
+//// for that State and the minting policy for TSRA (policy id = script hash),
+//// so TSRA can only move in a transaction that also transitions the State.
 ////
 //// Rules (see ../SPEC.md):
 ////   * Mint: committee M-of-N, not paused, supply stays <= min(attested
 ////     reserve, mint cap), and the attestation is fresh (<= 7 days old for the
 ////     whole validity range of the transaction).
-////   * Burn: no signature and no pause check. Anyone holding TSR can always
+////   * Burn: no signature and no pause check. Anyone holding TSRA can always
 ////     burn it; the State just has to record it. (Throughput note: every burn
 ////     spends the single State UTxO, so burns serialise. The redemption queue
 ////     batches many burns into one transaction for that reason.)
@@ -28,13 +28,15 @@ use aiken/collection/list
 use aiken/interval.{Finite}
 use cardano/address.{Address, Script}
 use cardano/assets.{PolicyId, quantity_of}
-use cardano/transaction.{InlineDatum, Input, Output, OutputReference, Transaction}
+use cardano/transaction.{
+  InlineDatum, Input, NoDatum, Output, OutputReference, Transaction,
+}
 use tessera/rules
 
 // ---------------------------------------------------------------- datum
 
 pub type ReserveState {
-  /// TSR currently in existence (1e-6 TSR units).
+  /// TSRA currently in existence (1e-6 TSRA units).
   minted_supply: Int,
   /// Reserve the committee last attested to, in the same units.
   attested_reserve: Int,
@@ -158,18 +160,18 @@ fn finite_bounds(tx: Transaction) -> Option<(Int, Int)> {
   }
 }
 
-/// TSR minted (positive) or burned (negative) under this policy in this tx.
-fn tsr_delta(tx: Transaction, own_policy: PolicyId) -> Int {
+/// TSRA minted (positive) or burned (negative) under this policy in this tx.
+fn tsra_delta(tx: Transaction, own_policy: PolicyId) -> Int {
   let names = assets.tokens(tx.mint, own_policy) |> dict.to_pairs
   when names is {
     [] -> 0
     [Pair(name, qty)] ->
-      if name == rules.tsr_name {
+      if name == rules.tsra_name {
         qty
       } else {
-        fail @"foreign token name under TSR policy"
+        fail @"foreign token name under TSRA policy"
       }
-    _ -> fail @"multiple token names under TSR policy"
+    _ -> fail @"multiple token names under TSRA policy"
   }
 }
 
@@ -202,7 +204,7 @@ validator reserve(nft_policy: PolicyId) {
         state_value_ok(next_out, nft_policy),
       }
 
-    let delta = tsr_delta(tx, own_hash)
+    let delta = tsra_delta(tx, own_hash)
     let signed = threshold_met(s0, tx.extra_signatories)
 
     when redeemer is {
@@ -283,7 +285,7 @@ validator reserve(nft_policy: PolicyId) {
   }
 
   mint(_redeemer: Data, policy_id: PolicyId, tx: Transaction) {
-    // TSR may only move when the genuine State transitions in the same tx;
+    // TSRA may only move when the genuine State transitions in the same tx;
     // the spend handler then enforces the exact quantity and the rules.
     let state_ins = own_script_inputs(tx.inputs, policy_id)
     when sole_state(state_ins, nft_policy) is {
@@ -368,8 +370,8 @@ fn state_in(s: ReserveState) -> Input {
   Input { output_reference: ref0(), output: state_out(s) }
 }
 
-fn tsr(qty: Int) -> assets.Value {
-  assets.from_asset(t_own, rules.tsr_name, qty)
+fn tsra(qty: Int) -> assets.Value {
+  assets.from_asset(t_own, rules.tsra_name, qty)
 }
 
 /// A well-formed committee transaction: both operators sign, finite validity
@@ -379,7 +381,7 @@ fn base_tx(s0: ReserveState, s1: ReserveState, delta: Int) -> Transaction {
     ..transaction.placeholder,
     inputs: [state_in(s0)],
     outputs: [state_out(s1)],
-    mint: tsr(delta),
+    mint: tsra(delta),
     extra_signatories: [t_op1, t_op2],
     validity_range: interval.between(1_500_000, 2_000_000),
   }
@@ -443,7 +445,7 @@ test mint_while_paused_is_rejected() {
 }
 
 test mint_delta_must_equal_redeemer_qty() {
-  // datum and redeemer say 10, but the tx mints 20 TSR
+  // datum and redeemer say 10, but the tx mints 20 TSRA
   let s0 = t_state(0, 100, 1_000)
   let s1 = ReserveState { ..next(s0), minted_supply: 10 }
   !reserve.spend(t_nft, Some(s0), Mint { qty: 10 }, ref0(), base_tx(s0, s1, 20))
@@ -473,20 +475,20 @@ test planted_state_without_nft_cannot_mint() fail {
       ..transaction.placeholder,
       inputs: [Input { output_reference: ref0(), output: state_out_with(evil, False) }],
       outputs: [state_out_with(evil_next, False)],
-      mint: tsr(500_000_000),
+      mint: tsra(500_000_000),
       extra_signatories: [t_op1],
       validity_range: interval.between(1_500_000, 2_000_000),
     }
   reserve.spend(t_nft, Some(evil), Mint { qty: 500_000_000 }, ref0(), tx)
 }
 
-test planted_state_cannot_unlock_tsr_mint_handler() {
+test planted_state_cannot_unlock_tsra_mint_handler() {
   let evil = t_state(0, 999_999_999, 999_999_999)
   let tx =
     Transaction {
       ..transaction.placeholder,
       inputs: [Input { output_reference: ref0(), output: state_out_with(evil, False) }],
-      mint: tsr(1),
+      mint: tsra(1),
     }
   !reserve.mint(t_nft, Void, t_own, tx)
 }
@@ -498,7 +500,7 @@ test mint_handler_accepts_when_genuine_state_is_spent() {
 }
 
 test mint_handler_rejects_when_no_state_is_spent() {
-  let tx = Transaction { ..transaction.placeholder, mint: tsr(10) }
+  let tx = Transaction { ..transaction.placeholder, mint: tsra(10) }
   !reserve.mint(t_nft, Void, t_own, tx)
 }
 
@@ -648,4 +650,215 @@ test pause_needs_the_committee() {
   let s1 = ReserveState { ..next(s0), paused: True }
   let tx = Transaction { ..base_tx(s0, s1, 0), extra_signatories: [t_op1] }
   !reserve.spend(t_nft, Some(s0), SetPaused { paused: True }, ref0(), tx)
+}
+
+// -- Added by the mutation pass: each test below is the only one that fails
+//    when a specific guard is deleted (see SPEC.md §6).
+
+test set_cap_needs_the_committee() {
+  let s0 = t_state(0, 100, 1_000)
+  let s1 = ReserveState { ..next(s0), mint_cap: 50 }
+  let tx = Transaction { ..base_tx(s0, s1, 0), extra_signatories: [t_op1] }
+  !reserve.spend(t_nft, Some(s0), SetCap { mint_cap: 50 }, ref0(), tx)
+}
+
+test a_zero_threshold_committee_cannot_act_unsigned() {
+  let s0 = ReserveState { ..t_state(0, 100, 1_000), threshold: 0 }
+  let s1 = ReserveState { ..next(s0), minted_supply: 10 }
+  let tx = Transaction { ..base_tx(s0, s1, 10), extra_signatories: [] }
+  !reserve.spend(t_nft, Some(s0), Mint { qty: 10 }, ref0(), tx)
+}
+
+test the_state_nft_cannot_leave_the_state() fail {
+  let s0 = t_state(100, 100, 1_000)
+  let s1 = ReserveState { ..next(s0), minted_supply: 60 }
+  let tx =
+    Transaction {
+      ..base_tx(s0, s1, -40),
+      outputs: [state_out_with(s1, False)],
+      extra_signatories: [],
+    }
+  reserve.spend(t_nft, Some(s0), Burn { qty: 40 }, ref0(), tx)
+}
+
+test a_stray_output_at_the_script_does_not_block_the_state() {
+  let s0 = t_state(100, 100, 1_000)
+  let s1 = ReserveState { ..next(s0), minted_supply: 60 }
+  let stray =
+    Output {
+      address: t_addr(),
+      value: assets.from_lovelace(1_500_000),
+      datum: NoDatum,
+      reference_script: None,
+    }
+  let tx =
+    Transaction {
+      ..base_tx(s0, s1, -40),
+      outputs: [stray, state_out(s1)],
+      extra_signatories: [],
+    }
+  reserve.spend(t_nft, Some(s0), Burn { qty: 40 }, ref0(), tx)
+}
+
+test a_state_holding_two_nfts_is_not_genuine() fail {
+  let s0 = t_state(0, 100, 1_000)
+  let s1 = ReserveState { ..next(s0), minted_supply: 10 }
+  let doubled =
+    Output {
+      ..state_out(s0),
+      value: assets.from_lovelace(2_000_000)
+        |> assets.add(t_nft, rules.state_nft_name, 2),
+    }
+  let tx =
+    Transaction {
+      ..base_tx(s0, s1, 10),
+      inputs: [Input { output_reference: ref0(), output: doubled }],
+    }
+  reserve.spend(t_nft, Some(s0), Mint { qty: 10 }, ref0(), tx)
+}
+
+test a_planted_input_beside_the_genuine_state_is_rejected() {
+  let s0 = t_state(0, 100, 1_000)
+  let evil =
+    ReserveState {
+      ..s0,
+      operators: [t_op1],
+      threshold: 1,
+      attested_reserve: 999_999,
+    }
+  let s1 = ReserveState { ..next(evil), minted_supply: 10 }
+  let planted =
+    Input { output_reference: ref1(), output: state_out_with(evil, False) }
+  let tx =
+    Transaction {
+      ..base_tx(s0, s1, 10),
+      inputs: [state_in(s0), planted],
+      extra_signatories: [t_op1],
+    }
+  !reserve.spend(t_nft, Some(evil), Mint { qty: 10 }, ref1(), tx)
+}
+
+test burn_cannot_change_the_committee() {
+  let s0 = t_state(100, 100, 1_000)
+  let s1 =
+    ReserveState {
+      ..next(s0),
+      minted_supply: 60,
+      operators: [t_op1],
+      threshold: 1,
+    }
+  let tx = Transaction { ..base_tx(s0, s1, -40), extra_signatories: [] }
+  !reserve.spend(t_nft, Some(s0), Burn { qty: 40 }, ref0(), tx)
+}
+
+test attest_cannot_change_the_cap() {
+  let s0 = t_state(0, 100, 1_000)
+  let s1 =
+    ReserveState {
+      ..next(s0),
+      attested_reserve: 250,
+      attestation_epoch: 2,
+      attested_at: 1_500_000,
+      mint_cap: 9_999,
+    }
+  !reserve.spend(t_nft, Some(s0), Attest { reserve: 250 }, ref0(), base_tx(s0, s1, 0))
+}
+
+test attest_must_anchor_at_the_validity_lower_bound() {
+  let s0 = t_state(0, 100, 1_000)
+  let s1 =
+    ReserveState {
+      ..next(s0),
+      attested_reserve: 250,
+      attestation_epoch: 2,
+      attested_at: 1_900_000,
+    }
+  !reserve.spend(t_nft, Some(s0), Attest { reserve: 250 }, ref0(), base_tx(s0, s1, 0))
+}
+
+test set_cap_cannot_change_the_committee() {
+  let s0 = t_state(0, 100, 1_000)
+  let s1 = ReserveState { ..next(s0), mint_cap: 50, threshold: 1 }
+  !reserve.spend(t_nft, Some(s0), SetCap { mint_cap: 50 }, ref0(), base_tx(s0, s1, 0))
+}
+
+test set_paused_cannot_change_the_reserve() {
+  let s0 = t_state(0, 100, 1_000)
+  let s1 = ReserveState { ..next(s0), paused: True, attested_reserve: 9_999 }
+  !reserve.spend(t_nft, Some(s0), SetPaused { paused: True }, ref0(), base_tx(s0, s1, 0))
+}
+
+test a_foreign_token_name_cannot_be_minted_under_the_tsra_policy() fail {
+  let s0 = t_state(0, 100, 1_000)
+  let s1 = ReserveState { ..next(s0), minted_supply: 10 }
+  let tx = Transaction { ..base_tx(s0, s1, 0), mint: assets.from_asset(t_own, "FAKE", 10) }
+  reserve.spend(t_nft, Some(s0), Mint { qty: 10 }, ref0(), tx)
+}
+
+test a_second_token_name_cannot_ride_along_with_an_attestation() fail {
+  let s0 = t_state(0, 100, 1_000)
+  let s1 =
+    ReserveState {
+      ..next(s0),
+      attested_reserve: 250,
+      attestation_epoch: 2,
+      attested_at: 1_500_000,
+    }
+  let tx =
+    Transaction {
+      ..base_tx(s0, s1, 0),
+      mint: tsra(10) |> assets.add(t_own, "FAKE", 10),
+    }
+  reserve.spend(t_nft, Some(s0), Attest { reserve: 250 }, ref0(), tx)
+}
+
+test burn_with_a_negative_qty_cannot_mint() {
+  // Burn needs no signature, so a negative burn would be an unsigned,
+  // uncapped mint if `qty > 0` were missing.
+  let s0 = t_state(0, 100, 1_000)
+  let s1 = ReserveState { ..next(s0), minted_supply: 100 }
+  let tx = Transaction { ..base_tx(s0, s1, 100), extra_signatories: [] }
+  !reserve.spend(t_nft, Some(s0), Burn { qty: -100 }, ref0(), tx)
+}
+
+test attest_negative_reserve_is_rejected() {
+  let s0 = t_state(0, 100, 1_000)
+  let s1 =
+    ReserveState {
+      ..next(s0),
+      attested_reserve: -1,
+      attestation_epoch: 2,
+      attested_at: 1_500_000,
+    }
+  !reserve.spend(t_nft, Some(s0), Attest { reserve: -1 }, ref0(), base_tx(s0, s1, 0))
+}
+
+test set_cap_negative_is_rejected() {
+  let s0 = t_state(0, 100, 1_000)
+  let s1 = ReserveState { ..next(s0), mint_cap: -1 }
+  !reserve.spend(t_nft, Some(s0), SetCap { mint_cap: -1 }, ref0(), base_tx(s0, s1, 0))
+}
+
+test attest_cannot_mint() {
+  let s0 = t_state(0, 100, 1_000)
+  let s1 =
+    ReserveState {
+      ..next(s0),
+      attested_reserve: 250,
+      attestation_epoch: 2,
+      attested_at: 1_500_000,
+    }
+  !reserve.spend(t_nft, Some(s0), Attest { reserve: 250 }, ref0(), base_tx(s0, s1, 10))
+}
+
+test set_cap_cannot_mint_with_an_exact_datum() {
+  let s0 = t_state(0, 100, 1_000)
+  let s1 = ReserveState { ..next(s0), mint_cap: 50 }
+  !reserve.spend(t_nft, Some(s0), SetCap { mint_cap: 50 }, ref0(), base_tx(s0, s1, 10))
+}
+
+test pause_cannot_mint() {
+  let s0 = t_state(0, 100, 1_000)
+  let s1 = ReserveState { ..next(s0), paused: True }
+  !reserve.spend(t_nft, Some(s0), SetPaused { paused: True }, ref0(), base_tx(s0, s1, 10))
 }

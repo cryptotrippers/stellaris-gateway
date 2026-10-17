@@ -2,7 +2,7 @@ name = "stellaris/tessera"
 version = "0.1.0"
 compiler = "v1.1.23"
 plutus = "v3"
-description = "Tessera (TSR) reserve-backed stablecoin, sTessera yield vault and redemption queue for Cardano (Preprod)"
+description = "Tessera (TSRA) reserve-backed stablecoin, sTessera yield vault and redemption queue for Cardano (Preprod)"
 
 [[dependencies]]
 name = "aiken-lang/stdlib"
