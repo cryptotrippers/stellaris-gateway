@@ -517,6 +517,28 @@ Then a mutation pass over every guard, as in §6.
   bound; that only delays their own exit.
 * **`SetParams` is named `SetBounds`** (as approved).
 
+**Equivalent mutants** (mutation pass, SPEC.md §6 has the totals):
+* *StakeShort `amount > 0`* — `deposit_ok` already refuses a zero or negative
+  stake (below 10 TSRA on an empty class, zero shares minted otherwise).
+* *StakeLong / RequestUnstake output count* — `other_output` already requires
+  exactly one vault output besides the State.
+* *RequestUnstake `shares > 0`* — zero or negative shares give a value ≤ 0,
+  which fails the 2 TSRA minimum.
+* *UnlockLong input count* — `sole_state` finds the one State and
+  `expect [pos]` forces exactly one other vault input.
+* *Spent input must be the State (`in_state == s0`)* — every branch fixes the
+  number of vault inputs, so a second State-shaped input can never join the
+  genuine State, and with one vault input `sole_state` has already proven it
+  is the genuine State. Kept as defence in depth.
+* *Claim: no other vault input (`ins == [own]`)* — two Tickets in one claim
+  burn two markers while each demands exactly one burned, and any other vault
+  input fails its own validator (a State only in UnlockLong, which needs a
+  Position; a Position only beside the State; planted UTxOs carry no
+  marker). Kept as defence in depth against double satisfaction.
+* *Reserve lookup: several Reserve States accepted* (`[s]` → `[s, ..]`) —
+  only one UTxO can ever hold the reserve's one-shot thread token, so at most
+  one reference input matches (the same survivor as 2.3, §6).
+
 ### 3.14 Open items
 
 1. **For 2.5 — loss-burn path on the reserve.** A vault-driven TSRA burn
@@ -629,3 +651,27 @@ all killed — by `set_kyc_with_an_invalid_policy_id_is_rejected`,
 `set_kyc_datum_policy_must_match_the_redeemer`,
 `set_kyc_changing_the_policy_with_the_committee_is_accepted`,
 `set_kyc_changing_the_policy_without_the_committee_is_rejected` and others.
+
+### Phase 2.4 (sTSRA vault)
+
+110 mutants over `validators/stsra_vault.ak` (95), `lib/tessera/vault_state.ak`
+(12) and `lib/tessera/reserve_ref.ak` (3). 102 are killed; the other 8 are
+equivalent and listed, one line each, in §3.13. No survivor showed a logic
+bug, and the validator logic did not change during the pass.
+
+| Guard | Mutants | Killed by (examples) |
+|---|---|---|
+| Identity / State value | `sole_state` any token count; thread count only; TSRA ignored; next State value unchecked | `a_state_holding_two_tokens_is_not_genuine`, `short_stake_without_the_tsra_arriving_is_rejected`, `short_stake_in_a_lookalike_token_is_rejected`, `the_state_may_not_carry_a_foreign_token` |
+| StakeShort / StakeLong | next datum unchecked; epoch not bumped; extra vault inputs | `short_stake_datum_shares_must_match_the_mint`, `short_stake_must_bump_the_epoch`, `long_stake_datum_long_shares_must_match`, `long_stake_cannot_spend_an_existing_position` |
+| RequestUnstake / UnlockLong | extra vault inputs / outputs; next datum unchecked | `unstake_cannot_spend_an_existing_position`, `unstake_datum_must_match`, `unlock_cannot_create_another_vault_output` |
+| Claim | cap dropped; vault outputs allowed; Ticket value unchecked; early claim; marker burn, payout or excess burn unchecked; loss index ignored | `claim_never_pays_more_than_the_escrow`, `claim_cannot_recreate_the_ticket`, `a_planted_ticket_cannot_be_claimed`, `claim_before_the_cooldown_is_rejected`, `claim_paying_someone_else_is_rejected`, `claim_after_a_loss_must_burn_the_excess` |
+| Positions | marker unchecked; State not required; State branch accepts a Claim | `a_planted_position_cannot_be_unlocked`, `a_position_is_spendable_only_beside_the_genuine_state`, `the_state_branch_refuses_a_claim_redeemer` |
+| ReportYield / SetBounds | extra vault inputs / outputs; may mint; missing or planted Reserve State | `report_yield_cannot_spend_a_position`, `set_bounds_cannot_create_another_vault_output`, `set_bounds_cannot_mint_stsra`, `report_yield_against_a_planted_reserve_state_is_rejected` |
+| Bounds / yield split | each hard limit; lock ≥ cooldown; first loss takes the whole cut; long tier unweighted; short-tier dust lost; cut not taken | `bounds_hard_limits`, `split_conserves_gross_exactly`, `long_tier_earns_the_weight_per_tsra`, `half_the_cut_goes_to_first_loss` |
+| Reserve lookup | token ignored; reserve address unchecked | `short_stake_against_a_planted_reserve_state_is_rejected`, `report_yield_against_a_reserve_state_off_the_reserve_address_is_rejected` |
+
+The first run surfaced 18 real test gaps (the guard was there, but no test
+pinned it), and each now has a test. Most cover extra vault inputs or outputs
+and the next datum on each redeemer. The last one is a Reserve State held at
+the wrong address, which the vault suite did not test (2.3 had the matching
+test).

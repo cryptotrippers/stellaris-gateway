@@ -2006,3 +2006,14 @@ test set_bounds_cannot_mint_stsra() {
   let tx = bounds_ok_tx()
   !spend_state(yield_s0(), bounds_rd(), Transaction { ..tx, mint: stsra(1_000_000) })
 }
+
+test report_yield_against_a_reserve_state_off_the_reserve_address_is_rejected() {
+  // the genuine token and committee, but not at the reserve address
+  let moved =
+    Input {
+      ..reserve_ref(),
+      output: Output { ..reserve_ref().output, address: key_addr(t_bob) },
+    }
+  let tx = yield_tx(3_888_889, 4_861_111, 625_000, 625_000, [t_op1, t_op2])
+  !report(Transaction { ..tx, reference_inputs: [moved] })
+}

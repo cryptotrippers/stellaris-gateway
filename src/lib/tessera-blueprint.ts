@@ -12,6 +12,9 @@
  * retired. The script is parameterised by the bootstrap seed UTxO.
  * Phase 2.3: `eligibility.ak` (allowlist policy + registry) is parameterised
  * by the applied reserve script hash.
+ * Phase 2.4: `stsra_vault.ak` (sTSRA vault State, Positions, Tickets and the
+ * sTSRA / marker policy) is parameterised by its seed UTxO and the applied
+ * reserve script hash.
  */
 
 /** `reserve.reserve` — Reserve State spend + TSRA and thread-token policy. */
@@ -21,3 +24,7 @@ export const TESSERA_RESERVE_BLUEPRINT_HASH =
 /** `eligibility.eligibility` — eligibility-token policy and registry address. */
 export const TESSERA_ELIGIBILITY_BLUEPRINT_HASH =
   "0df1e0a18ecb57fc4848ed0daed759bee3394dc9d21e070dd2d109a7";
+
+/** `stsra_vault.stsra_vault` — sTSRA vault spend + sTSRA and thread/marker policy. */
+export const TESSERA_STSRA_VAULT_BLUEPRINT_HASH =
+  "ce1cc7c2d88ddf0900ebba19e65b3be687b69f465d7d7bc5bf341215";
