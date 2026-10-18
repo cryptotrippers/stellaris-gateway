@@ -8,3 +8,6 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Offering registration recovery uses a persisted original transaction payload and an idempotent, chain-verified server write; retries must never submit another opening transaction.
+- Keep legacy yield-vault recovery separate from current threaded/marked vault readers and builders; immutable older contracts cannot inherit newer safety checks.
