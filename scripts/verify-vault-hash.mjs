@@ -25,6 +25,8 @@ const SUSDR_PLUTUS_PATH = resolve("contracts/susdr-vault/plutus.json");
 const MULTI_PLUTUS_PATH = resolve("contracts/multi-asset-vault/plutus.json");
 const FRACTION_PLUTUS_PATH = resolve("contracts/fraction-vault/plutus.json");
 const FRACTION_TS_PATH = resolve("src/lib/fraction-vault.ts");
+const TESSERA_PLUTUS_PATH = resolve("contracts/tessera/plutus.json");
+const TESSERA_TS_PATH = resolve("src/lib/tessera-blueprint.ts");
 const VAULT_TS_PATH = resolve("src/lib/vault.ts");
 const YIELD_TS_PATH = resolve("src/lib/yield-vault.ts");
 const SUSDR_TS_PATH = resolve("src/lib/susdr-vault.ts");
@@ -190,6 +192,34 @@ if (fractionValidators) {
 } else {
   console.log(
     "[verify-vault-hash] contracts/fraction-vault/plutus.json not present — skipping fraction pins.",
+  );
+}
+
+const tesseraValidators = existsSync(TESSERA_PLUTUS_PATH)
+  ? (JSON.parse(readFileSync(TESSERA_PLUTUS_PATH, "utf8"))?.validators ?? [])
+  : null;
+
+if (tesseraValidators) {
+  const tesseraPin = readPins(TESSERA_TS_PATH);
+  targets.push(
+    {
+      label: "tessera reserve (State + TSRA policy)",
+      onChain: findIn(tesseraValidators, "reserve.reserve"),
+      hash: tesseraPin("TESSERA_RESERVE_BLUEPRINT_HASH"),
+      cbor: "__BLUEPRINT_IMPORT__",
+      file: "src/lib/tessera-blueprint.ts",
+    },
+    {
+      label: "tessera state_nft",
+      onChain: findIn(tesseraValidators, "state_nft.state_nft", ".mint"),
+      hash: tesseraPin("TESSERA_STATE_NFT_BLUEPRINT_HASH"),
+      cbor: "__BLUEPRINT_IMPORT__",
+      file: "src/lib/tessera-blueprint.ts",
+    },
+  );
+} else {
+  console.log(
+    "[verify-vault-hash] contracts/tessera/plutus.json not present — skipping Tessera pins.",
   );
 }
 

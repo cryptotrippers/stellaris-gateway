@@ -1,8 +1,10 @@
 # Tessera — stablecoin rail redesign (draft for decision)
 
-Status: **design + scaffold (`contracts/tessera/`); no validators yet.** Written 2026-10-15 against the
-code in `contracts/susdr-vault/`. Items marked **DECISION** block
-implementation; everything else follows from the current code.
+Status: **design + Reserve State validator (`contracts/tessera/`).** Written
+2026-10-15 against the code in `contracts/susdr-vault/`. Decisions 1–3 are
+settled (2026-10-18, §7); decision 4 is open pending counsel. The sTessera
+vault and the redemption queue validator are not started and wait for an
+explicit start of Phase 2.
 
 ## 1. What exists today (and what it is not)
 
@@ -48,7 +50,7 @@ its names, hashes or token identifiers.
 * Keep PlutusV3 (current `aiken.toml`). The other vaults' version was not
   checked here.
 
-## 3. Collateral model — **DECISION 1**
+## 3. Collateral model — **DECISION 1: A at launch, C as the extension (decided)**
 
 | Option | How it holds the peg | Cost / risk for the Jan 2027 target |
 |---|---|---|
@@ -61,7 +63,7 @@ yield (`yield_vault.ak` accruals) feeds `ReportYield` on sTessera, which
 already forces the yield to be physically deposited, so reported yield cannot
 exceed funds actually delivered.
 
-## 4. Redemption queue — **DECISION 2**
+## 4. Redemption queue — **DECISION 2: as proposed below (decided)**
 
 Why a queue at all: reserve-backed redemption can need off-chain settlement,
 and a bank-run buffer limits how much can leave per day.
@@ -113,11 +115,27 @@ treasury) are not code and are the likely critical path, particularly for a
 $50M+ Brazil launch. I would not promise January mainnet until the audit slot
 and licensing path are confirmed.
 
-## 7. Open decisions
+## 7. Decisions
 
-1. **Collateral model** — A (reserve-backed), B or C? (Section 3)
-2. **Queue** — daily buckets with instant buffer as above, or a simpler
-   fixed 7-day delay for everything? (Section 4)
-3. ~~Naming~~ — **resolved:** Tessera is independent of sUSDr; full build.
-4. **Reserve asset and custodian** — which stable/T-bill custodian and which
-   on-chain asset pays redemptions? This sets the attestation format.
+Recorded 2026-10-18.
+
+1. **Collateral model — decided: A at launch, C as the planned extension.**
+   Launch is reserve-backed (option A): an off-chain reserve attested by the
+   committee caps the TSRA supply on chain. The planned extension is the
+   hybrid (option C): RWA vault shares accepted as reserve assets at
+   haircuts. Option B (over-collateralised CDP) is **out**.
+2. **Redemption — decided: as in §4.** An instant tier up to the buffer;
+   above it, Request UTxOs grouped into daily buckets, payable after
+   `bucket_end + settle_delay` with a **7-day hard cap**; buckets paid
+   **pro-rata** on a shortfall; **permissionless settlement** (anyone may
+   submit, funds go only to `owner`); **owner cancel** any time before
+   settlement.
+3. **Naming — resolved:** Tessera is independent of sUSDr; full build.
+   Names and tickers come from `src/config/brand.ts` (TSRA / sTSRA).
+4. **Reserve asset and custodian — open, pending counsel.** Which stable or
+   T-bill custodian, and which on-chain asset pays redemptions, are still
+   undecided. This sets the attestation format, so the `ReserveState` datum
+   stays provisional (SPEC.md §1) until it is answered.
+
+Phase 2 has not started: the sTessera vault and the redemption queue
+validator are not to be written until it is confirmed.
