@@ -26,7 +26,8 @@ transaction that creates the State, and it checks:
   token (no foreign tokens, no TSRA) — which also proves the token went
   there and nowhere else;
 * an inline `ReserveState` with `minted_supply == 0`, `attestation_epoch == 0`,
-  `epoch == 0`, `attested_reserve >= 0`, `0 <= mint_cap <= 5,000,000 TSRA`
+  `epoch == 0`, `attested_reserve >= 0`,
+  `0 <= mint_cap <= 1,000,000,000 TSRA` (`rules.max_mint_cap`, 1e15 units)
   and a valid committee;
 * `attested_at` equals the transaction's validity lower bound, inside a
   finite window of at most 1 day (`rules.window_ok`). Without this, a
@@ -53,8 +54,11 @@ committee is 3-of-5, a bootstrap parameter, not a validator constant.
 Every transition: exactly one token-bearing State input and output; the next
 datum must **equal** the expected datum (`s0` with only the permitted fields
 changed, `epoch + 1`); the next committee is valid; the State output holds
-exactly ADA + the thread token. `SetCap` is bounded by the same 5,000,000 TSRA
-hard ceiling as genesis.
+exactly ADA + the thread token. `SetCap` is bounded by the same
+1,000,000,000 TSRA hard ceiling as genesis. The proposed genesis `mint_cap` is
+5,000,000 TSRA; that is a bootstrap parameter the committee can later move
+with `SetCap`, not a validator limit. Minting is still bounded by the lower
+of `attested_reserve` and `mint_cap` (`rules.mint_allowed`).
 
 **Rotation.** `Rotate` replaces `operators` and `threshold` and nothing else.
 The current committee must meet its threshold (authorisation) and so must

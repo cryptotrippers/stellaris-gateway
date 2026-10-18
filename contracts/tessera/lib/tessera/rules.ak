@@ -14,9 +14,11 @@ pub const tsra_name: ByteArray = "TSRA"
 /// committee: 3-of-5, a bootstrap parameter.)
 pub const min_threshold: Int = 2
 
-/// Hard ceiling on `mint_cap`: 5,000,000 TSRA (6 decimals). Raising it needs a
-/// new script, not a committee vote.
-pub const max_mint_cap: Int = 5_000_000_000_000
+/// Hard ceiling on `mint_cap`: 1,000,000,000 TSRA (6 decimals, so 1e15 units).
+/// Raising it needs a new script, not a committee vote. The committee sets the
+/// working cap below it (proposed genesis `mint_cap`: 5,000,000 TSRA, a
+/// bootstrap parameter, not a validator constant).
+pub const max_mint_cap: Int = 1_000_000_000_000_000
 
 /// A reserve attestation older than this blocks new minting: 7 days.
 pub const max_attestation_age: Int = 604_800_000
@@ -83,4 +85,9 @@ test attestation_window_is_bounded() {
 
 test inverted_window_is_rejected() {
   !window_ok(3_000, 2_000, 0)
+}
+
+test the_mint_cap_ceiling_is_one_billion_tsra() {
+  // 1,000,000,000 TSRA at 6 decimals; changing it moves the script hash
+  max_mint_cap == 1_000_000_000 * 1_000_000
 }

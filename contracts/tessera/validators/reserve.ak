@@ -1428,3 +1428,20 @@ test rotation_datum_threshold_must_match_the_redeemer() {
   let s1 = ReserveState { ..rotated(s0), threshold: 3 }
   !rotate(s0, s1, new_committee, 2, [t_op1, t_op2, t_op3, t_op4, t_op5])
 }
+
+test genesis_with_the_proposed_five_million_cap_is_accepted() {
+  boot(ReserveState { ..t_genesis(), mint_cap: 5_000_000_000_000 })
+}
+
+test set_cap_above_five_million_tsra_is_accepted() {
+  // 5,000,000 TSRA is the proposed genesis cap, not a validator limit
+  let s0 = t_state(0, 100, 5_000_000_000_000)
+  let s1 = ReserveState { ..next(s0), mint_cap: 10_000_000_000_000 }
+  reserve.spend(
+    t_seed(),
+    Some(s0),
+    SetCap { mint_cap: 10_000_000_000_000 },
+    ref0(),
+    base_tx(s0, s1, 0),
+  )
+}

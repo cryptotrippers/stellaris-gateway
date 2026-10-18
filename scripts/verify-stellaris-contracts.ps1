@@ -256,7 +256,7 @@ $rules = @(
     @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'genesis_ok(s, lo, hi)'; Label = 'tessera genesis datum checked on-chain (2.2)' }
     @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'threshold_met(operators, threshold, tx.extra_signatories)'; Label = 'tessera rotation needs the new committee too (2.2)' }
     @{ File = 'contracts/tessera/lib/tessera/rules.ak'; Pattern = 'min_threshold: Int = 2'; Label = 'tessera committee threshold >= 2' }
-    @{ File = 'contracts/tessera/lib/tessera/rules.ak'; Pattern = 'max_mint_cap: Int = 5_000_000_000_000'; Label = 'tessera mint cap hard max 5M TSRA' }
+    @{ File = 'contracts/tessera/lib/tessera/rules.ak'; Pattern = 'max_mint_cap: Int = 1_000_000_000_000_000'; Label = 'tessera mint cap hard max 1B TSRA' }
     @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = '!s0.paused,'; Label = 'tessera mint blocked while paused' }
 )
 $missingRules = @()
