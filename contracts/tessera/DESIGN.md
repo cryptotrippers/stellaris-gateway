@@ -24,7 +24,8 @@ token we own. The redesign is three pieces, in dependency order.
 
 Names and tickers follow `src/config/brand.ts` (on `main` and
 `feature/tessera-rebuild`), the single source of truth. On-chain asset names:
-`TSRA` (the token) and `TSRA-STATE` (the Reserve State NFT).
+`TSRA` (the token) and `state` (the Reserve State's thread token, under the
+same policy; Phase 2.2).
 
 **Scope (decided):** Tessera is Stellaris's own token with **no tie to sUSDr or
 RealFi**. It is a new package, `contracts/tessera/`, not a rename of
