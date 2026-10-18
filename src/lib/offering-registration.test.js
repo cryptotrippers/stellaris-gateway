@@ -6,7 +6,6 @@ import {
   registryInteger,
   registerOpeningOnce,
   retryOfferingRegistration,
-  type PendingOffering,
 } from "./offering-registration.shared";
 
 const payload = {
@@ -28,7 +27,7 @@ const payload = {
   signatureThreshold: 1,
   bootstrapTxHash: "d".repeat(64),
 };
-const pending: PendingOffering = { payload, seed: { txHash: "e".repeat(64), outputIndex: 0 } };
+const pending = { payload, seed: { txHash: "e".repeat(64), outputIndex: 0 } };
 const row = {
   asset_id: payload.assetId,
   network: payload.network,
