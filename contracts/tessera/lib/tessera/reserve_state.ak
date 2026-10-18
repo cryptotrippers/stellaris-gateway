@@ -32,8 +32,9 @@ pub type ReserveState {
   /// Read by the sTessera vault (not written yet); stored here so one
   /// committee transaction controls every switch.
   kyc_stake: Bool,
-  /// Policy of the eligibility tokens (`validators/eligibility.ak`). Fixed at
-  /// genesis: `SetKyc` changes only the three switches.
+  /// Policy of the eligibility tokens (`validators/eligibility.ak` at launch).
+  /// Set at genesis; `SetKyc` (committee) may repoint it, e.g. to a
+  /// Midnight-issued credential policy, without a new reserve script.
   eligibility_policy: PolicyId,
 }
 

@@ -26,8 +26,9 @@
 ////     only `operators`, `threshold` and `epoch` change.
 ////   * Eligibility (Phase 2.3): when `kyc_mint` / `kyc_redeem` is on, Mint /
 ////     Burn also need `tessera/eligibility.eligible` for the redeemer's
-////     `holder`. SetKyc (committee M-of-N) flips the switches and nothing
-////     else. `kyc_stake` is stored here for the sTessera vault.
+////     `holder`. SetKyc (committee M-of-N) sets the switches and the
+////     eligibility policy (a 28-byte policy id) and nothing else. `kyc_stake`
+////     is stored here for the sTessera vault.
 ////   * Every transition: exactly one token-bearing State on both sides (the
 ////     V-01 lesson), the next datum equals the expected datum EXACTLY (so no
 ////     field can change unless that redeemer says it may), epoch +1, the
@@ -66,7 +67,12 @@ pub type ReserveRedeemer {
   SetCap { mint_cap: Int }
   SetPaused { paused: Bool }
   Rotate { operators: List<ByteArray>, threshold: Int }
-  SetKyc { kyc_mint: Bool, kyc_redeem: Bool, kyc_stake: Bool }
+  SetKyc {
+    kyc_mint: Bool,
+    kyc_redeem: Bool,
+    kyc_stake: Bool,
+    eligibility_policy: PolicyId,
+  }
 }
 
 // ---------------------------------------------------------------- helpers
@@ -338,17 +344,21 @@ validator reserve(seed: OutputReference) {
           s1 == ReserveState { ..s0, paused: paused, epoch: s0.epoch + 1 },
         }
 
-      // KYC switches: committee only, nothing else changes.
-      SetKyc { kyc_mint, kyc_redeem, kyc_stake } ->
+      // KYC switches and the eligibility policy: committee only, the policy
+      // must be a policy id, nothing else changes. Repointing the policy is
+      // how a Midnight-issued credential plugs in without a new reserve.
+      SetKyc { kyc_mint, kyc_redeem, kyc_stake, eligibility_policy } ->
         and {
           structural,
           signed,
+          bytearray.length(eligibility_policy) == 28,
           delta == 0,
           s1 == ReserveState {
             ..s0,
             kyc_mint: kyc_mint,
             kyc_redeem: kyc_redeem,
             kyc_stake: kyc_stake,
+            eligibility_policy: eligibility_policy,
             epoch: s0.epoch + 1,
           },
         }
@@ -1627,6 +1637,25 @@ test kyc_mint_alone_does_not_gate_burning() {
 
 // SetKyc
 
+fn set_kyc_policy(
+  s0: ReserveState,
+  s1: ReserveState,
+  m: Bool,
+  r: Bool,
+  st: Bool,
+  policy: ByteArray,
+  signers: List<ByteArray>,
+) -> Bool {
+  reserve.spend(
+    t_seed(),
+    Some(s0),
+    SetKyc { kyc_mint: m, kyc_redeem: r, kyc_stake: st, eligibility_policy: policy },
+    ref0(),
+    Transaction { ..base_tx(s0, s1, 0), extra_signatories: signers },
+  )
+}
+
+/// SetKyc that keeps the current eligibility policy.
 fn set_kyc(
   s0: ReserveState,
   s1: ReserveState,
@@ -1635,13 +1664,7 @@ fn set_kyc(
   st: Bool,
   signers: List<ByteArray>,
 ) -> Bool {
-  reserve.spend(
-    t_seed(),
-    Some(s0),
-    SetKyc { kyc_mint: m, kyc_redeem: r, kyc_stake: st },
-    ref0(),
-    Transaction { ..base_tx(s0, s1, 0), extra_signatories: signers },
-  )
+  set_kyc_policy(s0, s1, m, r, st, t_elig, signers)
 }
 
 fn kyc_all_on(s0: ReserveState) -> ReserveState {
@@ -1681,7 +1704,8 @@ test set_kyc_datum_stake_switch_must_match_the_redeemer() {
   !set_kyc(s0, s1, True, True, True, [t_op1, t_op2])
 }
 
-test set_kyc_cannot_change_the_eligibility_policy() {
+test set_kyc_datum_policy_must_match_the_redeemer() {
+  // redeemer keeps t_elig; datum installs another policy
   let s0 = t_state(0, 100, 1_000)
   let s1 =
     ReserveState {
@@ -1725,7 +1749,12 @@ test set_kyc_cannot_mint() {
   !reserve.spend(
     t_seed(),
     Some(s0),
-    SetKyc { kyc_mint: True, kyc_redeem: True, kyc_stake: True },
+    SetKyc {
+      kyc_mint: True,
+      kyc_redeem: True,
+      kyc_stake: True,
+      eligibility_policy: t_elig,
+    },
     ref0(),
     tx,
   )
@@ -1752,4 +1781,71 @@ test set_kyc_datum_redeem_switch_must_match_the_redeemer() {
   // only the redeem switch differs: redeemer off, datum on
   let s0 = t_state(0, 100, 1_000)
   !set_kyc(s0, kyc_all_on(s0), True, False, True, [t_op1, t_op2])
+}
+
+// SetKyc: repointing the eligibility policy (2.3 review)
+
+const t_new_elig: ByteArray =
+  #"88888888888888888888888888888888888888888888888888888888"
+
+test set_kyc_changing_the_policy_with_the_committee_is_accepted() {
+  let s0 = t_state(0, 100, 1_000)
+  let s1 = ReserveState { ..next(s0), eligibility_policy: t_new_elig }
+  set_kyc_policy(s0, s1, False, False, False, t_new_elig, [t_op1, t_op2])
+}
+
+test set_kyc_changing_the_policy_without_the_committee_is_rejected() {
+  let s0 = t_state(0, 100, 1_000)
+  let s1 = ReserveState { ..next(s0), eligibility_policy: t_new_elig }
+  !set_kyc_policy(s0, s1, False, False, False, t_new_elig, [t_op1])
+}
+
+test set_kyc_with_an_invalid_policy_id_is_rejected() {
+  // datum and redeemer agree, so only the 28-byte check stops it
+  let s0 = t_state(0, 100, 1_000)
+  let s1 = ReserveState { ..next(s0), eligibility_policy: #"77" }
+  !set_kyc_policy(s0, s1, False, False, False, #"77", [t_op1, t_op2])
+}
+
+test set_kyc_with_a_29_byte_policy_id_is_rejected() {
+  let long = #"8888888888888888888888888888888888888888888888888888888888"
+  let s0 = t_state(0, 100, 1_000)
+  let s1 = ReserveState { ..next(s0), eligibility_policy: long }
+  !set_kyc_policy(s0, s1, False, False, False, long, [t_op1, t_op2])
+}
+
+test set_kyc_changing_the_policy_cannot_touch_anything_else() {
+  let s0 = t_state(0, 100, 1_000)
+  let s1 =
+    ReserveState { ..next(s0), eligibility_policy: t_new_elig, mint_cap: 9_999 }
+  !set_kyc_policy(s0, s1, False, False, False, t_new_elig, [t_op1, t_op2])
+}
+
+test after_repointing_mint_eligibility_uses_the_new_policy() {
+  // kyc_mint on under the new policy: an old-policy token no longer counts
+  let s0 =
+    ReserveState {
+      ..t_state(0, 100, 1_000),
+      kyc_mint: True,
+      eligibility_policy: t_new_elig,
+    }
+  let s1 = ReserveState { ..next(s0), minted_supply: 10 }
+  let old = with_eligibility(base_tx(s0, s1, 10), t_holder, [t_op1, t_op2, t_holder])
+  let new_token =
+    Input {
+      ..elig_ref(t_holder),
+      output: Output {
+        ..elig_ref(t_holder).output,
+        value: assets.from_lovelace(2_000_000)
+          |> assets.add(t_new_elig, t_holder, 1),
+      },
+    }
+  let fresh = Transaction { ..old, reference_inputs: [new_token] }
+  !reserve.spend(t_seed(), Some(s0), Mint { qty: 10, holder: t_holder }, ref0(), old) && reserve.spend(
+    t_seed(),
+    Some(s0),
+    Mint { qty: 10, holder: t_holder },
+    ref0(),
+    fresh,
+  )
 }

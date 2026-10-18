@@ -16,7 +16,7 @@
 
 /** `reserve.reserve` — Reserve State spend + TSRA and thread-token policy. */
 export const TESSERA_RESERVE_BLUEPRINT_HASH =
-  "1492a47a338b8d46f17370efd0f10fe2649444faa5d77a96e066c68b";
+  "d2444aa24277a9f0a0234c11b0f74c08debbb309e0afb4e20f6ebe46";
 
 /** `eligibility.eligibility` — eligibility-token policy and registry address. */
 export const TESSERA_ELIGIBILITY_BLUEPRINT_HASH =

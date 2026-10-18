@@ -52,7 +52,7 @@ committee is 3-of-5, a bootstrap parameter, not a validator constant.
 | `SetCap{mint_cap}` | M-of-N | `mint_cap` | 0 |
 | `SetPaused{paused}` | M-of-N | `paused` | 0 |
 | `Rotate{operators, threshold}` | current M-of-N **and** new M-of-N, even when paused | `operators`, `threshold` | 0 |
-| `SetKyc{kyc_mint, kyc_redeem, kyc_stake}` | M-of-N | the three switches | 0 |
+| `SetKyc{kyc_mint, kyc_redeem, kyc_stake, eligibility_policy}` | M-of-N; policy must be 28 bytes | the three switches and `eligibility_policy` | 0 |
 
 Every transition: exactly one token-bearing State input and output; the next
 datum must **equal** the expected datum (`s0` with only the permitted fields
@@ -111,10 +111,13 @@ a datum flip.)
 **Switches.** `kyc_mint` gates `Mint`, `kyc_redeem` gates `Burn`, and
 `kyc_stake` is stored for the sTessera vault (not written yet). Each is off
 or on independently; an off switch ignores `holder`. `SetKyc` (committee
-M-of-N) changes only the three switches and `epoch + 1`. `eligibility_policy`
-is fixed at genesis, where it must be a 28-byte policy id. Genesis sets every
-switch explicitly; on Preprod all are off. Off is not forced on-chain: a
-launch that needs KYC from the first block may start with switches on.
+M-of-N) sets the three switches and `eligibility_policy` (which must be a
+28-byte policy id) and changes nothing else but `epoch + 1`. Repointing
+`eligibility_policy` is how a Midnight-issued credential policy plugs in
+later without a new reserve script. Genesis sets every switch and the policy
+explicitly (the policy must be 28 bytes there too); on Preprod all switches
+are off. Off is not forced on-chain: a launch that needs KYC from the first
+block may start with switches on.
 
 **Launch implementation: the eligibility registry.** `validators/eligibility.ak`
 is both the token's minting policy and the address that holds the tokens. It
@@ -141,6 +144,19 @@ With `kyc_redeem` on, `Burn` is no longer purely bearer: the committee can
 block a holder's redemption by revoking their token. That is the compliance
 intent, and it overrides the "burn is never gated by the committee" property
 from §1 while the switch is on.
+
+**Design notes for 2.6 (redemption queue).**
+* (a) *Eligibility is checked when a redemption request is created, not at
+  settlement.* The holder signs and proves eligibility once, when locking
+  TSRA into a Request UTxO; settlement then needs no holder signature and
+  stays permissionless (anyone may submit it; funds go only to `owner`).
+  This resolves the conflict between `eligible`'s holder signature and
+  permissionless settlement.
+* (b) *A revoked holder keeps a grace period to redeem TSRA they already
+  hold* — to be confirmed with counsel. Without it, revoking a token with
+  `kyc_redeem` on would strand that holder's TSRA. The mechanism (e.g. a
+  revocation timestamp the queue honours for a window) is open until the
+  counsel answer; it is not implemented here.
 
 ## 2. TSRA policy
 The reserve script **is** the TSRA policy (policy id = script hash, token name
@@ -243,3 +259,12 @@ are equivalent.
 Three survivors in the first run were real test gaps and now have tests:
 two of one name minted into two separate registry outputs, and the SetKyc
 mint and redeem switches each taken from the datum instead of the redeemer.
+
+2.3 review: `SetKyc` may now also repoint `eligibility_policy`. 7 mutants on
+that guard (length check dropped, `>= 28`, `<= 28`, policy taken from the
+datum, policy never changes, committee not required, next datum unchecked),
+all killed — by `set_kyc_with_an_invalid_policy_id_is_rejected`,
+`set_kyc_with_a_29_byte_policy_id_is_rejected`,
+`set_kyc_datum_policy_must_match_the_redeemer`,
+`set_kyc_changing_the_policy_with_the_committee_is_accepted`,
+`set_kyc_changing_the_policy_without_the_committee_is_rejected` and others.
