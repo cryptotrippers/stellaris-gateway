@@ -11,6 +11,7 @@ import { publicSupabase } from "./asset-vaults.shared";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertRole } from "./asset-vaults.shared";
 import { genuineOfferingAt } from "./offering-chain";
+import { offeringRegistrationSchema, registerOpeningOnce } from "./offering-registration.shared";
 import {
   OFFERING_COLS,
   type FractionHolder,
@@ -111,27 +112,7 @@ export const readFractionHolders = createServerFn({ method: "GET" })
 /** Register an offering that has just been opened on chain. Admin only. */
 export const registerOffering = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(
-    (input: {
-      assetId: string;
-      network: string;
-      vaultVersion: number;
-      scriptHash: string;
-      scriptAddress: string;
-      fractionPolicyId: string;
-      fractionAssetNameHex: string;
-      depositAssetId?: string | null;
-      totalFractions: number;
-      pricePerFraction: number;
-      mintFeeBps: number;
-      redeemFeeBps: number;
-      issuerName: string;
-      treasuryAddress?: string | null;
-      operatorKeyHashes: string[];
-      signatureThreshold: number;
-      bootstrapTxHash: string;
-    }) => input,
-  )
+  .inputValidator((input) => offeringRegistrationSchema.parse(input))
   .handler(async ({ data, context }): Promise<OfferingRow> => {
     await assertRole(context.supabase, context.userId, "admin");
     if (!/^[0-9a-f]{64}$/.test(data.bootstrapTxHash)) throw new Error("Bad transaction hash.");
@@ -166,7 +147,18 @@ export const registerOffering = createServerFn({ method: "POST" })
     if (mismatches.length) {
       throw new Error(`The chain disagrees with the form on: ${mismatches.join(", ")}. Not listed.`);
     }
-    const { data: row, error } = await context.supabase
+    return registerOpeningOnce(data, async () => {
+      const { data: existing, error } = await context.supabase
+        .from("offerings")
+        .select(OFFERING_COLS)
+        .eq("asset_id", data.assetId)
+        .eq("network", data.network)
+        .eq("vault_version", data.vaultVersion)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return existing as unknown as OfferingRow | null;
+    }, async () => {
+      const { data: row, error } = await context.supabase
       .from("offerings")
       .insert({
         asset_id: data.assetId,
@@ -191,5 +183,6 @@ export const registerOffering = createServerFn({ method: "POST" })
       .select(OFFERING_COLS)
       .single();
     if (error) throw new Error(error.message);
-    return row as unknown as OfferingRow;
+      return row as unknown as OfferingRow;
+    });
   });

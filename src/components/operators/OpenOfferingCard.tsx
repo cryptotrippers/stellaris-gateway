@@ -1,18 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { Button } from "@/components/ui/button";
 import { AlertTriangle, CheckCircle2, Layers, Loader2 } from "lucide-react";
 import { TxConfirmationBadge } from "@/components/vault/TxConfirmationBadge";
 import { CopyRow } from "@/components/ui/CopyRow";
 import { listDepositAssets } from "@/lib/deposit-assets.functions";
 import { depositAssetUnit, isAdaAsset, type DepositAsset } from "@/lib/deposit-assets.shared";
 import { getConnectedOperatorKeyHash } from "@/lib/vault-bootstrap";
-import { unitOf } from "@/lib/fraction-vault";
+import { FRACTION_VAULT_VERSION, unitOf } from "@/lib/fraction-vault";
 import { openOffering } from "@/lib/offering-tx";
 import { registerOffering } from "@/lib/offerings.functions";
 import { recordFractionEvent } from "@/lib/fraction-events.functions";
 import { APP_NETWORK } from "@/lib/network";
 import { cardanoscanAddress, short } from "@/lib/chain-format";
 import type { VaultSeed } from "@/lib/vault-instances";
+import {
+  PENDING_OFFERING_KEY, pendingOfferingSchema, priceInBaseUnits, registryInteger,
+  retryOfferingRegistration, type PendingOffering,
+} from "@/lib/offering-registration.shared";
 
 interface AssetOption {
   id: string;
@@ -56,6 +62,11 @@ export function OpenOfferingCard({
   const [keyHash, setKeyHash] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState<PendingOffering | null>(null);
+  const [restored, setRestored] = useState(false);
+  const [storageWarning, setStorageWarning] = useState<string | null>(null);
+  const register = useServerFn(registerOffering);
+  const record = useServerFn(recordFractionEvent);
   const [result, setResult] = useState<{
     txHash: string;
     address: string;
@@ -67,13 +78,24 @@ export function OpenOfferingCard({
     if (!denomId && denominations[0]) setDenomId(denominations[0].id);
   }, [denominations, denomId]);
 
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(PENDING_OFFERING_KEY);
+      if (saved) {
+        const opening = pendingOfferingSchema.parse(JSON.parse(saved));
+        setPending(opening);
+        setAssetId(opening.payload.assetId);
+      }
+    } catch {
+      setStorageWarning("Saved opening details could not be read. Keep this page open after signing so you can retry listing.");
+    } finally {
+      setRestored(true);
+    }
+  }, []);
+
   const denom: DepositAsset | null = denominations.find((d) => d.id === denomId) ?? null;
 
-  const priceBase = (() => {
-    const n = Number(priceAda);
-    if (!Number.isFinite(n) || n <= 0) return 0n;
-    return BigInt(Math.round(n * 10 ** (denom?.decimals ?? 6)));
-  })();
+  const priceBase = priceInBaseUnits(priceAda, denom?.decimals ?? 6);
   const fractions = (() => {
     try {
       return BigInt(totalFractions || "0");
@@ -92,12 +114,41 @@ export function OpenOfferingCard({
     }
   }
 
+  async function finishListing(opening: PendingOffering) {
+    await retryOfferingRegistration(opening, (payload) => register({ data: payload }), async () => {
+      setError("Submitted — waiting for Preprod to confirm before listing…");
+      await new Promise((resolve) => setTimeout(resolve, 10_000));
+    });
+    setError(null);
+    record({ data: { assetId: opening.payload.assetId, txHash: opening.payload.bootstrapTxHash } }).catch(() => {});
+    setResult({
+      txHash: opening.payload.bootstrapTxHash,
+      address: opening.payload.scriptAddress,
+      fractionUnit: opening.payload.fractionPolicyId + opening.payload.fractionAssetNameHex,
+      seed: opening.seed,
+    });
+    setPending(null);
+    try { localStorage.removeItem(PENDING_OFFERING_KEY); } catch { /* In-memory result remains available. */ }
+    onDone?.();
+  }
+
+  async function retryListing() {
+    if (!pending || disabled || busy) return;
+    setBusy(true);
+    setError(null);
+    try { await finishListing(pending); }
+    catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    finally { setBusy(false); }
+  }
+
   async function submit() {
-    if (!denom || !keyHash) return;
+    if (!denom || !keyHash || pending || result || !restored || busy || disabled) return;
     setBusy(true);
     setError(null);
     setResult(null);
     try {
+      const exactFractions = registryInteger(fractions);
+      const exactPrice = registryInteger(priceBase);
       const unit = unitOf(denom);
       const opened = await openOffering({
         assetId,
@@ -115,14 +166,14 @@ export function OpenOfferingCard({
       const payload = {
         assetId,
         network: APP_NETWORK,
-        vaultVersion: 1,
+        vaultVersion: Number(FRACTION_VAULT_VERSION),
         scriptHash: opened.scriptHash,
         scriptAddress: opened.address,
         fractionPolicyId: opened.policyId,
         fractionAssetNameHex: opened.assetNameHex,
         depositAssetId: denom.id,
-        totalFractions: Number(fractions),
-        pricePerFraction: Number(priceBase),
+        totalFractions: exactFractions,
+        pricePerFraction: exactPrice,
         mintFeeBps: Number(mintFeeBps),
         redeemFeeBps: Number(redeemFeeBps),
         issuerName: issuerName.trim() || "Stellaris",
@@ -131,30 +182,12 @@ export function OpenOfferingCard({
         signatureThreshold: 1,
         bootstrapTxHash: opened.txHash,
       };
-      // List only once the chain confirms the opening (up to ~5 minutes).
-      for (let i = 0; ; i++) {
-        try {
-          await registerOffering({ data: payload });
-          break;
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
-          if (!msg.includes("NOT_CONFIRMED") || i >= 30) throw e;
-          setError("Submitted — waiting for Preprod to confirm before listing…");
-          await new Promise((r) => setTimeout(r, 10_000));
-        }
-      }
-      setError(null);
-
-      // Best effort: the chain record is written as soon as the tx is visible.
-      recordFractionEvent({ data: { assetId, txHash: opened.txHash } }).catch(() => {});
-
-      setResult({
-        txHash: opened.txHash,
-        address: opened.address,
-        fractionUnit: opened.fractionUnit,
-        seed: opened.seed,
-      });
-      onDone?.();
+      // Keep the original transaction before the first network-dependent listing call.
+      const opening: PendingOffering = { payload, seed: opened.seed };
+      setPending(opening);
+      try { localStorage.setItem(PENDING_OFFERING_KEY, JSON.stringify(opening)); }
+      catch { setStorageWarning("Opening details could not be saved on this device. Keep this page open until listing succeeds."); }
+      await finishListing(opening);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -165,11 +198,15 @@ export function OpenOfferingCard({
   const ready =
     !disabled &&
     !busy &&
+    restored && !pending && !result &&
     Boolean(assetId) &&
     Boolean(denom) &&
     Boolean(keyHash) &&
     fractions > 0n &&
-    priceBase > 0n;
+    priceBase > 0n &&
+    fractions <= BigInt(Number.MAX_SAFE_INTEGER) &&
+    priceBase <= BigInt(Number.MAX_SAFE_INTEGER) &&
+    Number(mintFeeBps) <= 500 && Number(redeemFeeBps) <= 500;
 
   return (
     <section className="card-institutional mt-8 p-6">
@@ -271,14 +308,14 @@ export function OpenOfferingCard({
               placeholder="Not read yet"
               className="w-full rounded-md border border-border bg-background px-3 py-2 font-mono text-[11px] text-foreground"
             />
-            <button
+            <Button
               type="button"
               onClick={loadKey}
               disabled={disabled}
               className="shrink-0 rounded-md border border-border px-3 py-2 text-xs text-foreground disabled:opacity-50"
             >
               Read
-            </button>
+            </Button>
           </div>
         </Field>
       </div>
@@ -297,14 +334,31 @@ export function OpenOfferingCard({
         the asset.
       </p>
 
-      <button
+      <Button
         type="button"
         onClick={submit}
         disabled={!ready}
         className="mt-4 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
       >
         {busy && <Loader2 className="h-4 w-4 animate-spin" />} Open the offering on {APP_NETWORK}
-      </button>
+      </Button>
+
+      {storageWarning && <p className="mt-3 text-xs text-muted-foreground">{storageWarning}</p>}
+      {pending && (
+        <div className="mt-4 rounded-md border border-border p-4 text-xs">
+          <p className="font-semibold text-foreground">Opening submitted — listing pending</p>
+          <p className="mt-2 text-muted-foreground">Retry listing this same transaction. No new payment or wallet signature is required.</p>
+          <div className="mt-3 grid gap-2">
+            <CopyRow label="Opening transaction" value={pending.payload.bootstrapTxHash} />
+            <CopyRow label="Offering address" value={pending.payload.scriptAddress} />
+            <CopyRow label="Seed" value={`${pending.seed.txHash}#${pending.seed.outputIndex}`} />
+          </div>
+          <Button className="mt-3" variant="outline" size="sm" onClick={retryListing} disabled={disabled || busy}>
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />} Retry listing
+          </Button>
+          <TxConfirmationBadge txHash={pending.payload.bootstrapTxHash} />
+        </div>
+      )}
 
       {error && (
         <p className="mt-3 flex items-start gap-2 text-sm text-destructive">
