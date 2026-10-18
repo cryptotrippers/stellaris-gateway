@@ -165,10 +165,13 @@ The reserve script **is** the TSRA policy (policy id = script hash, token name
 is spent in the same transaction; the `spend` handler enforces the exact TSRA
 quantity and refuses any other token name under the policy.
 
-## 3. sTSRA vault (design, Phase 2.4 — not implemented yet)
+## 3. sTSRA vault (implemented: `validators/stsra_vault.ak`, Phase 2.4)
 
-Status: **design checkpoint.** No validator code until the decisions in §3.12
-are confirmed. Items marked **[D-n]** are those decisions.
+Status: **implemented and tested** (Phase 2.4). The design below was
+approved with every recommended default in §3.12 (items marked **[D-n]**);
+§3.13 lists where the implementation adds to or departs from it. Datum
+types live in `lib/tessera/vault_state.ak`, the Reserve State lookup in
+`lib/tessera/reserve_ref.ak`.
 
 ### 3.1 Topology
 
@@ -251,7 +254,7 @@ Like the reserve datum, `VaultState` is provisional and will move to
 | `Claim` | Ticket (State as **reference input**) | anyone; pays only `owner` | after `claim_after`: pay `owner` `v · loss_index_now / index_at_request`, burn the marker, burn the excess TSRA |
 | `UnlockLong` | State + Position | anyone; pays only `owner` | after `unlock_at`: pay `owner` `redeem_value(shares, L)`; burn the marker |
 | `ReportYield{gross}` | State | committee M-of-N | §3.5 |
-| `SetParams{…}` | State | committee M-of-N | change weight / cooldown / lock / protocol bps within the hard limits; nothing else |
+| `SetBounds{…}` | State | committee M-of-N | change weight / cooldown / lock / protocol bps within the hard limits; nothing else |
 | `ReportLoss{…}` | State | committee M-of-N | **2.5** — §3.8 |
 
 Every State transition: exactly one genuine State in and out, exact next
@@ -389,7 +392,7 @@ reserve that `kyc_redeem` does not gate. Flagged now so 2.5 plans it.
 | sTSRA transfer | nothing of the vault | none |
 | Claim | Ticket; State as reference input | none (unless a loss excess must be burned) |
 | StakeShort / StakeLong / RequestUnstake / UnlockLong | the single State | **serialised: one per State update** |
-| ReportYield / SetParams | the single State | rare, committee-driven |
+| ReportYield / SetBounds | the single State | rare, committee-driven |
 | every action that needs the committee or `kyc_stake` | the Reserve State as reference input | **stale reference**: the Reserve State changes on every TSRA mint and burn, so a vault tx built against an old one fails and must be rebuilt **[D-6]** |
 
 Mitigations in 2.4: Claims and transfers never touch the State; Tickets
@@ -454,7 +457,7 @@ rejected; the conservation identity `y_S + y_L + cut = gross` as a
 property-style test over a table of values; ReportYield changing shares or
 params rejected.
 
-*SetParams:* committee required; **weighting above cap** (> 1.5x) rejected;
+*SetBounds:* committee required; **weighting above cap** (> 1.5x) rejected;
 **fee above cap** (> 20%) rejected; cooldown < 7 d or > 14 d rejected; lock
 > 90 d rejected; touching balances rejected.
 
@@ -490,6 +493,42 @@ Then a mutation pass over every guard, as in §6.
   gated (sTSRA is transferable; redemption gating lives on the reserve's
   `Burn`).
 * 2.5 needs a reserve loss-burn path not gated by `kyc_redeem` (§3.8).
+
+### 3.13 Implementation notes (deviations from the design above)
+
+* **One Ticket per Claim, one Position per UnlockLong.** Both pay an owner,
+  so two of them in one transaction could be satisfied by a single payout
+  output (double satisfaction). A Claim may spend no other vault UTxO; an
+  UnlockLong spends exactly the State and one Position.
+* **Fee payments are summed per address** (`paid_tsra`), and genesis requires
+  `first_loss_addr != treasury_addr` and neither at the vault, so one output
+  cannot count towards both fee checks.
+* **The Claim payout is capped at the escrowed value** (`min(v, v · index_now
+  / index_at_request)`). The index can only fall, so the cap never binds
+  today; it stops a future index bug from paying out more than the Ticket
+  holds.
+* **`StakeLong` names the Position's `owner`** in the redeemer, and the
+  Position datum must match it; `RequestUnstake` does the same for the
+  Ticket.
+* **`unlock_at` and `claim_after` are exact** (`== hi + lock`,
+  `== hi + cooldown`): a builder sets the upper bound, so the contract fixes
+  the earliest exit to it rather than accepting any later time.
+* **Time windows are not capped.** A staker may choose a far-future upper
+  bound; that only delays their own exit.
+* **`SetParams` is named `SetBounds`** (as approved).
+
+### 3.14 Open items
+
+1. **For 2.5 — loss-burn path on the reserve.** A vault-driven TSRA burn
+   (ReportLoss, or a Claim's excess after a loss) has no holder signature,
+   so with `kyc_redeem` on the reserve's `Burn` refuses it. 2.5 must add a
+   committee-signed loss-burn path on the reserve that `kyc_redeem` does not
+   gate.
+2. **Before 2.6 — split the Reserve State?** Decide whether to split it into
+   a rarely-changing *config* UTxO (committee, switches, eligibility policy),
+   read by the vault and the queue, and a hot *supply* UTxO (minted supply,
+   attested reserve). Today every TSRA mint or burn invalidates in-flight
+   vault transactions that reference the Reserve State (§3.9, D-6).
 
 ## 4. Redemption queue
 Instant tier up to the buffer; Request UTxOs bucketed per day; payable after
