@@ -257,6 +257,14 @@ $rules = @(
     @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'threshold_met(operators, threshold, tx.extra_signatories)'; Label = 'tessera rotation needs the new committee too (2.2)' }
     @{ File = 'contracts/tessera/lib/tessera/rules.ak'; Pattern = 'min_threshold: Int = 2'; Label = 'tessera committee threshold >= 2' }
     @{ File = 'contracts/tessera/lib/tessera/rules.ak'; Pattern = 'max_mint_cap: Int = 1_000_000_000_000_000'; Label = 'tessera mint cap hard max 1B TSRA' }
+    @{ File = 'contracts/tessera/lib/tessera/eligibility.ak'; Pattern = 'list.has(tx.extra_signatories, holder) && ('; Label = 'tessera eligible() needs the holder signature (2.3)' }
+    @{ File = 'contracts/tessera/lib/tessera/eligibility.ak'; Pattern = 'quantity_of(i.output.value, policy, holder) == 1'; Label = 'tessera eligible() needs exactly the holder token (2.3)' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'kyc_ok(s0.kyc_mint, tx, s0.eligibility_policy, holder)'; Label = 'tessera Mint gated by kyc_mint (2.3)' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'kyc_ok(s0.kyc_redeem, tx, s0.eligibility_policy, holder)'; Label = 'tessera Burn gated by kyc_redeem (2.3)' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'bytearray.length(eligibility_policy) == 28'; Label = 'tessera SetKyc policy must be a policy id (2.3)' }
+    @{ File = 'contracts/tessera/validators/eligibility.ak'; Pattern = 'committee_signed(tx, reserve),'; Label = 'tessera eligibility issue/revoke needs the reserve committee (2.3)' }
+    @{ File = 'contracts/tessera/validators/eligibility.ak'; Pattern = 'tokens_stay_in_registry(tx, policy_id)'; Label = 'tessera eligibility tokens stay in the registry (2.3)' }
+    @{ File = 'contracts/tessera/validators/eligibility.ak'; Pattern = 'quantity_of(tx.mint, policy, name) <= -q'; Label = 'tessera eligibility tokens leave the registry only by burning (2.3)' }
     @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = '!s0.paused,'; Label = 'tessera mint blocked while paused' }
 )
 $missingRules = @()

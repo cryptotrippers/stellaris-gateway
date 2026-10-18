@@ -4,8 +4,10 @@ Fill each section before the matching validator is written. Test vectors are
 listed in `DESIGN.md` §5.
 
 ## 1. Reserve State (implemented: `validators/reserve.ak`)
-Datum `ReserveState`: `minted_supply`, `attested_reserve`, `mint_cap`,
-`attestation_epoch`, `attested_at`, `epoch`, `operators`, `threshold`, `paused`.
+Datum `ReserveState` (`lib/tessera/reserve_state.ak`): `minted_supply`,
+`attested_reserve`, `mint_cap`, `attestation_epoch`, `attested_at`, `epoch`,
+`operators`, `threshold`, `paused`, and (Phase 2.3) the eligibility switches
+`kyc_mint`, `kyc_redeem`, `kyc_stake` plus `eligibility_policy` (§1a).
 
 **Authenticity.** The genuine State is the single UTxO carrying the one-shot
 state-thread token (asset name `state`, `lib/stellaris/thread.ak`, the same
@@ -44,12 +46,13 @@ committee is 3-of-5, a bootstrap parameter, not a validator constant.
 
 | Redeemer | Who | Effect on datum | TSRA mint delta |
 |---|---|---|---|
-| `Mint{qty}` | M-of-N, not paused | `minted_supply += qty` | `+qty` |
-| `Burn{qty}` | anyone, even when paused | `minted_supply -= qty` | `-qty` |
+| `Mint{qty, holder}` | M-of-N, not paused; `holder` eligible if `kyc_mint` | `minted_supply += qty` | `+qty` |
+| `Burn{qty, holder}` | anyone, even when paused; `holder` eligible if `kyc_redeem` | `minted_supply -= qty` | `-qty` |
 | `Attest{reserve}` | M-of-N | reserve, `attestation_epoch+1`, `attested_at = lower bound` | 0 |
 | `SetCap{mint_cap}` | M-of-N | `mint_cap` | 0 |
 | `SetPaused{paused}` | M-of-N | `paused` | 0 |
 | `Rotate{operators, threshold}` | current M-of-N **and** new M-of-N, even when paused | `operators`, `threshold` | 0 |
+| `SetKyc{kyc_mint, kyc_redeem, kyc_stake, eligibility_policy}` | M-of-N; policy must be 28 bytes | the three switches and `eligibility_policy` | 0 |
 
 Every transition: exactly one token-bearing State input and output; the next
 datum must **equal** the expected datum (`s0` with only the permitted fields
@@ -92,6 +95,68 @@ Known gaps:
   pending-rotation field in the (provisional) datum.
 * Every burn spends the single State UTxO, so burns serialise (the queue
   batches them).
+
+## 1a. Eligibility (Phase 2.3: `lib/tessera/eligibility.ak`, `validators/eligibility.ak`)
+
+**One check.** Every action that can be gated calls only
+`eligible(tx, policy, holder)`: it passes when `holder` (a payment key hash)
+signed the transaction **and** a reference input or spent input holds
+exactly one token of `policy` named `holder`. Keeping it to one function is
+what lets the launch allowlist be replaced later, without touching the vaults
+or the reserve's logic, by a **Midnight zero-knowledge credential**: only
+`lib/tessera/eligibility.ak` changes. (Any change there still moves the hash
+of every script that calls it, so a swap is a coordinated script upgrade, not
+a datum flip.)
+
+**Switches.** `kyc_mint` gates `Mint`, `kyc_redeem` gates `Burn`, and
+`kyc_stake` is stored for the sTessera vault (not written yet). Each is off
+or on independently; an off switch ignores `holder`. `SetKyc` (committee
+M-of-N) sets the three switches and `eligibility_policy` (which must be a
+28-byte policy id) and changes nothing else but `epoch + 1`. Repointing
+`eligibility_policy` is how a Midnight-issued credential policy plugs in
+later without a new reserve script. Genesis sets every switch and the policy
+explicitly (the policy must be 28 bytes there too); on Preprod all switches
+are off. Off is not forced on-chain: a launch that needs KYC from the first
+block may start with switches on.
+
+**Launch implementation: the eligibility registry.** `validators/eligibility.ak`
+is both the token's minting policy and the address that holds the tokens. It
+is parameterised by the reserve script hash, and reads the committee from the
+genuine Reserve State (the one reference input carrying the reserve's thread
+token at the reserve address), so a reserve `Rotate` carries over.
+
+* *Issue:* committee M-of-N; each minted name is a 28-byte key hash, minted
+  once per transaction; every output carrying a token is at the registry,
+  holding exactly ADA plus one token. Tokens never sit in a wallet, so they
+  cannot be transferred, and the committee can always revoke them.
+* *Revoke:* committee M-of-N spends the registry UTxO and burns its token.
+  Nothing at the registry can be spent without the committee, and a token
+  can only leave the registry by being burned.
+* *Uniqueness* is not enforced on-chain (a policy sees only its own
+  transaction): the committee is trusted not to double-issue. A duplicate is
+  harmless: `eligible` needs exactly one matching token in some input, and a
+  duplicate can be revoked like any other.
+
+**Who the check gates.** `eligible` proves an allowlisted key signed the
+transaction. It does not restrict where minted TSRA goes, and TSRA itself
+stays freely transferable (native tokens cannot be frozen; DESIGN.md §2).
+With `kyc_redeem` on, `Burn` is no longer purely bearer: the committee can
+block a holder's redemption by revoking their token. That is the compliance
+intent, and it overrides the "burn is never gated by the committee" property
+from §1 while the switch is on.
+
+**Design notes for 2.6 (redemption queue).**
+* (a) *Eligibility is checked when a redemption request is created, not at
+  settlement.* The holder signs and proves eligibility once, when locking
+  TSRA into a Request UTxO; settlement then needs no holder signature and
+  stays permissionless (anyone may submit it; funds go only to `owner`).
+  This resolves the conflict between `eligible`'s holder signature and
+  permissionless settlement.
+* (b) *A revoked holder keeps a grace period to redeem TSRA they already
+  hold* — to be confirmed with counsel. Without it, revoking a token with
+  `kyc_redeem` on would strand that holder's TSRA. The mechanism (e.g. a
+  revocation timestamp the queue honours for a window) is open until the
+  counsel answer; it is not implemented here.
 
 ## 2. TSRA policy
 The reserve script **is** the TSRA policy (policy id = script hash, token name
@@ -162,3 +227,44 @@ Notes:
 * `burn_with_a_negative_qty_cannot_mint` was the most serious Phase 1 gap:
   Burn needs no signature, so without `qty > 0` a negative burn is an
   unsigned, uncapped mint. The guard was present; nothing tested it.
+
+### Phase 2.3 (eligibility)
+
+36 mutants over `lib/tessera/eligibility.ak` (6), `validators/eligibility.ak`
+(16) and the reserve's KYC guards (14). All are killed except three, which
+are equivalent.
+
+| Guard | Mutants | Killed by (examples) |
+|---|---|---|
+| `eligible()` | holder signature not required; reference / spent inputs not searched; token count `>= 1`; token name ignored; token policy ignored | `token_without_the_holders_signature_is_not_eligible`, `another_holders_token_is_not_eligible`, `exactly_one_token_is_required`, `a_token_under_another_policy_is_not_eligible`, `signer_with_a_spent_token_is_eligible` |
+| Issue | committee not required; amounts unchecked; name need not be a key hash; more than one per name; empty mint | `issuing_needs_the_committee`, `issuing_by_the_holder_alone_is_rejected`, `issuing_a_name_that_is_not_a_key_hash_is_rejected`, `issuing_two_of_one_name_into_separate_outputs_is_rejected`, `an_empty_mint_does_not_pass` |
+| Registry | tokens may leave; address unchecked; extra value allowed; several names per output | `issuing_into_a_wallet_is_rejected`, `a_registry_output_may_not_carry_extra_tokens`, `two_holders_tokens_may_not_share_a_registry_output` |
+| Committee source | planted Reserve State accepted; reserve address unchecked | `issuing_against_a_planted_reserve_state_is_rejected`, `issuing_against_a_reserve_state_off_the_reserve_address_is_rejected`, `issuing_follows_a_rotated_committee` |
+| Revoke | committee not required; burn not required | `revoking_needs_the_committee`, `the_holder_cannot_spend_their_registry_token`, `junk_at_the_registry_needs_the_committee_to_sweep`, `a_registry_token_cannot_be_moved_without_burning` |
+| Reserve KYC gates | Mint / Burn gate dropped; gate always open; gate ignores the switch; Mint reads the redeem switch; Burn reads the mint switch | `kyc_mint_on_an_ineligible_mint_is_rejected`, `kyc_redeem_on_an_ineligible_burn_is_rejected`, `kyc_mint_off_minting_needs_no_eligibility`, `kyc_redeem_alone_does_not_gate_minting`, `kyc_mint_alone_does_not_gate_burning` |
+| SetKyc | committee not required; may mint; next datum unchecked; each switch taken from the datum; epoch not bumped | `set_kyc_without_the_committee_is_rejected`, `set_kyc_cannot_mint`, `set_kyc_cannot_change_the_eligibility_policy`, `set_kyc_datum_mint_switch_must_match_the_redeemer`, `set_kyc_datum_redeem_switch_must_match_the_redeemer`, `set_kyc_datum_stake_switch_must_match_the_redeemer`, `set_kyc_must_bump_the_epoch` |
+| Genesis | eligibility policy unchecked | `genesis_with_an_eligibility_policy_that_is_not_a_policy_id_is_rejected` |
+
+**Equivalent survivors (3).**
+* *Issue: zero quantity allowed* (`qty < 0` → `qty <= 0`). The ledger never
+  carries a zero-quantity entry in a transaction's mint field, so `qty == 0`
+  cannot reach the policy.
+* *Registry: any count per output* (`[Pair(name, 1)]` → `[Pair(name, _)]`).
+  The exact-value check on the same output (`without_lovelace(value) ==
+  from_asset(policy, name, 1)`) already requires the count to be 1.
+* *Committee: several Reserve States accepted* (`[s]` → `[s, ..]`). Only one
+  UTxO can ever hold the reserve's thread token (one-shot mint, never
+  burned), so at most one reference input can match.
+
+Three survivors in the first run were real test gaps and now have tests:
+two of one name minted into two separate registry outputs, and the SetKyc
+mint and redeem switches each taken from the datum instead of the redeemer.
+
+2.3 review: `SetKyc` may now also repoint `eligibility_policy`. 7 mutants on
+that guard (length check dropped, `>= 28`, `<= 28`, policy taken from the
+datum, policy never changes, committee not required, next datum unchecked),
+all killed — by `set_kyc_with_an_invalid_policy_id_is_rejected`,
+`set_kyc_with_a_29_byte_policy_id_is_rejected`,
+`set_kyc_datum_policy_must_match_the_redeemer`,
+`set_kyc_changing_the_policy_with_the_committee_is_accepted`,
+`set_kyc_changing_the_policy_without_the_committee_is_rejected` and others.
