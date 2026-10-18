@@ -202,14 +202,23 @@ const tesseraValidators = existsSync(TESSERA_PLUTUS_PATH)
 if (tesseraValidators) {
   const tesseraPin = readPins(TESSERA_TS_PATH);
   // Phase 2.2: the State NFT is minted by reserve.ak itself (thread pattern);
-  // state_nft.ak is retired, so reserve is the only Tessera blueprint.
-  targets.push({
-    label: "tessera reserve (State + TSRA + thread policy)",
-    onChain: findIn(tesseraValidators, "reserve.reserve"),
-    hash: tesseraPin("TESSERA_RESERVE_BLUEPRINT_HASH"),
-    cbor: "__BLUEPRINT_IMPORT__",
-    file: "src/lib/tessera-blueprint.ts",
-  });
+  // state_nft.ak is retired. Phase 2.3 adds the eligibility validator.
+  targets.push(
+    {
+      label: "tessera reserve (State + TSRA + thread policy)",
+      onChain: findIn(tesseraValidators, "reserve.reserve"),
+      hash: tesseraPin("TESSERA_RESERVE_BLUEPRINT_HASH"),
+      cbor: "__BLUEPRINT_IMPORT__",
+      file: "src/lib/tessera-blueprint.ts",
+    },
+    {
+      label: "tessera eligibility (allowlist policy + registry)",
+      onChain: findIn(tesseraValidators, "eligibility.eligibility", ".mint"),
+      hash: tesseraPin("TESSERA_ELIGIBILITY_BLUEPRINT_HASH"),
+      cbor: "__BLUEPRINT_IMPORT__",
+      file: "src/lib/tessera-blueprint.ts",
+    },
+  );
 } else {
   console.log(
     "[verify-vault-hash] contracts/tessera/plutus.json not present — skipping Tessera pins.",

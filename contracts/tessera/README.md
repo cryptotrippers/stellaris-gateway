@@ -13,7 +13,10 @@ mainnet stays gated by `NETWORK.md`.
 aiken.toml                 Aiken project (plutus v3, stdlib v2.2.0)
 lib/tessera/exchange.ak    Share-price math for sTessera (ported, renamed)
 lib/tessera/rules.ak       Reserve-gate rules (caps, freshness, windows) + tests
+lib/tessera/reserve_state.ak  ReserveState datum + committee rules (shared)
+lib/tessera/eligibility.ak The one eligibility check, eligible(tx, policy, holder)
 validators/reserve.ak      Reserve State + TSRA mint policy (one script)
+validators/eligibility.ak  Eligibility-token policy + registry (allowlist)
 lib/stellaris/thread.ak    State-thread token helpers (verbatim copy of the vaults' module)
 DESIGN.md                  Design draft + decisions
 SPEC.md                    State transitions and invariants (to be filled)
@@ -24,6 +27,7 @@ SPEC.md                    State transitions and invariants (to be filled)
 | File | Role |
 |---|---|
 | `validators/reserve.ak` | **Written and tested** (`aiken check`, mutation-tested, SPEC.md §6). Reserve State + TSRA policy |
+| `validators/eligibility.ak` | **Written and tested** (Phase 2.3, SPEC.md §1a). Allowlist tokens, committee-issued and revocable |
 | `validators/stessera_vault.ak` | Yield vault; `ReportYield` requires delivered funds |
 | `validators/redeem_queue.ak` | Request UTxOs, daily buckets, permissionless settlement |
 

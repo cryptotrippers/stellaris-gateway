@@ -24,6 +24,10 @@
 ////   * Attest / SetCap / SetPaused: committee M-of-N.
 ////   * Rotate: the current committee M-of-N AND the new committee M-of-N;
 ////     only `operators`, `threshold` and `epoch` change.
+////   * Eligibility (Phase 2.3): when `kyc_mint` / `kyc_redeem` is on, Mint /
+////     Burn also need `tessera/eligibility.eligible` for the redeemer's
+////     `holder`. SetKyc (committee M-of-N) flips the switches and nothing
+////     else. `kyc_stake` is stored here for the sTessera vault.
 ////   * Every transition: exactly one token-bearing State on both sides (the
 ////     V-01 lesson), the next datum equals the expected datum EXACTLY (so no
 ////     field can change unless that redeemer says it may), epoch +1, the
@@ -37,43 +41,32 @@
 use aiken/collection/dict
 use aiken/collection/list
 use aiken/interval.{Finite}
+use aiken/primitive/bytearray
 use cardano/address.{Address, Script}
 use cardano/assets.{PolicyId, quantity_of}
 use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Transaction,
 }
 use stellaris/thread.{one_shot_mint, thread_name, thread_value}
+use tessera/eligibility.{eligible}
+use tessera/reserve_state.{ReserveState, operators_valid, threshold_met}
 use tessera/rules
 
 // ---------------------------------------------------------------- datum
 
-/// PROVISIONAL until counsel answers (SPEC.md §1): the committee model, the
-/// attestation format and any on-chain reserve asset may still change.
-pub type ReserveState {
-  /// TSRA currently in existence (1e-6 TSRA units).
-  minted_supply: Int,
-  /// Reserve the committee last attested to, in the same units.
-  attested_reserve: Int,
-  /// Committee-set ceiling on `minted_supply`, at most `rules.max_mint_cap`.
-  mint_cap: Int,
-  /// Number of attestations recorded so far (0 at genesis).
-  attestation_epoch: Int,
-  /// POSIX ms of the last attestation (genesis: the bootstrap tx's lower bound).
-  attested_at: Int,
-  /// Monotonic replay counter: exactly one State transition per tx.
-  epoch: Int,
-  operators: List<ByteArray>,
-  threshold: Int,
-  paused: Bool,
-}
+// `ReserveState` (PROVISIONAL) and the committee rules live in
+// `lib/tessera/reserve_state.ak`, shared with `validators/eligibility.ak`.
 
+/// `holder` on Mint / Burn is the party whose eligibility is checked when the
+/// matching KYC switch is on; it is ignored while the switch is off.
 pub type ReserveRedeemer {
-  Mint { qty: Int }
-  Burn { qty: Int }
+  Mint { qty: Int, holder: ByteArray }
+  Burn { qty: Int, holder: ByteArray }
   Attest { reserve: Int }
   SetCap { mint_cap: Int }
   SetPaused { paused: Bool }
   Rotate { operators: List<ByteArray>, threshold: Int }
+  SetKyc { kyc_mint: Bool, kyc_redeem: Bool, kyc_stake: Bool }
 }
 
 // ---------------------------------------------------------------- helpers
@@ -143,33 +136,22 @@ fn sole_state(
   }
 }
 
-/// At least `threshold` distinct members of `operators` signed the tx.
-fn threshold_met(
-  operators: List<ByteArray>,
-  threshold: Int,
-  signatories: List<ByteArray>,
-) -> Bool {
-  let signers =
-    operators
-      |> list.filter(fn(op) { list.has(signatories, op) })
-      |> list.unique
-  list.length(signers) >= threshold
-}
-
-/// A usable committee: no duplicate keys, and `rules.min_threshold <=
-/// threshold <= size` (so it is never empty and never a single key).
-fn operators_valid(operators: List<ByteArray>, threshold: Int) -> Bool {
-  let n = list.length(operators)
-  threshold >= rules.min_threshold && threshold <= n && list.length(
-    list.unique(operators),
-  ) == n
-}
-
 /// The State output holds exactly ADA plus one thread token — nothing else,
 /// not even TSRA (same policy), so nobody can attach junk tokens to inflate
 /// min-ADA and strand funds.
 fn state_value_ok(out: Output, policy: PolicyId) -> Bool {
   assets.without_lovelace(out.value) == thread_value(policy)
+}
+
+/// An action's eligibility gate: open while its switch is off, otherwise the
+/// one eligibility check (`tessera/eligibility.eligible`) for `holder`.
+fn kyc_ok(
+  switch_on: Bool,
+  tx: Transaction,
+  policy: PolicyId,
+  holder: ByteArray,
+) -> Bool {
+  !switch_on || eligible(tx, policy, holder)
 }
 
 /// (lower, upper) finite validity bounds, if both exist.
@@ -219,6 +201,7 @@ fn genesis_ok(s: ReserveState, lo: Int, hi: Int) -> Bool {
     s.attested_at == lo,
     rules.window_ok(lo, hi, 0),
     operators_valid(s.operators, s.threshold),
+    bytearray.length(s.eligibility_policy) == 28,
   }
 }
 
@@ -277,12 +260,13 @@ validator reserve(seed: OutputReference) {
     let signed = threshold_met(s0.operators, s0.threshold, tx.extra_signatories)
 
     when redeemer is {
-      Mint { qty } -> {
+      Mint { qty, holder } -> {
         expect Some((_lo, hi)) = finite_bounds(tx)
         and {
           structural,
           !s0.paused,
           signed,
+          kyc_ok(s0.kyc_mint, tx, s0.eligibility_policy, holder),
           rules.mint_allowed(
             s0.minted_supply,
             qty,
@@ -299,10 +283,12 @@ validator reserve(seed: OutputReference) {
         }
       }
 
-      // Bearer: no signature, and allowed while paused.
-      Burn { qty } ->
+      // Bearer: no committee signature, and allowed while paused. With
+      // `kyc_redeem` on, the burner must pass the eligibility check.
+      Burn { qty, holder } ->
         and {
           structural,
+          kyc_ok(s0.kyc_redeem, tx, s0.eligibility_policy, holder),
           qty > 0,
           qty <= s0.minted_supply,
           delta == -qty,
@@ -350,6 +336,21 @@ validator reserve(seed: OutputReference) {
           signed,
           delta == 0,
           s1 == ReserveState { ..s0, paused: paused, epoch: s0.epoch + 1 },
+        }
+
+      // KYC switches: committee only, nothing else changes.
+      SetKyc { kyc_mint, kyc_redeem, kyc_stake } ->
+        and {
+          structural,
+          signed,
+          delta == 0,
+          s1 == ReserveState {
+            ..s0,
+            kyc_mint: kyc_mint,
+            kyc_redeem: kyc_redeem,
+            kyc_stake: kyc_stake,
+            epoch: s0.epoch + 1,
+          },
         }
 
       // Committee rotation. The current committee authorises it; the new
@@ -423,6 +424,13 @@ const t_op5: ByteArray =
 
 const t_attested_at: Int = 1_000_000
 
+/// Eligibility policy the fixture State points at, and a holder key hash.
+const t_elig: ByteArray =
+  #"77777777777777777777777777777777777777777777777777777777"
+
+const t_holder: ByteArray =
+  #"a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+
 fn t_state(minted: Int, reserve: Int, cap: Int) -> ReserveState {
   ReserveState {
     minted_supply: minted,
@@ -434,6 +442,10 @@ fn t_state(minted: Int, reserve: Int, cap: Int) -> ReserveState {
     operators: [t_op1, t_op2],
     threshold: 2,
     paused: False,
+    kyc_mint: False,
+    kyc_redeem: False,
+    kyc_stake: False,
+    eligibility_policy: t_elig,
   }
 }
 
@@ -503,19 +515,19 @@ fn next(s: ReserveState) -> ReserveState {
 test mint_within_reserve_and_cap_is_accepted() {
   let s0 = t_state(0, 100, 1_000)
   let s1 = ReserveState { ..next(s0), minted_supply: 100 }
-  reserve.spend(t_seed(), Some(s0), Mint { qty: 100 }, ref0(), base_tx(s0, s1, 100))
+  reserve.spend(t_seed(), Some(s0), Mint { qty: 100, holder: t_holder }, ref0(), base_tx(s0, s1, 100))
 }
 
 test mint_above_attested_reserve_is_rejected() {
   let s0 = t_state(0, 100, 1_000)
   let s1 = ReserveState { ..next(s0), minted_supply: 101 }
-  !reserve.spend(t_seed(), Some(s0), Mint { qty: 101 }, ref0(), base_tx(s0, s1, 101))
+  !reserve.spend(t_seed(), Some(s0), Mint { qty: 101, holder: t_holder }, ref0(), base_tx(s0, s1, 101))
 }
 
 test mint_above_cap_is_rejected() {
   let s0 = t_state(0, 1_000, 100)
   let s1 = ReserveState { ..next(s0), minted_supply: 101 }
-  !reserve.spend(t_seed(), Some(s0), Mint { qty: 101 }, ref0(), base_tx(s0, s1, 101))
+  !reserve.spend(t_seed(), Some(s0), Mint { qty: 101, holder: t_holder }, ref0(), base_tx(s0, s1, 101))
 }
 
 test mint_with_stale_attestation_is_rejected() {
@@ -527,7 +539,7 @@ test mint_with_stale_attestation_is_rejected() {
       ..base_tx(s0, s1, 10),
       validity_range: interval.between(late - 1_000, late),
     }
-  !reserve.spend(t_seed(), Some(s0), Mint { qty: 10 }, ref0(), tx)
+  !reserve.spend(t_seed(), Some(s0), Mint { qty: 10, holder: t_holder }, ref0(), tx)
 }
 
 test mint_with_unbounded_validity_is_rejected() fail {
@@ -535,40 +547,40 @@ test mint_with_unbounded_validity_is_rejected() fail {
   let s1 = ReserveState { ..next(s0), minted_supply: 10 }
   let tx =
     Transaction { ..base_tx(s0, s1, 10), validity_range: interval.after(1_500_000) }
-  reserve.spend(t_seed(), Some(s0), Mint { qty: 10 }, ref0(), tx)
+  reserve.spend(t_seed(), Some(s0), Mint { qty: 10, holder: t_holder }, ref0(), tx)
 }
 
 test mint_below_threshold_is_rejected() {
   let s0 = t_state(0, 100, 1_000)
   let s1 = ReserveState { ..next(s0), minted_supply: 10 }
   let tx = Transaction { ..base_tx(s0, s1, 10), extra_signatories: [t_op1] }
-  !reserve.spend(t_seed(), Some(s0), Mint { qty: 10 }, ref0(), tx)
+  !reserve.spend(t_seed(), Some(s0), Mint { qty: 10, holder: t_holder }, ref0(), tx)
 }
 
 test mint_while_paused_is_rejected() {
   let s0 = ReserveState { ..t_state(0, 100, 1_000), paused: True }
   let s1 = ReserveState { ..next(s0), minted_supply: 10 }
-  !reserve.spend(t_seed(), Some(s0), Mint { qty: 10 }, ref0(), base_tx(s0, s1, 10))
+  !reserve.spend(t_seed(), Some(s0), Mint { qty: 10, holder: t_holder }, ref0(), base_tx(s0, s1, 10))
 }
 
 test mint_delta_must_equal_redeemer_qty() {
   // datum and redeemer say 10, but the tx mints 20 TSRA
   let s0 = t_state(0, 100, 1_000)
   let s1 = ReserveState { ..next(s0), minted_supply: 10 }
-  !reserve.spend(t_seed(), Some(s0), Mint { qty: 10 }, ref0(), base_tx(s0, s1, 20))
+  !reserve.spend(t_seed(), Some(s0), Mint { qty: 10, holder: t_holder }, ref0(), base_tx(s0, s1, 20))
 }
 
 test mint_cannot_sneak_in_a_different_field_change() {
   // raises the cap in the same transaction as a mint
   let s0 = t_state(0, 100, 1_000)
   let s1 = ReserveState { ..next(s0), minted_supply: 10, mint_cap: 9_999 }
-  !reserve.spend(t_seed(), Some(s0), Mint { qty: 10 }, ref0(), base_tx(s0, s1, 10))
+  !reserve.spend(t_seed(), Some(s0), Mint { qty: 10, holder: t_holder }, ref0(), base_tx(s0, s1, 10))
 }
 
 test mint_replayed_epoch_is_rejected() {
   let s0 = t_state(0, 100, 1_000)
   let s1 = ReserveState { ..s0, minted_supply: 10 }
-  !reserve.spend(t_seed(), Some(s0), Mint { qty: 10 }, ref0(), base_tx(s0, s1, 10))
+  !reserve.spend(t_seed(), Some(s0), Mint { qty: 10, holder: t_holder }, ref0(), base_tx(s0, s1, 10))
 }
 
 // -- Authenticity of the State (the planted-State attack)
@@ -586,7 +598,7 @@ test planted_state_without_nft_cannot_mint() fail {
       extra_signatories: [t_op1, t_op3],
       validity_range: interval.between(1_500_000, 2_000_000),
     }
-  reserve.spend(t_seed(), Some(evil), Mint { qty: 500_000_000 }, ref0(), tx)
+  reserve.spend(t_seed(), Some(evil), Mint { qty: 500_000_000, holder: t_holder }, ref0(), tx)
 }
 
 test planted_state_cannot_unlock_tsra_mint_handler() {
@@ -616,7 +628,7 @@ test two_genuine_states_cannot_be_spent_together() fail {
   let s1 = ReserveState { ..next(s0), minted_supply: 10 }
   let second = Input { output_reference: ref1(), output: state_out(s0) }
   let tx = Transaction { ..base_tx(s0, s1, 10), inputs: [state_in(s0), second] }
-  reserve.spend(t_seed(), Some(s0), Mint { qty: 10 }, ref0(), tx)
+  reserve.spend(t_seed(), Some(s0), Mint { qty: 10, holder: t_holder }, ref0(), tx)
 }
 
 test state_output_may_not_carry_foreign_tokens() {
@@ -630,7 +642,7 @@ test state_output_may_not_carry_foreign_tokens() {
         |> assets.add(#"44444444444444444444444444444444444444444444444444444444", "junk", 1),
     }
   let tx = Transaction { ..base_tx(s0, s1, 10), outputs: [junk] }
-  !reserve.spend(t_seed(), Some(s0), Mint { qty: 10 }, ref0(), tx)
+  !reserve.spend(t_seed(), Some(s0), Mint { qty: 10, holder: t_holder }, ref0(), tx)
 }
 
 // -- Burn
@@ -639,28 +651,28 @@ test burn_needs_no_signature() {
   let s0 = t_state(100, 100, 1_000)
   let s1 = ReserveState { ..next(s0), minted_supply: 60 }
   let tx = Transaction { ..base_tx(s0, s1, -40), extra_signatories: [] }
-  reserve.spend(t_seed(), Some(s0), Burn { qty: 40 }, ref0(), tx)
+  reserve.spend(t_seed(), Some(s0), Burn { qty: 40, holder: t_holder }, ref0(), tx)
 }
 
 test burn_is_allowed_while_paused() {
   let s0 = ReserveState { ..t_state(100, 100, 1_000), paused: True }
   let s1 = ReserveState { ..next(s0), minted_supply: 60 }
   let tx = Transaction { ..base_tx(s0, s1, -40), extra_signatories: [] }
-  reserve.spend(t_seed(), Some(s0), Burn { qty: 40 }, ref0(), tx)
+  reserve.spend(t_seed(), Some(s0), Burn { qty: 40, holder: t_holder }, ref0(), tx)
 }
 
 test burn_more_than_supply_is_rejected() {
   let s0 = t_state(100, 100, 1_000)
   let s1 = ReserveState { ..next(s0), minted_supply: -1 }
   let tx = Transaction { ..base_tx(s0, s1, -101), extra_signatories: [] }
-  !reserve.spend(t_seed(), Some(s0), Burn { qty: 101 }, ref0(), tx)
+  !reserve.spend(t_seed(), Some(s0), Burn { qty: 101, holder: t_holder }, ref0(), tx)
 }
 
 test burn_must_actually_burn() {
   let s0 = t_state(100, 100, 1_000)
   let s1 = ReserveState { ..next(s0), minted_supply: 60 }
   let tx = Transaction { ..base_tx(s0, s1, 0), extra_signatories: [] }
-  !reserve.spend(t_seed(), Some(s0), Burn { qty: 40 }, ref0(), tx)
+  !reserve.spend(t_seed(), Some(s0), Burn { qty: 40, holder: t_holder }, ref0(), tx)
 }
 
 // -- Attest
@@ -773,7 +785,7 @@ test a_zero_threshold_committee_cannot_act_unsigned() {
   let s0 = ReserveState { ..t_state(0, 100, 1_000), threshold: 0 }
   let s1 = ReserveState { ..next(s0), minted_supply: 10 }
   let tx = Transaction { ..base_tx(s0, s1, 10), extra_signatories: [] }
-  !reserve.spend(t_seed(), Some(s0), Mint { qty: 10 }, ref0(), tx)
+  !reserve.spend(t_seed(), Some(s0), Mint { qty: 10, holder: t_holder }, ref0(), tx)
 }
 
 test the_state_nft_cannot_leave_the_state() fail {
@@ -785,7 +797,7 @@ test the_state_nft_cannot_leave_the_state() fail {
       outputs: [state_out_with(s1, False)],
       extra_signatories: [],
     }
-  reserve.spend(t_seed(), Some(s0), Burn { qty: 40 }, ref0(), tx)
+  reserve.spend(t_seed(), Some(s0), Burn { qty: 40, holder: t_holder }, ref0(), tx)
 }
 
 test a_stray_output_at_the_script_does_not_block_the_state() {
@@ -804,7 +816,7 @@ test a_stray_output_at_the_script_does_not_block_the_state() {
       outputs: [stray, state_out(s1)],
       extra_signatories: [],
     }
-  reserve.spend(t_seed(), Some(s0), Burn { qty: 40 }, ref0(), tx)
+  reserve.spend(t_seed(), Some(s0), Burn { qty: 40, holder: t_holder }, ref0(), tx)
 }
 
 test a_state_holding_two_nfts_is_not_genuine() fail {
@@ -821,7 +833,7 @@ test a_state_holding_two_nfts_is_not_genuine() fail {
       ..base_tx(s0, s1, 10),
       inputs: [Input { output_reference: ref0(), output: doubled }],
     }
-  reserve.spend(t_seed(), Some(s0), Mint { qty: 10 }, ref0(), tx)
+  reserve.spend(t_seed(), Some(s0), Mint { qty: 10, holder: t_holder }, ref0(), tx)
 }
 
 test a_planted_input_beside_the_genuine_state_is_rejected() {
@@ -842,7 +854,7 @@ test a_planted_input_beside_the_genuine_state_is_rejected() {
       inputs: [state_in(s0), planted],
       extra_signatories: [t_op1, t_op3],
     }
-  !reserve.spend(t_seed(), Some(evil), Mint { qty: 10 }, ref1(), tx)
+  !reserve.spend(t_seed(), Some(evil), Mint { qty: 10, holder: t_holder }, ref1(), tx)
 }
 
 test burn_cannot_change_the_committee() {
@@ -855,7 +867,7 @@ test burn_cannot_change_the_committee() {
       threshold: 2,
     }
   let tx = Transaction { ..base_tx(s0, s1, -40), extra_signatories: [] }
-  !reserve.spend(t_seed(), Some(s0), Burn { qty: 40 }, ref0(), tx)
+  !reserve.spend(t_seed(), Some(s0), Burn { qty: 40, holder: t_holder }, ref0(), tx)
 }
 
 test attest_cannot_change_the_cap() {
@@ -899,7 +911,7 @@ test a_foreign_token_name_cannot_be_minted_under_the_tsra_policy() fail {
   let s0 = t_state(0, 100, 1_000)
   let s1 = ReserveState { ..next(s0), minted_supply: 10 }
   let tx = Transaction { ..base_tx(s0, s1, 0), mint: assets.from_asset(t_own, "FAKE", 10) }
-  reserve.spend(t_seed(), Some(s0), Mint { qty: 10 }, ref0(), tx)
+  reserve.spend(t_seed(), Some(s0), Mint { qty: 10, holder: t_holder }, ref0(), tx)
 }
 
 test a_second_token_name_cannot_ride_along_with_an_attestation() fail {
@@ -925,7 +937,7 @@ test burn_with_a_negative_qty_cannot_mint() {
   let s0 = t_state(0, 100, 1_000)
   let s1 = ReserveState { ..next(s0), minted_supply: 100 }
   let tx = Transaction { ..base_tx(s0, s1, 100), extra_signatories: [] }
-  !reserve.spend(t_seed(), Some(s0), Burn { qty: -100 }, ref0(), tx)
+  !reserve.spend(t_seed(), Some(s0), Burn { qty: -100, holder: t_holder }, ref0(), tx)
 }
 
 test attest_negative_reserve_is_rejected() {
@@ -987,6 +999,10 @@ fn t_genesis() -> ReserveState {
     operators: [t_op1, t_op2],
     threshold: 2,
     paused: False,
+    kyc_mint: False,
+    kyc_redeem: False,
+    kyc_stake: False,
+    eligibility_policy: t_elig,
   }
 }
 
@@ -1350,14 +1366,14 @@ test after_rotation_the_new_committee_can_mint() {
   let s0 = rotated(t_state(0, 100, 1_000))
   let s1 = ReserveState { ..next(s0), minted_supply: 10 }
   let tx = Transaction { ..base_tx(s0, s1, 10), extra_signatories: [t_op3, t_op5] }
-  reserve.spend(t_seed(), Some(s0), Mint { qty: 10 }, ref0(), tx)
+  reserve.spend(t_seed(), Some(s0), Mint { qty: 10, holder: t_holder }, ref0(), tx)
 }
 
 test after_rotation_the_old_committee_cannot_mint() {
   let s0 = rotated(t_state(0, 100, 1_000))
   let s1 = ReserveState { ..next(s0), minted_supply: 10 }
   let tx = Transaction { ..base_tx(s0, s1, 10), extra_signatories: [t_op1, t_op2] }
-  !reserve.spend(t_seed(), Some(s0), Mint { qty: 10 }, ref0(), tx)
+  !reserve.spend(t_seed(), Some(s0), Mint { qty: 10, holder: t_holder }, ref0(), tx)
 }
 
 test after_rotation_the_old_committee_cannot_rotate_back() {
@@ -1409,7 +1425,7 @@ test the_state_cannot_hold_tsra() {
         |> assets.add(t_own, rules.tsra_name, 10),
     }
   let tx = Transaction { ..base_tx(s0, s1, 10), outputs: [parked] }
-  !reserve.spend(t_seed(), Some(s0), Mint { qty: 10 }, ref0(), tx)
+  !reserve.spend(t_seed(), Some(s0), Mint { qty: 10, holder: t_holder }, ref0(), tx)
 }
 
 test genesis_without_a_validity_bound_is_rejected_even_at_time_zero() {
@@ -1444,4 +1460,296 @@ test set_cap_above_five_million_tsra_is_accepted() {
     ref0(),
     base_tx(s0, s1, 0),
   )
+}
+
+// -- Eligibility switches (Phase 2.3)
+
+const t_other_holder: ByteArray =
+  #"a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2"
+
+/// A reference input at the eligibility registry holding `name`'s token.
+fn elig_ref(name: ByteArray) -> Input {
+  Input {
+    output_reference: ref1(),
+    output: Output {
+      address: address.from_script(t_elig),
+      value: assets.from_lovelace(2_000_000) |> assets.add(t_elig, name, 1),
+      datum: NoDatum,
+      reference_script: None,
+    },
+  }
+}
+
+fn kyc(s: ReserveState, mint_on: Bool, redeem_on: Bool) -> ReserveState {
+  ReserveState { ..s, kyc_mint: mint_on, kyc_redeem: redeem_on }
+}
+
+/// Add the holder's token reference and signature to a transaction.
+fn with_eligibility(
+  tx: Transaction,
+  token_of: ByteArray,
+  signers: List<ByteArray>,
+) -> Transaction {
+  Transaction {
+    ..tx,
+    reference_inputs: [elig_ref(token_of)],
+    extra_signatories: signers,
+  }
+}
+
+fn kyc_mint_tx(s0: ReserveState) -> (ReserveState, Transaction) {
+  let s1 = ReserveState { ..next(s0), minted_supply: 10 }
+  (s1, base_tx(s0, s1, 10))
+}
+
+fn kyc_burn_tx(s0: ReserveState) -> (ReserveState, Transaction) {
+  let s1 = ReserveState { ..next(s0), minted_supply: 60 }
+  (s1, Transaction { ..base_tx(s0, s1, -40), extra_signatories: [] })
+}
+
+// Mint
+
+test kyc_mint_on_an_eligible_holder_can_mint() {
+  let s0 = kyc(t_state(0, 100, 1_000), True, False)
+  let (_, tx) = kyc_mint_tx(s0)
+  let tx = with_eligibility(tx, t_holder, [t_op1, t_op2, t_holder])
+  reserve.spend(t_seed(), Some(s0), Mint { qty: 10, holder: t_holder }, ref0(), tx)
+}
+
+test kyc_mint_on_an_ineligible_mint_is_rejected() {
+  let s0 = kyc(t_state(0, 100, 1_000), True, False)
+  let (_, tx) = kyc_mint_tx(s0)
+  let tx = Transaction { ..tx, extra_signatories: [t_op1, t_op2, t_holder] }
+  !reserve.spend(t_seed(), Some(s0), Mint { qty: 10, holder: t_holder }, ref0(), tx)
+}
+
+test kyc_mint_off_minting_needs_no_eligibility() {
+  let s0 = t_state(0, 100, 1_000)
+  let (_, tx) = kyc_mint_tx(s0)
+  reserve.spend(t_seed(), Some(s0), Mint { qty: 10, holder: t_holder }, ref0(), tx)
+}
+
+test kyc_mint_on_a_token_without_the_holders_signature_is_rejected() {
+  let s0 = kyc(t_state(0, 100, 1_000), True, False)
+  let (_, tx) = kyc_mint_tx(s0)
+  let tx = with_eligibility(tx, t_holder, [t_op1, t_op2])
+  !reserve.spend(t_seed(), Some(s0), Mint { qty: 10, holder: t_holder }, ref0(), tx)
+}
+
+test kyc_mint_on_another_holders_token_is_rejected() {
+  let s0 = kyc(t_state(0, 100, 1_000), True, False)
+  let (_, tx) = kyc_mint_tx(s0)
+  let tx = with_eligibility(tx, t_holder, [t_op1, t_op2, t_other_holder])
+  !reserve.spend(
+    t_seed(),
+    Some(s0),
+    Mint { qty: 10, holder: t_other_holder },
+    ref0(),
+    tx,
+  )
+}
+
+test kyc_mint_on_a_token_of_another_policy_is_rejected() {
+  // the State names t_elig; a lookalike token under a different policy
+  let s0 = kyc(t_state(0, 100, 1_000), True, False)
+  let (_, tx) = kyc_mint_tx(s0)
+  let fake =
+    Input {
+      ..elig_ref(t_holder),
+      output: Output {
+        ..elig_ref(t_holder).output,
+        value: assets.from_lovelace(2_000_000)
+          |> assets.add(#"66666666666666666666666666666666666666666666666666666666", t_holder, 1),
+      },
+    }
+  let tx =
+    Transaction {
+      ..tx,
+      reference_inputs: [fake],
+      extra_signatories: [t_op1, t_op2, t_holder],
+    }
+  !reserve.spend(t_seed(), Some(s0), Mint { qty: 10, holder: t_holder }, ref0(), tx)
+}
+
+test kyc_redeem_alone_does_not_gate_minting() {
+  let s0 = kyc(t_state(0, 100, 1_000), False, True)
+  let (_, tx) = kyc_mint_tx(s0)
+  reserve.spend(t_seed(), Some(s0), Mint { qty: 10, holder: t_holder }, ref0(), tx)
+}
+
+// Burn
+
+test kyc_redeem_on_an_eligible_holder_can_burn() {
+  let s0 = kyc(t_state(100, 100, 1_000), False, True)
+  let (_, tx) = kyc_burn_tx(s0)
+  let tx = with_eligibility(tx, t_holder, [t_holder])
+  reserve.spend(t_seed(), Some(s0), Burn { qty: 40, holder: t_holder }, ref0(), tx)
+}
+
+test kyc_redeem_on_an_ineligible_burn_is_rejected() {
+  let s0 = kyc(t_state(100, 100, 1_000), False, True)
+  let (_, tx) = kyc_burn_tx(s0)
+  let tx = Transaction { ..tx, extra_signatories: [t_holder] }
+  !reserve.spend(t_seed(), Some(s0), Burn { qty: 40, holder: t_holder }, ref0(), tx)
+}
+
+test kyc_redeem_off_burning_needs_no_eligibility() {
+  let s0 = t_state(100, 100, 1_000)
+  let (_, tx) = kyc_burn_tx(s0)
+  reserve.spend(t_seed(), Some(s0), Burn { qty: 40, holder: t_holder }, ref0(), tx)
+}
+
+test kyc_redeem_on_a_token_without_the_holders_signature_is_rejected() {
+  let s0 = kyc(t_state(100, 100, 1_000), False, True)
+  let (_, tx) = kyc_burn_tx(s0)
+  let tx = with_eligibility(tx, t_holder, [])
+  !reserve.spend(t_seed(), Some(s0), Burn { qty: 40, holder: t_holder }, ref0(), tx)
+}
+
+test kyc_redeem_on_another_holders_token_is_rejected() {
+  let s0 = kyc(t_state(100, 100, 1_000), False, True)
+  let (_, tx) = kyc_burn_tx(s0)
+  let tx = with_eligibility(tx, t_holder, [t_other_holder])
+  !reserve.spend(
+    t_seed(),
+    Some(s0),
+    Burn { qty: 40, holder: t_other_holder },
+    ref0(),
+    tx,
+  )
+}
+
+test kyc_mint_alone_does_not_gate_burning() {
+  let s0 = kyc(t_state(100, 100, 1_000), True, False)
+  let (_, tx) = kyc_burn_tx(s0)
+  reserve.spend(t_seed(), Some(s0), Burn { qty: 40, holder: t_holder }, ref0(), tx)
+}
+
+// SetKyc
+
+fn set_kyc(
+  s0: ReserveState,
+  s1: ReserveState,
+  m: Bool,
+  r: Bool,
+  st: Bool,
+  signers: List<ByteArray>,
+) -> Bool {
+  reserve.spend(
+    t_seed(),
+    Some(s0),
+    SetKyc { kyc_mint: m, kyc_redeem: r, kyc_stake: st },
+    ref0(),
+    Transaction { ..base_tx(s0, s1, 0), extra_signatories: signers },
+  )
+}
+
+fn kyc_all_on(s0: ReserveState) -> ReserveState {
+  ReserveState {
+    ..next(s0),
+    kyc_mint: True,
+    kyc_redeem: True,
+    kyc_stake: True,
+  }
+}
+
+test set_kyc_by_the_committee_is_accepted() {
+  let s0 = t_state(0, 100, 1_000)
+  set_kyc(s0, kyc_all_on(s0), True, True, True, [t_op1, t_op2])
+}
+
+test set_kyc_can_switch_back_off() {
+  let s0 = ReserveState { ..t_state(0, 100, 1_000), kyc_mint: True, kyc_stake: True }
+  let s1 = ReserveState { ..next(s0), kyc_mint: False, kyc_stake: False }
+  set_kyc(s0, s1, False, False, False, [t_op1, t_op2])
+}
+
+test set_kyc_without_the_committee_is_rejected() {
+  let s0 = t_state(0, 100, 1_000)
+  !set_kyc(s0, kyc_all_on(s0), True, True, True, [t_op1])
+}
+
+test set_kyc_datum_must_match_the_redeemer() {
+  // redeemer turns on mint only; datum turns on all three
+  let s0 = t_state(0, 100, 1_000)
+  !set_kyc(s0, kyc_all_on(s0), True, False, False, [t_op1, t_op2])
+}
+
+test set_kyc_datum_stake_switch_must_match_the_redeemer() {
+  let s0 = t_state(0, 100, 1_000)
+  let s1 = ReserveState { ..next(s0), kyc_mint: True, kyc_redeem: True }
+  !set_kyc(s0, s1, True, True, True, [t_op1, t_op2])
+}
+
+test set_kyc_cannot_change_the_eligibility_policy() {
+  let s0 = t_state(0, 100, 1_000)
+  let s1 =
+    ReserveState {
+      ..kyc_all_on(s0),
+      eligibility_policy: #"66666666666666666666666666666666666666666666666666666666",
+    }
+  !set_kyc(s0, s1, True, True, True, [t_op1, t_op2])
+}
+
+test set_kyc_cannot_touch_the_reserve() {
+  let s0 = t_state(0, 100, 1_000)
+  let s1 = ReserveState { ..kyc_all_on(s0), attested_reserve: 9_999 }
+  !set_kyc(s0, s1, True, True, True, [t_op1, t_op2])
+}
+
+test set_kyc_cannot_touch_the_committee() {
+  let s0 = t_state(0, 100, 1_000)
+  let s1 = ReserveState { ..kyc_all_on(s0), operators: [t_op1, t_op3] }
+  !set_kyc(s0, s1, True, True, True, [t_op1, t_op2])
+}
+
+test set_kyc_cannot_touch_the_pause_flag() {
+  let s0 = t_state(0, 100, 1_000)
+  let s1 = ReserveState { ..kyc_all_on(s0), paused: True }
+  !set_kyc(s0, s1, True, True, True, [t_op1, t_op2])
+}
+
+test set_kyc_must_bump_the_epoch() {
+  let s0 = t_state(0, 100, 1_000)
+  let s1 = ReserveState { ..kyc_all_on(s0), epoch: s0.epoch }
+  !set_kyc(s0, s1, True, True, True, [t_op1, t_op2])
+}
+
+test set_kyc_cannot_mint() {
+  let s0 = t_state(0, 100, 1_000)
+  let tx =
+    Transaction {
+      ..base_tx(s0, kyc_all_on(s0), 10),
+      extra_signatories: [t_op1, t_op2],
+    }
+  !reserve.spend(
+    t_seed(),
+    Some(s0),
+    SetKyc { kyc_mint: True, kyc_redeem: True, kyc_stake: True },
+    ref0(),
+    tx,
+  )
+}
+
+// Genesis
+
+test genesis_sets_the_switches_explicitly_and_may_start_all_off() {
+  let g = t_genesis()
+  !g.kyc_mint && !g.kyc_redeem && !g.kyc_stake && boot(g)
+}
+
+test genesis_with_an_eligibility_policy_that_is_not_a_policy_id_is_rejected() {
+  !boot(ReserveState { ..t_genesis(), eligibility_policy: #"77" })
+}
+
+test set_kyc_datum_mint_switch_must_match_the_redeemer() {
+  // only the mint switch differs: redeemer off, datum on
+  let s0 = t_state(0, 100, 1_000)
+  !set_kyc(s0, kyc_all_on(s0), False, True, True, [t_op1, t_op2])
+}
+
+test set_kyc_datum_redeem_switch_must_match_the_redeemer() {
+  // only the redeem switch differs: redeemer off, datum on
+  let s0 = t_state(0, 100, 1_000)
+  !set_kyc(s0, kyc_all_on(s0), True, False, True, [t_op1, t_op2])
 }
