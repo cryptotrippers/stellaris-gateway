@@ -42,8 +42,16 @@ export function MultiAssetVaultCard({ assetId = "demo" }: { assetId?: string }) 
       Promise.all(
         units.map(async (u) => {
           const unit = unitOfDepositAsset(u);
-          const applied = await deriveMultiVault(assetId, unit);
-          return { symbol: u.symbol, unit: lucidUnitOf(unit), address: applied.address };
+          try {
+            const applied = await deriveMultiVault(assetId, unit);
+            return { symbol: u.symbol, unit: lucidUnitOf(unit), address: applied.address };
+          } catch (e) {
+            // No pinned seed for this (asset, unit): there is no address yet.
+            if (e instanceof Error && e.name === "VaultNotBootstrappedError") {
+              return { symbol: u.symbol, unit: lucidUnitOf(unit), address: "Not bootstrapped" };
+            }
+            throw e;
+          }
         }),
       ),
   });

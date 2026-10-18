@@ -2,15 +2,17 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, Layers, Loader2 } from "lucide-react";
 import { TxConfirmationBadge } from "@/components/vault/TxConfirmationBadge";
+import { CopyRow } from "@/components/ui/CopyRow";
 import { listDepositAssets } from "@/lib/deposit-assets.functions";
 import { depositAssetUnit, isAdaAsset, type DepositAsset } from "@/lib/deposit-assets.shared";
 import { getConnectedOperatorKeyHash } from "@/lib/vault-bootstrap";
-import { deriveOffering, unitOf } from "@/lib/fraction-vault";
+import { unitOf } from "@/lib/fraction-vault";
 import { openOffering } from "@/lib/offering-tx";
 import { registerOffering } from "@/lib/offerings.functions";
 import { recordFractionEvent } from "@/lib/fraction-events.functions";
 import { APP_NETWORK } from "@/lib/network";
 import { cardanoscanAddress, short } from "@/lib/chain-format";
+import type { VaultSeed } from "@/lib/vault-instances";
 
 interface AssetOption {
   id: string;
@@ -54,26 +56,18 @@ export function OpenOfferingCard({
   const [keyHash, setKeyHash] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ txHash: string; address: string } | null>(null);
+  const [result, setResult] = useState<{
+    txHash: string;
+    address: string;
+    fractionUnit: string;
+    seed: VaultSeed;
+  } | null>(null);
 
   useEffect(() => {
     if (!denomId && denominations[0]) setDenomId(denominations[0].id);
   }, [denominations, denomId]);
 
   const denom: DepositAsset | null = denominations.find((d) => d.id === denomId) ?? null;
-
-  const [preview, setPreview] = useState<{ address: string; unit: string } | null>(null);
-  useEffect(() => {
-    setPreview(null);
-    if (!assetId || !denom) return;
-    let live = true;
-    deriveOffering(assetId, unitOf(denom))
-      .then((s) => live && setPreview({ address: s.address, unit: s.fractionUnit }))
-      .catch(() => {});
-    return () => {
-      live = false;
-    };
-  }, [assetId, denom]);
 
   const priceBase = (() => {
     const n = Number(priceAda);
@@ -154,7 +148,12 @@ export function OpenOfferingCard({
       // Best effort: the chain record is written as soon as the tx is visible.
       recordFractionEvent({ data: { assetId, txHash: opened.txHash } }).catch(() => {});
 
-      setResult({ txHash: opened.txHash, address: opened.address });
+      setResult({
+        txHash: opened.txHash,
+        address: opened.address,
+        fractionUnit: opened.fractionUnit,
+        seed: opened.seed,
+      });
       onDone?.();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -284,15 +283,9 @@ export function OpenOfferingCard({
         </Field>
       </div>
 
-      {preview && (
+      {assetId && denom && !result && (
         <div className="mt-4 rounded-md border border-border p-3 text-[11px] text-muted-foreground">
-          <p>Check before signing:</p>
-          <p className="mt-1 break-all">
-            Contract address: <span className="font-mono text-foreground">{preview.address}</span>
-          </p>
-          <p className="mt-1 break-all">
-            Fraction token ID: <span className="font-mono text-foreground">{preview.unit}</span>
-          </p>
+          The offering address is fixed by the opening transaction and shown once it confirms.
         </div>
       )}
       <p className="mt-4 text-xs text-muted-foreground">
@@ -334,6 +327,17 @@ export function OpenOfferingCard({
             >
               {short(result.address, 16, 10)}
             </a>
+          </p>
+          <div className="mt-2 grid gap-2">
+            <div>
+              <div className="text-muted-foreground">Fraction token ID</div>
+              <div className="mt-0.5 break-all font-mono text-foreground">{result.fractionUnit}</div>
+            </div>
+            <CopyRow label="Seed" value={`${result.seed.txHash}#${result.seed.outputIndex}`} />
+          </div>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            Developer step: pin this seed in src/lib/vault-instances.ts under OFFERING_SEEDS[&quot;
+            {assetId}:&quot;] (ADA) as {"{ txHash: \"...\", outputIndex: N }"}.
           </p>
           <TxConfirmationBadge txHash={result.txHash} />
         </div>

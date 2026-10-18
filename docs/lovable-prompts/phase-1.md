@@ -1,5 +1,13 @@
 # Phase 1 — Lovable prompts (UI follow-up to the contract security fixes)
 
+> **Status: all four prompts applied.** Prompt 1 landed via Lovable for
+> `operators.tsx` and `RebootstrapVaultCard.tsx` (commit `a829feb`); the rest
+> of Prompt 1 (`DeploymentWizard.tsx`) and Prompts 2–4 were applied by hand on
+> branch `phase-1c` while Lovable was out of credits. The bootstrap/opening
+> success panels share `src/components/ui/CopyRow.tsx`. Prompt 2 item 3 needed
+> no code: with the preview removed, `OpenOfferingCard` no longer calls
+> `deriveOffering`. Do not paste these again.
+
 Paste each prompt into Lovable **separately, in order**, and check the result
 before the next one. Each prompt only touches UI files; the logic they call is
 already in `src/lib` (committed on `feature/tessera-rebuild`).

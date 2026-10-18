@@ -4,9 +4,11 @@
  * Walks an admin through putting both validators on chain for a single asset:
  *
  *   1. Preflight    — network, wallet, role, and blueprint checks
- *   2. Derive       — applied script hashes + addresses for this asset
+ *   2. Derive       — the applied vault script for this asset (a yield_vault
+ *                     address only exists once step 3 has bootstrapped it)
  *   3. Yield vault  — sign the bootstrap tx that creates the State UTxO,
- *                     then record the address in the vault registry
+ *                     then record the address in the vault registry and
+ *                     show the seed a developer pins in vault-instances.ts
  *   4. Vault (v2)   — a first deposit, which is what witnesses the Stage 3
  *                     script on chain (that validator has no bootstrap UTxO)
  *   5. Verify       — read the deployed state back from the chain
@@ -27,6 +29,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/StatusBadge";
+import { CopyRow } from "@/components/ui/CopyRow";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getMyRoles,
@@ -49,6 +52,7 @@ import {
   deriveYieldVaultAddress,
   getConnectedOperatorKeyHash,
   validateCommittee,
+  type BootstrapResult,
 } from "@/lib/vault-bootstrap";
 import {
   DEFAULT_VAULT_ASSET_ID,
@@ -72,8 +76,6 @@ interface AssetLite {
 }
 
 interface Derived {
-  yieldAddress: string;
-  yieldHash: string;
   vaultAddress: string;
   vaultHash: string;
 }
@@ -109,6 +111,7 @@ export function DeploymentWizard() {
   const [treasury, setTreasury] = useState("");
   const [bootstrapping, setBootstrapping] = useState(false);
   const [bootstrapTx, setBootstrapTx] = useState<string | null>(null);
+  const [bootstrapRes, setBootstrapRes] = useState<BootstrapResult | null>(null);
   const [bootstrapErr, setBootstrapErr] = useState<string | null>(null);
 
   const [depositAda, setDepositAda] = useState("3");
@@ -126,6 +129,7 @@ export function DeploymentWizard() {
 
   const [sfm02Verifying, setSfm02Verifying] = useState(false);
   const [sfm02VerifyErr, setSfm02VerifyErr] = useState<string | null>(null);
+  const [sfm02NotPinned, setSfm02NotPinned] = useState(false);
   const [sfm02Verified, setSfm02Verified] = useState<{
     derivedAddress: string;
     registeredAddress: string | null;
@@ -189,6 +193,7 @@ export function DeploymentWizard() {
     setDerived(null);
     setDeriveErr(null);
     setBootstrapTx(null);
+    setBootstrapRes(null);
     setBootstrapErr(null);
     setDepositTx(null);
     setDepositErr(null);
@@ -200,12 +205,10 @@ export function DeploymentWizard() {
     setDeriving(true);
     setDeriveErr(null);
     try {
-      const y = await deriveYieldVaultAddress(assetId);
+      // No yield_vault preview: its address is fixed by the bootstrap seed.
       const { lucid, lucidMod } = await initLucidReadOnly();
       const v = await getVaultScript(lucid, lucidMod, assetId);
       setDerived({
-        yieldAddress: y.address,
-        yieldHash: y.scriptHash,
         vaultAddress: v.address,
         vaultHash: v.scriptHash,
       });
@@ -244,6 +247,7 @@ export function DeploymentWizard() {
         treasuryPkh: treasury.trim().toLowerCase() || undefined,
       });
       setBootstrapTx(res.txHash);
+      setBootstrapRes(res);
       await registerAssetVault({
         data: {
           assetId: res.assetId,
@@ -278,7 +282,7 @@ export function DeploymentWizard() {
   }
 
   async function runVerify() {
-    const address = derived?.yieldAddress ?? existing?.script_address;
+    const address = bootstrapRes?.address ?? existing?.script_address;
     if (!address) return;
     setVerifying(true);
     setVerifyErr(null);
@@ -300,8 +304,18 @@ export function DeploymentWizard() {
     setSfm02Verifying(true);
     setSfm02VerifyErr(null);
     setSfm02Verified(null);
+    setSfm02NotPinned(false);
     try {
-      const current = await deriveYieldVaultAddress("sfm-02");
+      let current: { address: string };
+      try {
+        current = await deriveYieldVaultAddress("sfm-02");
+      } catch (e) {
+        if (e instanceof Error && e.name === "VaultNotBootstrappedError") {
+          setSfm02NotPinned(true);
+          return;
+        }
+        throw e;
+      }
       const registered = (vaultsQ.data ?? []).find((v) => v.asset_id === "sfm-02") ?? null;
       const state = await getVaultChainState({ data: { address: current.address } });
       setSfm02Verified({
@@ -394,14 +408,19 @@ export function DeploymentWizard() {
         {existing && (
           <div className="mt-3 rounded-lg border border-border bg-secondary/40 p-3 text-[11px] text-muted-foreground">
             This asset already has a registered vault at{" "}
-            <span className="font-mono">{short(existing.script_address, 12, 8)}</span>. Deploying
-            again creates a second ledger — use the re-bootstrap flow on the operator console
-            instead unless the script hash changed.
+            <span className="font-mono">{short(existing.script_address, 12, 8)}</span>. Each
+            bootstrap creates a new, separate vault. Only the one pinned in the build is used by
+            the app.
           </div>
         )}
         {derived && (
           <div className="mt-3 grid gap-2 text-[11px] sm:grid-cols-2">
-            <Addr label="yield_vault" hash={derived.yieldHash} address={derived.yieldAddress} />
+            <div className="rounded-lg border border-border p-3 text-muted-foreground">
+              <div className="text-[10px] uppercase tracking-widest">yield_vault</div>
+              <div className="mt-1">
+                The vault address is fixed by the bootstrap transaction and shown once it confirms.
+              </div>
+            </div>
             <Addr label="vault" hash={derived.vaultHash} address={derived.vaultAddress} />
           </div>
         )}
@@ -427,6 +446,12 @@ export function DeploymentWizard() {
             </button>
           </div>
           {sfm02VerifyErr && <ErrorNote>{sfm02VerifyErr}</ErrorNote>}
+          {sfm02NotPinned && (
+            <div className="mt-4 rounded-lg border border-border bg-background/60 p-3 text-[11px] text-muted-foreground">
+              Not bootstrapped in this build — sfm-02 has no pinned yield_vault seed, so there is
+              no address to check yet.
+            </div>
+          )}
           {sfm02Verified && (
             <div className="mt-4 grid gap-2 sm:grid-cols-3">
               <VerificationResult label="State UTxO" ok={sfm02Verified.found} value={sfm02Verified.found ? "Found on chain" : "Not found"} />
@@ -516,6 +541,33 @@ export function DeploymentWizard() {
         </div>
         {bootstrapErr && <ErrorNote>{bootstrapErr}</ErrorNote>}
         {bootstrapTx && <TxNote label="Bootstrap submitted" hash={bootstrapTx} />}
+        {bootstrapRes && (
+          <div className="mt-3 rounded-lg border border-border p-3 text-[11px]">
+            <div className="grid gap-2">
+              <div>
+                <div className="text-muted-foreground">Vault address</div>
+                <div className="mt-0.5 break-all font-mono text-foreground">{bootstrapRes.address}</div>
+              </div>
+              <div>
+                <div className="text-muted-foreground">Script hash</div>
+                <div className="mt-0.5 break-all font-mono text-foreground">
+                  {bootstrapRes.scriptHash}
+                </div>
+              </div>
+              <CopyRow
+                label="Seed"
+                value={`${bootstrapRes.seed.txHash}#${bootstrapRes.seed.outputIndex}`}
+              />
+              <CopyRow label="State token" value={bootstrapRes.threadUnit} />
+            </div>
+            <p className="mt-3 text-muted-foreground">
+              Developer step: pin this seed in src/lib/vault-instances.ts under
+              YIELD_VAULT_SEEDS[&quot;{bootstrapRes.assetId}&quot;] as{" "}
+              {"{ txHash: \"...\", outputIndex: N }"}. Until that commit is deployed, deposits and
+              withdrawals for this vault are unavailable.
+            </p>
+          </div>
+        )}
       </Step>
 
       {/* Step 4 — witness the Stage 3 vault --------------------------------- */}
@@ -560,7 +612,7 @@ export function DeploymentWizard() {
         <button
           type="button"
           onClick={runVerify}
-          disabled={verifying || (!derived && !existing)}
+          disabled={verifying || (!bootstrapRes && !existing)}
           className="mt-3 inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-foreground disabled:opacity-50"
         >
           {verifying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}

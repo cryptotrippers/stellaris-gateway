@@ -42,9 +42,10 @@ function TransparencyPage() {
 
       <section className="grid gap-4 md:grid-cols-3">
         <div className="card-institutional p-5">
-          <div className="text-[11px] uppercase tracking-widest text-muted-foreground">Daily NAV ({BRAND.staked.ticker})</div>
+          <div className="text-[11px] uppercase tracking-widest text-muted-foreground">Daily NAV per {BRAND.staked.ticker}</div>
           <div className="number-display mt-1 text-3xl font-semibold">${latest.nav.toFixed(4)}</div>
           <div className="text-xs text-muted-foreground">{latest.nav >= prev.nav ? "+" : ""}{((latest.nav / prev.nav - 1) * 100).toFixed(3)}% vs previous day</div>
+          <div className="mt-1 text-xs text-muted-foreground">{BRAND.base.ticker} is fixed at $1; only {BRAND.staked.ticker} accrues yield.</div>
           <div className="mt-4 flex h-16 items-end gap-1">
             {T.navHistory.map(p => (
               <div key={p.date} title={`${p.date}: $${p.nav.toFixed(4)}`} className="flex-1 rounded-t bg-primary/70"
