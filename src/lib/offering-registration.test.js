@@ -51,7 +51,7 @@ describe("offering listing recovery", () => {
       ),
     ).rejects.toThrow("503");
     const restored = pendingOfferingSchema.parse(JSON.parse(saved));
-    const attempts: string[] = [];
+    const attempts = [];
     await retryOfferingRegistration(
       restored,
       async (data) => {
