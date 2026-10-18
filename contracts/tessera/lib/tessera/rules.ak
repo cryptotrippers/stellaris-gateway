@@ -7,8 +7,18 @@
 /// Asset name of the TSRA token minted under the reserve script's policy.
 pub const tsra_name: ByteArray = "TSRA"
 
-/// Asset name of the one-shot NFT that marks the genuine Reserve State UTxO.
-pub const state_nft_name: ByteArray = "TSRA-STATE"
+// The genuine Reserve State is marked by the state-thread token
+// (`stellaris/thread.thread_name`, "state") under this same policy.
+
+/// Hard minimum committee threshold: never a single key. (Proposed launch
+/// committee: 3-of-5, a bootstrap parameter.)
+pub const min_threshold: Int = 2
+
+/// Hard ceiling on `mint_cap`: 1,000,000,000 TSRA (6 decimals, so 1e15 units).
+/// Raising it needs a new script, not a committee vote. The committee sets the
+/// working cap below it (proposed genesis `mint_cap`: 5,000,000 TSRA, a
+/// bootstrap parameter, not a validator constant).
+pub const max_mint_cap: Int = 1_000_000_000_000_000
 
 /// A reserve attestation older than this blocks new minting: 7 days.
 pub const max_attestation_age: Int = 604_800_000
@@ -75,4 +85,9 @@ test attestation_window_is_bounded() {
 
 test inverted_window_is_rejected() {
   !window_ok(3_000, 2_000, 0)
+}
+
+test the_mint_cap_ceiling_is_one_billion_tsra() {
+  // 1,000,000,000 TSRA at 6 decimals; changing it moves the script hash
+  max_mint_cap == 1_000_000_000 * 1_000_000
 }

@@ -251,8 +251,12 @@ $rules = @(
     @{ File = 'contracts/susdr-vault/README.md'; Pattern = 'DO NOT BOOTSTRAP'; Label = 'susdr_vault frozen notice (F-1)' }
     @{ File = 'contracts/tessera/lib/tessera/rules.ak'; Pattern = 'qty > 0 && minted_supply + qty <= attested_reserve && minted_supply + qty <= mint_cap'; Label = 'tessera mint within reserve and cap' }
     @{ File = 'contracts/tessera/lib/tessera/rules.ak'; Pattern = 'max_attestation_age: Int = 604_800_000'; Label = 'tessera 7-day attestation freshness' }
-    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'expect Some((_, in_state)) = sole_state(ins, nft_policy)'; Label = 'tessera sole NFT-bearing State input' }
-    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'state_value_ok(next_out, nft_policy)'; Label = 'tessera State holds only ADA + NFT' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'expect Some((_, in_state)) = sole_state(ins, own_hash)'; Label = 'tessera sole token-bearing State input' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'assets.without_lovelace(out.value) == thread_value(policy)'; Label = 'tessera State holds exactly ADA + thread token' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'genesis_ok(s, lo, hi)'; Label = 'tessera genesis datum checked on-chain (2.2)' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'threshold_met(operators, threshold, tx.extra_signatories)'; Label = 'tessera rotation needs the new committee too (2.2)' }
+    @{ File = 'contracts/tessera/lib/tessera/rules.ak'; Pattern = 'min_threshold: Int = 2'; Label = 'tessera committee threshold >= 2' }
+    @{ File = 'contracts/tessera/lib/tessera/rules.ak'; Pattern = 'max_mint_cap: Int = 1_000_000_000_000_000'; Label = 'tessera mint cap hard max 1B TSRA' }
     @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = '!s0.paused,'; Label = 'tessera mint blocked while paused' }
 )
 $missingRules = @()
