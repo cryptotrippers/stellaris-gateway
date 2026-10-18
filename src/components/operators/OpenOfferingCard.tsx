@@ -16,8 +16,12 @@ import { APP_NETWORK } from "@/lib/network";
 import { cardanoscanAddress, short } from "@/lib/chain-format";
 import type { VaultSeed } from "@/lib/vault-instances";
 import {
-  PENDING_OFFERING_KEY, pendingOfferingSchema, priceInBaseUnits, registryInteger,
-  retryOfferingRegistration, type PendingOffering,
+  PENDING_OFFERING_KEY,
+  pendingOfferingSchema,
+  priceInBaseUnits,
+  registryInteger,
+  retryOfferingRegistration,
+  type PendingOffering,
 } from "@/lib/offering-registration.shared";
 
 interface AssetOption {
@@ -87,7 +91,9 @@ export function OpenOfferingCard({
         setAssetId(opening.payload.assetId);
       }
     } catch {
-      setStorageWarning("Saved opening details could not be read. Keep this page open after signing so you can retry listing.");
+      setStorageWarning(
+        "Saved opening details could not be read. Keep this page open after signing so you can retry listing.",
+      );
     } finally {
       setRestored(true);
     }
@@ -103,7 +109,9 @@ export function OpenOfferingCard({
       return 0n;
     }
   })();
-  const raiseAda = denom ? (Number(priceBase * fractions) / 10 ** denom.decimals).toLocaleString() : "—";
+  const raiseAda = denom
+    ? (Number(priceBase * fractions) / 10 ** denom.decimals).toLocaleString()
+    : "—";
 
   async function loadKey() {
     setError(null);
@@ -115,12 +123,18 @@ export function OpenOfferingCard({
   }
 
   async function finishListing(opening: PendingOffering) {
-    await retryOfferingRegistration(opening, (payload) => register({ data: payload }), async () => {
-      setError("Submitted — waiting for Preprod to confirm before listing…");
-      await new Promise((resolve) => setTimeout(resolve, 10_000));
-    });
+    await retryOfferingRegistration(
+      opening,
+      (payload) => register({ data: payload }),
+      async () => {
+        setError("Submitted — waiting for Preprod to confirm before listing…");
+        await new Promise((resolve) => setTimeout(resolve, 10_000));
+      },
+    );
     setError(null);
-    record({ data: { assetId: opening.payload.assetId, txHash: opening.payload.bootstrapTxHash } }).catch(() => {});
+    record({
+      data: { assetId: opening.payload.assetId, txHash: opening.payload.bootstrapTxHash },
+    }).catch(() => {});
     setResult({
       txHash: opening.payload.bootstrapTxHash,
       address: opening.payload.scriptAddress,
@@ -128,7 +142,11 @@ export function OpenOfferingCard({
       seed: opening.seed,
     });
     setPending(null);
-    try { localStorage.removeItem(PENDING_OFFERING_KEY); } catch { /* In-memory result remains available. */ }
+    try {
+      localStorage.removeItem(PENDING_OFFERING_KEY);
+    } catch {
+      /* In-memory result remains available. */
+    }
     onDone?.();
   }
 
@@ -136,9 +154,13 @@ export function OpenOfferingCard({
     if (!pending || disabled || busy) return;
     setBusy(true);
     setError(null);
-    try { await finishListing(pending); }
-    catch (e) { setError(e instanceof Error ? e.message : String(e)); }
-    finally { setBusy(false); }
+    try {
+      await finishListing(pending);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function submit() {
@@ -185,8 +207,13 @@ export function OpenOfferingCard({
       // Keep the original transaction before the first network-dependent listing call.
       const opening: PendingOffering = { payload, seed: opened.seed };
       setPending(opening);
-      try { localStorage.setItem(PENDING_OFFERING_KEY, JSON.stringify(opening)); }
-      catch { setStorageWarning("Opening details could not be saved on this device. Keep this page open until listing succeeds."); }
+      try {
+        localStorage.setItem(PENDING_OFFERING_KEY, JSON.stringify(opening));
+      } catch {
+        setStorageWarning(
+          "Opening details could not be saved on this device. Keep this page open until listing succeeds.",
+        );
+      }
       await finishListing(opening);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -198,7 +225,9 @@ export function OpenOfferingCard({
   const ready =
     !disabled &&
     !busy &&
-    restored && !pending && !result &&
+    restored &&
+    !pending &&
+    !result &&
     Boolean(assetId) &&
     Boolean(denom) &&
     Boolean(keyHash) &&
@@ -206,7 +235,8 @@ export function OpenOfferingCard({
     priceBase > 0n &&
     fractions <= BigInt(Number.MAX_SAFE_INTEGER) &&
     priceBase <= BigInt(Number.MAX_SAFE_INTEGER) &&
-    Number(mintFeeBps) <= 500 && Number(redeemFeeBps) <= 500;
+    Number(mintFeeBps) <= 500 &&
+    Number(redeemFeeBps) <= 500;
 
   return (
     <section className="card-institutional mt-8 p-6">
@@ -347,13 +377,21 @@ export function OpenOfferingCard({
       {pending && (
         <div className="mt-4 rounded-md border border-border p-4 text-xs">
           <p className="font-semibold text-foreground">Opening submitted — listing pending</p>
-          <p className="mt-2 text-muted-foreground">Retry listing this same transaction. No new payment or wallet signature is required.</p>
+          <p className="mt-2 text-muted-foreground">
+            Retry listing this same transaction. No new payment or wallet signature is required.
+          </p>
           <div className="mt-3 grid gap-2">
             <CopyRow label="Opening transaction" value={pending.payload.bootstrapTxHash} />
             <CopyRow label="Offering address" value={pending.payload.scriptAddress} />
             <CopyRow label="Seed" value={`${pending.seed.txHash}#${pending.seed.outputIndex}`} />
           </div>
-          <Button className="mt-3" variant="outline" size="sm" onClick={retryListing} disabled={disabled || busy}>
+          <Button
+            className="mt-3"
+            variant="outline"
+            size="sm"
+            onClick={retryListing}
+            disabled={disabled || busy}
+          >
             {busy && <Loader2 className="h-4 w-4 animate-spin" />} Retry listing
           </Button>
           <TxConfirmationBadge txHash={pending.payload.bootstrapTxHash} />
@@ -385,13 +423,15 @@ export function OpenOfferingCard({
           <div className="mt-2 grid gap-2">
             <div>
               <div className="text-muted-foreground">Fraction token ID</div>
-              <div className="mt-0.5 break-all font-mono text-foreground">{result.fractionUnit}</div>
+              <div className="mt-0.5 break-all font-mono text-foreground">
+                {result.fractionUnit}
+              </div>
             </div>
             <CopyRow label="Seed" value={`${result.seed.txHash}#${result.seed.outputIndex}`} />
           </div>
           <p className="mt-2 text-[11px] text-muted-foreground">
             Developer step: pin this seed in src/lib/vault-instances.ts under OFFERING_SEEDS[&quot;
-            {assetId}:&quot;] (ADA) as {"{ txHash: \"...\", outputIndex: N }"}.
+            {assetId}:&quot;] (ADA) as {'{ txHash: "...", outputIndex: N }'}.
           </p>
           <TxConfirmationBadge txHash={result.txHash} />
         </div>

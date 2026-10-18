@@ -72,12 +72,17 @@ export async function registerOpeningOnce<T extends RegisteredOpening>(
 ): Promise<T> {
   const accept = (row: T): T => {
     if (
-      row.asset_id !== payload.assetId || row.network !== payload.network ||
-      row.vault_version !== payload.vaultVersion || row.script_address !== payload.scriptAddress ||
-      row.script_hash !== payload.scriptHash || row.fraction_policy_id !== payload.fractionPolicyId ||
+      row.asset_id !== payload.assetId ||
+      row.network !== payload.network ||
+      row.vault_version !== payload.vaultVersion ||
+      row.script_address !== payload.scriptAddress ||
+      row.script_hash !== payload.scriptHash ||
+      row.fraction_policy_id !== payload.fractionPolicyId ||
       row.bootstrap_tx_hash !== payload.bootstrapTxHash
     ) {
-      throw new Error("A different opening is already registered for this asset. Nothing was overwritten.");
+      throw new Error(
+        "A different opening is already registered for this asset. Nothing was overwritten.",
+      );
     }
     return row;
   };

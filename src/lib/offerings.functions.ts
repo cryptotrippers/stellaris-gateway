@@ -145,44 +145,50 @@ export const registerOffering = createServerFn({ method: "POST" })
     if (d.threshold !== data.signatureThreshold) mismatches.push("threshold");
     if (d.operators.join() !== data.operatorKeyHashes.join()) mismatches.push("committee");
     if (mismatches.length) {
-      throw new Error(`The chain disagrees with the form on: ${mismatches.join(", ")}. Not listed.`);
+      throw new Error(
+        `The chain disagrees with the form on: ${mismatches.join(", ")}. Not listed.`,
+      );
     }
-    return registerOpeningOnce(data, async () => {
-      const { data: existing, error } = await context.supabase
-        .from("offerings")
-        .select(OFFERING_COLS)
-        .eq("asset_id", data.assetId)
-        .eq("network", data.network)
-        .eq("vault_version", data.vaultVersion)
-        .maybeSingle();
-      if (error) throw new Error(error.message);
-      return existing as unknown as OfferingRow | null;
-    }, async () => {
-      const { data: row, error } = await context.supabase
-      .from("offerings")
-      .insert({
-        asset_id: data.assetId,
-        network: data.network,
-        vault_version: data.vaultVersion,
-        script_hash: data.scriptHash,
-        script_address: data.scriptAddress,
-        fraction_policy_id: data.fractionPolicyId,
-        fraction_asset_name_hex: data.fractionAssetNameHex,
-        deposit_asset_id: data.depositAssetId ?? null,
-        total_fractions: data.totalFractions,
-        price_per_fraction: data.pricePerFraction,
-        mint_fee_bps: data.mintFeeBps,
-        redeem_fee_bps: data.redeemFeeBps,
-        issuer_name: data.issuerName,
-        treasury_address: data.treasuryAddress ?? null,
-        operator_key_hashes: data.operatorKeyHashes,
-        signature_threshold: data.signatureThreshold,
-        bootstrap_tx_hash: data.bootstrapTxHash,
-        bootstrapped_at: new Date().toISOString(),
-      } as never)
-      .select(OFFERING_COLS)
-      .single();
-    if (error) throw new Error(error.message);
-      return row as unknown as OfferingRow;
-    });
+    return registerOpeningOnce(
+      data,
+      async () => {
+        const { data: existing, error } = await context.supabase
+          .from("offerings")
+          .select(OFFERING_COLS)
+          .eq("asset_id", data.assetId)
+          .eq("network", data.network)
+          .eq("vault_version", data.vaultVersion)
+          .maybeSingle();
+        if (error) throw new Error(error.message);
+        return existing as unknown as OfferingRow | null;
+      },
+      async () => {
+        const { data: row, error } = await context.supabase
+          .from("offerings")
+          .insert({
+            asset_id: data.assetId,
+            network: data.network,
+            vault_version: data.vaultVersion,
+            script_hash: data.scriptHash,
+            script_address: data.scriptAddress,
+            fraction_policy_id: data.fractionPolicyId,
+            fraction_asset_name_hex: data.fractionAssetNameHex,
+            deposit_asset_id: data.depositAssetId ?? null,
+            total_fractions: data.totalFractions,
+            price_per_fraction: data.pricePerFraction,
+            mint_fee_bps: data.mintFeeBps,
+            redeem_fee_bps: data.redeemFeeBps,
+            issuer_name: data.issuerName,
+            treasury_address: data.treasuryAddress ?? null,
+            operator_key_hashes: data.operatorKeyHashes,
+            signature_threshold: data.signatureThreshold,
+            bootstrap_tx_hash: data.bootstrapTxHash,
+            bootstrapped_at: new Date().toISOString(),
+          } as never)
+          .select(OFFERING_COLS)
+          .single();
+        if (error) throw new Error(error.message);
+        return row as unknown as OfferingRow;
+      },
+    );
   });
