@@ -11,7 +11,7 @@
     scripts (TS/JS never gets pasted into PowerShell). Run from anywhere; every
     Node script is invoked from the repo root.
 
-    Nine checks, covering all four Aiken projects:
+    Nine checks, covering all five Aiken projects:
       1. Git working tree clean (snapshot taken BEFORE anything runs)
       2. Aiken toolchain matches the pin in every aiken.toml
       3. aiken check - every project, all tests pass, zero warnings
@@ -49,7 +49,7 @@ $ErrorActionPreference = 'Stop'
 # $PSScriptRoot is empty inside param() defaults on Windows PowerShell 5.1.
 if (-not $RepoRoot) { $RepoRoot = Split-Path -Parent $PSScriptRoot }
 $results = New-Object System.Collections.Generic.List[object]
-$Projects = @('vault', 'fraction-vault', 'multi-asset-vault', 'susdr-vault')
+$Projects = @('vault', 'fraction-vault', 'multi-asset-vault', 'susdr-vault', 'tessera')
 
 function Add-Result {
     param(
@@ -201,7 +201,7 @@ if ($nodeCmd) {
     if ($rt.ExitCode -ne 0) { $bp += "datum round-trip: $(Get-LastLines ($rt.StdOut + $rt.StdErr))" }
 } else { $bp += 'node not on PATH - drift guard and round-trip skipped' }
 if ($bp.Count) { Add-Result '4. Blueprints (fresh build, pins, datum round-trip)' 'FAIL' ($bp -join '; ') }
-else { Add-Result '4. Blueprints (fresh build, pins, datum round-trip)' 'PASS' 'All 4 plutus.json match a fresh build; every pinned hash matches; State datum round-trips' }
+else { Add-Result '4. Blueprints (fresh build, pins, datum round-trip)' 'PASS' "All $($Projects.Count) plutus.json match a fresh build; every pinned hash matches; State datum round-trips" }
 
 # ---------------------------------------------------------------------------
 # 5. Live Preprod scripts. verify-live-scripts.mjs exits 1 on MISMATCH, 2 on
@@ -249,6 +249,11 @@ $rules = @(
     @{ File = 'contracts/multi-asset-vault/validators/multi_asset_vault.ak'; Pattern = 'marked && owner_signed'; Label = 'multi_asset_vault spends only marked Positions (F-4)' }
     @{ File = 'contracts/fraction-vault/validators/fraction_vault.ak'; Pattern = 'one_shot_mint(tx, policy_id, seed)'; Label = 'fraction_vault state-thread mint (F-1)' }
     @{ File = 'contracts/susdr-vault/README.md'; Pattern = 'DO NOT BOOTSTRAP'; Label = 'susdr_vault frozen notice (F-1)' }
+    @{ File = 'contracts/tessera/lib/tessera/rules.ak'; Pattern = 'qty > 0 && minted_supply + qty <= attested_reserve && minted_supply + qty <= mint_cap'; Label = 'tessera mint within reserve and cap' }
+    @{ File = 'contracts/tessera/lib/tessera/rules.ak'; Pattern = 'max_attestation_age: Int = 604_800_000'; Label = 'tessera 7-day attestation freshness' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'expect Some((_, in_state)) = sole_state(ins, nft_policy)'; Label = 'tessera sole NFT-bearing State input' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'state_value_ok(next_out, nft_policy)'; Label = 'tessera State holds only ADA + NFT' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = '!s0.paused,'; Label = 'tessera mint blocked while paused' }
 )
 $missingRules = @()
 foreach ($r in $rules) {
