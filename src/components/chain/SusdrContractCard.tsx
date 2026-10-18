@@ -20,9 +20,11 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 /**
- * Read-only identity card for the sUSDr stablecoin vault: the pinned
- * (unapplied) blueprint hashes and the applied script hash + address this
- * build derives at runtime.
+ * Read-only identity card for the legacy sUSDr stand-in vault (frozen, never
+ * bootstrapped; see contracts/susdr-vault/README.md): the pinned (unapplied)
+ * blueprint hashes and the applied script hash + address this build derives
+ * at runtime. It is NOT the Tessera contract, so it must not carry the
+ * TSRA/sTSRA names from src/config/brand.ts.
  */
 export function SusdrContractCard() {
   const [applied, setApplied] = useState<AppliedSusdrVault | null>(null);
@@ -45,21 +47,23 @@ export function SusdrContractCard() {
   return (
     <div className="card-institutional p-6">
       <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-        <FileCode2 className="h-4 w-4 text-primary" /> {BRAND.staked.ticker} stablecoin vault — contract identity
+        <FileCode2 className="h-4 w-4 text-primary" /> Legacy stablecoin stand-in (frozen) — contract
+        identity
       </h3>
       <p className="mt-1 text-xs text-muted-foreground">
-        Preprod reference implementation. Blueprint hashes are pinned in the app and re-checked at
-        runtime before any transaction is built.
+        Frozen Preprod stand-in, never bootstrapped and not used by the app. It is not{" "}
+        {BRAND.base.ticker} or {BRAND.staked.ticker}; {BRAND.productName} ships its own contracts.
+        Blueprint hashes are pinned in the app and re-checked at runtime.
       </p>
 
       <div className="mt-4">
         <Row label="Network" value={`cardano-${APP_NETWORK}`} />
         <Row label="Vault version" value={String(SUSDR_VAULT_VERSION)} />
         <Row label="Pinned vault blueprint (unapplied)" value={SUSDR_BLUEPRINT_HASH} />
-        <Row label={`Pinned ${BRAND.base.ticker} policy blueprint (unapplied)`} value={USDR_BLUEPRINT_HASH} />
+        <Row label="Pinned test-stablecoin policy blueprint (unapplied)" value={USDR_BLUEPRINT_HASH} />
         {applied && <Row label="Applied script hash" value={applied.scriptHash} />}
         {applied && <Row label="Applied address" value={applied.address} />}
-        {applied && <Row label={`${BRAND.staked.ticker} share token policy`} value={applied.policyId} />}
+        {applied && <Row label="Share token policy" value={applied.policyId} />}
       </div>
 
       {error ? (

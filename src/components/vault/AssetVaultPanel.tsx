@@ -94,11 +94,17 @@ export function AssetVaultPanel({ assetId }: { assetId: string }) {
 
       {vault && (
         <>
-          {deriveError && (
+          {deriveError?.name === "VaultNotBootstrappedError" ? (
             <p className="mt-4 rounded-md border border-border bg-secondary/40 p-3 text-xs text-muted-foreground">
-              This address could not be verified against the current validator in your browser, so
-              it is shown exactly as registered. Re-check before sending funds.
+              This project&apos;s vault has not been bootstrapped in the current build.
             </p>
+          ) : (
+            deriveError && (
+              <p className="mt-4 rounded-md border border-border bg-secondary/40 p-3 text-xs text-muted-foreground">
+                This address could not be verified against the current validator in your browser,
+                so it is shown exactly as registered. Re-check before sending funds.
+              </p>
+            )
           )}
 
           {isStale && derived && (
@@ -160,9 +166,8 @@ export function AssetVaultPanel({ assetId }: { assetId: string }) {
             )}
             {stateQ.data && stateQ.data.stateCount > 1 && (
               <p className="mb-3 rounded-lg bg-secondary/40 p-2 text-[11px] text-muted-foreground">
-                This project was set up twice on chain, so {stateQ.data.stateCount} ledger records
-                exist at its address. The live one (the most advanced) is shown and used for every
-                transaction; the unused duplicate is ignored and can never be spent.
+                {stateQ.data.stateCount - 1} unrecognised record(s) sit at this vault address. They
+                carry no vault token, are ignored, and can never be spent.
               </p>
             )}
             {stateQ.data?.found && stateQ.data.state && (

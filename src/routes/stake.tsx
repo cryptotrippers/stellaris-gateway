@@ -8,7 +8,7 @@ export const Route = createFileRoute("/stake")({
   head: () => ({
     meta: [
       { title: `Stake ${BRAND.staked.ticker} · Stellaris` },
-      { name: "description", content: `Stake ${BRAND.base.ticker} for ${BRAND.staked.ticker}: a 7-day unstake tier or a 30-day lock at a higher rate.` },
+      { name: "description", content: `Stake ${BRAND.base.ticker} for ${BRAND.staked.ticker}: a 7-day unstake tier or a 30-day lock at a higher target rate. Rates are variable, not promised.` },
       { property: "og:title", content: `Stake ${BRAND.staked.ticker} · Stellaris` },
       { property: "og:description", content: `Two staking tiers for ${BRAND.staked.ticker}, with the cooldown shown before you confirm.` },
       { property: "og:type", content: "website" },
@@ -54,7 +54,10 @@ function StakePage() {
             >
               <div className="flex items-center justify-between">
                 <span className="inline-flex items-center gap-2 text-sm font-semibold"><Icon className="h-4 w-4 text-primary" />{t.label}</span>
-                <span className="number-display text-xl font-semibold text-accent">{t.aprPct.toFixed(1)}%</span>
+                <span className="text-right">
+                  <span className="number-display block text-xl font-semibold text-accent">{t.aprPct.toFixed(1)}%</span>
+                  <span className="block text-[10px] uppercase tracking-widest text-muted-foreground">target, variable</span>
+                </span>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">{t.summary}</p>
               <div className="mt-3 text-[11px] uppercase tracking-widest text-muted-foreground">Cooldown: {t.cooldownDays} days</div>
@@ -100,9 +103,12 @@ function StakePage() {
             </p>
             <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
               <dt className="text-muted-foreground">You stake</dt><dd className="text-right">{n.toLocaleString()} {BRAND.base.ticker}</dd>
-              <dt className="text-muted-foreground">Illustrative rate</dt><dd className="text-right">{tier.aprPct.toFixed(1)}% / yr</dd>
-              <dt className="text-muted-foreground">Illustrative yearly earnings</dt><dd className="text-right">{yearly.toFixed(2)} {BRAND.base.ticker}</dd>
+              <dt className="text-muted-foreground">Target rate (variable)</dt><dd className="text-right">{tier.aprPct.toFixed(1)}% / yr</dd>
+              <dt className="text-muted-foreground">Yearly earnings at the target rate</dt><dd className="text-right">{yearly.toFixed(2)} {BRAND.base.ticker}</dd>
             </dl>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Rates are targets, not promises. They vary with the reserve portfolio&apos;s yield and can be lower.
+            </p>
             <div className="mt-4 flex gap-2">
               <button onClick={() => setReviewing(false)} className="flex-1 rounded-xl border border-border px-4 py-2.5 text-sm">Back</button>
               <button onClick={() => setDone(true)} className="flex-1 rounded-xl bg-gradient-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground">

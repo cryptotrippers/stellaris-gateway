@@ -1,4 +1,4 @@
-import { APP_NETWORK, NETWORK_LABEL, IS_UNEXPECTED_MAINNET } from "@/lib/network";
+import { NETWORK_LABEL, IS_UNEXPECTED_MAINNET } from "@/lib/network";
 import { AlertTriangle, Info } from "lucide-react";
 
 /**
@@ -6,17 +6,16 @@ import { AlertTriangle, Info } from "lucide-react";
  * plain-language; the loud red state is reserved for an actual misconfiguration.
  */
 export function NetworkBadge() {
-  const isMainnet = APP_NETWORK === "mainnet";
   const danger = IS_UNEXPECTED_MAINNET;
   const Icon = danger ? AlertTriangle : Info;
   return (
     <span
       title={
+        // The app refuses mainnet (network.ts): APP_NETWORK stays "preprod" even
+        // when mainnet is requested, so there is no "live network" state.
         IS_UNEXPECTED_MAINNET
-          ? "CONFIGURATION ERROR: the app resolved to Cardano Mainnet, but this deployment is Preprod-only. Do not sign transactions."
-          : isMainnet
-            ? "App is pointed at Cardano Mainnet. Transactions use real ADA."
-            : `Demo network (${NETWORK_LABEL}). Everything here uses test funds — no real money is involved.`
+          ? "CONFIGURATION ERROR: mainnet was requested and refused. The app is still on Preprod; fix VITE_BLOCKFROST_NETWORK."
+          : `Demo network (${NETWORK_LABEL}). Everything here uses test funds — no real money is involved.`
       }
       className={
         "inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold ring-1 " +
@@ -28,9 +27,7 @@ export function NetworkBadge() {
       <Icon className="h-3 w-3" />
       {IS_UNEXPECTED_MAINNET
         ? `${NETWORK_LABEL} — MISCONFIGURED`
-        : isMainnet
-          ? "Live network"
-          : "Demo network — funds aren't real"}
+        : "Demo network — funds aren't real"}
     </span>
   );
 }
