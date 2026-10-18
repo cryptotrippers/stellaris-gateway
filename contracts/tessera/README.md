@@ -15,8 +15,11 @@ lib/tessera/exchange.ak    Share-price math for sTessera (ported, renamed)
 lib/tessera/rules.ak       Reserve-gate rules (caps, freshness, windows) + tests
 lib/tessera/reserve_state.ak  ReserveState datum + committee rules (shared)
 lib/tessera/eligibility.ak The one eligibility check, eligible(tx, policy, holder)
+lib/tessera/reserve_ref.ak Genuine Reserve State lookup (reference input)
+lib/tessera/vault_state.ak sTSRA vault datum, bounds, yield split
 validators/reserve.ak      Reserve State + TSRA mint policy (one script)
 validators/eligibility.ak  Eligibility-token policy + registry (allowlist)
+validators/stsra_vault.ak  sTSRA vault: State, Positions, Tickets + sTSRA policy
 lib/stellaris/thread.ak    State-thread token helpers (verbatim copy of the vaults' module)
 DESIGN.md                  Design draft + decisions
 SPEC.md                    State transitions and invariants (to be filled)
@@ -28,7 +31,7 @@ SPEC.md                    State transitions and invariants (to be filled)
 |---|---|
 | `validators/reserve.ak` | **Written and tested** (`aiken check`, mutation-tested, SPEC.md §6). Reserve State + TSRA policy |
 | `validators/eligibility.ak` | **Written and tested** (Phase 2.3, SPEC.md §1a). Allowlist tokens, committee-issued and revocable |
-| `validators/stessera_vault.ak` | Yield vault; `ReportYield` requires delivered funds |
+| `validators/stsra_vault.ak` | **Written and tested** (Phase 2.4, SPEC.md §3). Two-tier staking vault; `ReportYield` requires delivered funds |
 | `validators/redeem_queue.ak` | Request UTxOs, daily buckets, permissionless settlement |
 
 ## Commands

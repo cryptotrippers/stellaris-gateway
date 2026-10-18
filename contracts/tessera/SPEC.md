@@ -165,9 +165,392 @@ The reserve script **is** the TSRA policy (policy id = script hash, token name
 is spent in the same transaction; the `spend` handler enforces the exact TSRA
 quantity and refuses any other token name under the policy.
 
-## 3. sTessera vault
-Share-price accounting per `lib/tessera/exchange.ak`. `total_assets` must equal
-the TSRA physically locked at the script every transition.
+## 3. sTSRA vault (implemented: `validators/stsra_vault.ak`, Phase 2.4)
+
+Status: **implemented and tested** (Phase 2.4). The design below was
+approved with every recommended default in §3.12 (items marked **[D-n]**);
+§3.13 lists where the implementation adds to or departs from it. Datum
+types live in `lib/tessera/vault_state.ak`, the Reserve State lookup in
+`lib/tessera/reserve_ref.ak`.
+
+### 3.1 Topology
+
+One script, `validators/stsra_vault.ak`, parameterised by
+`(seed: OutputReference, reserve: PolicyId)`. It is:
+
+* the spending validator for the vault State, for long-tier Positions and
+  for cooldown Tickets;
+* the minting policy for three asset names under its own hash: `state` (the
+  one-shot thread token, `lib/stellaris/thread.ak`), `sTSRA` (the
+  fungible short-tier share token), and `position` (the marker in every
+  Position and Ticket — the Phase 1 F-4 lesson).
+
+The committee and the `kyc_stake` switch are read from the **genuine Reserve
+State** as a reference input (the one input holding the reserve's thread
+token at the reserve address), exactly as `validators/eligibility.ak` does,
+so a reserve `Rotate` or `SetKyc` applies to the vault immediately. **[D-6]**
+
+**One State, not one per tier [D-1].** A single State UTxO holds the
+accounting of both tiers. ReportYield must update both tiers' prices
+atomically (the weighting depends on both tiers' assets in the same
+instant); two States would force every ReportYield to spend both anyway,
+and would let a stake land in one tier between the two halves of a split.
+
+### 3.2 Tier representation [D-2]
+
+| | Short tier (7–14 day cooldown) | Long tier (30-day lock, ≤ 90) |
+|---|---|---|
+| Share | fungible **`sTSRA` token** (bearer, transferable) | **Position UTxO** at the vault (marker, non-transferable) |
+| Share class | class S: `short_shares`, `short_assets` | class L: `long_shares`, `long_assets` |
+| Exit | `RequestUnstake` → cooldown Ticket → `Claim` | `UnlockLong` after `unlock_at` (no extra cooldown) **[D-3]** |
+
+Why two share classes: one exchange rate can only pay one yield rate, so a
+1.25x weighting needs the long tier to have its own price. Why the long tier
+is a Position and not a second token: a lock cannot be enforced on a bearer
+token (it could be sold or moved the moment it is minted). The short tier
+stays a token so sTSRA is liquid without touching the vault.
+
+### 3.3 Datum
+
+```
+VaultState {
+  short_shares: Int,        -- == total sTSRA supply
+  short_assets: Int,        -- TSRA owned by class S
+  long_shares: Int,         -- == sum of shares over live Positions
+  long_assets: Int,         -- TSRA owned by class L
+  loss_index: Int,          -- 1e12 at genesis; only ReportLoss (2.5) lowers it
+  long_weight_bps: Int,     -- 12_500 proposed; 10_000 <= w <= 15_000
+  short_cooldown_ms: Int,   -- 7 days proposed; 7 d <= c <= 14 d
+  long_lock_ms: Int,        -- 30 days proposed; c <= l <= 90 d
+  protocol_bps: Int,        -- 1_250 proposed; 0 <= p <= 2_000
+  first_loss_addr: Address, -- bootstrap parameter until 2.5
+  treasury_addr: Address,
+  epoch: Int,
+}
+
+Position { owner: Address, shares: Int, unlock_at: Int }      -- class L
+Ticket   { owner: Address, value: Int, index_at_request: Int,
+           claim_after: Int }                                -- cooling
+```
+
+The State UTxO holds exactly ADA + the thread token + `short_assets +
+long_assets` TSRA (exact-value check, as the reserve does), so
+`total_assets` always equals the TSRA physically locked, and no one can
+donate TSRA to skew a price. A Position holds exactly ADA + one marker (its
+TSRA stays in the State). A Ticket holds exactly ADA + one marker + `value`
+TSRA. "TSRA" always means the reserve policy's `TSRA` asset name; any other
+token is refused.
+
+Like the reserve datum, `VaultState` is provisional and will move to
+`lib/tessera/vault_state.ak` (shared with 2.5/2.6).
+
+### 3.4 Redeemers
+
+| Redeemer | Spends | Who | Effect |
+|---|---|---|---|
+| `StakeShort{amount, holder}` | State | anyone; `holder` eligible if `kyc_stake` | +`amount` TSRA to State; mint `mint_shares(amount, S)` sTSRA |
+| `StakeLong{amount, holder, owner}` | State | anyone; `holder` eligible if `kyc_stake` | +`amount` TSRA to State; create Position (marker) with `unlock_at == hi + long_lock_ms` |
+| `RequestUnstake{shares, owner}` | State | anyone holding sTSRA | burn `shares` sTSRA; move `v = redeem_value(shares, S)` TSRA from State into a new Ticket (marker) with `index_at_request == loss_index`, `claim_after == hi + short_cooldown_ms` |
+| `Claim` | Ticket (State as **reference input**) | anyone; pays only `owner` | after `claim_after`: pay `owner` `v · loss_index_now / index_at_request`, burn the marker, burn the excess TSRA |
+| `UnlockLong` | State + Position | anyone; pays only `owner` | after `unlock_at`: pay `owner` `redeem_value(shares, L)`; burn the marker |
+| `ReportYield{gross}` | State | committee M-of-N | §3.5 |
+| `SetBounds{…}` | State | committee M-of-N | change weight / cooldown / lock / protocol bps within the hard limits; nothing else |
+| `ReportLoss{…}` | State | committee M-of-N | **2.5** — §3.8 |
+
+Every State transition: exactly one genuine State in and out, exact next
+datum (only the fields that redeemer may change, `epoch + 1`), exact State
+value. Time comes from the validity range: `hi` is the finite upper bound
+(the latest the transaction can land), `lo` the lower bound; "after T" means
+`lo >= T`.
+
+Minimums (per class): the first stake into an empty class is at least
+`min_initial_deposit` (10 TSRA); a Position or Ticket worth less than
+`min_position_value` (2 TSRA) cannot be created **[D-7]**. All share and value
+maths is `lib/tessera/exchange.ak` (floor rounding in the protocol's
+favour), so no non-loss redeemer can lower either class's price.
+
+The policy (`mint` handler): `state` only at genesis (§3.10); `sTSRA` mint or
+burn only with the genuine State spent (the State branch fixes the exact
+amount); marker mint only with the genuine State spent; marker burn always
+allowed by the policy — a marker only exists inside a Position or Ticket,
+whose own spend rules decide when it may be burned.
+
+### 3.5 ReportYield and the weighting
+
+Inputs: `gross > 0`, current `A_S = short_assets`, `A_L = long_assets`,
+`w = long_weight_bps`, `p = protocol_bps`.
+
+```
+cut       = gross * p / 10_000                 (floor)
+to_reserve = cut / 2                            (floor)  -> first_loss_addr
+to_treasury = cut - to_reserve                         -> treasury_addr
+net       = gross - cut                                  -> stays in the State
+
+W_S = A_S * 10_000
+W_L = A_L * w
+y_L = net * W_L / (W_S + W_L)                   (floor)
+y_S = net - y_L
+
+short_assets' = A_S + y_S      long_assets' = A_L + y_L
+shares unchanged
+```
+
+On-chain checks: committee M-of-N; `gross > 0`; `W_S + W_L > 0` (yield into
+an empty vault is refused); the State's TSRA rises by exactly `net`; an
+output at `first_loss_addr` carries at least `to_reserve` TSRA and one at
+`treasury_addr` at least `to_treasury` (both must physically leave in this
+transaction, so "yield reported without funds" cannot pass — the TSRA must
+come from the committee's inputs).
+
+**Conservation.** `y_S + y_L = net` by construction (y_S is the remainder),
+and `net + to_reserve + to_treasury = gross`, so every unit of reported
+yield is accounted for exactly once.
+
+**Weighting.** Up to one unit of rounding (which falls to class S),
+`y_L / A_L = (w / 10_000) · y_S / A_S`: one TSRA in the long tier earns
+`w/10_000` times what one TSRA in the short tier earns. The long tier's
+extra comes out of `net`, i.e. out of the short tier's share of the stakers'
+pool, never out of `cut`: `cut` is fixed from `gross` before the split, and
+`w` does not appear in it. Both increments are `>= 0`, so ReportYield never
+lowers a price.
+
+**Fee settlement [D-4].** The protocol cut is **paid out in TSRA**, not
+minted as shares: the protocol never holds stake, so it cannot dilute
+stakers and is not shielded inside the pool when a loss lands, and the
+State's TSRA stays equal to `short_assets + long_assets`. (`exchange.ak`'s
+`fee_shares_for` is therefore unused.)
+
+**The 3% first-loss cap [D-5].** The reserve should stop receiving half the
+cut once it reaches 3% of TSRA liabilities. Liabilities are readable
+(`minted_supply` in the Reserve State reference input), but the first-loss
+reserve's balance is not: a plain address can hold many UTxOs and a
+transaction cannot prove their total. Until 2.5 gives the first-loss reserve
+its own State UTxO with a tracked balance, 2.4 always sends half the cut to
+`first_loss_addr`; the 3% check is added in 2.5 (the vault then reads that
+State as a reference input). This never under-funds the reserve.
+
+### 3.6 Cooldown tickets: "the lower of request-time and claim-time value"
+
+At `RequestUnstake` the holder's sTSRA is burned and its current value
+`v = redeem_value(shares, S)` leaves the pool into the Ticket, which also
+records `index_at_request = loss_index`. From then on the Ticket earns
+nothing: ReportYield credits only `short_assets` and `long_assets`, and the
+Ticket's TSRA is no longer in either.
+
+At `Claim` (after `claim_after`):
+
+```
+payout = v * loss_index_now / index_at_request          (floor)
+excess = v - payout                                      (burned)
+```
+
+`loss_index` starts at 1e12 and only ReportLoss lowers it (by the loss
+rate applied to the stakers), so `payout = min(v, value at claim time)`:
+
+* no loss during cooldown → `loss_index_now == index_at_request` →
+  `payout = v` (the request-time value; no yield earned in cooldown);
+* a loss of rate `r` during cooldown → `payout = v·(1−r)`, exactly what the
+  same TSRA would be worth had it stayed staked — nobody escapes a loss
+  recorded during cooldown.
+
+`Claim` reads the State only as a **reference input**, so claims never
+contend with the State. `excess` is 0 until ReportLoss exists; once it can
+be positive it must be burned through the reserve (TSRA `Burn`) in the
+claim transaction — the 2.5 loss path.
+
+### 3.7 Long-tier unlock
+
+`UnlockLong` (after `unlock_at`) pays `redeem_value(shares, L)` at the
+current class-L price and removes the Position; the 30-day lock is itself
+the notice period, so there is no second cooldown **[D-3]**. Partial
+unlocks are not supported (a Position is all or nothing), which also makes
+the 2 TSRA minimum a creation-time rule **[D-7]**.
+
+### 3.8 ReportLoss (2.5) — the hook
+
+Only a committee-signed `ReportLoss` may lower a share price, and 2.5 will
+allow it only after the first-loss reserve is exhausted (proved from the
+first-loss reserve's State). Its shape, which 2.4 already accommodates:
+
+* a loss rate `r` applied **by assets** to both classes (`short_assets`
+  and `long_assets` × (1−r); shares unchanged) — the weighting is a yield
+  rule, not a loss rule;
+* `loss_index × (1−r)`, which Tickets pick up at Claim (§3.6);
+* the lost TSRA burned through the reserve in the same transaction.
+
+Nothing in 2.4 blocks this: no invariant says a price only rises (only that
+non-loss redeemers cannot lower it), the index exists from genesis, and
+Tickets already compute against it. **Reserve dependency:** a vault-driven
+burn has no holder signature, so with `kyc_redeem` on the reserve's `Burn`
+would refuse it; 2.5 needs a committee-signed loss-burn path on the
+reserve that `kyc_redeem` does not gate. Flagged now so 2.5 plans it.
+
+### 3.9 eUTxO contention
+
+| Action | Touches | Contention |
+|---|---|---|
+| sTSRA transfer | nothing of the vault | none |
+| Claim | Ticket; State as reference input | none (unless a loss excess must be burned) |
+| StakeShort / StakeLong / RequestUnstake / UnlockLong | the single State | **serialised: one per State update** |
+| ReportYield / SetBounds | the single State | rare, committee-driven |
+| every action that needs the committee or `kyc_stake` | the Reserve State as reference input | **stale reference**: the Reserve State changes on every TSRA mint and burn, so a vault tx built against an old one fails and must be rebuilt **[D-6]** |
+
+Mitigations in 2.4: Claims and transfers never touch the State; Tickets
+carry their own TSRA so the cooldown queue scales without the State;
+committee actions are rare. Stake/unstake throughput is one State
+transition per block (~20 s on Preprod) — acceptable for Preprod, and the
+known upgrade path is batching through order UTxOs (like the redemption
+queue), deferred until volume needs it. For the stale Reserve State the
+builder retries against the latest UTxO; the alternative, caching the
+committee and `kyc_stake` in the vault State with a permissionless `Sync`
+redeemer, removes the dependency but opens a window where a rotation or a
+`SetKyc` has not reached the vault yet.
+
+### 3.10 Genesis
+
+As `reserve.ak`: the `state` mint consumes the seed, mints exactly one
+`state` and nothing else, spends no vault input, and creates exactly one
+output at the vault address holding exactly ADA + the token (no TSRA), with
+an inline `VaultState` of zero shares and assets, `loss_index == 1e12`,
+`epoch == 0`, parameters within their hard limits, and `first_loss_addr` /
+`treasury_addr` that are not the vault itself.
+
+### 3.11 Test plan
+
+*Genesis:* good genesis accepted; each bad field rejected (non-zero
+balances, index ≠ 1e12, epoch ≠ 0, weight > 1.5x or < 1x, cooldown outside
+7–14 d, lock > 90 d or < cooldown, protocol bps > 20%, fee address = vault);
+token sent elsewhere; two vault outputs; TSRA or foreign tokens in the
+State; seed not spent; State spent alongside; `state` minted twice.
+
+*StakeShort / StakeLong:* first stake ≥ 10 TSRA accepted, 9.999999
+rejected (**first-depositor inflation**); shares minted = `mint_shares`,
+floor; minting one more sTSRA than owed rejected; TSRA other than the
+reserve's `TSRA` rejected; State TSRA not rising by `amount` rejected;
+`kyc_stake` on + ineligible rejected, on + eligible accepted, off needs
+nothing; Position without marker / with two markers / with TSRA inside
+rejected; `unlock_at` earlier than `hi + long_lock_ms` rejected; unbounded
+validity rejected; Position below 2 TSRA rejected.
+
+*RequestUnstake / Claim:* Ticket value = `redeem_value`, floor; Ticket
+`claim_after` earlier than `hi + cooldown` rejected; `index_at_request` ≠
+`loss_index` rejected; sTSRA not burned (or burned short) rejected;
+**early claim** (`lo < claim_after`) rejected (**cooldown bypass**); claim
+paying anyone but `owner` rejected; claim paying more than
+`v · index_now / index_at_request` rejected; claim with a **planted
+Ticket** (no marker, or marker forged without the State) rejected;
+**ticket replay** — the marker must be burned and the Ticket is a spent
+UTxO, so a second claim of the same Ticket cannot be built; claim against
+a planted vault State reference rejected; a claim after a simulated index
+drop pays the lower value and must burn the excess.
+
+*UnlockLong:* **early unstake** (`lo < unlock_at`) rejected; pays exactly
+`redeem_value(shares, L)` to `owner`; marker not burned rejected; a
+**planted Position** (no marker) rejected.
+
+*ReportYield:* committee required (and follows a reserve `Rotate`);
+**yield reported without funds** — State TSRA not rising by `net`
+rejected; fee outputs missing or short rejected; first-loss / treasury
+split wrong rejected; split between tiers ≠ the formula rejected (and the
+remainder rule: short gets the rounding); empty vault rejected; `gross ≤ 0`
+rejected; the conservation identity `y_S + y_L + cut = gross` as a
+property-style test over a table of values; ReportYield changing shares or
+params rejected.
+
+*SetBounds:* committee required; **weighting above cap** (> 1.5x) rejected;
+**fee above cap** (> 20%) rejected; cooldown < 7 d or > 14 d rejected; lock
+> 90 d rejected; touching balances rejected.
+
+*Identity / generic:* **planted State** (no thread token) cannot be spent,
+cannot authorise sTSRA or marker mints; two genuine States rejected;
+foreign tokens in the State rejected; sTSRA minted without the State spent
+rejected; markers conserved (no marker leaves the vault except by burning).
+
+Then a mutation pass over every guard, as in §6.
+
+### 3.12 Decisions to confirm
+
+* **[D-1]** One State for both tiers.
+* **[D-2]** Short tier = fungible `sTSRA` token; long tier = locked Position
+  UTxO with its own share class.
+* **[D-3]** Long tier pays out directly at unlock (no extra 7-day cooldown);
+  Positions are all-or-nothing.
+* **[D-4]** Protocol cut paid out in TSRA at ReportYield (half to
+  `first_loss_addr`, half to `treasury_addr`), not minted as shares.
+* **[D-5]** The 3%-of-liabilities stop for the first-loss share is
+  deferred to 2.5; until then half the cut always goes to the first-loss
+  address.
+* **[D-6]** Committee and `kyc_stake` read live from the Reserve State
+  reference input (accepting rebuilds when it changes), rather than cached
+  in the vault with a `Sync` redeemer.
+* **[D-7]** The 2 TSRA minimum applies at creation of Positions and
+  Tickets; the 10 TSRA minimum applies per class to the first stake.
+* Tickets escrow their TSRA (so Claim does not touch the State) and use a
+  loss index for the "lower of" rule.
+* Claims and unlocks are permissionless (funds only to `owner`); owners are
+  full addresses, not just key hashes.
+* `kyc_stake` gates staking only; unstake, claim and unlock are never
+  gated (sTSRA is transferable; redemption gating lives on the reserve's
+  `Burn`).
+* 2.5 needs a reserve loss-burn path not gated by `kyc_redeem` (§3.8).
+
+### 3.13 Implementation notes (deviations from the design above)
+
+* **One Ticket per Claim, one Position per UnlockLong.** Both pay an owner,
+  so two of them in one transaction could be satisfied by a single payout
+  output (double satisfaction). A Claim may spend no other vault UTxO; an
+  UnlockLong spends exactly the State and one Position.
+* **Fee payments are summed per address** (`paid_tsra`), and genesis requires
+  `first_loss_addr != treasury_addr` and neither at the vault, so one output
+  cannot count towards both fee checks.
+* **The Claim payout is capped at the escrowed value** (`min(v, v · index_now
+  / index_at_request)`). The index can only fall, so the cap never binds
+  today; it stops a future index bug from paying out more than the Ticket
+  holds.
+* **`StakeLong` names the Position's `owner`** in the redeemer, and the
+  Position datum must match it; `RequestUnstake` does the same for the
+  Ticket.
+* **`unlock_at` and `claim_after` are exact** (`== hi + lock`,
+  `== hi + cooldown`): a builder sets the upper bound, so the contract fixes
+  the earliest exit to it rather than accepting any later time.
+* **Time windows are not capped.** A staker may choose a far-future upper
+  bound; that only delays their own exit.
+* **`SetParams` is named `SetBounds`** (as approved).
+
+**Equivalent mutants** (mutation pass, SPEC.md §6 has the totals):
+* *StakeShort `amount > 0`* — `deposit_ok` already refuses a zero or negative
+  stake (below 10 TSRA on an empty class, zero shares minted otherwise).
+* *StakeLong / RequestUnstake output count* — `other_output` already requires
+  exactly one vault output besides the State.
+* *RequestUnstake `shares > 0`* — zero or negative shares give a value ≤ 0,
+  which fails the 2 TSRA minimum.
+* *UnlockLong input count* — `sole_state` finds the one State and
+  `expect [pos]` forces exactly one other vault input.
+* *Spent input must be the State (`in_state == s0`)* — every branch fixes the
+  number of vault inputs, so a second State-shaped input can never join the
+  genuine State, and with one vault input `sole_state` has already proven it
+  is the genuine State. Kept as defence in depth.
+* *Claim: no other vault input (`ins == [own]`)* — two Tickets in one claim
+  burn two markers while each demands exactly one burned, and any other vault
+  input fails its own validator (a State only in UnlockLong, which needs a
+  Position; a Position only beside the State; planted UTxOs carry no
+  marker). Kept as defence in depth against double satisfaction.
+* *Reserve lookup: several Reserve States accepted* (`[s]` → `[s, ..]`) —
+  only one UTxO can ever hold the reserve's one-shot thread token, so at most
+  one reference input matches (the same survivor as 2.3, §6).
+
+### 3.14 Open items
+
+1. **For 2.5 — loss-burn path on the reserve.** A vault-driven TSRA burn
+   (ReportLoss, or a Claim's excess after a loss) has no holder signature,
+   so with `kyc_redeem` on the reserve's `Burn` refuses it. 2.5 must add a
+   committee-signed loss-burn path on the reserve that `kyc_redeem` does not
+   gate.
+2. **Before 2.6 — split the Reserve State?** Decide whether to split it into
+   a rarely-changing *config* UTxO (committee, switches, eligibility policy),
+   read by the vault and the queue, and a hot *supply* UTxO (minted supply,
+   attested reserve). Today every TSRA mint or burn invalidates in-flight
+   vault transactions that reference the Reserve State (§3.9, D-6).
 
 ## 4. Redemption queue
 Instant tier up to the buffer; Request UTxOs bucketed per day; payable after
@@ -268,3 +651,27 @@ all killed — by `set_kyc_with_an_invalid_policy_id_is_rejected`,
 `set_kyc_datum_policy_must_match_the_redeemer`,
 `set_kyc_changing_the_policy_with_the_committee_is_accepted`,
 `set_kyc_changing_the_policy_without_the_committee_is_rejected` and others.
+
+### Phase 2.4 (sTSRA vault)
+
+110 mutants over `validators/stsra_vault.ak` (95), `lib/tessera/vault_state.ak`
+(12) and `lib/tessera/reserve_ref.ak` (3). 102 are killed; the other 8 are
+equivalent and listed, one line each, in §3.13. No survivor showed a logic
+bug, and the validator logic did not change during the pass.
+
+| Guard | Mutants | Killed by (examples) |
+|---|---|---|
+| Identity / State value | `sole_state` any token count; thread count only; TSRA ignored; next State value unchecked | `a_state_holding_two_tokens_is_not_genuine`, `short_stake_without_the_tsra_arriving_is_rejected`, `short_stake_in_a_lookalike_token_is_rejected`, `the_state_may_not_carry_a_foreign_token` |
+| StakeShort / StakeLong | next datum unchecked; epoch not bumped; extra vault inputs | `short_stake_datum_shares_must_match_the_mint`, `short_stake_must_bump_the_epoch`, `long_stake_datum_long_shares_must_match`, `long_stake_cannot_spend_an_existing_position` |
+| RequestUnstake / UnlockLong | extra vault inputs / outputs; next datum unchecked | `unstake_cannot_spend_an_existing_position`, `unstake_datum_must_match`, `unlock_cannot_create_another_vault_output` |
+| Claim | cap dropped; vault outputs allowed; Ticket value unchecked; early claim; marker burn, payout or excess burn unchecked; loss index ignored | `claim_never_pays_more_than_the_escrow`, `claim_cannot_recreate_the_ticket`, `a_planted_ticket_cannot_be_claimed`, `claim_before_the_cooldown_is_rejected`, `claim_paying_someone_else_is_rejected`, `claim_after_a_loss_must_burn_the_excess` |
+| Positions | marker unchecked; State not required; State branch accepts a Claim | `a_planted_position_cannot_be_unlocked`, `a_position_is_spendable_only_beside_the_genuine_state`, `the_state_branch_refuses_a_claim_redeemer` |
+| ReportYield / SetBounds | extra vault inputs / outputs; may mint; missing or planted Reserve State | `report_yield_cannot_spend_a_position`, `set_bounds_cannot_create_another_vault_output`, `set_bounds_cannot_mint_stsra`, `report_yield_against_a_planted_reserve_state_is_rejected` |
+| Bounds / yield split | each hard limit; lock ≥ cooldown; first loss takes the whole cut; long tier unweighted; short-tier dust lost; cut not taken | `bounds_hard_limits`, `split_conserves_gross_exactly`, `long_tier_earns_the_weight_per_tsra`, `half_the_cut_goes_to_first_loss` |
+| Reserve lookup | token ignored; reserve address unchecked | `short_stake_against_a_planted_reserve_state_is_rejected`, `report_yield_against_a_reserve_state_off_the_reserve_address_is_rejected` |
+
+The first run surfaced 18 real test gaps (the guard was there, but no test
+pinned it), and each now has a test. Most cover extra vault inputs or outputs
+and the next datum on each redeemer. The last one is a Reserve State held at
+the wrong address, which the vault suite did not test (2.3 had the matching
+test).

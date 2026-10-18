@@ -265,6 +265,18 @@ $rules = @(
     @{ File = 'contracts/tessera/validators/eligibility.ak'; Pattern = 'committee_signed(tx, reserve),'; Label = 'tessera eligibility issue/revoke needs the reserve committee (2.3)' }
     @{ File = 'contracts/tessera/validators/eligibility.ak'; Pattern = 'tokens_stay_in_registry(tx, policy_id)'; Label = 'tessera eligibility tokens stay in the registry (2.3)' }
     @{ File = 'contracts/tessera/validators/eligibility.ak'; Pattern = 'quantity_of(tx.mint, policy, name) <= -q'; Label = 'tessera eligibility tokens leave the registry only by burning (2.3)' }
+    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'genesis_ok(s, policy)'; Label = 'tessera sTSRA vault genesis checked on-chain (2.4)' }
+    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'tsra(reserve, s.short_assets + s.long_assets),'; Label = 'tessera sTSRA vault State holds exactly its accounted TSRA (2.4)' }
+    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'lo >= t.claim_after'; Label = 'tessera sTSRA cooldown enforced at Claim (2.4)' }
+    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'claim_after: hi + s0.short_cooldown_ms'; Label = 'tessera sTSRA Ticket cooldown set from the upper bound (2.4)' }
+    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'lo >= p.unlock_at'; Label = 'tessera sTSRA long lock enforced at unlock (2.4)' }
+    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'ins == [own],'; Label = 'tessera sTSRA one Ticket per Claim, no double satisfaction (2.4)' }
+    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'paid_tsra(tx, s0.first_loss_addr, reserve) >= to_first_loss'; Label = 'tessera sTSRA yield pays the first-loss share (2.4)' }
+    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'committee_ok(tx, reserve),'; Label = 'tessera sTSRA committee from the live Reserve State (2.4)' }
+    @{ File = 'contracts/tessera/lib/tessera/vault_state.ak'; Pattern = 'max_long_weight_bps: Int = 15_000'; Label = 'tessera sTSRA long weight hard max 1.5x (2.4)' }
+    @{ File = 'contracts/tessera/lib/tessera/vault_state.ak'; Pattern = 'max_long_lock_ms: Int = 7_776_000_000'; Label = 'tessera sTSRA long lock hard max 90 days (2.4)' }
+    @{ File = 'contracts/tessera/lib/tessera/vault_state.ak'; Pattern = 'max_short_cooldown_ms: Int = 1_209_600_000'; Label = 'tessera sTSRA short cooldown hard max 14 days (2.4)' }
+    @{ File = 'contracts/tessera/lib/tessera/exchange.ak'; Pattern = 'max_yield_fee_bps: Int = 2000'; Label = 'tessera sTSRA protocol share hard max 20% (2.4)' }
     @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = '!s0.paused,'; Label = 'tessera mint blocked while paused' }
 )
 $missingRules = @()
