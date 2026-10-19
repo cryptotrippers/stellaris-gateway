@@ -26,13 +26,14 @@ export const Route = createFileRoute("/marketplace")({
 
 const categoryIcon = {
   "Sustainable Farming": Leaf,
-  "Clean Energy": Wind,
+  "Clean Energy": Sun,
   "Real Estate": Building2,
   "Carbon Credits": Leaf,
   "Infrastructure": Sun,
 } as const;
 
 const STATUS_TONE: Record<string, "primary" | "accent" | "warning" | "success"> = {
+  demo: "warning",
   pilot: "warning",
   draft: "warning",
   open: "accent",
