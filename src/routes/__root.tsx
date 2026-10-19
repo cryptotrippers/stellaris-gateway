@@ -85,7 +85,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Stellaris · Own real-world assets from ₳10" },
       { name: "description", content: "Solar farms, coffee estates, and real estate — fractionalized on Cardano. Verified yields, ESG ratings, and 24h withdrawals." },
       { name: "author", content: "Stellaris Finance" },
-      { name: "theme-color", content: "#0033ad" },
+      { name: "theme-color", content: "#102438" },
       { property: "og:site_name", content: "Stellaris Finance" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -96,7 +96,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" },
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" },
     ],
     scripts: [
       {
