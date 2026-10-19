@@ -95,7 +95,7 @@ export const Route = createFileRoute("/marketplace/$id")({
   ),
   errorComponent: ({ error }) => (
     <div className="py-24 text-center text-sm text-muted-foreground">
-      Couldn't load this vault. {error.message}
+      Couldn't load this vault. {error instanceof Error ? error.message : String(error)}
     </div>
   ),
   pendingComponent: () => (

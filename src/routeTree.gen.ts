@@ -9,149 +9,54 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as YieldRouteImport } from './routes/yield'
-import { Route as UpgradeRouteImport } from './routes/upgrade'
-import { Route as TransparencyRouteImport } from './routes/transparency'
-import { Route as TestnetRouteImport } from './routes/testnet'
-import { Route as TermsRouteImport } from './routes/terms'
-import { Route as StewardshipRouteImport } from './routes/stewardship'
-import { Route as StakeRouteImport } from './routes/stake'
-import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
-import { Route as SecurityRouteImport } from './routes/security'
-import { Route as PropertyRouteImport } from './routes/property'
-import { Route as PipelineRouteImport } from './routes/pipeline'
-import { Route as OperatorsRouteImport } from './routes/operators'
-import { Route as McpRouteImport } from './routes/mcp'
-import { Route as MarketplaceRouteImport } from './routes/marketplace'
-import { Route as InviteRouteImport } from './routes/invite'
-import { Route as GovernanceRouteImport } from './routes/governance'
-import { Route as DevelopersRouteImport } from './routes/developers'
-import { Route as BlockfrostHealthRouteImport } from './routes/blockfrost-health'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AssetsRouteImport } from './routes/assets'
-import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as UpgradeIndexRouteImport } from './routes/upgrade.index'
-import { Route as OfferingsIndexRouteImport } from './routes/offerings.index'
-import { Route as LearnIndexRouteImport } from './routes/learn.index'
-import { Route as GovernanceIndexRouteImport } from './routes/governance.index'
-import { Route as FundingIndexRouteImport } from './routes/funding.index'
-import { Route as UpgradeReturnRouteImport } from './routes/upgrade.return'
-import { Route as OfferingsIdRouteImport } from './routes/offerings.$id'
-import { Route as MarketplaceIdRouteImport } from './routes/marketplace.$id'
-import { Route as LearnTopicRouteImport } from './routes/learn.$topic'
-import { Route as IssuersIdRouteImport } from './routes/issuers.$id'
-import { Route as GovernanceNewRouteImport } from './routes/governance.new'
-import { Route as GovernanceSipRouteImport } from './routes/governance.$sip'
-import { Route as FundingNewRouteImport } from './routes/funding.new'
-import { Route as FundingIdRouteImport } from './routes/funding.$id'
-import { Route as Char91DotwellKnownChar93SecurityChar91DotChar93txtRouteImport } from './routes/[.well-known]/security[.]txt'
-import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as AppRouteImport } from './routes/app'
+import { Route as AssetsRouteImport } from './routes/assets'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as BlockfrostHealthRouteImport } from './routes/blockfrost-health'
+import { Route as DevelopersRouteImport } from './routes/developers'
+import { Route as GovernanceRouteImport } from './routes/governance'
+import { Route as InviteRouteImport } from './routes/invite'
+import { Route as MarketplaceRouteImport } from './routes/marketplace'
+import { Route as McpRouteImport } from './routes/mcp'
+import { Route as OperatorsRouteImport } from './routes/operators'
+import { Route as PipelineRouteImport } from './routes/pipeline'
+import { Route as PropertyRouteImport } from './routes/property'
+import { Route as SecurityRouteImport } from './routes/security'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as StakeRouteImport } from './routes/stake'
+import { Route as StewardshipRouteImport } from './routes/stewardship'
+import { Route as TermsRouteImport } from './routes/terms'
+import { Route as TestnetRouteImport } from './routes/testnet'
+import { Route as TransparencyRouteImport } from './routes/transparency'
+import { Route as UpgradeRouteImport } from './routes/upgrade'
+import { Route as YieldRouteImport } from './routes/yield'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
-import { Route as ApiV1YieldRouteImport } from './routes/api/v1/yield'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as Char91DotwellKnownChar93SecurityChar91DotChar93txtRouteImport } from './routes/[.well-known]/security[.]txt'
+import { Route as FundingIndexRouteImport } from './routes/funding.index'
+import { Route as FundingIdRouteImport } from './routes/funding.$id'
+import { Route as FundingNewRouteImport } from './routes/funding.new'
+import { Route as GovernanceIndexRouteImport } from './routes/governance.index'
+import { Route as GovernanceSipRouteImport } from './routes/governance.$sip'
+import { Route as GovernanceNewRouteImport } from './routes/governance.new'
+import { Route as IssuersIdRouteImport } from './routes/issuers.$id'
+import { Route as LearnIndexRouteImport } from './routes/learn.index'
+import { Route as LearnTopicRouteImport } from './routes/learn.$topic'
+import { Route as MarketplaceIdRouteImport } from './routes/marketplace.$id'
+import { Route as OfferingsIndexRouteImport } from './routes/offerings.index'
+import { Route as OfferingsIdRouteImport } from './routes/offerings.$id'
+import { Route as UpgradeIndexRouteImport } from './routes/upgrade.index'
+import { Route as UpgradeReturnRouteImport } from './routes/upgrade.return'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
-import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
+import { Route as ApiV1YieldRouteImport } from './routes/api/v1/yield'
 import { Route as ApiPublicBlockfrostWebhookRouteImport } from './routes/api/public/blockfrost/webhook'
+import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiV1YieldUserAddressQueueRouteImport } from './routes/api/v1/yield/user/$address/queue'
 
-const YieldRoute = YieldRouteImport.update({
-  id: '/yield',
-  path: '/yield',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const UpgradeRoute = UpgradeRouteImport.update({
-  id: '/upgrade',
-  path: '/upgrade',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TransparencyRoute = TransparencyRouteImport.update({
-  id: '/transparency',
-  path: '/transparency',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TestnetRoute = TestnetRouteImport.update({
-  id: '/testnet',
-  path: '/testnet',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TermsRoute = TermsRouteImport.update({
-  id: '/terms',
-  path: '/terms',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const StewardshipRoute = StewardshipRouteImport.update({
-  id: '/stewardship',
-  path: '/stewardship',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const StakeRoute = StakeRouteImport.update({
-  id: '/stake',
-  path: '/stake',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
-  id: '/sitemap.xml',
-  path: '/sitemap.xml',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SecurityRoute = SecurityRouteImport.update({
-  id: '/security',
-  path: '/security',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PropertyRoute = PropertyRouteImport.update({
-  id: '/property',
-  path: '/property',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PipelineRoute = PipelineRouteImport.update({
-  id: '/pipeline',
-  path: '/pipeline',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OperatorsRoute = OperatorsRouteImport.update({
-  id: '/operators',
-  path: '/operators',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const McpRoute = McpRouteImport.update({
-  id: '/mcp',
-  path: '/mcp',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MarketplaceRoute = MarketplaceRouteImport.update({
-  id: '/marketplace',
-  path: '/marketplace',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const InviteRoute = InviteRouteImport.update({
-  id: '/invite',
-  path: '/invite',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GovernanceRoute = GovernanceRouteImport.update({
-  id: '/governance',
-  path: '/governance',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DevelopersRoute = DevelopersRouteImport.update({
-  id: '/developers',
-  path: '/developers',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BlockfrostHealthRoute = BlockfrostHealthRouteImport.update({
-  id: '/blockfrost-health',
-  path: '/blockfrost-health',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AssetsRoute = AssetsRouteImport.update({
-  id: '/assets',
-  path: '/assets',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRoute = AppRouteImport.update({
@@ -159,85 +64,110 @@ const AppRoute = AppRouteImport.update({
   path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AssetsRoute = AssetsRouteImport.update({
+  id: '/assets',
+  path: '/assets',
   getParentRoute: () => rootRouteImport,
 } as any)
-const UpgradeIndexRoute = UpgradeIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => UpgradeRoute,
-} as any)
-const OfferingsIndexRoute = OfferingsIndexRouteImport.update({
-  id: '/offerings/',
-  path: '/offerings/',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LearnIndexRoute = LearnIndexRouteImport.update({
-  id: '/learn/',
-  path: '/learn/',
+const BlockfrostHealthRoute = BlockfrostHealthRouteImport.update({
+  id: '/blockfrost-health',
+  path: '/blockfrost-health',
   getParentRoute: () => rootRouteImport,
 } as any)
-const GovernanceIndexRoute = GovernanceIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => GovernanceRoute,
-} as any)
-const FundingIndexRoute = FundingIndexRouteImport.update({
-  id: '/funding/',
-  path: '/funding/',
+const DevelopersRoute = DevelopersRouteImport.update({
+  id: '/developers',
+  path: '/developers',
   getParentRoute: () => rootRouteImport,
 } as any)
-const UpgradeReturnRoute = UpgradeReturnRouteImport.update({
-  id: '/return',
-  path: '/return',
-  getParentRoute: () => UpgradeRoute,
-} as any)
-const OfferingsIdRoute = OfferingsIdRouteImport.update({
-  id: '/offerings/$id',
-  path: '/offerings/$id',
+const GovernanceRoute = GovernanceRouteImport.update({
+  id: '/governance',
+  path: '/governance',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MarketplaceIdRoute = MarketplaceIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => MarketplaceRoute,
-} as any)
-const LearnTopicRoute = LearnTopicRouteImport.update({
-  id: '/learn/$topic',
-  path: '/learn/$topic',
+const InviteRoute = InviteRouteImport.update({
+  id: '/invite',
+  path: '/invite',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IssuersIdRoute = IssuersIdRouteImport.update({
-  id: '/issuers/$id',
-  path: '/issuers/$id',
+const MarketplaceRoute = MarketplaceRouteImport.update({
+  id: '/marketplace',
+  path: '/marketplace',
   getParentRoute: () => rootRouteImport,
 } as any)
-const GovernanceNewRoute = GovernanceNewRouteImport.update({
-  id: '/new',
-  path: '/new',
-  getParentRoute: () => GovernanceRoute,
-} as any)
-const GovernanceSipRoute = GovernanceSipRouteImport.update({
-  id: '/$sip',
-  path: '/$sip',
-  getParentRoute: () => GovernanceRoute,
-} as any)
-const FundingNewRoute = FundingNewRouteImport.update({
-  id: '/funding/new',
-  path: '/funding/new',
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
-const FundingIdRoute = FundingIdRouteImport.update({
-  id: '/funding/$id',
-  path: '/funding/$id',
+const OperatorsRoute = OperatorsRouteImport.update({
+  id: '/operators',
+  path: '/operators',
   getParentRoute: () => rootRouteImport,
 } as any)
-const Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute =
-  Char91DotwellKnownChar93SecurityChar91DotChar93txtRouteImport.update({
-    id: '/.well-known/security.txt',
-    path: '/.well-known/security.txt',
+const PipelineRoute = PipelineRouteImport.update({
+  id: '/pipeline',
+  path: '/pipeline',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PropertyRoute = PropertyRouteImport.update({
+  id: '/property',
+  path: '/property',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SecurityRoute = SecurityRouteImport.update({
+  id: '/security',
+  path: '/security',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StakeRoute = StakeRouteImport.update({
+  id: '/stake',
+  path: '/stake',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StewardshipRoute = StewardshipRouteImport.update({
+  id: '/stewardship',
+  path: '/stewardship',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TestnetRoute = TestnetRouteImport.update({
+  id: '/testnet',
+  path: '/testnet',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TransparencyRoute = TransparencyRouteImport.update({
+  id: '/transparency',
+  path: '/transparency',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UpgradeRoute = UpgradeRouteImport.update({
+  id: '/upgrade',
+  path: '/upgrade',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const YieldRoute = YieldRouteImport.update({
+  id: '/yield',
+  path: '/yield',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const Char91DotmcpChar93ListToolsRoute =
+  Char91DotmcpChar93ListToolsRouteImport.update({
+    id: '/.mcp/list-tools',
+    path: '/.mcp/list-tools',
     getParentRoute: () => rootRouteImport,
   } as any)
 const Char91DotwellKnownChar93OauthProtectedResourceRoute =
@@ -246,16 +176,81 @@ const Char91DotwellKnownChar93OauthProtectedResourceRoute =
     path: '/.well-known/oauth-protected-resource',
     getParentRoute: () => rootRouteImport,
   } as any)
-const Char91DotmcpChar93ListToolsRoute =
-  Char91DotmcpChar93ListToolsRouteImport.update({
-    id: '/.mcp/list-tools',
-    path: '/.mcp/list-tools',
+const Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute =
+  Char91DotwellKnownChar93SecurityChar91DotChar93txtRouteImport.update({
+    id: '/.well-known/security.txt',
+    path: '/.well-known/security.txt',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiV1YieldRoute = ApiV1YieldRouteImport.update({
-  id: '/api/v1/yield',
-  path: '/api/v1/yield',
+const FundingIndexRoute = FundingIndexRouteImport.update({
+  id: '/funding/',
+  path: '/funding/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const FundingIdRoute = FundingIdRouteImport.update({
+  id: '/funding/$id',
+  path: '/funding/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FundingNewRoute = FundingNewRouteImport.update({
+  id: '/funding/new',
+  path: '/funding/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GovernanceIndexRoute = GovernanceIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => GovernanceRoute,
+} as any)
+const GovernanceSipRoute = GovernanceSipRouteImport.update({
+  id: '/$sip',
+  path: '/$sip',
+  getParentRoute: () => GovernanceRoute,
+} as any)
+const GovernanceNewRoute = GovernanceNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => GovernanceRoute,
+} as any)
+const IssuersIdRoute = IssuersIdRouteImport.update({
+  id: '/issuers/$id',
+  path: '/issuers/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LearnIndexRoute = LearnIndexRouteImport.update({
+  id: '/learn/',
+  path: '/learn/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LearnTopicRoute = LearnTopicRouteImport.update({
+  id: '/learn/$topic',
+  path: '/learn/$topic',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketplaceIdRoute = MarketplaceIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => MarketplaceRoute,
+} as any)
+const OfferingsIndexRoute = OfferingsIndexRouteImport.update({
+  id: '/offerings/',
+  path: '/offerings/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OfferingsIdRoute = OfferingsIdRouteImport.update({
+  id: '/offerings/$id',
+  path: '/offerings/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UpgradeIndexRoute = UpgradeIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => UpgradeRoute,
+} as any)
+const UpgradeReturnRoute = UpgradeReturnRouteImport.update({
+  id: '/return',
+  path: '/return',
+  getParentRoute: () => UpgradeRoute,
 } as any)
 const Char91DotmcpChar93InvokeToolToolRoute =
   Char91DotmcpChar93InvokeToolToolRouteImport.update({
@@ -263,16 +258,21 @@ const Char91DotmcpChar93InvokeToolToolRoute =
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicPaymentsWebhookRoute =
-  ApiPublicPaymentsWebhookRouteImport.update({
-    id: '/api/public/payments/webhook',
-    path: '/api/public/payments/webhook',
-    getParentRoute: () => rootRouteImport,
-  } as any)
+const ApiV1YieldRoute = ApiV1YieldRouteImport.update({
+  id: '/api/v1/yield',
+  path: '/api/v1/yield',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicBlockfrostWebhookRoute =
   ApiPublicBlockfrostWebhookRouteImport.update({
     id: '/api/public/blockfrost/webhook',
     path: '/api/public/blockfrost/webhook',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPublicPaymentsWebhookRoute =
+  ApiPublicPaymentsWebhookRouteImport.update({
+    id: '/api/public/payments/webhook',
+    path: '/api/public/payments/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiV1YieldUserAddressQueueRoute =
@@ -600,144 +600,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/yield': {
-      id: '/yield'
-      path: '/yield'
-      fullPath: '/yield'
-      preLoaderRoute: typeof YieldRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/upgrade': {
-      id: '/upgrade'
-      path: '/upgrade'
-      fullPath: '/upgrade'
-      preLoaderRoute: typeof UpgradeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/transparency': {
-      id: '/transparency'
-      path: '/transparency'
-      fullPath: '/transparency'
-      preLoaderRoute: typeof TransparencyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/testnet': {
-      id: '/testnet'
-      path: '/testnet'
-      fullPath: '/testnet'
-      preLoaderRoute: typeof TestnetRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/terms': {
-      id: '/terms'
-      path: '/terms'
-      fullPath: '/terms'
-      preLoaderRoute: typeof TermsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/stewardship': {
-      id: '/stewardship'
-      path: '/stewardship'
-      fullPath: '/stewardship'
-      preLoaderRoute: typeof StewardshipRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/stake': {
-      id: '/stake'
-      path: '/stake'
-      fullPath: '/stake'
-      preLoaderRoute: typeof StakeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sitemap.xml': {
-      id: '/sitemap.xml'
-      path: '/sitemap.xml'
-      fullPath: '/sitemap.xml'
-      preLoaderRoute: typeof SitemapDotxmlRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/security': {
-      id: '/security'
-      path: '/security'
-      fullPath: '/security'
-      preLoaderRoute: typeof SecurityRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/property': {
-      id: '/property'
-      path: '/property'
-      fullPath: '/property'
-      preLoaderRoute: typeof PropertyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/pipeline': {
-      id: '/pipeline'
-      path: '/pipeline'
-      fullPath: '/pipeline'
-      preLoaderRoute: typeof PipelineRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/operators': {
-      id: '/operators'
-      path: '/operators'
-      fullPath: '/operators'
-      preLoaderRoute: typeof OperatorsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/mcp': {
-      id: '/mcp'
-      path: '/mcp'
-      fullPath: '/mcp'
-      preLoaderRoute: typeof McpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/marketplace': {
-      id: '/marketplace'
-      path: '/marketplace'
-      fullPath: '/marketplace'
-      preLoaderRoute: typeof MarketplaceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/invite': {
-      id: '/invite'
-      path: '/invite'
-      fullPath: '/invite'
-      preLoaderRoute: typeof InviteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/governance': {
-      id: '/governance'
-      path: '/governance'
-      fullPath: '/governance'
-      preLoaderRoute: typeof GovernanceRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/developers': {
-      id: '/developers'
-      path: '/developers'
-      fullPath: '/developers'
-      preLoaderRoute: typeof DevelopersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/blockfrost-health': {
-      id: '/blockfrost-health'
-      path: '/blockfrost-health'
-      fullPath: '/blockfrost-health'
-      preLoaderRoute: typeof BlockfrostHealthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/assets': {
-      id: '/assets'
-      path: '/assets'
-      fullPath: '/assets'
-      preLoaderRoute: typeof AssetsRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app': {
@@ -747,123 +614,144 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/assets': {
+      id: '/assets'
+      path: '/assets'
+      fullPath: '/assets'
+      preLoaderRoute: typeof AssetsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/upgrade/': {
-      id: '/upgrade/'
-      path: '/'
-      fullPath: '/upgrade/'
-      preLoaderRoute: typeof UpgradeIndexRouteImport
-      parentRoute: typeof UpgradeRoute
-    }
-    '/offerings/': {
-      id: '/offerings/'
-      path: '/offerings'
-      fullPath: '/offerings/'
-      preLoaderRoute: typeof OfferingsIndexRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/learn/': {
-      id: '/learn/'
-      path: '/learn'
-      fullPath: '/learn/'
-      preLoaderRoute: typeof LearnIndexRouteImport
+    '/blockfrost-health': {
+      id: '/blockfrost-health'
+      path: '/blockfrost-health'
+      fullPath: '/blockfrost-health'
+      preLoaderRoute: typeof BlockfrostHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/governance/': {
-      id: '/governance/'
-      path: '/'
-      fullPath: '/governance/'
-      preLoaderRoute: typeof GovernanceIndexRouteImport
-      parentRoute: typeof GovernanceRoute
-    }
-    '/funding/': {
-      id: '/funding/'
-      path: '/funding'
-      fullPath: '/funding/'
-      preLoaderRoute: typeof FundingIndexRouteImport
+    '/developers': {
+      id: '/developers'
+      path: '/developers'
+      fullPath: '/developers'
+      preLoaderRoute: typeof DevelopersRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/upgrade/return': {
-      id: '/upgrade/return'
-      path: '/return'
-      fullPath: '/upgrade/return'
-      preLoaderRoute: typeof UpgradeReturnRouteImport
-      parentRoute: typeof UpgradeRoute
-    }
-    '/offerings/$id': {
-      id: '/offerings/$id'
-      path: '/offerings/$id'
-      fullPath: '/offerings/$id'
-      preLoaderRoute: typeof OfferingsIdRouteImport
+    '/governance': {
+      id: '/governance'
+      path: '/governance'
+      fullPath: '/governance'
+      preLoaderRoute: typeof GovernanceRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/marketplace/$id': {
-      id: '/marketplace/$id'
-      path: '/$id'
-      fullPath: '/marketplace/$id'
-      preLoaderRoute: typeof MarketplaceIdRouteImport
-      parentRoute: typeof MarketplaceRoute
-    }
-    '/learn/$topic': {
-      id: '/learn/$topic'
-      path: '/learn/$topic'
-      fullPath: '/learn/$topic'
-      preLoaderRoute: typeof LearnTopicRouteImport
+    '/invite': {
+      id: '/invite'
+      path: '/invite'
+      fullPath: '/invite'
+      preLoaderRoute: typeof InviteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/issuers/$id': {
-      id: '/issuers/$id'
-      path: '/issuers/$id'
-      fullPath: '/issuers/$id'
-      preLoaderRoute: typeof IssuersIdRouteImport
+    '/marketplace': {
+      id: '/marketplace'
+      path: '/marketplace'
+      fullPath: '/marketplace'
+      preLoaderRoute: typeof MarketplaceRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/governance/new': {
-      id: '/governance/new'
-      path: '/new'
-      fullPath: '/governance/new'
-      preLoaderRoute: typeof GovernanceNewRouteImport
-      parentRoute: typeof GovernanceRoute
-    }
-    '/governance/$sip': {
-      id: '/governance/$sip'
-      path: '/$sip'
-      fullPath: '/governance/$sip'
-      preLoaderRoute: typeof GovernanceSipRouteImport
-      parentRoute: typeof GovernanceRoute
-    }
-    '/funding/new': {
-      id: '/funding/new'
-      path: '/funding/new'
-      fullPath: '/funding/new'
-      preLoaderRoute: typeof FundingNewRouteImport
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/funding/$id': {
-      id: '/funding/$id'
-      path: '/funding/$id'
-      fullPath: '/funding/$id'
-      preLoaderRoute: typeof FundingIdRouteImport
+    '/operators': {
+      id: '/operators'
+      path: '/operators'
+      fullPath: '/operators'
+      preLoaderRoute: typeof OperatorsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/.well-known/security.txt': {
-      id: '/.well-known/security.txt'
-      path: '/.well-known/security.txt'
-      fullPath: '/.well-known/security.txt'
-      preLoaderRoute: typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRouteImport
+    '/pipeline': {
+      id: '/pipeline'
+      path: '/pipeline'
+      fullPath: '/pipeline'
+      preLoaderRoute: typeof PipelineRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/.well-known/oauth-protected-resource': {
-      id: '/.well-known/oauth-protected-resource'
-      path: '/.well-known/oauth-protected-resource'
-      fullPath: '/.well-known/oauth-protected-resource'
-      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+    '/property': {
+      id: '/property'
+      path: '/property'
+      fullPath: '/property'
+      preLoaderRoute: typeof PropertyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/security': {
+      id: '/security'
+      path: '/security'
+      fullPath: '/security'
+      preLoaderRoute: typeof SecurityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stake': {
+      id: '/stake'
+      path: '/stake'
+      fullPath: '/stake'
+      preLoaderRoute: typeof StakeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stewardship': {
+      id: '/stewardship'
+      path: '/stewardship'
+      fullPath: '/stewardship'
+      preLoaderRoute: typeof StewardshipRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/testnet': {
+      id: '/testnet'
+      path: '/testnet'
+      fullPath: '/testnet'
+      preLoaderRoute: typeof TestnetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/transparency': {
+      id: '/transparency'
+      path: '/transparency'
+      fullPath: '/transparency'
+      preLoaderRoute: typeof TransparencyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/upgrade': {
+      id: '/upgrade'
+      path: '/upgrade'
+      fullPath: '/upgrade'
+      preLoaderRoute: typeof UpgradeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/yield': {
+      id: '/yield'
+      path: '/yield'
+      fullPath: '/yield'
+      preLoaderRoute: typeof YieldRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.mcp/list-tools': {
@@ -873,12 +761,117 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/v1/yield': {
-      id: '/api/v1/yield'
-      path: '/api/v1/yield'
-      fullPath: '/api/v1/yield'
-      preLoaderRoute: typeof ApiV1YieldRouteImport
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/.well-known/security.txt': {
+      id: '/.well-known/security.txt'
+      path: '/.well-known/security.txt'
+      fullPath: '/.well-known/security.txt'
+      preLoaderRoute: typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/funding/': {
+      id: '/funding/'
+      path: '/funding'
+      fullPath: '/funding/'
+      preLoaderRoute: typeof FundingIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/funding/$id': {
+      id: '/funding/$id'
+      path: '/funding/$id'
+      fullPath: '/funding/$id'
+      preLoaderRoute: typeof FundingIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/funding/new': {
+      id: '/funding/new'
+      path: '/funding/new'
+      fullPath: '/funding/new'
+      preLoaderRoute: typeof FundingNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/governance/': {
+      id: '/governance/'
+      path: '/'
+      fullPath: '/governance/'
+      preLoaderRoute: typeof GovernanceIndexRouteImport
+      parentRoute: typeof GovernanceRoute
+    }
+    '/governance/$sip': {
+      id: '/governance/$sip'
+      path: '/$sip'
+      fullPath: '/governance/$sip'
+      preLoaderRoute: typeof GovernanceSipRouteImport
+      parentRoute: typeof GovernanceRoute
+    }
+    '/governance/new': {
+      id: '/governance/new'
+      path: '/new'
+      fullPath: '/governance/new'
+      preLoaderRoute: typeof GovernanceNewRouteImport
+      parentRoute: typeof GovernanceRoute
+    }
+    '/issuers/$id': {
+      id: '/issuers/$id'
+      path: '/issuers/$id'
+      fullPath: '/issuers/$id'
+      preLoaderRoute: typeof IssuersIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/learn/': {
+      id: '/learn/'
+      path: '/learn'
+      fullPath: '/learn/'
+      preLoaderRoute: typeof LearnIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/learn/$topic': {
+      id: '/learn/$topic'
+      path: '/learn/$topic'
+      fullPath: '/learn/$topic'
+      preLoaderRoute: typeof LearnTopicRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/marketplace/$id': {
+      id: '/marketplace/$id'
+      path: '/$id'
+      fullPath: '/marketplace/$id'
+      preLoaderRoute: typeof MarketplaceIdRouteImport
+      parentRoute: typeof MarketplaceRoute
+    }
+    '/offerings/': {
+      id: '/offerings/'
+      path: '/offerings'
+      fullPath: '/offerings/'
+      preLoaderRoute: typeof OfferingsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/offerings/$id': {
+      id: '/offerings/$id'
+      path: '/offerings/$id'
+      fullPath: '/offerings/$id'
+      preLoaderRoute: typeof OfferingsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/upgrade/': {
+      id: '/upgrade/'
+      path: '/'
+      fullPath: '/upgrade/'
+      preLoaderRoute: typeof UpgradeIndexRouteImport
+      parentRoute: typeof UpgradeRoute
+    }
+    '/upgrade/return': {
+      id: '/upgrade/return'
+      path: '/return'
+      fullPath: '/upgrade/return'
+      preLoaderRoute: typeof UpgradeReturnRouteImport
+      parentRoute: typeof UpgradeRoute
     }
     '/.mcp/invoke-tool/$tool': {
       id: '/.mcp/invoke-tool/$tool'
@@ -887,11 +880,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/public/payments/webhook': {
-      id: '/api/public/payments/webhook'
-      path: '/api/public/payments/webhook'
-      fullPath: '/api/public/payments/webhook'
-      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
+    '/api/v1/yield': {
+      id: '/api/v1/yield'
+      path: '/api/v1/yield'
+      fullPath: '/api/v1/yield'
+      preLoaderRoute: typeof ApiV1YieldRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/public/blockfrost/webhook': {
@@ -899,6 +892,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/blockfrost/webhook'
       fullPath: '/api/public/blockfrost/webhook'
       preLoaderRoute: typeof ApiPublicBlockfrostWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/payments/webhook': {
+      id: '/api/public/payments/webhook'
+      path: '/api/public/payments/webhook'
+      fullPath: '/api/public/payments/webhook'
+      preLoaderRoute: typeof ApiPublicPaymentsWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/v1/yield/user/$address/queue': {
