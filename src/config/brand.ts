@@ -10,12 +10,12 @@ export const BRAND = {
     ticker: "TSRA",
     name: "Tessera",
     description:
-      "Dollar-referenced stablecoin, 1 TSRA = 1 USD. Does not earn yield; redeemable instantly.",
+      "Dollar-referenced token, 1 TSRA = 1 USD, backed by reserves published on the transparency page. Does not earn yield. Redeemed through a daily redemption queue.",
   },
   staked: {
     ticker: "sTSRA",
     name: "Staked Tessera",
     description:
-      "Yield-bearing staked TSRA. Earns from the reserve portfolio and unstakes after a cooldown.",
+      "Staked TSRA. Earns a share of the reserve portfolio's yield, credited gradually over 7 days. Rates are variable and can fall.",
   },
 } as const;

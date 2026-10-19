@@ -29,7 +29,7 @@ export const Route = createFileRoute("/governance/")({
   head: () => ({
     meta: [
       { title: "Governance · Stellaris Finance" },
-      { name: "description", content: "Institutional governance for the Stellaris RealFi protocol. Vote on SIPs, monitor vaults, delegate voting power, and read on-chain signals." },
+      { name: "description", content: "Institutional governance for the Stellaris protocol. Vote on SIPs, monitor vaults, delegate voting power, and read on-chain signals." },
       { property: "og:title", content: "Stellaris Governance Console" },
       { property: "og:description", content: "SIPs, vaults, delegates and market signals in one institutional-grade dashboard." },
     ],

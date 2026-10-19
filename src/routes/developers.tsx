@@ -36,10 +36,10 @@ export const Route = createFileRoute("/developers")({
       {
         name: "description",
         content:
-          "Institutional API for RealFi data feeds, portfolio state, and vault operations. RESTful + WebSocket + on-chain queries.",
+          "Institutional API for Stellaris data feeds, portfolio state, and vault operations. RESTful + WebSocket + on-chain queries.",
       },
       { property: "og:title", content: "Stellaris Developer Portal" },
-      { property: "og:description", content: "Programmatic access to RealFi vaults on Cardano." },
+      { property: "og:description", content: "Programmatic access to Stellaris vaults on Cardano." },
     ],
   }),
   component: Developers,

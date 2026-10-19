@@ -47,7 +47,7 @@ export function SusdrContractCard() {
   return (
     <div className="card-institutional p-6">
       <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
-        <FileCode2 className="h-4 w-4 text-primary" /> Legacy stablecoin stand-in (frozen) — contract
+        <FileCode2 className="h-4 w-4 text-primary" /> Legacy sUSDr vault (frozen, not in use) — contract
         identity
       </h3>
       <p className="mt-1 text-xs text-muted-foreground">
