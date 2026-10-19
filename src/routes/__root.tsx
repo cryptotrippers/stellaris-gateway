@@ -82,8 +82,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Stellaris · Own real-world assets from ₳10" },
-      { name: "description", content: "Solar farms, coffee estates, and real estate — fractionalized on Cardano. Verified yields, ESG ratings, and 24h withdrawals." },
+      { title: "Stellaris Finance · Real-world assets on Cardano" },
+      { name: "description", content: "The transparent gateway to real-world assets on Cardano. Testnet preview: no real-money investments are available." },
       { name: "author", content: "Stellaris Finance" },
       { name: "theme-color", content: "#102438" },
       { property: "og:site_name", content: "Stellaris Finance" },
