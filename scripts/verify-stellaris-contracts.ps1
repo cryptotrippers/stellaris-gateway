@@ -298,7 +298,7 @@ $rules = @(
     @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'continuing_ok(ticket, state_in),'; Label = 'tessera F-6 sTSRA new Ticket at the State address (2-H)' }
     @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'genesis_out_ok(boot, policy),'; Label = 'tessera F-6 sTSRA genesis at the enterprise address (2-H)' }
     @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'hi < c0.loss_pending_until,'; Label = 'tessera LossBurn needs a freeze that holds for the whole validity (2.5b)' }
-    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'claim_excess(tx, cfg.vault_policy) == Some(qty),'; Label = 'tessera VaultClaimBurn burns exactly a genuine Ticket's excess (2.5b)' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'claim_excess(tx, cfg.vault_policy) == Some(qty),'; Label = 'tessera VaultClaimBurn burns exactly a genuine Ticket excess (2.5b)' }
     @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'LossBurn { qty, written_off } -> loss_burn(qty, written_off, own_ref, tx)'; Label = 'tessera LossBurn is the one redeemer that spends Supply and Config (2.5b)' }
     @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'rules.can_open_freeze(lo, hi, until, c0.loss_pending_until),'; Label = 'tessera OpenLoss bounded by the freeze rules (2.5b)' }
     @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'bytearray.length(vault_policy) == 28,'; Label = 'tessera SetVault policy must be a script hash (2.5b)' }
