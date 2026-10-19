@@ -202,7 +202,8 @@ const tesseraValidators = existsSync(TESSERA_PLUTUS_PATH)
 if (tesseraValidators) {
   const tesseraPin = readPins(TESSERA_TS_PATH);
   // Phase 2.2: the State NFT is minted by reserve.ak itself (thread pattern);
-  // state_nft.ak is retired. 2.3 adds eligibility, 2.4 the sTSRA vault.
+  // state_nft.ak is retired. 2.3 adds eligibility, 2.4 the sTSRA vault, 2.5b the
+  // first-loss reserve.
   targets.push(
     {
       label: "tessera reserve (Config + Supply + TSRA + thread policy)",
@@ -225,6 +226,20 @@ if (tesseraValidators) {
       cbor: "__BLUEPRINT_IMPORT__",
       file: "src/lib/tessera-blueprint.ts",
     },
+    {
+      label: "tessera vault_ops (withdraw-zero: ReportLoss, ReportYield, SetBounds, Claim accounting)",
+      onChain: findIn(tesseraValidators, "vault_ops.vault_ops", ".withdraw"),
+      hash: tesseraPin("TESSERA_VAULT_OPS_BLUEPRINT_HASH"),
+      cbor: "__BLUEPRINT_IMPORT__",
+      file: "src/lib/tessera-blueprint.ts",
+    },
+    {
+      label: "tessera first_loss (first-loss reserve State + thread policy)",
+      onChain: findIn(tesseraValidators, "first_loss.first_loss"),
+      hash: tesseraPin("TESSERA_FIRST_LOSS_BLUEPRINT_HASH"),
+      cbor: "__BLUEPRINT_IMPORT__",
+      file: "src/lib/tessera-blueprint.ts",
+    },
   );
 } else {
   console.log(
@@ -235,6 +250,32 @@ if (tesseraValidators) {
 for (const target of targets) {
   if (target.cbor === "__BLUEPRINT_IMPORT__") target.cbor = target.onChain.compiledCode;
 }
+
+// Size guard: a script must fit in the transaction that publishes it as a
+// reference script (16,384 bytes max transaction size), so no validator in any
+// project may compile above MAX_VALIDATOR_BYTES. The Tessera target is 13,000
+// (headroom for the redemption queue); CI fails at 14,000.
+const MAX_VALIDATOR_BYTES = 14_000;
+let oversize = false;
+for (const p of [
+  PLUTUS_PATH,
+  SUSDR_PLUTUS_PATH,
+  MULTI_PLUTUS_PATH,
+  FRACTION_PLUTUS_PATH,
+  TESSERA_PLUTUS_PATH,
+]) {
+  if (!existsSync(p)) continue;
+  for (const v of JSON.parse(readFileSync(p, "utf8"))?.validators ?? []) {
+    const bytes = (v.compiledCode?.length ?? 0) / 2;
+    if (bytes > MAX_VALIDATOR_BYTES) {
+      console.error(
+        `[verify-vault-hash] SIZE: ${v.title} in ${p} compiles to ${bytes} bytes (> ${MAX_VALIDATOR_BYTES}); it could not be published as a reference script.`,
+      );
+      oversize = true;
+    }
+  }
+}
+if (oversize) process.exit(1);
 
 let drift = false;
 for (const t of targets) {

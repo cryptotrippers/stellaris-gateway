@@ -16,11 +16,16 @@ lib/tessera/rules.ak       Reserve-gate rules (caps, freshness, windows) + tests
 lib/tessera/reserve_state.ak  ConfigState / SupplyState datums + committee rules (shared)
 lib/tessera/reserve_threads.ak  The `config` and `supply` thread-token names
 lib/tessera/eligibility.ak The one eligibility check, eligible(tx, policy, holder)
-lib/tessera/reserve_ref.ak Genuine Reserve Config lookup (reference input)
-lib/tessera/vault_state.ak sTSRA vault datum, bounds, yield split
+lib/tessera/reserve_ref.ak Genuine Reserve Config / Supply lookups (reference and spent)
+lib/tessera/vault_state.ak sTSRA vault datum, redeemer, bounds, yield split, ticket_payout
+lib/tessera/loss.ak        ReportLoss waterfall arithmetic (Phase 2.5b)
+lib/tessera/first_loss_state.ak  First-loss State datum and lookups
+lib/tessera/loss_fixture.ak  Worst-case ReportLoss / Claim transactions for the budget tests
 validators/reserve.ak      Reserve Config + Supply + TSRA mint policy (one script)
 validators/eligibility.ak  Eligibility-token policy + registry (allowlist)
 validators/stsra_vault.ak  sTSRA vault: State, Positions, Tickets + sTSRA policy
+validators/first_loss.ak   First-loss reserve State (Phase 2.5b)
+validators/vault_ops.ak    Withdraw-zero script: ReportLoss, ReportYield, SetBounds, Claim accounting (2.5b)
 lib/stellaris/thread.ak    State-thread token helpers (verbatim copy of the vaults' module)
 DESIGN.md                  Design draft + decisions
 SPEC.md                    State transitions and invariants (to be filled)
@@ -30,9 +35,11 @@ SPEC.md                    State transitions and invariants (to be filled)
 
 | File | Role |
 |---|---|
-| `validators/reserve.ak` | **Written and tested** (`aiken check`, mutation-tested, SPEC.md §6). Reserve Config + Supply (Phase 2.5a split) + TSRA policy |
+| `validators/reserve.ak` | **Written and tested** (`aiken check`, mutation-tested, SPEC.md §6). Reserve Config + Supply (Phase 2.5a split) + TSRA policy; the loss path (`OpenLoss`, `CancelLoss`, `LossBurn`, `SetVault`, `VaultClaimBurn`, Phase 2.5b) |
 | `validators/eligibility.ak` | **Written and tested** (Phase 2.3, SPEC.md §1a). Allowlist tokens, committee-issued and revocable |
-| `validators/stsra_vault.ak` | **Written and tested** (Phase 2.4, SPEC.md §3). Two-tier staking vault; `ReportYield` requires delivered funds |
+| `validators/stsra_vault.ak` | **Written and tested** (Phase 2.4, SPEC.md §3). Two-tier staking vault; `ReportYield` requires delivered funds; `ReportLoss`, the loss freeze and class generations (2.5b) |
+| `validators/first_loss.ak` | **Written and tested** (Phase 2.5b, SPEC.md §3a). TSRA that exists only to be burned against a loss; `Deposit` / `Draw` |
+| `validators/vault_ops.ak` | **Written and tested** (Phase 2.5b, SPEC.md §3a.15). Holds the vault checks that would not fit in one script; registration is the only certificate it accepts |
 | `validators/redeem_queue.ak` | Request UTxOs, daily buckets, permissionless settlement |
 
 ## Commands
