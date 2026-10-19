@@ -285,9 +285,12 @@ $rules = @(
     @{ File = 'contracts/tessera/lib/tessera/exchange.ak'; Pattern = 'max_yield_fee_bps: Int = 2000'; Label = 'tessera sTSRA protocol share hard max 20% (2.4)' }
     @{ File = 'contracts/tessera/lib/stellaris/outputs.ak'; Pattern = 'out.address == spent.address,'; Label = 'tessera F-6 continuing outputs keep the exact address (2-H)' }
     @{ File = 'contracts/tessera/lib/stellaris/outputs.ak'; Pattern = 'out.reference_script == None,'; Label = 'tessera F-6 script outputs carry no reference script (2-H)' }
-    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'continuing_ok(next_out, state_in),'; Label = 'tessera F-6 reserve State pinned (2-H)' }
-    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'keeps_lovelace(next_out, state_in),'; Label = 'tessera F-6 reserve State keeps its lovelace (2-H)' }
-    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'genesis_out_ok(boot, policy),'; Label = 'tessera F-6 reserve genesis at the enterprise address (2-H)' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'continuing_ok(next_out, supply_in),'; Label = 'tessera F-6 reserve Supply pinned (2-H, 2.5a)' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'continuing_ok(next_out, config_in),'; Label = 'tessera F-6 reserve Config pinned (2-H, 2.5a)' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'keeps_lovelace(next_out, supply_in),'; Label = 'tessera F-6 reserve Supply keeps its lovelace (2-H, 2.5a)' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'keeps_lovelace(next_out, config_in),'; Label = 'tessera F-6 reserve Config keeps its lovelace (2-H, 2.5a)' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'genesis_out_ok(cfg_out, policy),'; Label = 'tessera F-6 reserve genesis Config at the enterprise address (2-H, 2.5a)' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'genesis_out_ok(sup_out, policy),'; Label = 'tessera F-6 reserve genesis Supply at the enterprise address (2-H, 2.5a)' }
     @{ File = 'contracts/tessera/validators/eligibility.ak'; Pattern = 'genesis_out_ok(o, policy)'; Label = 'tessera F-6 eligibility registry outputs pinned (2-H)' }
     @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'continuing_ok(next_out, state_in),'; Label = 'tessera F-6 sTSRA State pinned (2-H)' }
     @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'keeps_lovelace(next_out, state_in),'; Label = 'tessera F-6 sTSRA State keeps its lovelace (2-H)' }
@@ -307,7 +310,7 @@ $rules = @(
     @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'hi - lo <= rules.max_attest_window,'; Label = 'tessera sTSRA ReportYield window at most 1 day (2-H)' }
     @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'owner_authorised(tx, p.owner),'; Label = 'tessera sTSRA UnlockLong needs its owner (2-H)' }
     @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'lovelace_of(paid) >= lovelace_of(spent.value),'; Label = 'tessera sTSRA exits return the spent UTxOs ADA (2-H)' }
-    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = '!s0.paused,'; Label = 'tessera mint blocked while paused' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = '!cfg.paused,'; Label = 'tessera mint blocked while paused (Config flag, 2.5a)' }
 )
 $missingRules = @()
 foreach ($r in $rules) {
