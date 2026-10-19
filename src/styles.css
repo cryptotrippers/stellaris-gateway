@@ -12,6 +12,7 @@
   --color-teal: var(--teal);
   --color-teal-bright: var(--teal-bright);
   --color-gold: var(--gold);
+  --color-aqua: var(--aqua);
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
   --radius-sm: calc(var(--radius) - 4px);
@@ -65,6 +66,17 @@
 :root {
   --radius: 0.875rem;
 
+  /* Stellaris brand base values — the only place raw brand hex lives */
+  --stellaris-navy: #102438;
+  --stellaris-deep: #081a2a;
+  --stellaris-teal: #0e766f;
+  --stellaris-aqua: #39cbbb;
+  --stellaris-gold: #d7b773;
+  --stellaris-white: #ffffff;
+  --stellaris-cloud: #f5f7f8;
+  --stellaris-text: #172b3a;
+  --stellaris-muted: #64748b;
+
   /* Stellaris Prime — institutional blue on clean light surface */
   --background: oklch(0.975 0.003 220); /* #F5F7F8 */
   --foreground: oklch(0.27 0.04 240); /* #172B3A */
@@ -80,10 +92,11 @@
   --primary: oklch(0.25 0.05 245); /* navy #102438 */
   --primary-foreground: oklch(0.99 0 0);
   --primary-glow: oklch(0.5 0.09 185); /* teal #0E766F */
-  --deep: oklch(0.2 0.04 250); /* #0A1726 */
+  --deep: var(--stellaris-deep);
   --deep-foreground: oklch(0.97 0.005 220);
   --teal: oklch(0.5 0.09 185);
   --teal-bright: oklch(0.64 0.12 180); /* #15A394 */
+  --aqua: var(--stellaris-aqua);
   --gold: oklch(0.79 0.1 85); /* #D7B773 */
 
   --secondary: oklch(0.94 0.008 220);
@@ -136,7 +149,9 @@
   --shadow-glow: 0 0 0 1px oklch(0.5 0.09 185 / 0.15), 0 8px 24px -6px oklch(0.25 0.05 245 / 0.2);
 }
 
-.dark {
+/* .protocol = 'The Protocol' dark analytical mode for any section */
+.dark,
+.protocol {
   --deep: oklch(0.14 0.03 250);
   --background: oklch(0.16 0.03 250);
   --foreground: oklch(0.97 0.008 285);
@@ -376,4 +391,9 @@
 }
 .home-dark-section .home-eyebrow {
   color: var(--gold);
+}
+
+.protocol {
+  background-color: var(--background);
+  color: var(--foreground);
 }
