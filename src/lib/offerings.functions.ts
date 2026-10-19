@@ -11,6 +11,7 @@ import { publicSupabase } from "./asset-vaults.shared";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertRole } from "./asset-vaults.shared";
 import { genuineOfferingAt } from "./offering-chain";
+import { bfVaultUtxos } from "./yield-chain-decode";
 import {
   OFFERING_COLS,
   type FractionHolder,
@@ -64,7 +65,8 @@ export const readOfferingChainState = createServerFn({ method: "GET" })
   .handler(async ({ data }): Promise<OfferingChainState> => {
     const { bfGet } = await import("./blockfrost-fetch.server");
     const unit = data.unit && data.unit !== "lovelace" ? data.unit : "lovelace";
-    const utxos = (await bfGet<BfUtxo[]>(`/addresses/${data.address}/utxos`)) ?? [];
+    // F-6: read the offering where its thread token actually sits.
+    const { utxos } = await bfVaultUtxos<BfUtxo>(bfGet, data.address);
 
     // F-1: the live offering is the UTxO carrying its state-thread token. The
     // old rule displayed whichever Offering datum came first, so a planted

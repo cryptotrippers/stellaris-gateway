@@ -219,9 +219,13 @@ VaultState {
   long_shares: Int,         -- == sum of shares over live Positions
   long_assets: Int,         -- TSRA owned by class L
   loss_index: Int,          -- 1e12 at genesis; only ReportLoss (2.5) lowers it
+  vest_short: Int,          -- reported yield not yet in the class S price (2-H)
+  vest_long: Int,           -- the same for class L
+  vest_from: Int,           -- vesting line: from (vest_from, vest_*) ...
+  vest_until: Int,          -- ... to (vest_until, 0); all 0 at genesis
   long_weight_bps: Int,     -- 12_500 proposed; 10_000 <= w <= 15_000
   short_cooldown_ms: Int,   -- 7 days proposed; 7 d <= c <= 14 d
-  long_lock_ms: Int,        -- 30 days proposed; c <= l <= 90 d
+  long_lock_ms: Int,        -- 30 days proposed; 2c <= l <= 90 d (2-H)
   protocol_bps: Int,        -- 1_250 proposed; 0 <= p <= 2_000
   first_loss_addr: Address, -- bootstrap parameter until 2.5
   treasury_addr: Address,
@@ -234,7 +238,8 @@ Ticket   { owner: Address, value: Int, index_at_request: Int,
 ```
 
 The State UTxO holds exactly ADA + the thread token + `short_assets +
-long_assets` TSRA (exact-value check, as the reserve does), so
+long_assets + vest_short + vest_long` TSRA (exact-value check, as the
+reserve does), so
 `total_assets` always equals the TSRA physically locked, and no one can
 donate TSRA to skew a price. A Position holds exactly ADA + one marker (its
 TSRA stays in the State). A Ticket holds exactly ADA + one marker + `value`
@@ -251,8 +256,8 @@ Like the reserve datum, `VaultState` is provisional and will move to
 | `StakeShort{amount, holder}` | State | anyone; `holder` eligible if `kyc_stake` | +`amount` TSRA to State; mint `mint_shares(amount, S)` sTSRA |
 | `StakeLong{amount, holder, owner}` | State | anyone; `holder` eligible if `kyc_stake` | +`amount` TSRA to State; create Position (marker) with `unlock_at == hi + long_lock_ms` |
 | `RequestUnstake{shares, owner}` | State | anyone holding sTSRA | burn `shares` sTSRA; move `v = redeem_value(shares, S)` TSRA from State into a new Ticket (marker) with `index_at_request == loss_index`, `claim_after == hi + short_cooldown_ms` |
-| `Claim` | Ticket (State as **reference input**) | anyone; pays only `owner` | after `claim_after`: pay `owner` `v · loss_index_now / index_at_request`, burn the marker, burn the excess TSRA |
-| `UnlockLong` | State + Position | anyone; pays only `owner` | after `unlock_at`: pay `owner` `redeem_value(shares, L)`; burn the marker |
+| `Claim` | Ticket (State as **reference input**) | anyone; pays only `owner` | after `claim_after`: pay `owner` `v · loss_index_now / index_at_request` and the Ticket's ADA, burn the marker, burn the excess TSRA |
+| `UnlockLong` | State + Position | **the owner** (2-H, §3.15) | after `unlock_at`: pay `owner` `redeem_value(shares, L)` and the Position's ADA; burn the marker |
 | `ReportYield{gross}` | State | committee M-of-N | §3.5 |
 | `SetBounds{…}` | State | committee M-of-N | change weight / cooldown / lock / protocol bps within the hard limits; nothing else |
 | `ReportLoss{…}` | State | committee M-of-N | **2.5** — §3.8 |
@@ -413,7 +418,9 @@ As `reserve.ak`: the `state` mint consumes the seed, mints exactly one
 output at the vault address holding exactly ADA + the token (no TSRA), with
 an inline `VaultState` of zero shares and assets, `loss_index == 1e12`,
 `epoch == 0`, parameters within their hard limits, and `first_loss_addr` /
-`treasury_addr` that are not the vault itself.
+`treasury_addr` that are not the vault itself. Phase 2-H: nothing vesting
+(`vest_* == 0`), and the output sits at the vault's enterprise address (no
+stake credential) with no reference script (AUDIT.md F-6).
 
 ### 3.11 Test plan
 
@@ -551,6 +558,66 @@ Then a mutation pass over every guard, as in §6.
    read by the vault and the queue, and a hot *supply* UTxO (minted supply,
    attested reserve). Today every TSRA mint or burn invalidates in-flight
    vault transactions that reference the Reserve State (§3.9, D-6).
+3. **For 2.5 — ReportLoss eats unvested yield first.** A loss must first be
+   taken from `vest_short` / `vest_long` (yield the stakers have not yet
+   received), and only the remainder from `short_assets` / `long_assets` and
+   the loss index. Otherwise stakers who exit during the vest week keep yield
+   that the loss should have cancelled (§3.15).
+
+### 3.15 Phase 2-H hardening (approved 2026-10-19)
+
+**Yield vesting (H2.1, option a).** ReportYield no longer moves the price
+at once: the net yield is split as in §3.5 (weights now use each class's
+*whole* TSRA, booked + vesting) and added to `vest_short` / `vest_long`,
+which vest linearly over `vest_period_ms` = 7 days, a hard constant.
+
+* *Booking.* Every State transition first folds what has vested by the
+  validity **lower bound** `lo` into `short_assets` / `long_assets`
+  (`vault_state.fold`). The ledger guarantees `lo` has been reached; `hi` has
+  not, so booking at `hi` would let a staker with a far-future upper bound
+  vest the whole week at once. A fold restarts the line at the fold time, so
+  the slope (and the end date) is unchanged.
+* *Pricing.* Stakes price at `hi` (booked + vested by `hi`): a staker never
+  buys below the price at the moment the transaction lands. Unstakes and
+  unlocks price at `lo` (booked only, after the fold): an exit never gets
+  more than that price. Picking the validity range can only cost the user.
+* *Rounding.* `vested` is clamped to `[0, unvested]` and rounded down; the
+  dust stays unvested in the pool. Folding early can only lower a later price
+  by that dust, never raise it (`folding_early_never_raises_a_price`).
+* *Roll-over.* ReportYield adds the new yield to what is still vesting and
+  restarts one 7-day line from `max(lo, vest_from)`; nothing is lost or
+  counted twice (`vesting_report_conserves_every_unit`). Its window is at most
+  1 day (`hi - lo <= max_attest_window`), so `lo` cannot be backdated to vest
+  the yield early.
+* *Known edge.* If every share of a class exits while yield is still
+  vesting, that unvested yield passes to the next entrant of the class (as the
+  rounding dust always has). Exiting forfeits unvested yield by design.
+
+**Lock floor (H2.2).** `long_lock_ms >= 2 × short_cooldown_ms` in
+`bounds_ok`, so genesis and SetBounds both enforce it (7-day cooldown: lock
+at least 14 days; 14-day cooldown: at least 28).
+
+**Owner authorisation and ADA (H2.3).** A Position keeps earning after
+`unlock_at`, so only its owner may unlock it: a key owner signs; a script
+owner has an input of its own script spent in the transaction (so its
+validator decides). Claim stays permissionless — a Ticket earns nothing, so
+an early claim costs its owner nothing. Both pay the owner the spent UTxO's
+lovelace as well as the TSRA. A Position or Ticket owned by the vault
+address itself is refused at creation (it could never be paid out).
+
+**Output pinning (H1, AUDIT.md F-6).** The continuing State, and every new
+Position and Ticket, sits at the spent State's exact address (stake
+credential included) with no reference script, and the State never loses
+lovelace: no vault redeemer pays ADA out of the State (Claim and UnlockLong
+pay the Ticket's / Position's own ADA). The reserve State and eligibility
+registry outputs follow the same rules; the reserve has no lovelace
+exception either.
+
+**Equivalent mutant** (Phase 2-H pass, §6):
+* *`vested`: `t <= from` → `t < from`* — at `t == from` the formula gives
+  0 anyway; it differs only when `vest_until == vest_from` with yield still
+  vesting, which cannot happen (every ReportYield sets `vest_until =
+  start + 7 days`, and genesis starts with nothing vesting).
 
 ## 4. Redemption queue
 Instant tier up to the buffer; Request UTxOs bucketed per day; payable after
@@ -675,3 +742,27 @@ pinned it), and each now has a test. Most cover extra vault inputs or outputs
 and the next datum on each redeemer. The last one is a Reserve State held at
 the wrong address, which the vault suite did not test (2.3 had the matching
 test).
+
+### Phase 2-H (hardening: F-6 output pinning, vesting, lock floor, owner unlock)
+
+97 mutants: 59 over Tessera (the shared `lib/stellaris/outputs.ak` 6,
+`validators/reserve.ak` 3, `validators/eligibility.ak` 1,
+`validators/stsra_vault.ak` 38, `lib/tessera/vault_state.ak` 11) and 38 over
+the legacy vaults (`yield_vault` + its `outputs.ak` 12, `multi_asset_vault`
+12, `fraction_vault` 14). 96 are killed; the other one is equivalent and
+listed in §3.15. No survivor showed a logic bug, and the validator logic
+did not change during the pass.
+
+| Guard | Mutants | Killed by (examples) |
+|---|---|---|
+| F-6 helper | address matched by payment credential only; reference script unchecked; lovelace check always true / strict | `f6_state_under_a_foreign_stake_credential_is_rejected`, `f6_state_with_a_reference_script_is_rejected`, `f6_state_losing_lovelace_is_rejected` |
+| F-6 per validator | `continuing_ok` / `keeps_lovelace` / `genesis_out_ok` dropped; new Position / Ticket not pinned; lovelace exception removed, widened or not gated on an ADA unit | the `f6_*` tests in each project |
+| Vesting (validator) | fold at `hi`; stakes priced at `lo`; exits priced at `hi`; any branch booking from `s0`; weights from booked only; vest start / end / roll-over; window unchecked or strict; yield booked at once | `vesting_a_far_future_upper_bound_cannot_book_the_vest_early`, `vesting_stake_prices_at_the_upper_bound`, `vesting_unstake_prices_at_the_lower_bound`, `vesting_report_conserves_every_unit` |
+| Vesting (`vault_state`) | no clamp either side; rounds up; line not restarted; vested not removed; period halved; price ignores vesting | `vested_is_clamped_to_the_unvested_amount`, `vesting_fold_matches_the_hand_computed_state`, `folding_early_never_raises_a_price` |
+| Lock floor / genesis | lock ≥ cooldown only; each `vest_*` genesis field unchecked | `set_bounds_with_lock_below_twice_the_cooldown_is_rejected`, `genesis_with_a_future_vest_start_is_rejected` |
+| Owner unlock / ADA | owner not required; key owner need not sign; any script input counts; exit ADA not returned; vault-owned Position / Ticket allowed | the H2.3 unlock and claim tests |
+
+The first run surfaced 3 real test gaps, each now with a test: genesis did
+not pin `vest_from`, StakeLong at the `lo` price, and SetBounds booking
+from the unfolded State. Five mutants that left a one-item `and { }` (which
+does not compile) were re-pointed to `True,` and are killed.

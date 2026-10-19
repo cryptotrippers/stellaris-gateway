@@ -12,6 +12,7 @@ import {
   initLucidWithWallet,
 } from "./vault";
 import { getWalletState } from "./wallet-store";
+import { scriptCredentialOf } from "./yield-chain-decode";
 import { getAddressesForStakeAddress } from "./blockfrost.functions";
 
 export interface VaultHolding {
@@ -128,7 +129,9 @@ async function collectHoldings(
       const script = await getVaultScript(lucid, lucidMod, assetId);
       const rows: VaultHolding[] = [];
       try {
-        const utxos = await lucid.utxosAt(script.address);
+        // F-6: every UTxO under the script's payment credential, whatever
+        // its stake credential.
+        const utxos = await lucid.utxosAt(scriptCredentialOf(script.address));
         for (const u of utxos) {
           if (!u.datum) continue;
           try {

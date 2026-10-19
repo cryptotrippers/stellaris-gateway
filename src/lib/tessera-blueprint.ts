@@ -19,12 +19,12 @@
 
 /** `reserve.reserve` — Reserve State spend + TSRA and thread-token policy. */
 export const TESSERA_RESERVE_BLUEPRINT_HASH =
-  "d2444aa24277a9f0a0234c11b0f74c08debbb309e0afb4e20f6ebe46";
+  "813f72527045fc82ceda7527a4488f78a1de64369739e72ff7f691f7";
 
 /** `eligibility.eligibility` — eligibility-token policy and registry address. */
 export const TESSERA_ELIGIBILITY_BLUEPRINT_HASH =
-  "0df1e0a18ecb57fc4848ed0daed759bee3394dc9d21e070dd2d109a7";
+  "c2f2f6fdc62456bd7ce30f521425aa27025d8427d975350f0db7050f";
 
 /** `stsra_vault.stsra_vault` — sTSRA vault spend + sTSRA and thread/marker policy. */
 export const TESSERA_STSRA_VAULT_BLUEPRINT_HASH =
-  "ce1cc7c2d88ddf0900ebba19e65b3be687b69f465d7d7bc5bf341215";
+  "fc355a5ec275d1cbadf96defe83b1eb5d9af8d267fba0554e56d391d";

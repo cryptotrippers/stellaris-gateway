@@ -25,6 +25,7 @@ import {
   quantityOf,
   selectThreadState,
   threadUnitOfAddress,
+  bfVaultUtxos,
   markerUnitOfAddress,
 
   type BfAddressTx,
@@ -57,7 +58,8 @@ export const getVaultChainState = createServerFn({ method: "GET" })
   })
   .handler(async ({ data }): Promise<VaultChainState> => {
     const { bfGet } = await import("./blockfrost-fetch.server");
-    const utxos = (await bfGet<BfUtxo[]>(`/addresses/${data.address}/utxos?count=100`)) ?? [];
+    // F-6: read the vault where its thread token actually sits.
+    const { utxos } = await bfVaultUtxos<BfUtxo>(bfGet, data.address, "?count=100");
 
     const stateCandidates: Array<{
       state: VaultStateDatum;

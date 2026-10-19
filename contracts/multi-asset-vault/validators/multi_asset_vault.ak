@@ -44,6 +44,7 @@ use cardano/assets.{PolicyId}
 use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, placeholder,
 }
+use stellaris/outputs.{continuing_ok, genesis_out_ok, keeps_lovelace}
 use stellaris/shares.{
   VaultAccounting, after_accrue, after_deposit, after_withdraw, deposit_ok,
   mint_shares, redeem_value, withdraw_ok,
@@ -51,7 +52,7 @@ use stellaris/shares.{
 use stellaris/thread.{
   holds_marker, holds_thread, marker_name, one_shot_mint, thread_name,
 }
-use stellaris/units.{rider_ok, unit_of, value_clean}
+use stellaris/units.{is_ada, rider_ok, unit_of, value_clean}
 
 pub type MultiDatum {
   /// A single depositor's stake.
@@ -277,7 +278,12 @@ validator multi_asset_vault(
           let outs = script_outputs(tx, policy_id)
           expect [boot] = outs
           expect Some(boot_datum) = datum_of(boot)
-          one_shot_mint(tx, policy_id, seed) && script_inputs(tx, policy_id) == [] && outputs_well_formed(
+          // F-6: the genesis State sits at the enterprise address with no
+          // reference script.
+          one_shot_mint(tx, policy_id, seed) && script_inputs(tx, policy_id) == [] && genesis_out_ok(
+            boot,
+            policy_id,
+          ) && outputs_well_formed(
             outs,
             policy_id,
             unit_policy,
@@ -398,6 +404,21 @@ validator multi_asset_vault(
               threshold,
             ) && n_shares >= 0 && n_assets >= 0
 
+        // F-6: every vault output (the next State, a new or continuing
+        // Position) keeps the State's exact address and carries no reference
+        // script. The State keeps its lovelace except in a `Withdraw` from an
+        // ADA-unit vault, where the lovelace IS the pooled unit; that payout
+        // is bounded by the unit accounting below (SPEC.md, F-6 exceptions).
+        // With a token unit the State's lovelace is only its rider.
+        let pinned =
+          list.all(outs, fn(o) { continuing_ok(o, own_in.output) }) && when
+            redeemer
+          is {
+            Withdraw { .. } ->
+              is_ada(unit_policy) || keeps_lovelace(next_out, own_in.output)
+            _ -> keeps_lovelace(next_out, own_in.output)
+          }
+
         let transition =
           when redeemer is {
             // ------------------------------------------------
@@ -454,7 +475,7 @@ validator multi_asset_vault(
         // compared `n_assets <= n_assets`, i.e. checked nothing. As in
         // yield_vault (V-07), solvency is inductive: every branch above ties
         // `n_assets` to the exact unit delta at the script address.
-        structural && transition
+        structural && pinned && transition
       }
     }
   }
@@ -837,4 +858,134 @@ test deposit_cannot_spend_an_existing_position() {
       [t_alice],
     )
   !t_spend(s0, Deposit, 0, t)
+}
+
+// --- Phase 2-H: output pinning (AUDIT.md F-6) -----------------------
+
+fn f6_staked(o: Output) -> Output {
+  Output {
+    ..o,
+    address: Address {
+      ..o.address,
+      stake_credential: Some(address.Inline(VerificationKey(t_mallory))),
+    },
+  }
+}
+
+fn f6_ref_script(o: Output) -> Output {
+  Output { ..o, reference_script: Some(t_mallory) }
+}
+
+/// A 10 ADA deposit into an ADA-unit vault (the State spent at index 0),
+/// with the State and new Position rewritten.
+fn f6_deposit(
+  state_in: Int,
+  state_out: Int,
+  pos: Int,
+  fs: fn(Output) -> Output,
+  fp: fn(Output) -> Output,
+) -> Bool {
+  let s0 = t_state(10_000_000, 10_000_000)
+  let t =
+    t_tx(
+      [t_in(0, t_out(state_in, s0))],
+      [
+        fs(t_out(state_out, t_state(20_000_000, 20_000_000))),
+        fp(t_out(pos, Position { owner: t_alice, shares: 10_000_000 })),
+      ],
+      [t_alice],
+    )
+  t_spend(s0, Deposit, 0, t)
+}
+
+fn f6_id(o: Output) -> Output {
+  o
+}
+
+test f6_deposit_fixture_is_accepted() {
+  f6_deposit(3_000_000, 3_000_000, 10_000_000, f6_id, f6_id)
+}
+
+test f6_state_under_a_foreign_stake_credential_is_rejected() {
+  !f6_deposit(3_000_000, 3_000_000, 10_000_000, f6_staked, f6_id)
+}
+
+test f6_state_with_a_reference_script_is_rejected() {
+  !f6_deposit(3_000_000, 3_000_000, 10_000_000, f6_ref_script, f6_id)
+}
+
+test f6_position_under_a_foreign_stake_credential_is_rejected() {
+  !f6_deposit(3_000_000, 3_000_000, 10_000_000, f6_id, f6_staked)
+}
+
+test f6_position_with_a_reference_script_is_rejected() {
+  !f6_deposit(3_000_000, 3_000_000, 10_000_000, f6_id, f6_ref_script)
+}
+
+test f6_deposit_draining_the_state_into_the_position_is_rejected() {
+  // the unit delta is still 10 ADA, but the State's lovelace falls 3 -> 2
+  !f6_deposit(3_000_000, 2_000_000, 11_000_000, f6_id, f6_id)
+}
+
+test f6_ada_unit_withdraw_may_pay_out_of_the_state() {
+  // the documented exception: in an ADA-unit vault the State's lovelace is
+  // pooled unit, so a full exit at price 1.2 takes 2 ADA of it
+  let s0 = t_state(10_000_000, 12_000_000)
+  let p = Position { owner: t_alice, shares: 10_000_000 }
+  let t =
+    t_tx(
+      [t_in(0, t_out(4_000_000, s0)), t_in(1, t_out(10_000_000, p))],
+      [t_out(2_000_000, t_state(0, 0)), t_key(t_alice, 12_000_000)],
+      [t_alice],
+    )
+  t_spend(s0, Withdraw { shares: 10_000_000 }, 0, t)
+}
+
+/// A full withdraw from a token-unit vault: the State's lovelace is only its
+/// rider, so it must stay.
+fn f6_token_withdraw(state_out: Int) -> Bool {
+  let unit_out =
+    fn(lovelace: Int, units: Int, d: MultiDatum) {
+      let o = t_out(lovelace, d)
+      Output { ..o, value: assets.add(o.value, t_op1, "u", units) }
+    }
+  let s0 = t_state(10_000_000, 10_000_000)
+  let p = Position { owner: t_alice, shares: 10_000_000 }
+  let paid = t_key(t_alice, 2_000_000 + 3_000_000 - state_out)
+  let t =
+    t_tx(
+      [t_in(0, unit_out(3_000_000, 0, s0)), t_in(1, unit_out(2_000_000, 10_000_000, p))],
+      [
+        t_out(state_out, t_state(0, 0)),
+        Output { ..paid, value: assets.add(paid.value, t_op1, "u", 10_000_000) },
+      ],
+      [t_alice],
+    )
+  multi_asset_vault.spend(
+    1,
+    t_asset,
+    t_op1,
+    "u",
+    t_seed,
+    Some(s0),
+    Withdraw { shares: 10_000_000 },
+    t_ref(0),
+    t,
+  )
+}
+
+test f6_token_unit_withdraw_keeps_the_state_rider() {
+  f6_token_withdraw(3_000_000)
+}
+
+test f6_token_unit_withdraw_cannot_take_the_state_rider() {
+  !f6_token_withdraw(2_000_000)
+}
+
+test f6_bootstrap_under_a_stake_credential_is_rejected() {
+  !t_mint(t_boot_tx([t_seed_in()], [f6_staked(t_out(2_000_000, t_state(0, 0)))], 1))
+}
+
+test f6_bootstrap_with_a_reference_script_is_rejected() {
+  !t_mint(t_boot_tx([t_seed_in()], [f6_ref_script(t_out(2_000_000, t_state(0, 0)))], 1))
 }

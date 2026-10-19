@@ -48,6 +48,7 @@ use cardano/assets.{PolicyId, quantity_of}
 use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Transaction,
 }
+use stellaris/outputs.{continuing_ok, genesis_out_ok, keeps_lovelace}
 use stellaris/thread.{one_shot_mint, thread_name, thread_value}
 use tessera/eligibility.{eligible}
 use tessera/reserve_state.{ReserveState, operators_valid, threshold_met}
@@ -213,7 +214,8 @@ fn genesis_ok(s: ReserveState, lo: Int, hi: Int) -> Bool {
 
 /// Genesis: the thread token is minted exactly once (the seed is consumed),
 /// no State is spent alongside it, and the only output at this address is
-/// the genesis State, holding exactly ADA + the token with a valid datum.
+/// the genesis State, holding exactly ADA + the token with a valid datum, at
+/// the script's enterprise address with no reference script (F-6).
 /// `state_value_ok` is an exact match, so it also proves the token went to
 /// that output and nowhere else (only one is ever minted).
 fn genesis(tx: Transaction, policy: PolicyId, seed: OutputReference) -> Bool {
@@ -224,6 +226,7 @@ fn genesis(tx: Transaction, policy: PolicyId, seed: OutputReference) -> Bool {
           and {
             one_shot_mint(tx, policy, seed),
             own_script_inputs(tx.inputs, policy) == [],
+            genesis_out_ok(boot, policy),
             state_value_ok(boot, policy),
             genesis_ok(s, lo, hi),
           }
@@ -252,14 +255,18 @@ validator reserve(seed: OutputReference) {
 
     // V-01 from day one: exactly one genuine State on BOTH sides, and the
     // input being spent is that State (not a planted lookalike).
-    expect Some((_, in_state)) = sole_state(ins, own_hash)
+    expect Some((state_in, in_state)) = sole_state(ins, own_hash)
     expect Some((next_out, s1)) = sole_state(outs, own_hash)
 
+    // F-6: the State keeps its exact address, carries no reference script
+    // and never loses lovelace (no redeemer pays ADA out of the State).
     let structural =
       and {
         in_state == s0,
         operators_valid(s1.operators, s1.threshold),
         state_value_ok(next_out, own_hash),
+        continuing_ok(next_out, state_in),
+        keeps_lovelace(next_out, state_in),
       }
 
     let delta = tsra_delta(tx, own_hash)
@@ -1847,5 +1854,79 @@ test after_repointing_mint_eligibility_uses_the_new_policy() {
     Mint { qty: 10, holder: t_holder },
     ref0(),
     fresh,
+  )
+}
+
+// -- F-6: the State keeps its address, carries no reference script, and
+// never loses lovelace
+
+const t_stranger: ByteArray =
+  #"f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0"
+
+/// A committee SetPaused whose State output is rewritten by `f`.
+fn pause_with(f: fn(Output) -> Output) -> Bool {
+  let s0 = t_state(0, 100, 1_000)
+  let s1 = ReserveState { ..next(s0), paused: True }
+  let tx = base_tx(s0, s1, 0)
+  expect [out] = tx.outputs
+  reserve.spend(
+    t_seed(),
+    Some(s0),
+    SetPaused { paused: True },
+    ref0(),
+    Transaction { ..tx, outputs: [f(out)] },
+  )
+}
+
+test f6_pause_fixture_is_accepted() {
+  pause_with(fn(o) { o })
+}
+
+test f6_state_under_a_foreign_stake_credential_is_rejected() {
+  !pause_with(
+    fn(o) {
+      Output {
+        ..o,
+        address: Address {
+          payment_credential: Script(t_own),
+          stake_credential: Some(address.Inline(address.VerificationKey(t_stranger))),
+        },
+      }
+    },
+  )
+}
+
+test f6_state_with_a_reference_script_is_rejected() {
+  !pause_with(fn(o) { Output { ..o, reference_script: Some(t_stranger) } })
+}
+
+test f6_state_losing_lovelace_is_rejected() {
+  !pause_with(fn(o) { Output { ..o, value: assets.add(o.value, "", "", -1) } })
+}
+
+test f6_state_may_gain_lovelace() {
+  pause_with(fn(o) { Output { ..o, value: assets.add(o.value, "", "", 1_000_000) } })
+}
+
+test f6_genesis_under_a_stake_credential_is_rejected() {
+  let o = state_out(t_genesis())
+  let staked =
+    Output {
+      ..o,
+      address: Address {
+        payment_credential: Script(t_own),
+        stake_credential: Some(address.Inline(address.VerificationKey(t_stranger))),
+      },
+    }
+  !reserve.mint(t_seed(), Void, t_own, boot_tx([staked]))
+}
+
+test f6_genesis_with_a_reference_script_is_rejected() {
+  let o = state_out(t_genesis())
+  !reserve.mint(
+    t_seed(),
+    Void,
+    t_own,
+    boot_tx([Output { ..o, reference_script: Some(t_stranger) }]),
   )
 }

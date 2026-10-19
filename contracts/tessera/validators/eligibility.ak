@@ -29,6 +29,7 @@ use cardano/assets.{PolicyId, quantity_of}
 use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Transaction,
 }
+use stellaris/outputs.{genesis_out_ok}
 use stellaris/thread.{thread_name}
 use tessera/reserve_state.{ReserveState, threshold_met}
 
@@ -61,6 +62,9 @@ fn committee_signed(tx: Transaction, reserve: PolicyId) -> Bool {
 
 /// Every output that carries a token of `policy` is at the registry address
 /// and holds exactly one token of `policy` and nothing else besides ADA.
+/// Registry outputs are only ever created here, never continued, so they
+/// take the genesis rule (F-6): the registry's enterprise address (no stake
+/// credential) and no reference script.
 fn tokens_stay_in_registry(tx: Transaction, policy: PolicyId) -> Bool {
   list.all(
     tx.outputs,
@@ -68,9 +72,11 @@ fn tokens_stay_in_registry(tx: Transaction, policy: PolicyId) -> Bool {
       when dict.to_pairs(assets.tokens(o.value, policy)) is {
         [] -> True
         [Pair(name, 1)] ->
-          o.address.payment_credential == Script(policy) && assets.without_lovelace(
-            o.value,
-          ) == assets.from_asset(policy, name, 1)
+          genesis_out_ok(o, policy) && assets.without_lovelace(o.value) == assets.from_asset(
+            policy,
+            name,
+            1,
+          )
         _ -> False
       }
     },
@@ -474,4 +480,29 @@ test issuing_two_of_one_name_into_separate_outputs_is_rejected() {
       mint: assets.from_asset(t_policy, t_holder, 2),
     }
   !eligibility.mint(t_reserve, Void, t_policy, tx)
+}
+
+// -- F-6: registry outputs sit at the enterprise address, no reference script
+
+test f6_issuing_under_a_foreign_stake_credential_is_rejected() {
+  let o = registry_out(t_holder)
+  let staked =
+    Output {
+      ..o,
+      address: Address {
+        payment_credential: Script(t_policy),
+        stake_credential: Some(address.Inline(VerificationKey(t_op3))),
+      },
+    }
+  !eligibility.mint(t_reserve, Void, t_policy, issue_tx([staked], [t_op1, t_op2]))
+}
+
+test f6_issuing_with_a_reference_script_is_rejected() {
+  let o = registry_out(t_holder)
+  !eligibility.mint(
+    t_reserve,
+    Void,
+    t_policy,
+    issue_tx([Output { ..o, reference_script: Some(t_op3) }], [t_op1, t_op2]),
+  )
 }

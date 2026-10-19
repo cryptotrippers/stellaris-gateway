@@ -37,7 +37,7 @@ import {
 export const MULTI_VAULT_VERSION = 2n;
 
 /** Hash of the *unapplied* multi_asset_vault validator from plutus.json. */
-export const MULTI_BLUEPRINT_HASH = "a7f9a45e1f1ac8efbffe2eaa1b1371297dbfe7cad99096212dee649a";
+export const MULTI_BLUEPRINT_HASH = "770577be4ab87d5c569a94f3c4ff516bab41e8d9404eb4e3da09fc87";
 
 import multiBlueprintSource from "../../contracts/multi-asset-vault/plutus.json?raw";
 
