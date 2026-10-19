@@ -141,14 +141,15 @@ function MarketingNav() {
     { to: "/stake", label: "Staking" },
     { to: "/transparency", label: "Transparency" },
     { to: "/property", label: "Property" },
-  ];
+    { to: "/governance", label: "Governance" },
+  ] as const;
   return (
     <header className="sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur-md">
       <div className="home-container flex h-[72px] items-center justify-between gap-3">
         <Link to="/" aria-label="Stellaris home" className="shrink-0">
           <StellarisWordmark />
         </Link>
-        <nav aria-label="Main navigation" className="hidden items-center gap-6 lg:flex">
+        <nav aria-label="Main navigation" className="hidden items-center gap-4 md:flex lg:gap-6">
           {links.map((link) => (
             <Link
               key={link.to}
