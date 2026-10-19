@@ -29,6 +29,9 @@ import { assetsQueryOptions, fundedPct } from "@/lib/assets-query";
 import { formatAda, lovelaceToAda } from "@/lib/format";
 import { trackEvent } from "@/lib/analytics";
 import homeImage from "@/assets/stellaris-home.jpg";
+import propertyImg from "@/assets/home-property.jpg";
+import energyImg from "@/assets/home-energy.jpg";
+import agriImg from "@/assets/home-agriculture.jpg";
 
 const SITE = "https://stellarischain.com";
 const FAQ = [
@@ -61,12 +64,12 @@ const FAQ = [
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: `Stellaris · Real assets, ${BRAND.productName} & transparent reserves` },
+      { title: "Stellaris Finance · Real assets. More accessible ownership." },
       {
         name: "description",
         content: `Explore fractional real-world assets, ${BRAND.base.ticker}, ${BRAND.staked.ticker} staking and the reserve model on Cardano. Testnet preview; property is planned, subject to legal approval.`,
       },
-      { property: "og:title", content: `Stellaris · Real assets & ${BRAND.productName}` },
+      { property: "og:title", content: "Stellaris Finance · Real assets. More accessible ownership." },
       {
         property: "og:description",
         content:
@@ -106,26 +109,23 @@ function LandingPage() {
       <MarketingNav />
       <main>
         <Hero />
-        <section className="border-b border-border bg-surface">
-          <div className="home-container grid gap-4 py-5 sm:grid-cols-3">
-            <TrustItem icon={Layers} title="Built on Cardano" detail="Preprod test network" />
-            <TrustItem
-              icon={ShieldCheck}
-              title="Rules before returns"
-              detail="Risks, fees and exits in view"
-            />
-            <TrustItem
-              icon={Landmark}
-              title="A reserve-first model"
-              detail="Explore the illustrative allocation"
-            />
+        <section className="border-y border-border bg-surface" aria-label="Platform status">
+          <div className="home-container grid gap-4 py-5 sm:grid-cols-2 lg:grid-cols-4">
+            <TrustItem icon={Layers} title="Network" detail="Cardano Preprod (test network)" />
+            <TrustItem icon={ExternalLink} title="Explorer" detail="Every transaction on Cardanoscan" />
+            <TrustItem icon={ShieldCheck} title="Independent audit" detail="Not yet completed" />
+            <TrustItem icon={Clock3} title="Status" detail="Preview — no live offerings" />
           </div>
         </section>
+        <AssetClasses />
+        <HowItWorks />
+        <FeaturedAssets />
+        <WhyBlockchain />
         <ProductModel />
         <ReservePreview />
-        <FeaturedAssets />
-        <PropertyPreview />
-        <HowItWorks />
+        <TransparencyLinks />
+        <Education />
+        <IssuerSection />
         <FaqSection />
         <FinalCta />
       </main>
@@ -202,59 +202,72 @@ function MarketingNav() {
 
 function Hero() {
   return (
-    <section className="home-hero relative isolate overflow-hidden">
-      <img
-        src={homeImage}
-        alt="Illustrative solar-roofed homes overlooking farmland and the coast, not an actual offering"
-        width={1920}
-        height={1024}
-        fetchPriority="high"
-        className="absolute inset-0 -z-20 h-full w-full object-cover object-[65%_center]"
-      />
-      <div className="home-hero-veil absolute inset-0 -z-10" />
-      <div className="home-container relative py-12 md:py-16">
-        <div className="max-w-[620px]">
-          <div className="inline-flex items-center gap-2 border-l-2 border-primary pl-3 text-xs font-semibold uppercase text-primary">
-            Real-world assets. A clearer model.
-          </div>
-          <h1 className="mt-5 text-5xl font-semibold leading-[1.05] md:text-7xl">
-            Stellaris
-            <span className="mt-3 block text-2xl font-medium leading-tight md:text-4xl">
-              Real assets.
-              <br />
-              With the rules on show.
-            </span>
+    <section className="home-hero relative overflow-hidden">
+      <div className="home-container grid items-center gap-10 py-14 md:py-20 lg:grid-cols-[1.05fr_1fr]">
+        <div>
+          <p className="home-eyebrow tracking-wider">Real-World Assets • Powered by Cardano</p>
+          <h1 className="mt-5 text-4xl font-bold leading-[1.08] text-primary md:text-6xl">
+            Real assets.
+            <span className="block text-teal">More accessible ownership.</span>
           </h1>
-          <p className="mt-6 max-w-[470px] text-base leading-relaxed text-muted-foreground md:text-lg">
-            Fractional ownership, {BRAND.productName} and a reserve-first staking model. Explore
-            what you hold, how it works and where the risks sit.
+          <p className="mt-6 max-w-[520px] text-base leading-relaxed text-muted-foreground md:text-lg">
+            Explore the technology bringing fractional participation, transparent records and
+            real-world investment opportunities closer together.
           </p>
-          <div className="mt-7 flex flex-wrap gap-3">
+          <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild size="lg" className="h-12 px-6">
               <Link
                 to="/marketplace"
                 onClick={() => trackEvent("landing_hero_cta_click", { target: "marketplace" })}
               >
-                Explore projects <ArrowRight />
+                Explore the Platform <ArrowRight />
               </Link>
             </Button>
-            <Button
-              asChild
-              variant="outline"
-              size="lg"
-              className="h-12 border-primary/20 bg-surface/90 px-6"
-            >
-              <Link to="/transparency">See the reserve model</Link>
+            <Button asChild variant="outline" size="lg" className="h-12 px-6">
+              <a href="#how-it-works">How Stellaris Works</a>
             </Button>
           </div>
-          <p className="mt-6 flex items-start gap-2 text-xs leading-relaxed text-muted-foreground">
-            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-            Testnet preview — no real money. Staking and reserve data are illustrative.
+          <p className="mt-6 inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-xs text-muted-foreground">
+            <span className="h-1.5 w-1.5 rounded-full bg-warning" aria-hidden />
+            Testnet preview on Cardano Preprod — no real money
           </p>
         </div>
-        <p className="mt-8 text-[10px] text-muted-foreground md:absolute md:bottom-4 md:right-6 md:mt-0">
-          Concept image · not a listed property
-        </p>
+        <div className="home-hero-panel relative overflow-hidden p-3 shadow-elevated">
+          <img
+            src={homeImage}
+            alt="Concept image of solar-roofed homes near farmland — not a listed asset"
+            width={1920}
+            height={1024}
+            fetchPriority="high"
+            className="h-56 w-full rounded-xl object-cover md:h-72"
+          />
+          <div className="p-4 md:p-5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs uppercase tracking-wider text-gold">Illustrative ownership record</p>
+              <span className="rounded-full border border-gold/40 px-2 py-0.5 text-[10px] text-gold">
+                Example only
+              </span>
+            </div>
+            <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+              <div>
+                <dt className="text-xs opacity-70">Asset type</dt>
+                <dd className="font-medium">Rooftop solar</dd>
+              </div>
+              <div>
+                <dt className="text-xs opacity-70">Network</dt>
+                <dd className="font-medium">Cardano Preprod</dd>
+              </div>
+              <div>
+                <dt className="text-xs opacity-70">Record</dt>
+                <dd className="font-mono text-xs">Native token · transferable</dd>
+              </div>
+              <div>
+                <dt className="text-xs opacity-70">Verification</dt>
+                <dd className="font-medium">Evidence linked per asset</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -487,9 +500,14 @@ function FeaturedAssets() {
         </div>
       )}
       {!isLoading && !error && featured.length === 0 && (
-        <p className="mt-8 border-y border-border py-8 text-sm text-muted-foreground">
-          No projects are registered yet.
-        </p>
+        <div className="home-card mt-8 p-8 text-center">
+          <p className="text-lg font-semibold">New opportunities are being prepared.</p>
+          <div className="mt-4 flex flex-wrap justify-center gap-3 text-sm">
+            <a href="#how-it-works" className="text-teal hover:underline">Learn how it works</a>
+            <Link to="/auth" className="text-teal hover:underline">Get launch updates</Link>
+            <Link to="/funding/new" className="text-teal hover:underline">Become an issuer</Link>
+          </div>
+        </div>
       )}
       {!error && (
         <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
@@ -502,7 +520,7 @@ function FeaturedAssets() {
                 to="/marketplace/$id"
                 params={{ id: asset.id }}
                 onClick={() => trackEvent("landing_asset_click", { asset: asset.id })}
-                className="group flex min-w-0 flex-col rounded-lg border border-border bg-surface p-6 transition-colors hover:border-primary/40"
+                className="home-card group flex min-w-0 flex-col p-6"
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="home-icon bg-secondary text-primary">
@@ -553,6 +571,150 @@ function FeaturedAssets() {
   );
 }
 
+function AssetClasses() {
+  const classes = [
+    { img: propertyImg, title: "Property", body: "Fractional residential property in Australia and Southeast Asia.", status: "Planned — subject to legal approval", to: "/property" },
+    { img: energyImg, title: "Renewable energy", body: "Rooftop and community solar that produces measurable output.", status: "Demo projects on testnet", to: "/marketplace" },
+    { img: agriImg, title: "Agriculture & productive businesses", body: "Farms and estates with reported harvests and income.", status: "Demo projects on testnet", to: "/marketplace" },
+  ];
+  return (
+    <section className="home-container home-section">
+      <SectionHeading
+        eyebrow="Asset classes"
+        title="Real-world assets, explained plainly."
+        description="Other approved categories may follow. Nothing below is a live offering."
+      />
+      <div className="mt-10 grid gap-6 md:grid-cols-3">
+        {classes.map((c) => (
+          <Link key={c.title} to={c.to} className="home-card group overflow-hidden">
+            <img src={c.img} alt={`${c.title} — illustrative image`} width={1024} height={768} loading="lazy" className="h-48 w-full object-cover" />
+            <div className="p-6">
+              <Badge tone="warning">{c.status}</Badge>
+              <h3 className="mt-4 text-xl font-semibold">{c.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{c.body}</p>
+              <span className="mt-5 inline-flex items-center gap-1 text-sm font-medium text-teal">
+                Learn more <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              </span>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function WhyBlockchain() {
+  const points = [
+    ["Traceable history", "Every transfer is recorded publicly and can be checked by anyone."],
+    ["Programmable rules", "Fees, caps and exits can be enforced by the contract itself."],
+    ["Leaner administration", "Registers and distributions could run with fewer manual steps."],
+    ["Digital ownership records", "Your fractions are native tokens you hold in your own wallet."],
+  ];
+  return (
+    <section className="home-dark-section">
+      <div className="home-container home-section grid gap-10 lg:grid-cols-[0.9fr_1.1fr]">
+        <div>
+          <p className="home-eyebrow text-gold">Why blockchain matters</p>
+          <h2 className="mt-3 text-3xl font-semibold leading-tight md:text-4xl">A shared record anyone can check.</h2>
+          <p className="mt-5 text-sm leading-relaxed opacity-75">
+            Important: a blockchain record does not by itself guarantee legal ownership of the
+            underlying asset, its valuation, its performance or legal enforceability. Those depend
+            on the legal structure and evidence behind each asset.
+          </p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {points.map(([t, b]) => (
+            <div key={t} className="rounded-2xl border border-deep-foreground/15 p-5">
+              <h3 className="font-semibold">{t}</h3>
+              <p className="mt-2 text-sm leading-relaxed opacity-75">{b}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function TransparencyLinks() {
+  const items: [string, string, string][] = [
+    ["Network details", "Live Preprod connection health", "/blockfrost-health"],
+    ["Smart contract records", "Contracts, versions and pinned hashes", "/developers"],
+    ["Audit status", "Internal review done; independent audit pending", "/security"],
+    ["Reserve methodology", "Sleeves, targets and loss order (illustrative)", "/transparency"],
+    ["Asset verification", "Issuer checks and evidence per project", "/marketplace"],
+    ["Terms & risks", "What you agree to and what can go wrong", "/terms"],
+  ];
+  return (
+    <section className="home-container home-section">
+      <SectionHeading eyebrow="Transparency & evidence" title="Every claim comes with a source." />
+      <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map(([t, d, to]) => (
+          <Link key={t} to={to} className="home-card group flex items-start justify-between gap-4 p-5">
+            <div>
+              <h3 className="font-semibold">{t}</h3>
+              <p className="mt-1 text-sm text-muted-foreground">{d}</p>
+            </div>
+            <ArrowUpRight className="h-4 w-4 shrink-0 text-teal" />
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function Education() {
+  const qs = [
+    "What is a real-world asset?",
+    "What does fractional ownership mean?",
+    "What am I legally entitled to?",
+    "How could distributions work?",
+    "What are the risks?",
+    "Can I sell or redeem my position?",
+    "What is a Cardano wallet?",
+  ];
+  return (
+    <section className="border-y border-border bg-surface">
+      <div className="home-container home-section">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <SectionHeading eyebrow="Learn" title="Start with the questions that matter." />
+          <Button asChild variant="outline">
+            <Link to="/learn">All guides <ArrowUpRight /></Link>
+          </Button>
+        </div>
+        <div className="mt-8 flex flex-wrap gap-3">
+          {qs.map((q) => (
+            <Link key={q} to="/learn" className="rounded-full border border-border bg-background px-4 py-2 text-sm transition-colors hover:border-teal hover:text-teal">
+              {q}
+            </Link>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function IssuerSection() {
+  return (
+    <section className="home-container home-section">
+      <div className="home-card grid gap-8 p-8 md:grid-cols-[1.4fr_1fr] md:items-center md:p-12">
+        <div>
+          <p className="home-eyebrow">For asset owners & issuers</p>
+          <h2 className="mt-3 text-3xl font-semibold leading-tight">Bring your real-world assets into a new digital marketplace.</h2>
+          <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+            Submit an asset with evidence, go through review and governance, and report against it
+            on chain. Listing does not guarantee funding or investor demand.
+          </p>
+        </div>
+        <div className="flex md:justify-end">
+          <Button asChild size="lg" className="h-12">
+            <Link to="/funding/new">Explore Issuer Partnerships <ArrowRight /></Link>
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function PropertyPreview() {
   return (
     <section className="border-y border-border bg-surface">
@@ -580,40 +742,30 @@ function PropertyPreview() {
 
 function HowItWorks() {
   const steps = [
-    {
-      icon: Building2,
-      title: "Explore the terms",
-      body: "Compare projects and product models. Read the risks, fees and exit rules before deciding.",
-    },
-    {
-      icon: Wallet,
-      title: "Connect on Preprod",
-      body: "Use a supported Cardano wallet with test funds. Demo projects and staking previews do not accept investments.",
-    },
-    {
-      icon: Layers,
-      title: "Follow your position",
-      body: "Returns land in your wallet and show in your portfolio. Each project shows its exit rules before you invest. Returns are never guaranteed.",
-    },
+    { icon: Building2, title: "Discover", body: "Browse opportunities and planned asset classes." },
+    { icon: ShieldCheck, title: "Review", body: "Read the asset, risks, fees and exit terms." },
+    { icon: Landmark, title: "Get eligible", body: "Complete onboarding and any eligibility checks — a wallet alone is not enough." },
+    { icon: Wallet, title: "Participate", body: "Use supported Cardano infrastructure when a valid offering is open." },
+    { icon: Layers, title: "Follow", body: "Track holdings, transactions and reporting in your portfolio." },
   ];
   return (
-    <section className="home-container home-section">
+    <section id="how-it-works" className="home-container home-section scroll-mt-20">
       <SectionHeading
-        eyebrow="From exploration to ownership"
-        title="Know the rules before you participate."
+        eyebrow="How Stellaris works"
+        title="Five steps, with the rules in view."
       />
-      <div className="mt-9 grid gap-7 md:grid-cols-3">
+      <ol className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
         {steps.map((step, i) => (
-          <div key={step.title} className="border-t border-border pt-5">
+          <li key={step.title} className="home-card p-5">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-primary">0{i + 1}</span>
+              <span className="home-step-num">{i + 1}</span>
               <step.icon className="h-5 w-5 text-muted-foreground" />
             </div>
             <h3 className="mt-5 text-lg font-semibold">{step.title}</h3>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.body}</p>
-          </div>
+          </li>
         ))}
-      </div>
+      </ol>
     </section>
   );
 }
@@ -667,20 +819,23 @@ function FaqSection() {
 
 function FinalCta() {
   return (
-    <section className="border-y border-border bg-secondary/50">
-      <div className="home-container flex flex-wrap items-center justify-between gap-8 py-12">
+    <section className="home-dark-section">
+      <div className="home-container flex flex-wrap items-center justify-between gap-8 py-16">
         <div>
-          <p className="home-eyebrow">Explore Stellaris</p>
-          <h2 className="mt-3 text-3xl font-semibold">Start with understanding.</h2>
-          <p className="mt-3 text-sm text-muted-foreground">
+          <p className="home-eyebrow text-gold">Explore Stellaris</p>
+          <h2 className="mt-3 max-w-xl text-3xl font-semibold">Explore what the future of real-world ownership could look like.</h2>
+          <p className="mt-3 text-sm opacity-75">
             Browse the testnet experience. No real money required.
           </p>
         </div>
-        <div className="flex flex-col items-start gap-5">
-          <Button asChild size="lg" className="h-12">
+        <div className="flex flex-wrap items-center gap-4">
+          <Button asChild size="lg" className="h-12 bg-gold text-deep hover:bg-gold/90">
             <Link to="/marketplace" onClick={() => trackEvent("landing_final_cta_click")}>
-              Explore the marketplace <ArrowRight />
+              Explore the Demo <ArrowRight />
             </Link>
+          </Button>
+          <Button asChild size="lg" variant="outline" className="h-12 border-gold/50 bg-transparent text-deep-foreground hover:bg-gold/10 hover:text-deep-foreground">
+            <Link to="/auth">Get Launch Updates</Link>
           </Button>
           <ShareRow
             url="/"
@@ -731,6 +886,7 @@ function Footer() {
             ["My portfolio", "/app"],
             ["Invite friends", "/invite"],
             ["Learn", "/learn"],
+            ["List an asset", "/funding/new"],
             ["Terms", "/terms"],
           ]}
         />
