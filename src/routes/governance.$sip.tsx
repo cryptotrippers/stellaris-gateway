@@ -45,7 +45,7 @@ export const Route = createFileRoute("/governance/$sip")({
   component: ProposalDetailPage,
   errorComponent: ({ error }) => (
     <div role="alert" className="mx-auto max-w-3xl p-10 text-sm text-destructive">
-      Could not load this proposal: {error.message}
+      Could not load this proposal: {error instanceof Error ? error.message : String(error)}
     </div>
   ),
   notFoundComponent: () => (
