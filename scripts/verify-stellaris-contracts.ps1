@@ -252,16 +252,21 @@ $rules = @(
     @{ File = 'contracts/susdr-vault/README.md'; Pattern = 'DO NOT BOOTSTRAP'; Label = 'susdr_vault frozen notice (F-1)' }
     @{ File = 'contracts/tessera/lib/tessera/rules.ak'; Pattern = 'qty > 0 && minted_supply + qty <= attested_reserve && minted_supply + qty <= mint_cap'; Label = 'tessera mint within reserve and cap' }
     @{ File = 'contracts/tessera/lib/tessera/rules.ak'; Pattern = 'max_attestation_age: Int = 604_800_000'; Label = 'tessera 7-day attestation freshness' }
-    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'expect Some((state_in, in_state)) = sole_state(ins, own_hash)'; Label = 'tessera sole token-bearing State input' }
-    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'assets.without_lovelace(out.value) == thread_value(policy)'; Label = 'tessera State holds exactly ADA + thread token' }
-    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'genesis_ok(s, lo, hi)'; Label = 'tessera genesis datum checked on-chain (2.2)' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'expect Some((supply_in, in_supply)) = sole_supply(ins, own_hash)'; Label = 'tessera sole token-bearing Supply input (2.5a)' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'assets.without_lovelace(out.value) == supply_value(policy)'; Label = 'tessera Supply holds exactly ADA + its thread token (2.5a)' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'assets.without_lovelace(out.value) == config_value(policy)'; Label = 'tessera Config holds exactly ADA + its thread token (2.5a)' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'expect Some((config_in, in_config)) = sole_config(ins, own_hash)'; Label = 'tessera sole token-bearing Config input (2.5a)' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'expect Some(cfg) = genuine_config(tx, own_hash)'; Label = 'tessera Supply transitions need the genuine Config reference (2.5a)' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'genesis_config_ok(c)'; Label = 'tessera genesis Config datum checked on-chain (2.5a)' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'quantity_of(tx.mint, policy, supply_name) == 1'; Label = 'tessera thread tokens move only at genesis, one of each (2.5a)' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'genesis_supply_ok(s, lo, hi)'; Label = 'tessera genesis Supply datum checked on-chain (2.2, 2.5a)' }
     @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'threshold_met(operators, threshold, tx.extra_signatories)'; Label = 'tessera rotation needs the new committee too (2.2)' }
     @{ File = 'contracts/tessera/lib/tessera/rules.ak'; Pattern = 'min_threshold: Int = 2'; Label = 'tessera committee threshold >= 2' }
     @{ File = 'contracts/tessera/lib/tessera/rules.ak'; Pattern = 'max_mint_cap: Int = 1_000_000_000_000_000'; Label = 'tessera mint cap hard max 1B TSRA' }
     @{ File = 'contracts/tessera/lib/tessera/eligibility.ak'; Pattern = 'list.has(tx.extra_signatories, holder) && ('; Label = 'tessera eligible() needs the holder signature (2.3)' }
     @{ File = 'contracts/tessera/lib/tessera/eligibility.ak'; Pattern = 'quantity_of(i.output.value, policy, holder) == 1'; Label = 'tessera eligible() needs exactly the holder token (2.3)' }
-    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'kyc_ok(s0.kyc_mint, tx, s0.eligibility_policy, holder)'; Label = 'tessera Mint gated by kyc_mint (2.3)' }
-    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'kyc_ok(s0.kyc_redeem, tx, s0.eligibility_policy, holder)'; Label = 'tessera Burn gated by kyc_redeem (2.3)' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'kyc_ok(cfg.kyc_mint, tx, cfg.eligibility_policy, holder)'; Label = 'tessera Mint gated by kyc_mint (2.3)' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'kyc_ok(cfg.kyc_redeem, tx, cfg.eligibility_policy, holder)'; Label = 'tessera Burn gated by kyc_redeem (2.3)' }
     @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'bytearray.length(eligibility_policy) == 28'; Label = 'tessera SetKyc policy must be a policy id (2.3)' }
     @{ File = 'contracts/tessera/validators/eligibility.ak'; Pattern = 'committee_signed(tx, reserve),'; Label = 'tessera eligibility issue/revoke needs the reserve committee (2.3)' }
     @{ File = 'contracts/tessera/validators/eligibility.ak'; Pattern = 'tokens_stay_in_registry(tx, policy_id)'; Label = 'tessera eligibility tokens stay in the registry (2.3)' }

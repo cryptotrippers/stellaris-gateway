@@ -35,8 +35,11 @@ use stellaris/thread.{
 }
 use tessera/eligibility.{eligible}
 use tessera/exchange
-use tessera/reserve_ref.{genuine_reserve}
-use tessera/reserve_state.{ReserveState, threshold_met}
+use tessera/reserve_ref.{genuine_config}
+use tessera/reserve_state.{
+  ConfigDatum, ConfigState, SupplyDatum, SupplyState, threshold_met,
+}
+use tessera/reserve_threads.{config_value, supply_value}
 use tessera/rules
 use tessera/vault_state.{
   Position, PositionDatum, StateDatum, Ticket, TicketDatum, VaultDatum,
@@ -229,7 +232,7 @@ fn finite_bounds(tx: Transaction) -> Option<(Int, Int)> {
 /// Staking gate: the genuine Reserve State must be referenced; with its
 /// `kyc_stake` switch on, `holder` must pass the one eligibility check.
 fn kyc_stake_ok(tx: Transaction, reserve: PolicyId, holder: ByteArray) -> Bool {
-  when genuine_reserve(tx, reserve) is {
+  when genuine_config(tx, reserve) is {
     Some(r) -> !r.kyc_stake || eligible(tx, r.eligibility_policy, holder)
     None -> False
   }
@@ -237,7 +240,7 @@ fn kyc_stake_ok(tx: Transaction, reserve: PolicyId, holder: ByteArray) -> Bool {
 
 /// The reserve committee (read live from the Reserve State) signed.
 fn committee_ok(tx: Transaction, reserve: PolicyId) -> Bool {
-  when genuine_reserve(tx, reserve) is {
+  when genuine_config(tx, reserve) is {
     Some(r) -> threshold_met(r.operators, r.threshold, tx.extra_signatories)
     None -> False
   }
@@ -764,14 +767,8 @@ fn marker(q: Int) -> Value {
   assets.from_asset(t_own, marker_name, q)
 }
 
-fn t_reserve_state(kyc_stake: Bool, operators: List<ByteArray>) -> ReserveState {
-  ReserveState {
-    minted_supply: 0,
-    attested_reserve: 0,
-    mint_cap: 0,
-    attestation_epoch: 0,
-    attested_at: 0,
-    epoch: 0,
+fn t_reserve_state(kyc_stake: Bool, operators: List<ByteArray>) -> ConfigState {
+  ConfigState {
     operators,
     threshold: 2,
     paused: False,
@@ -779,10 +776,11 @@ fn t_reserve_state(kyc_stake: Bool, operators: List<ByteArray>) -> ReserveState 
     kyc_redeem: False,
     kyc_stake,
     eligibility_policy: t_elig,
+    epoch: 0,
   }
 }
 
-fn reserve_ref_with(rs: ReserveState, with_token: Bool) -> Input {
+fn reserve_ref_with(rs: ConfigState, with_token: Bool) -> Input {
   Input {
     output_reference: r(9),
     output: Output {
@@ -791,11 +789,11 @@ fn reserve_ref_with(rs: ReserveState, with_token: Bool) -> Input {
         stake_credential: None,
       },
       value: if with_token {
-        ada() |> assets.merge(thread_value(t_reserve))
+        ada() |> assets.merge(config_value(t_reserve))
       } else {
         ada()
       },
-      datum: InlineDatum(rs),
+      datum: InlineDatum(ConfigDatum(rs)),
       reference_script: None,
     },
   }
@@ -2667,4 +2665,58 @@ test vesting_set_bounds_books_the_vested_yield() {
     bounds_rd(),
     at(bounds_tx(s0, bounded(s0, 13_000, 7 * day, 30 * day, 1_250), [t_op1, t_op2]), half, half + 1_000),
   )
+}
+
+// -- Phase 2.5a: the vault reads the Config, never the Supply
+
+test short_stake_against_a_supply_datum_under_the_config_token_is_rejected() {
+  let s0 = t_vs(0, 0, 0, 0)
+  let wrong_kind =
+    Input {
+      ..reserve_ref(),
+      output: Output {
+        ..reserve_ref().output,
+        datum: InlineDatum(
+          SupplyDatum(
+            SupplyState {
+              minted_supply: 0,
+              attested_reserve: 0,
+              mint_cap: 0,
+              attestation_epoch: 0,
+              attested_at: 0,
+              epoch: 0,
+            },
+          ),
+        ),
+      },
+    }
+  let tx = Transaction { ..stake_short(s0, 10_000_000, 10_000_000), reference_inputs: [wrong_kind] }
+  !short(s0, 10_000_000, tx)
+}
+
+test short_stake_against_the_supply_utxo_in_place_of_the_config_is_rejected() {
+  let s0 = t_vs(0, 0, 0, 0)
+  let supply_token =
+    Input {
+      ..reserve_ref(),
+      output: Output {
+        ..reserve_ref().output,
+        value: ada() |> assets.merge(supply_value(t_reserve)),
+      },
+    }
+  let tx = Transaction { ..stake_short(s0, 10_000_000, 10_000_000), reference_inputs: [supply_token] }
+  !short(s0, 10_000_000, tx)
+}
+
+test report_yield_against_the_supply_utxo_in_place_of_the_config_is_rejected() {
+  let supply_token =
+    Input {
+      ..reserve_ref(),
+      output: Output {
+        ..reserve_ref().output,
+        value: ada() |> assets.merge(supply_value(t_reserve)),
+      },
+    }
+  let tx = yield_tx(3_888_889, 4_861_111, 625_000, 625_000, [t_op1, t_op2])
+  !report(Transaction { ..tx, reference_inputs: [supply_token] })
 }

@@ -205,7 +205,7 @@ if (tesseraValidators) {
   // state_nft.ak is retired. 2.3 adds eligibility, 2.4 the sTSRA vault.
   targets.push(
     {
-      label: "tessera reserve (State + TSRA + thread policy)",
+      label: "tessera reserve (Config + Supply + TSRA + thread policy)",
       onChain: findIn(tesseraValidators, "reserve.reserve"),
       hash: tesseraPin("TESSERA_RESERVE_BLUEPRINT_HASH"),
       cbor: "__BLUEPRINT_IMPORT__",
