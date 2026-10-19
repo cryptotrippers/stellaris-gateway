@@ -40,6 +40,34 @@ function TransparencyPage() {
         </p>
       </div>
 
+      <section className="grid gap-4 md:grid-cols-2">
+        <div className="card-institutional p-5">
+          <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-muted-foreground">
+            <FileCheck className="h-3.5 w-3.5 text-primary" /> Reserve attestation
+          </div>
+          <div className="number-display mt-1 text-2xl font-semibold">
+            {new Date(T.asOf).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+          </div>
+          <div className="text-xs text-muted-foreground">Last attestation date</div>
+          <p className="mt-3 rounded-lg border border-border bg-surface p-3 text-xs text-muted-foreground">
+            Minting pauses automatically if the attestation is older than 7 days.
+          </p>
+        </div>
+        <div className="card-institutional p-5">
+          <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest text-muted-foreground">
+            <KeyRound className="h-3.5 w-3.5 text-primary" /> Who controls what
+          </div>
+          <ul className="mt-2 space-y-1.5 text-xs text-muted-foreground">
+            <li>Changes need M-of-N committee signatures — no single key can move funds or change rules.</li>
+            <li>Hard limits are enforced on-chain: mint ceiling, fee cap 20%, lock ≤ 90 days, cooldown 7–14 days.</li>
+            <li>
+              Every rule lives in public, mutation-tested contracts — see{" "}
+              <Link to="/security" className="text-primary hover:underline">Security</Link>.
+            </li>
+          </ul>
+        </div>
+      </section>
+
       <section className="grid gap-4 md:grid-cols-3">
         <div className="card-institutional p-5">
           <div className="text-[11px] uppercase tracking-widest text-muted-foreground">Daily NAV per {BRAND.staked.ticker}</div>
@@ -139,6 +167,10 @@ function Protection() {
     <section className="card-institutional p-5 md:p-8">
       <h2 className="text-2xl font-semibold tracking-tight">How your money is protected</h2>
       <p className="mt-1 text-sm text-muted-foreground">If something goes wrong, losses are absorbed in this order — first loss at the top.</p>
+      <p className="mt-3 inline-flex items-start gap-2 rounded-xl border border-primary/40 bg-primary/10 px-4 py-3 text-sm">
+        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+        <span><strong>Our difference:</strong> reserves, first-loss size and loss order are published and checked by the contracts, not just stated.</span>
+      </p>
       <ol className="mt-6 space-y-2">
         {stack.map((s, i) => (
           <li key={s.t}>
@@ -147,7 +179,6 @@ function Protection() {
               <div>
                 <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
                   {s.t}
-                  {s.key && <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2 py-0.5 text-[10px] uppercase tracking-wider text-primary-foreground"><ShieldCheck className="h-3 w-3" /> Our key difference</span>}
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">{s.d}</p>
               </div>
@@ -165,7 +196,7 @@ function Protection() {
         ))}
       </ol>
       <p className="mt-4 rounded-xl border border-success/40 bg-success/5 p-4 text-sm">
-        Credit and marketplace assets are <strong>never sold</strong> to meet redemptions.
+        By policy, redemptions are paid from the most liquid assets first; credit and marketplace assets are <strong>not sold</strong> to meet them.
       </p>
     </section>
   );
