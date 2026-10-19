@@ -1,5 +1,5 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { ArrowLeft, Shield, ExternalLink } from "lucide-react";
+import { ArrowLeft, Shield, ExternalLink, AlertTriangle } from "lucide-react";
 import { queryOptions, useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { getAssetVault } from "@/lib/asset-vaults.functions";
 import { getVaultChainState } from "@/lib/yield-chain.functions";
@@ -127,6 +127,7 @@ function AssetDetail() {
   const lockedLovelace = chainQ.data?.found ? Number(chainQ.data.lockedLovelace) : null;
   const raisedLovelace = lockedLovelace ?? asset.raised_lovelace;
 
+  const isDemo = asset.funding_status === "demo";
   const targetAda = lovelaceToAda(asset.target_lovelace);
   const raisedAda = lovelaceToAda(raisedLovelace);
   const minAda = lovelaceToAda(asset.min_deposit_lovelace);
@@ -143,6 +144,13 @@ function AssetDetail() {
       >
         <ArrowLeft className="h-4 w-4" /> Marketplace
       </Link>
+
+      {isDemo && (
+        <div className="mt-4 flex items-start gap-3 rounded-xl border border-warning/40 bg-warning/10 p-4 text-sm text-warning" role="alert">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span><strong>Demo project</strong> — illustrative only. Nothing can be invested.</span>
+        </div>
+      )}
 
       <div className="mt-4 grid gap-6 lg:grid-cols-[1.5fr_1fr]">
         <div>
@@ -248,9 +256,13 @@ function AssetDetail() {
 
         {/* Right rail — every asset derives its own vault script from (version, asset_id) */}
         <aside className="h-fit space-y-4 lg:sticky lg:top-24">
-          <AllocationFlow assetId={asset.id} />
-          <YieldVaultActionsCard assetId={asset.id} />
-          <LegacyVaultCard assetId={asset.id} />
+          {!isDemo && (
+            <>
+              <AllocationFlow assetId={asset.id} />
+              <YieldVaultActionsCard assetId={asset.id} />
+              <LegacyVaultCard assetId={asset.id} />
+            </>
+          )}
           <VaultTxHistoryCard assetId={asset.id} />
         </aside>
       </div>
