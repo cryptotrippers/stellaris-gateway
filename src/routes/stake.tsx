@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Clock, Lock, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Clock, Lock, AlertTriangle, CheckCircle2, Info } from "lucide-react";
 import { BRAND } from "@/config/brand";
 import { STAKE_TIERS, MOCK_BASE_BALANCE, type StakeTierId } from "@/data/staking.mock";
 
@@ -8,9 +8,9 @@ export const Route = createFileRoute("/stake")({
   head: () => ({
     meta: [
       { title: `Stake ${BRAND.staked.ticker} · Stellaris` },
-      { name: "description", content: `Stake ${BRAND.base.ticker} for ${BRAND.staked.ticker}: a 7-day unstake tier or a 30-day lock at a higher target rate. Rates are variable, not promised.` },
+      { name: "description", content: `Stake ${BRAND.base.ticker} for ${BRAND.staked.ticker}: flexible staking with a cooldown, or a locked position at a higher target rate. Rates are variable, not promised.` },
       { property: "og:title", content: `Stake ${BRAND.staked.ticker} · Stellaris` },
-      { property: "og:description", content: `Two staking tiers for ${BRAND.staked.ticker}, with the cooldown shown before you confirm.` },
+      { property: "og:description", content: `Flexible or locked staking for ${BRAND.staked.ticker}, with the cooldown shown before you confirm.` },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -25,7 +25,7 @@ function addDays(d: number) {
 }
 
 function StakePage() {
-  const [tierId, setTierId] = useState<StakeTierId>("flex7");
+  const [tierId, setTierId] = useState<StakeTierId>("flex");
   const [amount, setAmount] = useState("");
   const [reviewing, setReviewing] = useState(false);
   const [done, setDone] = useState(false);
@@ -45,7 +45,7 @@ function StakePage() {
       <div className="mt-8 grid gap-3 sm:grid-cols-2">
         {STAKE_TIERS.map(t => {
           const active = t.id === tierId;
-          const Icon = t.id === "lock30" ? Lock : Clock;
+          const Icon = t.id === "locked" ? Lock : Clock;
           return (
             <button
               key={t.id}
@@ -60,11 +60,26 @@ function StakePage() {
                 </span>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">{t.summary}</p>
-              <div className="mt-3 text-[11px] uppercase tracking-widest text-muted-foreground">Cooldown: {t.cooldownDays} days</div>
+              <div className="mt-3 text-[11px] uppercase tracking-widest text-muted-foreground">
+                {t.id === "locked" ? `Lock: ${t.cooldownDays} days` : `Cooldown: ${t.cooldownDays} days`}
+                {t.multiplier > 1 && ` · ${t.multiplier}× yield`}
+              </div>
             </button>
           );
         })}
       </div>
+
+      <ul className="mt-6 space-y-2">
+        {[
+          "Yield is credited gradually over 7 days after each report, so staking just before a report doesn't capture it.",
+          `The protocol keeps 12.5% of yield (hard cap 20%), never your principal; half of that goes to the first-loss reserve.`,
+          "Staking may require an eligibility check, depending on your country.",
+        ].map(note => (
+          <li key={note} className="flex items-start gap-2 text-xs text-muted-foreground">
+            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" /> {note}
+          </li>
+        ))}
+      </ul>
 
       <div className="mt-6 card-institutional p-5">
         <label className="text-sm font-medium" htmlFor="stake-amt">Amount ({BRAND.base.ticker})</label>
@@ -94,12 +109,12 @@ function StakePage() {
         {reviewing && valid && !done && (
           <div className="mt-4 rounded-xl border border-warning/40 bg-warning/5 p-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <Clock className="h-4 w-4 text-warning" /> {tier.cooldownDays}-day cooldown
+              <Clock className="h-4 w-4 text-warning" /> {tier.id === "locked" ? `${tier.cooldownDays}-day lock` : `${tier.cooldownDays}-day cooldown`}
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
-              {tier.id === "lock30"
-                ? `Your ${BRAND.base.ticker} is locked for ${tier.cooldownDays} days. Earliest withdrawal: ${addDays(tier.cooldownDays)}.`
-                : `When you unstake, funds arrive ${tier.cooldownDays} days after your request (e.g. request today → available ${addDays(tier.cooldownDays)}).`}
+              {tier.id === "locked"
+                ? `Your ${BRAND.base.ticker} is locked for ${tier.cooldownDays} days. Earliest withdrawal: ${addDays(tier.cooldownDays)}. Only you can unlock it once the lock ends.`
+                : `When you unstake, funds arrive ${tier.cooldownDays} days after your request (e.g. request today → available ${addDays(tier.cooldownDays)}). During the cooldown your request no longer earns yield but still shares in any loss until you claim.`}
             </p>
             <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
               <dt className="text-muted-foreground">You stake</dt><dd className="text-right">{n.toLocaleString()} {BRAND.base.ticker}</dd>
