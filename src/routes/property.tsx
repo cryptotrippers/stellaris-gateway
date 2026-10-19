@@ -8,7 +8,7 @@ export const Route = createFileRoute("/property")({
       { title: "Property: Australia & Southeast Asia (planned) · Stellaris" },
       { name: "description", content: `How Stellaris plans to offer tokenised property shares in Australia and Southeast Asia, with rent paid pro rata in ${BRAND.base.ticker}. Planned — subject to legal approval.` },
       { property: "og:title", content: "Property: Australia & Southeast Asia (planned) · Stellaris" },
-      { property: "og:description", content: "Tokenised shares in local property companies, with ownership caps enforced by the contracts. Planned — nothing is on offer yet." },
+      { property: "og:description", content: "Tokenised shares in local property companies, with ownership caps to be enforced by the contracts. Planned — nothing is on offer yet." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -50,7 +50,7 @@ function PropertyPage() {
         <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
           <li>A local property company owns each property; investors hold tokenised shares in that company.</li>
           <li>Rent is paid out pro rata in {BRAND.base.ticker}.</li>
-          <li>Ownership caps and transfer rules are enforced by the contracts on every purchase and transfer.</li>
+          <li>Ownership caps and transfer rules will be enforced by the contracts on every purchase and transfer.</li>
         </ul>
       </section>
 
@@ -59,7 +59,7 @@ function PropertyPage() {
           <h2 className="flex items-center gap-2 text-lg font-semibold"><Globe2 className="h-5 w-5 text-primary" /> Philippines</h2>
           <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
             <li>The property company is majority Filipino-owned, as the law requires.</li>
-            <li>Foreign ownership is capped at 40% per project, and the contracts enforce the cap on every purchase and transfer.</li>
+            <li>Foreign ownership will be capped at 40% per project, and the contracts will enforce the cap on every purchase and transfer.</li>
             <li>
               Filipino citizens abroad, including dual citizens, can invest on the Filipino side:{" "}
               <strong className="text-foreground">Invest back home</strong>.
@@ -86,7 +86,7 @@ function PropertyPage() {
         </p>
         <div className="mt-5 space-y-5">
           <Meter label="Filipino allocation" pct={62} note="Majority Filipino-owned, as required by law" />
-          <Meter label="Foreign allocation" pct={31} note="31% of the 40% cap — enforced by the contract on every purchase and transfer" />
+          <Meter label="Foreign allocation" pct={31} note="31% of the 40% cap (illustrative). The contract will enforce it on every purchase and transfer" />
         </div>
       </section>
     </div>

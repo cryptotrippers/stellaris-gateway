@@ -9,7 +9,6 @@ import {
   ShieldCheck,
   Leaf,
   Sun,
-  Wind,
   Building2,
   Users,
   ChevronDown,
@@ -105,7 +104,7 @@ export const Route = createFileRoute("/")({
 
 const categoryIcon = {
   "Sustainable Farming": Leaf,
-  "Clean Energy": Wind,
+  "Clean Energy": Sun,
   "Real Estate": Building2,
   "Carbon Credits": Leaf,
   "Infrastructure": Sun,

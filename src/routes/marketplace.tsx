@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useMatchRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Filter, Leaf, Wind, Building2, Sun, Landmark } from "lucide-react";
+import { Search, Filter, Leaf, Building2, Sun, Landmark } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/StatusBadge";
 import { FundingBar } from "@/components/ui/funding-bar";
@@ -26,13 +26,14 @@ export const Route = createFileRoute("/marketplace")({
 
 const categoryIcon = {
   "Sustainable Farming": Leaf,
-  "Clean Energy": Wind,
+  "Clean Energy": Sun,
   "Real Estate": Building2,
   "Carbon Credits": Leaf,
   "Infrastructure": Sun,
 } as const;
 
 const STATUS_TONE: Record<string, "primary" | "accent" | "warning" | "success"> = {
+  demo: "warning",
   pilot: "warning",
   draft: "warning",
   open: "accent",
