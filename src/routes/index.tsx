@@ -172,7 +172,7 @@ function MarketingNav() {
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden"
+            className="md:hidden"
             aria-label={menuOpen ? "Close menu" : "Open menu"}
             aria-expanded={menuOpen}
             aria-controls="home-mobile-menu"
@@ -186,7 +186,7 @@ function MarketingNav() {
         <nav
           id="home-mobile-menu"
           aria-label="Mobile navigation"
-          className="home-container grid gap-1 border-t border-border py-3 lg:hidden"
+          className="home-container grid gap-1 border-t border-border py-3 md:hidden"
         >
           {links.map((link) => (
             <Button key={link.to} asChild variant="ghost" className="justify-start">
