@@ -13,3 +13,5 @@
 
 - Keep the home-page product overview driven by BRAND and the existing illustrative data modules; this keeps renames and preview figures consistent across pages.
 - Scope home-page presentation rules under home-prefixed classes so updates do not restyle the operational app.
+
+- Public marketing pages use `components/layout/MarketingNav` + `MarketingFooter` and the status vocabulary in `components/brand/StatusPill`; keeps navigation and disclosures consistent across pages.

@@ -21,6 +21,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/StatusBadge";
 import { StellarisWordmark } from "@/components/brand/Logo";
+import { MarketingNav } from "@/components/layout/MarketingNav";
+import { MarketingFooter } from "@/components/layout/MarketingFooter";
 import { ShareRow } from "@/components/landing/ShareRow";
 import { BRAND } from "@/config/brand";
 import { STAKE_TIERS } from "@/data/staking.mock";
@@ -129,75 +131,8 @@ function LandingPage() {
         <FaqSection />
         <FinalCta />
       </main>
-      <Footer />
+      <MarketingFooter />
     </div>
-  );
-}
-
-function MarketingNav() {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const links = [
-    { to: "/marketplace", label: "Marketplace" },
-    { to: "/stake", label: "Staking" },
-    { to: "/transparency", label: "Transparency" },
-    { to: "/property", label: "Property" },
-    { to: "/governance", label: "Governance" },
-  ] as const;
-  return (
-    <header className="sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur-md">
-      <div className="home-container flex h-[72px] items-center justify-between gap-3">
-        <Link to="/" aria-label="Stellaris home" className="shrink-0">
-          <StellarisWordmark />
-        </Link>
-        <nav aria-label="Main navigation" className="hidden items-center gap-4 md:flex lg:gap-6">
-          {links.map((link) => (
-            <Link
-              key={link.to}
-              to={link.to}
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="flex items-center gap-2">
-          <span className="hidden items-center gap-1.5 text-xs text-muted-foreground xl:flex">
-            <span className="h-1.5 w-1.5 rounded-full bg-success" /> Preprod
-          </span>
-          <Button asChild className="h-10 px-4 sm:px-5">
-            <Link to="/app" onClick={() => trackEvent("nav_open_app_click")}>
-              Open app <ArrowUpRight />
-            </Link>
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            aria-label={menuOpen ? "Close menu" : "Open menu"}
-            aria-expanded={menuOpen}
-            aria-controls="home-mobile-menu"
-            onClick={() => setMenuOpen(!menuOpen)}
-          >
-            {menuOpen ? <X /> : <Menu />}
-          </Button>
-        </div>
-      </div>
-      {menuOpen && (
-        <nav
-          id="home-mobile-menu"
-          aria-label="Mobile navigation"
-          className="home-container grid gap-1 border-t border-border py-3 md:hidden"
-        >
-          {links.map((link) => (
-            <Button key={link.to} asChild variant="ghost" className="justify-start">
-              <Link to={link.to} onClick={() => setMenuOpen(false)}>
-                {link.label}
-              </Link>
-            </Button>
-          ))}
-        </nav>
-      )}
-    </header>
   );
 }
 
@@ -825,56 +760,6 @@ function FinalCta() {
   );
 }
 
-function Footer() {
-  return (
-    <footer className="bg-surface">
-      <div className="home-container grid gap-8 py-12 sm:grid-cols-2 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
-        <div>
-          <StellarisWordmark />
-          <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted-foreground">
-            Real-world assets, a reserve-first model and clearer rules. Built on Cardano.
-          </p>
-          <p className="mt-3 text-xs text-muted-foreground">
-            Testnet preview. Illustrative data is not live financial information.
-          </p>
-        </div>
-        <FooterCol
-          title="Explore"
-          links={[
-            ["Marketplace", "/marketplace"],
-            ["Fractions", "/offerings"],
-            [`${BRAND.staked.ticker} staking`, "/stake"],
-            ["Property (planned)", "/property"],
-          ]}
-        />
-        <FooterCol
-          title="Transparency"
-          links={[
-            ["Reserve model", "/transparency"],
-            ["Security", "/security"],
-            ["Governance", "/governance"],
-            ["Impact record", "/stewardship"],
-          ]}
-        />
-        <FooterCol
-          title="Your account"
-          links={[
-            ["My portfolio", "/app"],
-            ["Invite friends", "/invite"],
-            ["Learn", "/learn"],
-            ["List an asset", "/funding/new"],
-            ["Terms", "/terms"],
-          ]}
-        />
-      </div>
-      <div className="home-container flex flex-wrap justify-between gap-3 border-t border-border py-5 text-xs text-muted-foreground">
-        <span>© {new Date().getUTCFullYear()} Stellaris. Built on Cardano.</span>
-        <span>Capital at risk. Rates are target, variable. Nothing is guaranteed.</span>
-      </div>
-    </footer>
-  );
-}
-
 function SectionHeading({
   eyebrow,
   title,
@@ -897,19 +782,3 @@ function SectionHeading({
   );
 }
 
-function FooterCol({ title, links }: { title: string; links: [string, string][] }) {
-  return (
-    <div>
-      <h3 className="text-xs font-semibold uppercase text-muted-foreground">{title}</h3>
-      <ul className="mt-4 space-y-3">
-        {links.map(([label, to]) => (
-          <li key={to}>
-            <Link to={to} className="text-sm transition-colors hover:text-primary">
-              {label}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
