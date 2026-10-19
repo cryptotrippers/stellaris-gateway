@@ -1691,7 +1691,7 @@ mutants of the registry. The Phase 2.4 / 2-H vault mutants were **not** re-run
 as a set: their guards are covered by the 2.4 tests, which all still pass, and by
 the new vault mutants; a full re-run of that set is an open item.
 
-Tests: 507 before 2.5b, 869 after. The PS1 run on the clean tree: tessera 869/869, 0 compiler warnings.
+Tests: 507 before 2.5b, 906 after the vault_ops split. The PS1 run on the clean tree: tessera 906/906, 0 compiler warnings.
 
 ### Phase 2.5b, the `vault_ops` split
 
