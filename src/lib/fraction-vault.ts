@@ -45,7 +45,7 @@ export const FRACTION_VAULT_VERSION = 2n;
 
 /** Hash of the *unapplied* fraction_vault validator from plutus.json. */
 export const FRACTION_BLUEPRINT_HASH =
-  "1360f2208e2a2ba81185727a162cac4f1a06123d93818a1859e254a4";
+  "d629b0afe186ec2c88e9b7f62466b17dfcfbc4758ed68455549d778d";
 
 /** Hash of the *unapplied* fraction mint policy from plutus.json. */
 export const FRACTION_POLICY_BLUEPRINT_HASH =

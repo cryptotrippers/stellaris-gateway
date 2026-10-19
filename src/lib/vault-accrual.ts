@@ -16,7 +16,7 @@ import { assertYieldVaultAddress, getYieldVaultScript, YIELD_VAULT_VERSION } fro
 import { getRefInputIfPublished } from "./ref-scripts";
 import {
   encodeStateDatum,
-  genuineLucidState,
+  findLucidState,
   type VaultStateDatum,
 } from "./yield-chain-decode";
 import { settleFee } from "./vault-fees";
@@ -88,9 +88,9 @@ export async function buildAccrual(params: {
   const selfHash = cred.hash;
 
   // --- locate the live State UTxO ---------------------------------------
-  const utxos = await lucid.utxosAt(script.address);
-  // F-1: the genuine State is the one carrying this instance's thread token.
-  const chosen = genuineLucidState(utxos, script.threadUnit, script.address);
+  // F-1 / F-6: the genuine State is the one carrying this instance's thread
+  // token, wherever it sits under the script's payment credential.
+  const chosen = await findLucidState(lucid, script.address, script.threadUnit);
   const stateUtxo = chosen?.utxo ?? null;
   const state = chosen?.state ?? null;
   if (!stateUtxo || !state) {
@@ -186,7 +186,7 @@ export async function buildAccrual(params: {
   // SetFee / ClaimFee builder must set both bounds too.
   builder = builder
     .pay.ToContract(
-      script.address,
+      stateUtxo.address,
       { kind: "inline", value: nextDatum },
       { lovelace: currentLovelace + params.amountLovelace, [script.threadUnit]: 1n },
     )

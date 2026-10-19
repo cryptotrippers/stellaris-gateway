@@ -529,6 +529,40 @@ default (both scripts evaluated locally against the exact transaction), and
 only signs with `--submit` and the owner's key from the environment. The empty
 v3 States hold 20 tADA of min-ADA that v3 offers no way to release.
 
+### F-6 — Continuing outputs are matched by payment credential only — MEDIUM — **FIXED (Phase 2-H)**
+
+Every shared-State validator selected its script UTxOs by payment
+credential alone, and checked the continuing State's value and datum but not
+its full address or reference script. So a transaction the validator
+otherwise accepts could:
+
+* move the State (or a new Position / Ticket) to the same script under a
+  **stake credential of the submitter's choosing** — the submitter then earns
+  the staking rewards on everything locked there (material for the ADA
+  pools), and every off-chain reader that looks the State up by the exact
+  derived address loses it, which freezes the app's builders;
+* attach a **reference script** to the State, raising its min-ADA so that
+  accounted lovelace gets stranded (the V-02 / `values_pure` lesson, one
+  field over);
+* on redeemers whose accounting is not in lovelace (Tessera vault, a
+  token-unit `multi_asset_vault` / `fraction_vault`), **drain the State's
+  lovelace** down to min-ADA — any StakeShort could take it, since staking
+  needs no signature.
+
+No pinned vault was bootstrapped (all seed maps empty), so nothing on
+Preprod was exposed.
+
+**Fix.** `lib/stellaris/outputs.ak` (byte-identical in every project, checked
+by the verification script): `continuing_ok` (exact address + no reference
+script), `genesis_out_ok` (enterprise address + no reference script),
+`keeps_lovelace`. All six validators use them; the lovelace exceptions are
+listed in `SPEC.md` §7a. Genesis pins the stake credential to `None` (no
+protocol stake key, by decision). Off-chain, States are found by thread token
+across the payment credential, and builders pay back to the found UTxO's own
+address. Tests: `f6_*` in every validator (stake-credential swap, reference
+script attached, ADA drain, genesis variants, and each lovelace exception
+with its token-unit counter-case).
+
 ### M-1 — `multi_asset_vault` solvency check is a tautology — LOW — **FIXED**
 
 `solvent(VaultAccounting { .., total_assets: n_assets }, n_assets)` compares

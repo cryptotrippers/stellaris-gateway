@@ -10,7 +10,7 @@
 import { REF_SCRIPT_HOME_ADDRESS, isPlaceholderHome, type ValidatorKey } from "./ref-scripts.shared";
 import { YIELD_VAULT_VERSION } from "./yield-vault";
 import { VAULT_VERSION } from "./vault-params";
-import { genuineStateAt } from "./yield-chain-decode";
+import { bfVaultUtxos, genuineStateAt } from "./yield-chain-decode";
 import { YIELD_VAULT_SEEDS, seedToData } from "./vault-instances";
 import blueprintSource from "../../contracts/vault/plutus.json?raw";
 
@@ -101,10 +101,11 @@ async function expectedHashFallback(
 
   if (key === "receipt") {
     const { bfGet } = await import("./blockfrost-fetch.server");
-    const utxos =
-      (await bfGet<Array<{ inline_datum: string | null; amount: Array<{ unit: string; quantity: string }> }>>(
-        `/addresses/${vault.script_address}/utxos?count=100`,
-      )) ?? [];
+    // F-6: read the vault where its thread token actually sits.
+    const { utxos } = await bfVaultUtxos<{
+      inline_datum: string | null;
+      amount: Array<{ unit: string; quantity: string }>;
+    }>(bfGet, vault.script_address, "?count=100");
     // F-1: only the State carrying the thread token is the vault's; a planted
     // State could otherwise nominate an arbitrary "receipt policy" here.
     const state = genuineStateAt(utxos, vault.script_address);

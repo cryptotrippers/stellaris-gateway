@@ -21,7 +21,8 @@
       5. Live Preprod scripts match the local build (verify-live-scripts)
       6. Security rules present in source: fee/deposit caps, state-thread
          token on every shared-State validator (AUDIT.md F-1), position
-         markers (F-4), sUSDr frozen
+         markers (F-4), output pinning (F-6, one shared outputs.ak),
+         sUSDr frozen
       7. Mainnet refused: no tracked env file targets mainnet AND
          src/lib/network.ts hard-refuses it
       8. No secret/live keys in TRACKED env files
@@ -251,7 +252,7 @@ $rules = @(
     @{ File = 'contracts/susdr-vault/README.md'; Pattern = 'DO NOT BOOTSTRAP'; Label = 'susdr_vault frozen notice (F-1)' }
     @{ File = 'contracts/tessera/lib/tessera/rules.ak'; Pattern = 'qty > 0 && minted_supply + qty <= attested_reserve && minted_supply + qty <= mint_cap'; Label = 'tessera mint within reserve and cap' }
     @{ File = 'contracts/tessera/lib/tessera/rules.ak'; Pattern = 'max_attestation_age: Int = 604_800_000'; Label = 'tessera 7-day attestation freshness' }
-    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'expect Some((_, in_state)) = sole_state(ins, own_hash)'; Label = 'tessera sole token-bearing State input' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'expect Some((state_in, in_state)) = sole_state(ins, own_hash)'; Label = 'tessera sole token-bearing State input' }
     @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'assets.without_lovelace(out.value) == thread_value(policy)'; Label = 'tessera State holds exactly ADA + thread token' }
     @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'genesis_ok(s, lo, hi)'; Label = 'tessera genesis datum checked on-chain (2.2)' }
     @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'threshold_met(operators, threshold, tx.extra_signatories)'; Label = 'tessera rotation needs the new committee too (2.2)' }
@@ -266,7 +267,7 @@ $rules = @(
     @{ File = 'contracts/tessera/validators/eligibility.ak'; Pattern = 'tokens_stay_in_registry(tx, policy_id)'; Label = 'tessera eligibility tokens stay in the registry (2.3)' }
     @{ File = 'contracts/tessera/validators/eligibility.ak'; Pattern = 'quantity_of(tx.mint, policy, name) <= -q'; Label = 'tessera eligibility tokens leave the registry only by burning (2.3)' }
     @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'genesis_ok(s, policy)'; Label = 'tessera sTSRA vault genesis checked on-chain (2.4)' }
-    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'tsra(reserve, s.short_assets + s.long_assets),'; Label = 'tessera sTSRA vault State holds exactly its accounted TSRA (2.4)' }
+    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'tsra(reserve, s.short_assets + s.long_assets + s.vest_short + s.vest_long),'; Label = 'tessera sTSRA vault State holds exactly its accounted TSRA, vesting included (2.4, 2-H)' }
     @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'lo >= t.claim_after'; Label = 'tessera sTSRA cooldown enforced at Claim (2.4)' }
     @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'claim_after: hi + s0.short_cooldown_ms'; Label = 'tessera sTSRA Ticket cooldown set from the upper bound (2.4)' }
     @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'lo >= p.unlock_at'; Label = 'tessera sTSRA long lock enforced at unlock (2.4)' }
@@ -277,6 +278,30 @@ $rules = @(
     @{ File = 'contracts/tessera/lib/tessera/vault_state.ak'; Pattern = 'max_long_lock_ms: Int = 7_776_000_000'; Label = 'tessera sTSRA long lock hard max 90 days (2.4)' }
     @{ File = 'contracts/tessera/lib/tessera/vault_state.ak'; Pattern = 'max_short_cooldown_ms: Int = 1_209_600_000'; Label = 'tessera sTSRA short cooldown hard max 14 days (2.4)' }
     @{ File = 'contracts/tessera/lib/tessera/exchange.ak'; Pattern = 'max_yield_fee_bps: Int = 2000'; Label = 'tessera sTSRA protocol share hard max 20% (2.4)' }
+    @{ File = 'contracts/tessera/lib/stellaris/outputs.ak'; Pattern = 'out.address == spent.address,'; Label = 'tessera F-6 continuing outputs keep the exact address (2-H)' }
+    @{ File = 'contracts/tessera/lib/stellaris/outputs.ak'; Pattern = 'out.reference_script == None,'; Label = 'tessera F-6 script outputs carry no reference script (2-H)' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'continuing_ok(next_out, state_in),'; Label = 'tessera F-6 reserve State pinned (2-H)' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'keeps_lovelace(next_out, state_in),'; Label = 'tessera F-6 reserve State keeps its lovelace (2-H)' }
+    @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = 'genesis_out_ok(boot, policy),'; Label = 'tessera F-6 reserve genesis at the enterprise address (2-H)' }
+    @{ File = 'contracts/tessera/validators/eligibility.ak'; Pattern = 'genesis_out_ok(o, policy)'; Label = 'tessera F-6 eligibility registry outputs pinned (2-H)' }
+    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'continuing_ok(next_out, state_in),'; Label = 'tessera F-6 sTSRA State pinned (2-H)' }
+    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'keeps_lovelace(next_out, state_in),'; Label = 'tessera F-6 sTSRA State keeps its lovelace (2-H)' }
+    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'continuing_ok(pos, state_in),'; Label = 'tessera F-6 sTSRA new Position at the State address (2-H)' }
+    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'continuing_ok(ticket, state_in),'; Label = 'tessera F-6 sTSRA new Ticket at the State address (2-H)' }
+    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'genesis_out_ok(boot, policy),'; Label = 'tessera F-6 sTSRA genesis at the enterprise address (2-H)' }
+    @{ File = 'contracts/vault/validators/yield_vault.ak'; Pattern = 'list.all(outs, fn(o) { continuing_ok(o, own_in.output) })'; Label = 'tessera F-6 yield_vault outputs pinned (2-H)' }
+    @{ File = 'contracts/vault/validators/yield_vault.ak'; Pattern = 'genesis_out_ok(boot, policy_id)'; Label = 'tessera F-6 yield_vault bootstrap at the enterprise address (2-H)' }
+    @{ File = 'contracts/multi-asset-vault/validators/multi_asset_vault.ak'; Pattern = 'list.all(outs, fn(o) { continuing_ok(o, own_in.output) })'; Label = 'tessera F-6 multi_asset_vault outputs pinned (2-H)' }
+    @{ File = 'contracts/multi-asset-vault/validators/multi_asset_vault.ak'; Pattern = 'is_ada(unit_policy) || keeps_lovelace(next_out, own_in.output)'; Label = 'tessera F-6 multi_asset_vault lovelace exception only for an ADA unit (2-H)' }
+    @{ File = 'contracts/fraction-vault/validators/fraction_vault.ak'; Pattern = 'continuing_ok(state_out, only_in)'; Label = 'tessera F-6 fraction_vault offering pinned (2-H)' }
+    @{ File = 'contracts/fraction-vault/validators/fraction_vault.ak'; Pattern = 'pays_ada_out || keeps_lovelace(state_out, only_in)'; Label = 'tessera F-6 fraction_vault lovelace exception only for an ADA unit (2-H)' }
+    @{ File = 'contracts/tessera/lib/tessera/vault_state.ak'; Pattern = 'pub const vest_period_ms: Int = 604_800_000'; Label = 'tessera sTSRA yield vests over a hard-coded 7 days (2-H)' }
+    @{ File = 'contracts/tessera/lib/tessera/vault_state.ak'; Pattern = 'long_lock_ms >= 2 * short_cooldown_ms,'; Label = 'tessera sTSRA long lock at least twice the cooldown (2-H)' }
+    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'let sf = fold(s0, lo)'; Label = 'tessera sTSRA vesting booked at the validity lower bound only (2-H)' }
+    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'let price_assets = short_assets_at(sf, hi)'; Label = 'tessera sTSRA stakes priced at the upper bound (2-H)' }
+    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'hi - lo <= rules.max_attest_window,'; Label = 'tessera sTSRA ReportYield window at most 1 day (2-H)' }
+    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'owner_authorised(tx, p.owner),'; Label = 'tessera sTSRA UnlockLong needs its owner (2-H)' }
+    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'lovelace_of(paid) >= lovelace_of(spent.value),'; Label = 'tessera sTSRA exits return the spent UTxOs ADA (2-H)' }
     @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = '!s0.paused,'; Label = 'tessera mint blocked while paused' }
 )
 $missingRules = @()
@@ -285,6 +310,11 @@ foreach ($r in $rules) {
     if (-not (Test-Path $path) -or -not ((Get-Content $path -Raw -Encoding UTF8).Contains($r.Pattern))) {
         $missingRules += "$($r.Label) [$($r.File)]"
     }
+}
+$outputsCopies = @('contracts/vault', 'contracts/multi-asset-vault', 'contracts/fraction-vault', 'contracts/tessera') | ForEach-Object { Join-Path $RepoRoot "$_/lib/stellaris/outputs.ak" }
+$outputsHashes = @($outputsCopies | ForEach-Object { if (Test-Path $_) { (Get-FileHash $_ -Algorithm SHA256).Hash } else { 'missing' } } | Select-Object -Unique)
+if ($outputsHashes.Count -ne 1 -or $outputsHashes[0] -eq 'missing') {
+    $missingRules += 'F-6 lib/stellaris/outputs.ak must exist and be byte-identical in all four projects'
 }
 if ($missingRules.Count) { Add-Result '6. Security rules present in source' 'FAIL' ("Changed or missing: " + ($missingRules -join '; ')) }
 else { Add-Result '6. Security rules present in source' 'PASS' "$($rules.Count) caps/guards intact, incl. state-thread token on all 3 shared-State validators and position markers on both Position vaults" }

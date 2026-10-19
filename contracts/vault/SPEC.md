@@ -140,6 +140,36 @@ These must hold for every valid transaction:
 9. **Value conservation:** all minted/burned receipt quantities are matched by
    the corresponding vault accounting transition.
 
+## 7a. Output pinning and lovelace exceptions (AUDIT.md F-6, Phase 2-H)
+
+Every shared-State validator (`yield_vault`, `multi_asset_vault`,
+`fraction_vault`, and Tessera's `reserve`, `eligibility`, `stsra_vault`)
+requires, through the shared `lib/stellaris/outputs.ak`:
+
+* every continuing State / Position / Ticket output, and every new Position or
+  Ticket, is at the spent State's **exact address** (stake credential
+  included) and has **no reference script**;
+* every genesis output (bootstrap, opening, eligibility registry outputs) is
+  at the script's **enterprise address** (payment = own script, no stake
+  credential) with no reference script;
+* the continuing State keeps **at least the spent State's lovelace**, except
+  where a redeemer pays ADA out of the pool:
+
+| Validator | Redeemers that may lower the State's lovelace | Why it is bounded |
+|---|---|---|
+| `yield_vault` | `Withdraw`, `ClaimFee` | ADA is the pooled asset; `paid <= redeem_value - exit fee` / `<= redeem_value(fee shares)`, and `n_assets == total_assets - paid` |
+| `multi_asset_vault` | `Withdraw`, **only for an ADA-unit vault** | the lovelace IS the unit; `value_delta >= -paid` and `n_assets == total_assets - paid`. With a token unit the State's lovelace is only its rider and must stay |
+| `fraction_vault` | `Redeem`, `ClaimFee`, **only for an ADA-unit offering** | the lovelace IS the pool; `value_delta == -net` / `== -amount`. With a token unit the lovelace is only the rider |
+| `reserve` (Tessera) | none | the State holds only ADA + the thread token |
+| `stsra_vault` (Tessera) | none | TSRA is the pooled asset; Claim / UnlockLong pay the Ticket's / Position's own ADA |
+| `eligibility` (Tessera) | — | registry outputs are never continued |
+
+Off-chain, every reader and builder finds a State by its thread token across
+the script's payment credential (`findLucidState`, `bfVaultUtxos`,
+`genuineStateAt` / `genuineOfferingAt` match the credential, not the address
+string), and builders pay the continuing State and new Positions back to the
+State UTxO's own address.
+
 ## 8. Test vector matrix
 
 | Case | Expected result |

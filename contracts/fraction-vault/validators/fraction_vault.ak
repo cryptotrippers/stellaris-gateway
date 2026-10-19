@@ -43,6 +43,7 @@ use stellaris/offering.{
   Closed, Offering, OfferingDatum, Open, Redeeming, Status, bps_of, buy_cost,
   fee_bps_ok, operators_valid, redeem_gross, supply_ok, threshold_met,
 }
+use stellaris/outputs.{continuing_ok, genesis_out_ok, keeps_lovelace}
 use stellaris/thread.{holds_thread, one_shot_mint, thread_name}
 use stellaris/units.{is_ada, min_rider_lovelace, rider_ok, unit_of, value_clean}
 
@@ -236,7 +237,12 @@ validator fraction_vault(
   mint(_redeemer: Data, policy_id: PolicyId, tx: Transaction) {
     expect [boot] = script_outputs(tx, policy_id)
     expect Some(boot_datum) = datum_of(boot)
-    one_shot_mint(tx, policy_id, seed) && script_inputs(tx, policy_id) == [] && offering_value_ok(
+    // F-6: the opening Offering sits at the enterprise address with no
+    // reference script.
+    one_shot_mint(tx, policy_id, seed) && script_inputs(tx, policy_id) == [] && genesis_out_ok(
+      boot,
+      policy_id,
+    ) && offering_value_ok(
       boot,
       policy_id,
       unit_policy,
@@ -392,7 +398,23 @@ validator fraction_vault(
       }
     let solvency = held_out >= n_pool + n_fees + reserve
 
-    structural && transition && solvency
+    // F-6: the Offering keeps its exact address, carries no reference script
+    // and keeps its lovelace, except in `Redeem` and `ClaimFee` on an
+    // ADA-unit offering, where the lovelace IS the pool; those payouts are
+    // bounded by `value_delta` above (SPEC.md, F-6 exceptions). With a token
+    // unit the lovelace is only the rider.
+    let pays_ada_out =
+      is_ada(unit_policy) && when redeemer is {
+        Redeem { .. } -> True
+        ClaimFee { .. } -> True
+        _ -> False
+      }
+    let pinned =
+      continuing_ok(state_out, only_in) && (
+        pays_ada_out || keeps_lovelace(state_out, only_in)
+      )
+
+    structural && transition && solvency && pinned
   }
 
   else(_) {
@@ -908,4 +930,139 @@ test opening_cannot_claim_minted_fractions_with_an_empty_pool() {
       1,
     ),
   )
+}
+
+// ------------------------------------------------------------------
+// Phase 2-H: output pinning (AUDIT.md F-6)
+// ------------------------------------------------------------------
+
+fn f6_staked(o: Output) -> Output {
+  Output {
+    ..o,
+    address: address.Address {
+      ..o.address,
+      stake_credential: Some(address.Inline(VerificationKey(op1))),
+    },
+  }
+}
+
+fn f6_ref_script(o: Output) -> Output {
+  Output { ..o, reference_script: Some(op1) }
+}
+
+fn f6_close(f: fn(Output) -> Output) -> Bool {
+  let before = offering(4, 4, 100_000_000, 0, Open, 0, 0)
+  let after = offering(4, 4, 100_000_000, 0, Closed, 0, 0)
+  run(
+    before,
+    rider + 100_000_000,
+    [f(script_utxo(rider + 100_000_000, after))],
+    assets.zero,
+    [op1, op2],
+    SetStatus { status: Closed },
+  )
+}
+
+test f6_close_fixture_is_accepted() {
+  f6_close(fn(o) { o })
+}
+
+test f6_offering_under_a_foreign_stake_credential_is_rejected() {
+  !f6_close(f6_staked)
+}
+
+test f6_offering_with_a_reference_script_is_rejected() {
+  !f6_close(f6_ref_script)
+}
+
+test f6_opening_under_a_stake_credential_is_rejected() {
+  !open(
+    opening_tx(
+      [seed_input()],
+      [f6_staked(script_utxo(rider, offering(0, 0, 0, 0, Open, 100, 100)))],
+      1,
+    ),
+  )
+}
+
+test f6_opening_with_a_reference_script_is_rejected() {
+  !open(
+    opening_tx(
+      [seed_input()],
+      [f6_ref_script(script_utxo(rider, offering(0, 0, 0, 0, Open, 100, 100))),
+      ],
+      1,
+    ),
+  )
+}
+
+/// A token-unit offering (unit `op1`."u"): its lovelace is only the rider.
+fn tok_utxo(lovelace: Int, units: Int, d: OfferingDatum) -> Output {
+  let o = script_utxo(lovelace, d)
+  Output { ..o, value: assets.add(o.value, op1, "u", units) }
+}
+
+fn run_tok(
+  before: OfferingDatum,
+  in_utxo: Output,
+  outs: List<Output>,
+  mint: Value,
+  signers: List<ByteArray>,
+  r: FractionRedeemer,
+) -> Bool {
+  fraction_vault.spend(
+    0,
+    t_asset,
+    op1,
+    "u",
+    t_seed,
+    Some(before),
+    r,
+    own_ref_0,
+    spend_tx(in_utxo, outs, mint, signers),
+  )
+}
+
+fn f6_token_close(rider_out: Int) -> Bool {
+  let before = offering(4, 4, 100_000_000, 0, Open, 0, 0)
+  let after = offering(4, 4, 100_000_000, 0, Closed, 0, 0)
+  run_tok(
+    before,
+    tok_utxo(3_000_000, 100_000_000, before),
+    [tok_utxo(rider_out, 100_000_000, after)],
+    assets.zero,
+    [op1, op2],
+    SetStatus { status: Closed },
+  )
+}
+
+test f6_token_unit_close_keeps_the_rider() {
+  f6_token_close(3_000_000)
+}
+
+test f6_token_unit_close_cannot_take_the_rider() {
+  !f6_token_close(2_000_000)
+}
+
+fn f6_token_redeem(rider_out: Int) -> Bool {
+  // pool 110, 4 outstanding, redeem 1 -> gross 27.5, 1% fee 0.275
+  let before = offering(4, 4, 110_000_000, 0, Redeeming, 0, 100)
+  let after = offering(4, 3, 110_000_000 - 27_500_000, 275_000, Redeeming, 0, 100)
+  run_tok(
+    before,
+    tok_utxo(3_000_000, 110_000_000, before),
+    [tok_utxo(rider_out, 110_000_000 - 27_225_000, after)],
+    assets.from_asset(fpolicy, t_asset, -1),
+    [],
+    Redeem { qty: 1 },
+  )
+}
+
+test f6_token_unit_redeem_keeps_the_rider() {
+  f6_token_redeem(3_000_000)
+}
+
+test f6_token_unit_redeem_cannot_take_the_rider() {
+  // the ADA-unit exception does not extend to a token-unit offering
+  !f6_token_redeem(2_000_000)
 }

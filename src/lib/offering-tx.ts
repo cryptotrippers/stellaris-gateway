@@ -30,6 +30,7 @@ import {
   type OfferingStatus,
 } from "./offering-chain";
 import type { VaultSeed } from "./vault-instances";
+import { sameScriptCredential, scriptCredentialOf } from "./yield-chain-decode";
 
 /** FractionRedeemer constructor indices — mirrors fraction_vault.ak. */
 const R_BUY = 0;
@@ -77,7 +78,13 @@ async function connect(
   return { lucid, lucidMod, scripts, walletAddress, selfHash: cred.hash };
 }
 
-type LucidUtxo = { txHash: string; outputIndex: number; datum?: string | null; assets: Record<string, bigint> };
+type LucidUtxo = {
+  txHash: string;
+  outputIndex: number;
+  address: string;
+  datum?: string | null;
+  assets: Record<string, bigint>;
+};
 
 export interface OfferingView {
   address: string;
@@ -98,11 +105,18 @@ function unitHeld(utxo: LucidUtxo, unitKey: string): bigint {
 async function resolveOffering(
   session: Session,
 ): Promise<{ utxo: LucidUtxo; datum: OfferingDatum; held: bigint; lovelace: bigint }> {
-  const utxos = (await session.lucid.utxosAt(session.scripts.address)) as unknown as LucidUtxo[];
-  // F-1: the live offering is the one carrying its state-thread token. Anyone
-  // can pay an Offering-shaped datum here; those are ignored, never spent.
+  // F-1 / F-6: the live offering is the one carrying its state-thread token,
+  // wherever it sits under the script's payment credential. Anyone can pay an
+  // Offering-shaped datum here; those are ignored, never spent. Every builder
+  // below pays the continuing offering back to `utxo.address`, as the
+  // validator requires.
   const thread = session.scripts.threadUnit;
+  const utxos = (await session.lucid.utxosAtWithUnit(
+    scriptCredentialOf(session.scripts.address),
+    thread,
+  )) as unknown as LucidUtxo[];
   const found = utxos
+    .filter((u) => sameScriptCredential(u.address, session.scripts.address))
     .filter((u) => (u.assets[thread] ?? 0n) === 1n)
     .map((u) => ({ utxo: u, datum: readOfferingDatum(u.datum ?? null) }))
     .filter((c): c is { utxo: LucidUtxo; datum: OfferingDatum } => c.datum !== null);
@@ -358,7 +372,7 @@ export async function buyFractions(params: {
     .mintAssets({ [session.scripts.fractionUnit]: params.qty }, Data.to(new Constr(0, [])))
     .attach.MintingPolicy({ type: "PlutusV3", script: session.scripts.policyCbor })
     .pay.ToContract(
-      session.scripts.address,
+      utxo.address,
       { kind: "inline", value: encodeOfferingDatum(session.lucidMod, next) },
       scriptValue(session.scripts, lovelace, held + quote.cost),
     )
@@ -431,7 +445,7 @@ export async function redeemFractions(params: {
     .mintAssets({ [session.scripts.fractionUnit]: -params.qty }, Data.to(new Constr(0, [])))
     .attach.MintingPolicy({ type: "PlutusV3", script: session.scripts.policyCbor })
     .pay.ToContract(
-      session.scripts.address,
+      utxo.address,
       { kind: "inline", value: encodeOfferingDatum(session.lucidMod, next) },
       scriptValue(session.scripts, lovelace, nextHeld),
     )
@@ -477,7 +491,7 @@ export async function distributeIncome(params: {
     .collectFrom([utxo as never], Data.to(new Constr(R_DISTRIBUTE, [params.amount])))
     .attach.SpendingValidator({ type: "PlutusV3", script: session.scripts.cbor })
     .pay.ToContract(
-      session.scripts.address,
+      utxo.address,
       { kind: "inline", value: encodeOfferingDatum(session.lucidMod, next) },
       scriptValue(session.scripts, lovelace, held + params.amount),
     )
@@ -504,7 +518,7 @@ async function committeeTx(
     .collectFrom([utxo as never], redeemer)
     .attach.SpendingValidator({ type: "PlutusV3", script: session.scripts.cbor })
     .pay.ToContract(
-      session.scripts.address,
+      utxo.address,
       { kind: "inline", value: encodeOfferingDatum(session.lucidMod, next) },
       value,
     );

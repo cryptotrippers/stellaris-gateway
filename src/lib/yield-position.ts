@@ -30,7 +30,7 @@ import { getRefInputIfPublished } from "./ref-scripts";
 import {
   encodeStateDatum,
   readPositionDatum,
-  genuineLucidState,
+  findLucidState,
   type VaultPositionDatum,
   type VaultStateDatum,
 } from "./yield-chain-decode";
@@ -130,7 +130,9 @@ async function connect(assetId: string, registryAddress?: string | null): Promis
 }
 
 interface ResolvedUtxos {
-  stateUtxo: { datum?: string | null; assets: Record<string, bigint> };
+  stateUtxo: { address: string; datum?: string | null; assets: Record<string, bigint> };
+  /** F-6: where the State sits; the continuing State and Positions go here. */
+  stateAddress: string;
   state: VaultStateDatum;
   stateLovelace: bigint;
   positions: Array<{ utxo: unknown; datum: VaultPositionDatum; lovelace: bigint }>;
@@ -141,7 +143,17 @@ async function resolveVault(
   script: Pick<LucidBits["script"], "address" | "threadUnit" | "markerUnit">,
   owner?: string,
 ): Promise<ResolvedUtxos> {
-  const utxos = await lucid.utxosAt(script.address);
+  // F-1 / F-6: the genuine State is the one carrying this instance's thread
+  // token, wherever it sits under the script's payment credential; a
+  // State-shaped datum anyone else paid here is ignored, whatever it claims.
+  const chosen = await findLucidState(lucid, script.address, script.threadUnit);
+  const stateUtxo = chosen?.utxo ?? null;
+  const state = chosen?.state ?? null;
+  if (!stateUtxo || !state) {
+    throw new Error("This vault has no state UTxO yet — it must be bootstrapped first.");
+  }
+  // The validator keeps every Position at the State's exact address.
+  const utxos = await lucid.utxosAt(stateUtxo.address);
   const positions: ResolvedUtxos["positions"] = [];
 
   for (const u of utxos) {
@@ -161,17 +173,9 @@ async function resolveVault(
       });
     }
   }
-  // F-1: the genuine State is the one carrying this instance's thread token;
-  // a State-shaped datum anyone else paid here is ignored, whatever it claims.
-  const chosen = genuineLucidState(utxos, script.threadUnit, script.address);
-  const stateUtxo = chosen?.utxo ?? null;
-  const state = chosen?.state ?? null;
-  if (!stateUtxo || !state) {
-    throw new Error("This vault has no state UTxO yet — it must be bootstrapped first.");
-  }
-
   return {
     stateUtxo: stateUtxo as ResolvedUtxos["stateUtxo"],
+    stateAddress: stateUtxo.address,
     state,
     stateLovelace: (stateUtxo.assets["lovelace"] as bigint | undefined) ?? 0n,
     positions,
@@ -240,7 +244,7 @@ export async function depositToYieldVault(params: {
     params.assetId,
     params.registryAddress,
   );
-  const { stateUtxo, state, stateLovelace } = await resolveVault(lucid, script);
+  const { stateUtxo, stateAddress, state, stateLovelace } = await resolveVault(lucid, script);
   assertReceiptPolicy(receipt, state.receiptPolicy);
 
   if (state.paused) {
@@ -318,12 +322,12 @@ export async function depositToYieldVault(params: {
   }
   const completed = await builder
     .pay.ToContract(
-      script.address,
+      stateAddress,
       { kind: "inline", value: nextState },
       { lovelace: stateLovelace, [script.threadUnit]: 1n },
     )
     .pay.ToContract(
-      script.address,
+      stateAddress,
       { kind: "inline", value: positionDatum },
       { lovelace: deposit, [script.markerUnit]: 1n },
     )
@@ -372,7 +376,11 @@ export async function withdrawFromYieldVault(params: {
     params.assetId,
     params.registryAddress,
   );
-  const { stateUtxo, state, stateLovelace, positions } = await resolveVault(lucid, script, selfHash);
+  const { stateUtxo, stateAddress, state, stateLovelace, positions } = await resolveVault(
+    lucid,
+    script,
+    selfHash,
+  );
   assertReceiptPolicy(receipt, state.receiptPolicy);
   if (positions.length === 0) {
     throw new Error("This wallet holds no position in this vault.");
@@ -468,7 +476,7 @@ export async function withdrawFromYieldVault(params: {
   }
   builder = builder
     .pay.ToContract(
-      script.address,
+      stateAddress,
       { kind: "inline", value: nextState },
       { lovelace: nextStateLovelace, [script.threadUnit]: 1n },
     )
@@ -478,7 +486,7 @@ export async function withdrawFromYieldVault(params: {
 
   if (remainingShares > 0n) {
     builder = builder.pay.ToContract(
-      script.address,
+      stateAddress,
       { kind: "inline", value: encodePosition(lucidMod, selfHash, remainingShares) },
       { lovelace: remainingPositionLovelace, [script.markerUnit]: 1n },
     );

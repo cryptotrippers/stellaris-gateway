@@ -276,9 +276,28 @@ export function selectThreadState<T>(
 }
 
 /**
+ * F-6: does `candidate` sit under the same script payment credential as
+ * `address`, whatever its stake credential? The validators pin every State to
+ * its genesis address, so in practice the two are equal; matching on the
+ * credential means a reader never loses the State if they ever differ.
+ */
+export function sameScriptCredential(candidate: string, address: string): boolean {
+  const hash = scriptHashOfAddress(address);
+  return hash !== null && scriptHashOfAddress(candidate) === hash;
+}
+
+/** Lucid credential of the script behind a vault address (F-6). */
+export function scriptCredentialOf(address: string): { type: "Script"; hash: string } {
+  const hash = scriptHashOfAddress(address);
+  if (!hash) throw new Error(`Not a script address: ${address.slice(0, 24)}…`);
+  return { type: "Script", hash };
+}
+
+/**
  * The genuine State datum among Blockfrost items (UTxOs, tx inputs or tx
- * outputs) at `address`: State-shaped AND carrying the thread token. Null when
- * there is none — including when only planted, token-less States exist.
+ * outputs) under `address`'s script credential: State-shaped AND carrying the
+ * thread token. Null when there is none — including when only planted,
+ * token-less States exist.
  */
 export function genuineStateAt(
   items: Array<{ address?: string; amount?: BfAmount[]; inline_datum: string | null }>,
@@ -287,7 +306,7 @@ export function genuineStateAt(
   const unit = threadUnitOfAddress(address);
   if (!unit) return null;
   const candidates = items
-    .filter((i) => i.address === undefined || i.address === address)
+    .filter((i) => i.address === undefined || sameScriptCredential(i.address, address))
     .map((i) => ({ state: readStateDatum(i.inline_datum), amount: i.amount }))
     .filter((c): c is { state: VaultStateDatum; amount: BfAmount[] | undefined } => c.state !== null);
   return selectThreadState(candidates, (c) => quantityOf(c.amount, unit) === 1n, address).genuine
@@ -301,15 +320,76 @@ export function genuineStateAt(
  * never returned, whatever epoch or price they claim (F-1, O-03).
  */
 export function genuineLucidState<
-  U extends { txHash: string; outputIndex: number; datum?: string | null; assets: Record<string, bigint> },
+  U extends {
+    txHash: string;
+    outputIndex: number;
+    address?: string;
+    datum?: string | null;
+    assets: Record<string, bigint>;
+  },
 >(utxos: U[], threadUnit: string, address: string): { utxo: U; state: VaultStateDatum } | null {
   const candidates: Array<{ utxo: U; state: VaultStateDatum }> = [];
   for (const u of utxos) {
+    if (u.address !== undefined && !sameScriptCredential(u.address, address)) continue;
     const state = readStateDatum(u.datum ?? null);
     if (state) candidates.push({ utxo: u, state });
   }
   return selectThreadState(candidates, (c) => (c.utxo.assets[threadUnit] ?? 0n) === 1n, address)
     .genuine;
+}
+
+/**
+ * F-6: find the vault's genuine State by its thread token across the script's
+ * whole payment credential (any stake credential), not just the derived
+ * enterprise address. Builders must pay the continuing State (and any new
+ * Position) back to `utxo.address`, which the validator requires.
+ */
+export async function findLucidState<
+  U extends {
+    txHash: string;
+    outputIndex: number;
+    address: string;
+    datum?: string | null;
+    assets: Record<string, bigint>;
+  },
+>(
+  lucid: { utxosAtWithUnit: (c: { type: "Script"; hash: string }, unit: string) => Promise<U[]> },
+  address: string,
+  threadUnit: string,
+): Promise<{ utxo: U; state: VaultStateDatum } | null> {
+  const utxos = await lucid.utxosAtWithUnit(scriptCredentialOf(address), threadUnit);
+  return genuineLucidState(utxos, threadUnit, address);
+}
+
+/**
+ * F-6, Blockfrost side: the UTxOs of a vault, read where its genuine State
+ * actually sits. The address holding the instance's thread token is looked up
+ * by asset (`/assets/{unit}/addresses`) and accepted only under the same
+ * script payment credential as `address`; the vault's Positions live beside
+ * the State, so its UTxOs are read there. Falls back to `address` itself
+ * before bootstrap (no token minted yet). `get` is the caller's Blockfrost
+ * GET (server-side `bfGet`), so this module stays free of server imports.
+ */
+export async function bfVaultUtxos<U>(
+  get: <T>(path: string) => Promise<T | null>,
+  address: string,
+  query = "",
+): Promise<{ address: string; utxos: U[] }> {
+  const unit = threadUnitOfAddress(address);
+  let at = address;
+  if (unit) {
+    const holders = (await get<Array<{ address: string }>>(`/assets/${unit}/addresses`)) ?? [];
+    const own = holders.filter((h) => sameScriptCredential(h.address, address));
+    if (own.length > 1) {
+      throw new Error(
+        `Vault state ambiguous: the state-thread token of ${address} is held at ` +
+          `${String(own.length)} addresses, which the validator makes impossible.`,
+      );
+    }
+    if (own[0]) at = own[0].address;
+  }
+  const utxos = (await get<U[]>(`/addresses/${at}/utxos${query}`)) ?? [];
+  return { address: at, utxos };
 }
 
 /** Share price = total_assets / total_shares; exactly 1.0 before any deposit. */

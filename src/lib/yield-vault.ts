@@ -39,7 +39,7 @@ export const YIELD_VAULT_VERSION = 5n;
 
 /** Hash of the *unapplied* yield_vault validator from plutus.json. */
 export const YIELD_BLUEPRINT_HASH =
-  "de8b9dd1a05be3549ee04ef8e6e3b4057bb0e09e16939c5b289fb69b";
+  "279332cb516eb353ea362c93f9df61dd6b2f8ffd3004c0307b66dd8e";
 
 /** Compiled CBOR of the *unapplied* yield_vault validator (PlutusV3). */
 import yieldBlueprintSource from "../../contracts/vault/plutus.json?raw";

@@ -42,6 +42,7 @@ use cardano/assets.{PolicyId}
 use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Transaction, placeholder,
 }
+use stellaris/outputs.{continuing_ok, genesis_out_ok, keeps_lovelace}
 use stellaris/shares.{
   VaultAccounting, deposit_ok, entry_fee_bps_ok, entry_fee_for, exit_fee_bps_ok,
   exit_fee_for, fee_assets_for, fee_bps_ok, fee_shares_for, max_settle_window,
@@ -341,9 +342,11 @@ validator yield_vault(_version: Int, asset_id: ByteArray, seed: OutputReference)
           let outs = script_outputs(tx, policy_id)
           expect Some(boot) = sole_state_output(outs)
           expect Some(boot_datum) = datum_of(boot)
+          // F-6: the genesis State sits at the enterprise address with no
+          // reference script.
           one_shot_mint(tx, policy_id, seed) && script_inputs(tx, policy_id) == [] && list.length(
             outs,
-          ) == 1 && holds_thread(boot.value, policy_id) && values_pure(
+          ) == 1 && genesis_out_ok(boot, policy_id) && holds_thread(boot.value, policy_id) && values_pure(
             outs,
             policy_id,
           ) && bootstrap_ok(boot_datum)
@@ -503,6 +506,20 @@ validator yield_vault(_version: Int, asset_id: ByteArray, seed: OutputReference)
           ) && n_treasury_shares >= 0 && n_treasury_shares <= n_shares && n_last_fee_time >= last_fee_time && n_treasury == treasury && n_receipt_policy == receipt_policy && bytearray.length(
             receipt_policy,
           ) == 28
+
+        // F-6: every vault output (the next State, a new or continuing
+        // Position) keeps the State's exact address and carries no reference
+        // script. The State keeps its lovelace except in `Withdraw` and
+        // `ClaimFee`, the two redeemers that pay ADA out of the pool; both are
+        // bounded by the accounting below (SPEC.md, F-6 exceptions).
+        let pinned =
+          list.all(outs, fn(o) { continuing_ok(o, own_in.output) }) && when
+            redeemer
+          is {
+            Withdraw { .. } -> True
+            ClaimFee { .. } -> True
+            _ -> keeps_lovelace(next_out, own_in.output)
+          }
 
         let same_committee = committee_unchanged(d, next)
 
@@ -685,7 +702,7 @@ validator yield_vault(_version: Int, asset_id: ByteArray, seed: OutputReference)
 
 
 
-        structural && transition
+        structural && pinned && transition
       }
     }
   }
@@ -2539,4 +2556,108 @@ test deposit_cannot_create_two_positions() {
       out(vault_addr(), 5_000_000, Position { owner: alice, shares: 5_000_000 }),
     ]
   !deposit_with(outs, deposit_mint(2))
+}
+
+// --- Phase 2-H: output pinning (AUDIT.md F-6) -----------------------
+
+fn f6_staked(o: Output) -> Output {
+  Output {
+    ..o,
+    address: Address {
+      ..o.address,
+      stake_credential: Some(address.Inline(VerificationKey(mallory))),
+    },
+  }
+}
+
+fn f6_ref_script(o: Output) -> Output {
+  Output { ..o, reference_script: Some(mallory) }
+}
+
+fn f6_pause(f: fn(Output) -> Output) -> Bool {
+  let s0 = state(10_000_000, 10_000_000, 7, False)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [f(out(vault_addr(), 2_000_000, state(10_000_000, 10_000_000, 7, True)))],
+      [op1, op2],
+    )
+  yield_vault.spend(t_version, t_asset, t_seed, Some(s0), SetPaused { paused: True }, state_ref, t)
+}
+
+/// A first deposit of 10 ADA, with the State and new Position rewritten.
+fn f6_deposit(state_lovelace: Int, pos_lovelace: Int, f: fn(Output) -> Output) -> Bool {
+  let s0 = state(0, 0, 7, False)
+  let t =
+    tx(
+      [input_at(0, out(vault_addr(), 2_000_000, s0))],
+      [
+        out(vault_addr(), state_lovelace, state(10_000_000, 10_000_000, 7, False)),
+        f(out(vault_addr(), pos_lovelace, Position { owner: alice, shares: 10_000_000 })),
+      ],
+      [alice],
+    )
+  yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Deposit, state_ref, t)
+}
+
+test f6_fixtures_are_accepted() {
+  f6_pause(fn(o) { o }) && f6_deposit(2_000_000, 10_000_000, fn(o) { o })
+}
+
+test f6_state_under_a_foreign_stake_credential_is_rejected() {
+  !f6_pause(f6_staked)
+}
+
+test f6_state_with_a_reference_script_is_rejected() {
+  !f6_pause(f6_ref_script)
+}
+
+test f6_position_under_a_foreign_stake_credential_is_rejected() {
+  !f6_deposit(2_000_000, 10_000_000, f6_staked)
+}
+
+test f6_position_with_a_reference_script_is_rejected() {
+  !f6_deposit(2_000_000, 10_000_000, f6_ref_script)
+}
+
+test f6_deposit_draining_the_state_into_the_position_is_rejected() {
+  // the pool balances (value_delta is still 10 ADA), but the State's own
+  // lovelace falls from 2 to 1 ADA
+  !f6_deposit(1_000_000, 11_000_000, fn(o) { o })
+}
+
+test f6_withdraw_may_pay_yield_out_of_the_state() {
+  // the documented exception: price 1.2 after a 2 ADA accrual, so the full
+  // exit takes 12 ADA, 2 of it out of the State's lovelace
+  let s0 = state(10_000_000, 12_000_000, 7, False)
+  let t =
+    tx(
+      [
+        input_at(0, out(vault_addr(), 4_000_000, s0)),
+        input_at(1, out(vault_addr(), 10_000_000, Position { owner: alice, shares: 10_000_000 })),
+      ],
+      [out(vault_addr(), 2_000_000, state(0, 0, 7, False)), plain_out(alice, 12_000_000)],
+      [alice],
+    )
+  yield_vault.spend(t_version, t_asset, t_seed, Some(s0), Withdraw { shares: 10_000_000 }, state_ref, t)
+}
+
+test f6_bootstrap_under_a_stake_credential_is_rejected() {
+  let t =
+    bootstrap_tx(
+      [seed_input()],
+      [f6_staked(out(vault_addr(), 5_000_000, state(0, 0, 0, False)))],
+      1,
+    )
+  !yield_vault.mint(t_version, t_asset, t_seed, Void, vhash, t)
+}
+
+test f6_bootstrap_with_a_reference_script_is_rejected() {
+  let t =
+    bootstrap_tx(
+      [seed_input()],
+      [f6_ref_script(out(vault_addr(), 5_000_000, state(0, 0, 0, False)))],
+      1,
+    )
+  !yield_vault.mint(t_version, t_asset, t_seed, Void, vhash, t)
 }
