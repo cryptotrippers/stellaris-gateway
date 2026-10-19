@@ -1,4 +1,3 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AlertTriangle, ShieldCheck, ArrowDown, FileCheck, KeyRound } from "lucide-react";
 import { BRAND } from "@/config/brand";
