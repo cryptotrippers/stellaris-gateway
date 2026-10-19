@@ -30,11 +30,11 @@ const OG_IMAGE = `${SITE}${ogAsset.url}`;
 const FAQ = [
   {
     q: "Is this actually safe?",
-    a: "Every project is run by a registered, audited operator, and withdrawals carry a 24h safety delay. Your share is recorded in your own name on Cardano — you hold it, not us.",
+    a: "Nothing here is risk-free. What we do: contracts enforce the rules and publish the loss order, reserves are shown on the transparency page, and the code goes through independent audits before mainnet. This is a testnet preview; no real money is used.",
   },
   {
     q: "Do I need to know anything about crypto?",
-    a: "No. You can pay by card, or connect a Cardano wallet if you already have one. Returns can be converted back to your local currency at any time.",
+    a: "A Cardano wallet is needed today. Simpler sign-up options are planned.",
   },
   {
     q: "What's the minimum investment?",
@@ -43,11 +43,11 @@ const FAQ = [
 
   {
     q: "What are the fees?",
-    a: "0.4% per year, streamed continuously from yield. No entry fee, no exit fee, no lockups beyond the 24h security timelock.",
+    a: "For staking, the protocol keeps 12.5% of the yield earned (capped at 20% by the contract), never your principal. Each marketplace project shows its own fee before you invest.",
   },
   {
     q: "Who can invest?",
-    a: "Retail investors in 60+ jurisdictions where fractional RWAs are permitted. Our one-click ZK-KYC checks eligibility in seconds without exposing your data.",
+    a: "It depends on your country and the product. Some products will need an eligibility check, and privacy-preserving checks are planned. Availability is being confirmed with legal advisers in Australia and the Philippines first.",
   },
   {
     q: "What is Cardano and why does it matter?",
@@ -59,9 +59,9 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Own real-world assets from ₳10 · Stellaris" },
-      { name: "description", content: "Solar farms, coffee estates, and real estate — fractionalized on Cardano. Verified yields, ESG ratings, and 24h withdrawals. Start with ₳10." },
+      { name: "description", content: "Fractional real-world assets and a reserve-backed dollar token on Cardano, starting with property in Australia and Southeast Asia. Testnet preview." },
       { property: "og:title", content: "Own real-world assets from ₳10 · Stellaris" },
-      { property: "og:description", content: "Solar farms, coffee estates, and real estate — fractionalized on Cardano. Verified yields, ESG ratings, and 24h withdrawals." },
+      { property: "og:description", content: "Fractional real-world assets and a reserve-backed dollar token on Cardano. Testnet preview." },
       { property: "og:type", content: "website" },
       { property: "og:url", content: SITE + "/" },
       { property: "og:image", content: OG_IMAGE },
@@ -186,8 +186,8 @@ function Hero() {
             From <span className="number-display">₳10</span>.
           </h1>
           <p className="mt-5 max-w-xl text-base md:text-lg text-muted-foreground leading-relaxed">
-            Solar farms, coffee estates and property — split into small shares you can buy in a few
-            taps. You can see exactly what you own and take your money out whenever you like.
+            Property and other real assets, split into small shares, with every rule enforced
+            on-chain and every reserve published. Built first for Australia and Southeast Asia.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link
@@ -260,7 +260,7 @@ function HowItWorks() {
   const steps = [
     { icon: Coins, title: "Pick a project", body: "Browse real things — solar, farms, property. Each one shows what it does and what it aims to pay." },
     { icon: Wallet, title: "Connect a wallet", body: "Link a Cardano wallet and put in as little as ₳10. Your share is recorded in your own name, not ours." },
-    { icon: TrendingUp, title: "Track your earnings", body: "Returns land back in your wallet and show up in your portfolio. Withdraw whenever you want." },
+    { icon: TrendingUp, title: "Track your earnings", body: "Returns land in your wallet and show in your portfolio. Each project shows its exit rules before you invest." },
   ];
   return (
     <section id="how-it-works" className="mx-auto max-w-[1400px] px-4 md:px-6 py-16 md:py-24 scroll-mt-20">
@@ -294,7 +294,7 @@ function FeaturedAssets() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <div className="text-sm font-medium text-primary">Featured projects</div>
-            <h2 className="mt-2 text-3xl md:text-4xl font-semibold tracking-tight">Real things that make real money.</h2>
+            <h2 className="mt-2 text-3xl md:text-4xl font-semibold tracking-tight">Real assets, with the rules on show.</h2>
           </div>
           <Link to="/marketplace" className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80">
             All projects <ArrowUpRight className="h-4 w-4" />
@@ -473,7 +473,7 @@ function Footer() {
           <StellarisWordmark />
           <p className="mt-3 text-sm text-muted-foreground max-w-sm">Small shares of real-world projects, on Cardano. Simple to use, seriously engineered.</p>
         </div>
-        <FooterCol title="Product" links={[["Invest", "/marketplace"], ["Earnings", "/yield"], ["Vote", "/governance"]]} />
+        <FooterCol title="Product" links={[["Invest", "/marketplace"], ["Earnings", "/yield"], ["Property", "/property"], ["Vote", "/governance"]]} />
         <FooterCol title="Trust" links={[["Security", "/security"], ["Impact", "/stewardship"], ["Developers", "/developers"]]} />
         <FooterCol title="Account" links={[["My portfolio", "/app"], ["Upgrade", "/upgrade"]]} />
 
