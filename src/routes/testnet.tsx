@@ -30,9 +30,9 @@ interface Banner { tone: "destructive" | "warning"; title: string; detail: strin
 export const Route = createFileRoute("/testnet")({
   head: () => ({
     meta: [
-      { title: "RealFi Testnet · Cardano Preprod · Stellaris" },
-      { name: "description", content: "Live Cardano Preprod (RealFi testnet) chain tip, CIP-30 wallet connection, faucet, and explorer links." },
-      { property: "og:title", content: "RealFi Testnet · Cardano Preprod" },
+      { title: "Stellaris Testnet · Cardano Preprod" },
+      { name: "description", content: "Live Cardano Preprod (Stellaris testnet) chain tip, CIP-30 wallet connection, faucet, and explorer links." },
+      { property: "og:title", content: "Stellaris Testnet · Cardano Preprod" },
       { property: "og:description", content: "Connect a Cardano wallet on Preprod and follow the live chain tip." },
     ],
   }),
@@ -100,7 +100,7 @@ function TestnetPage() {
     banners.push({
       tone: "warning",
       title: `${wallet.provider} is on mainnet`,
-      detail: "Switch your wallet's network to Preprod (Settings → Network) and reconnect to test against RealFi's testnet.",
+      detail: "Switch your wallet's network to Preprod (Settings → Network) and reconnect to test against the Stellaris testnet.",
     });
   }
   if (connectError) {
@@ -113,7 +113,7 @@ function TestnetPage() {
       <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="text-[11px] uppercase tracking-[0.22em] text-primary">Testnet</div>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground">RealFi · Cardano Preprod</h1>
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground">Stellaris testnet · Cardano Preprod</h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
             Live chain tip via Blockfrost and CIP-30 wallet connect. Point Lace / Eternl / Nami / Typhon at Preprod to test.
           </p>
@@ -276,7 +276,6 @@ function TestnetPage() {
           <ResourceLink title="Cardanoscan Preprod" desc="Explorer for txs, blocks, addresses" url="https://preprod.cardanoscan.io" />
           <ResourceLink title="CExplorer Preprod" desc="Alternate explorer & pool stats" url="https://preprod.cexplorer.io" />
           <ResourceLink title="Blockfrost" desc="REST API — cardano-preprod.blockfrost.io" url="https://blockfrost.io" />
-          <ResourceLink title="RealFi (USDr) Testnet" desc="Phase 1 testnet UI" url="https://preprod.realfi.co" />
           <ResourceLink title="Cardano Testnets docs" desc="Preprod / Preview / Midnight" url="https://docs.cardano.org/cardano-testnet/getting-started" />
         </div>
       </div>
