@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useMatchRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Filter, Leaf, Wind, Building2, Sun, Landmark } from "lucide-react";
+import { Search, Filter, Leaf, Building2, Sun, Landmark } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/StatusBadge";
 import { FundingBar } from "@/components/ui/funding-bar";

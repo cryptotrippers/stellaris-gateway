@@ -9,7 +9,6 @@ import {
   ShieldCheck,
   Leaf,
   Sun,
-  Wind,
   Building2,
   Users,
   ChevronDown,
