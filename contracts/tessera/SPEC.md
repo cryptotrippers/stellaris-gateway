@@ -1426,10 +1426,378 @@ redemption queue goes in its own script, and anything the queue needs from the
 vault or reserve goes into `vault_ops` (about 1.9 KB of headroom) or a new
 script, not into those two. Applying parameters adds a few dozen bytes to each.
 
-## 4. Redemption queue
-Instant tier up to the buffer; Request UTxOs bucketed per day; payable after
+## 4. Redemption queue (Phase 2.6 — DESIGN CHECKPOINT, nothing implemented)
+
+Status: **revision 1, awaiting approval.** Baseline: §4 of the skeleton ("instant
+tier up to the buffer; Request UTxOs bucketed per day; payable after
 `bucket_end + settle_delay` (max 7 days); permissionless settlement to `owner`;
-owner cancel before settlement.
+owner cancel before settlement") plus the 2.3 decision that `kyc_redeem` is
+applied to the requester **at request time** (§1a, note (a)).
+
+Decisions are numbered [D-21]… (2.5b ended at D-20). Each has a recommended
+default; the ones that need your call, counsel's or both are in §4.12.
+
+### 4.0 Constraints and what is not touched
+
+* **No change** to `stsra_vault` (12,652 B), `reserve` (12,308 B), `vault_ops`
+  (11,100 B), `first_loss` (4,466 B) or `eligibility` (2,365 B), and so no
+  rehash and no new pin for any of them. Every new script ≤ 13,000 B; CI fails at
+  14,000.
+* **Why the reserve cannot take a queue redeemer** (measured, scratch copy, not
+  committed): a minimal `QueueBurn{qty}` modelled on `VaultClaimBurn` (it sums
+  the settled requests and burns exactly that) takes the reserve from 12,308 to
+  **13,072 B (+764)**, before the Config field that would name the queue script.
+  That breaks the target and uses up the reserve's remaining headroom, so the
+  queue burns through the reserve's **existing** `Burn` (D-22).
+* The queue's committee, `kyc_redeem` switch and `eligibility_policy` are read
+  from the genuine reserve Config **by reference** (`reserve_ref.genuine_config`),
+  so a `Rotate` or `SetKyc` carries over, as in the vault.
+* Units: TSRA and the payout asset both have 6 decimals; 1 TSRA redeems for 1
+  payout unit (par). Times are POSIX ms.
+
+### 4.1 [D-21] Scripts
+
+The proven 2.5b pattern: cheap per-UTxO gates, the real work once per
+transaction in a withdraw-zero script. (A batch settlement spends N Request
+inputs, and a spend handler runs once per input: putting the batch checks in it
+would cost O(N²).)
+
+| Script | Purpose | Holds | Est. size |
+|---|---|---|---:|
+| `redeem_queue` (mint + spend; params `seed, reserve, flow, admin`) | marker mint/burn; the UTxOs at its address; `Cancel`; gates every other spend to `queue_flow` or `queue_admin` | Request, Sink, Buffer shards, QueueConfig, Grace | 6,000–8,000 |
+| `queue_flow` (withdraw-zero; param `reserve`) | user flow: `Request`, `Instant`, `Settle`, `Sweep`, limit accounting | – | 9,000–11,500 |
+| `queue_admin` (withdraw-zero; param `reserve`) | committee flow: `Genesis`, `Suspend`, `Resume`, `SetLimits`, `Fund`, `Defund`, `GrantGrace` | – | 6,000–8,500 |
+
+`queue_flow` and `queue_admin` publish handlers accept only `RegisterCredential`
+(the 2.5b condition), and their withdrawal amount must be 0. The queue binds the
+withdraw redeemer's `queue` field and action tag exactly as the vault binds ops.
+**These sizes are estimates**, not measurements (the only measured anchor is
+`vault_ops` at 11,100 B for four heavy transitions). First step of the
+implementation, before any real logic: compile stubs of the three validators with
+representative data decoding and report real sizes; if any estimate fails, stop
+and re-split (§4.10).
+
+### 4.2 [D-22] How TSRA is burned (item 2)
+
+**Recommended: lock at request, forward at settlement, burn in batches through
+the existing `Burn`.**
+
+1. *Request:* the holder signs, `kyc_redeem` is applied to them **here** (D-25),
+   and their TSRA is locked in a Request UTxO. Supply is **not** touched, so
+   requests are independent of the reserve (D-30).
+2. *Settle / Instant:* the TSRA in the settled Requests moves into a **Sink**
+   output at the queue address (no burn yet), and the payout is made (D-23).
+3. *Sweep:* anyone holding a `kyc_redeem`-eligible key (a keeper; the committee
+   issues it a registry token) spends any number of Sink inputs together with the
+   genuine Supply under the reserve's **existing** `Burn{qty, holder}`. The Sink
+   spend handler (gate to `queue_flow`) requires: the Supply input's redeemer, read
+   from `tx.redeemers`, is constructor 1 (`Burn`) with `qty` equal to the total TSRA
+   in the Sink inputs; no TSRA output at the queue address; nothing else spent at
+   the queue. The reserve itself enforces `delta == -qty`, `minted_supply -= qty`
+   and the `kyc_redeem` check on the keeper.
+
+The reserve's `Burn` constructor index is read with `builtin.un_constr_data` (a
+mirror, as `OpsEnvelope` does); `verify-vault-hash.mjs` is extended to check the
+index against the reserve blueprint, so a reordering of `ReserveRedeemer` fails CI.
+
+*Consequence to accept:* between settlement and sweep, `minted_supply` still
+counts TSRA that has already been paid out. That errs **against** minting
+(`minted ≤ attested` keeps holding with a larger left side), so it is
+conservative; the cost is that the TSRA supply figure lags by the unswept amount.
+If no eligible keeper exists, sinks pile up (liveness, not safety).
+
+*Alternatives rejected:* (a) **new reserve redeemer**: +764 B, breaks the target;
+(b) **burn at request** with the existing `Burn`: the burn cannot be undone, so
+the owner could never cancel; (c) **settlement through `Burn` signed by the
+holder**: not permissionless, and it is when `kyc_redeem` is on (the real mode)
+that permissionlessness matters; (d) **a burn-authority script** that takes
+`claim_excess` out of the reserve and lets the queue use the same slot: would
+shrink the reserve and is the clean long-term shape, but rewrites the merged,
+mutation-tested `VaultClaimBurn` path. Not for 2.6; revisit if a third burner
+appears.
+
+### 4.3 [D-23] Who funds settlement; evidence of payout (item 1)
+
+**Recommended: payout is on chain, in a configured payout asset, from a
+Buffer; the fiat leg is explicitly not evidenced on chain.**
+
+* The **Buffer** is a set of UTxOs ("shards", D-27/D-30) at the queue address,
+  each holding the payout asset (`payout_policy`, `payout_name` in QueueConfig;
+  on Preprod a committee-minted test asset) plus a shard thread token. The
+  committee funds a shard (`Fund`) and may withdraw surplus (`Defund`), both
+  M-of-N via `queue_admin`. `Defund` is **not** tied to outstanding Requests
+  (that cannot be checked without enumerating them; see R-3).
+* A settlement transaction pays `qty` payout units **to the Request's `payout_to`
+  address** out of a shard. The payment itself is the evidence: a Request is
+  settled **iff** its owner's address received `qty` in the same transaction.
+  Nobody can settle without paying, so permissionless settlement is safe.
+* **Not evidenced, on purpose:** any bank or fiat wire. How the committee turns
+  fiat into the payout asset (or tops the Buffer up from the off-chain reserve)
+  is off chain, visible on chain only as `Fund`, and reflected in the next
+  `Attest`. If counsel requires a direct fiat payout instead, the alternative is
+  a committee-signed `SettleAttested` (settlement stops being permissionless);
+  that is a separate decision, not designed here.
+* The Buffer is part of the reserve; the committee's `attested_reserve` must
+  include it. **`Burn` does not lower `attested_reserve`** (existing behaviour),
+  so between a payout and the next `Attest` the mint headroom
+  `attested_reserve - minted_supply` is larger than the cash. Minting still needs
+  a committee signature and a fresh attestation, so this is a committee-trust
+  point, not a new hole (R-2).
+
+### 4.4 [D-24] Requests, buckets, cancel
+
+* **Request UTxO** at `redeem_queue`, holding exactly: `qty` TSRA, one `request`
+  marker (minted by the queue, F-4 style, so a planted lookalike is ignored), and
+  lovelace `>= min_request_ada`. Datum:
+  `Request { owner: VerificationKeyHash, payout_to: Address, qty, bucket, payable_after }`.
+* `bucket = lo / 86_400_000` of the creating transaction, which must be a finite
+  window of at most 1 hour that lies inside one day (a window crossing midnight is
+  refused; resubmit). `payable_after = (bucket + 1) * 86_400_000 + settle_delay`,
+  **computed and stored at request time**, so the committee cannot lengthen an
+  existing request by changing `settle_delay` later.
+* `settle_delay` is in QueueConfig, `0 <= settle_delay <= 7 days` (hard rule in
+  `rules.ak`-style constants, not a vote). Recommended default 2 days.
+* `qty >= min_request` (QueueConfig; default 100 TSRA) keeps dust out.
+* **Cancel:** the owner signs; spends the Request with `Cancel`; gets exactly the
+  TSRA back (+ lovelace) at an address they choose; marker burned. Allowed at any
+  time before the Request is spent by a settlement, **and never blocked** by a
+  suspension, a loss freeze, a revoked eligibility token, the pause, or an empty
+  Buffer. Cancel and settlement race for the same UTxO; whichever lands first
+  wins. Cancel is handled by `redeem_queue` itself (no `queue_flow` run).
+* **Keeper tip:** a settler may take at most `settle_tip` lovelace (QueueConfig,
+  default 0.2 ADA, hard cap 1 ADA) per Request out of its lovelace; the rest goes
+  to `payout_to`. So permissionless settlement has an incentive but cannot be a
+  grab.
+* `payout_to` must be a key-credential address (v1); a script payout address is
+  refused (it could be made un-spendable or non-payable and block a batch).
+
+### 4.5 [D-25] Eligibility (item 2)
+
+* `kyc_redeem` on: `Request` and `Instant` call the one existing
+  `eligible(tx, policy, owner)`: `owner` signed and holds a registry token, read
+  from the genuine Config at request time. Off: `owner` still signs (a Request
+  needs its owner for Cancel), no token needed.
+* `Settle` needs **no** signature and no eligibility (decided in 2.3 note (a)):
+  funds go only to `payout_to`.
+* `Sweep` goes through the reserve's `Burn`, which applies `kyc_redeem` to the
+  keeper (above). That is not a compliance control on the redeemer; the control
+  is the request-time check.
+* `paused` does not block any queue action: the reserve's `Burn` is allowed while
+  paused, and so is redemption.
+
+### 4.6 [D-26] Instant tier
+
+`Instant{qty}` in one transaction: the holder signs, `kyc_redeem` applies, the
+holder's TSRA goes into a Sink and the holder is paid `qty` from a shard.
+Allowed iff all hold: not suspended (D-28), no loss freeze (D-29), `qty <=
+instant_max` (QueueConfig, default 10,000 TSRA per transaction), `qty <=` the
+shard's payout balance, and the shard's daily and monthly counters leave room
+(D-27). So "instant up to the buffer" is bounded by the shard balance **and** the
+limits. Anything above that goes through the daily-bucket path.
+
+### 4.7 [D-27] Daily and monthly limits (item 3)
+
+* Limits cap total **payouts** (instant + settled) and live where payouts
+  already serialise, the Buffer shards, never on Requests. QueueConfig holds
+  `daily_limit`, `monthly_limit` (global, in payout units) and `shards`; each shard
+  enforces `daily_limit / shards` and `monthly_limit / shards`, so the global cap
+  holds without a shared counter. Windows: day index `lo / 86_400_000`, month
+  index `day / 30` (30-day blocks, not calendar months; simpler and
+  unambiguous on chain).
+* Shard datum: `Shard { day, paid_day, month, paid_month }`; a payout resets a
+  counter when its index moved and refuses when `paid + qty > limit`.
+* A Request that does not fit today's limit stays pending (nothing is lost, it
+  can be cancelled) and is paid on a later day.
+* **The committee's power over limits is bounded:** an *increase* applies at once;
+  a *decrease* is announced (`pending_limits` + `effective_at`) and applies only
+  `limit_notice` (7 days) later, so lowering the limits cannot be used as an
+  open-ended, un-time-limited suspension. A hard floor is not proposed (see R-4).
+* Per-holder limits (AML) are **not** on chain: they would need per-holder state
+  and a shared registry. Out of scope unless counsel requires it.
+
+### 4.8 [D-28] Suspension under stress (item 3)
+
+* `Suspend{until}` (committee M-of-N, `queue_admin`) sets `suspended_until` in
+  QueueConfig; `Resume` clears it. Effects while `suspended_until > lo`: `Instant`
+  and `Settle` are refused. `Request` and `Cancel` are **not** blocked (the queue
+  can form; owners can always leave).
+* Cap and gap mirror the loss freeze: one suspension lasts at most
+  **3 days** from the transaction's lower bound (`max_suspend_ms`, constant), and a
+  new one may open only **7 days** after the previous ended
+  (`suspend_reopen_gap_ms`). The window of the opening transaction is at most 1
+  day. Recommended 3 days (not 7) because the daily path already adds up to 7
+  days of `settle_delay`; the committee can still re-suspend after the gap.
+* A suspension does not change any stored `payable_after`; requests simply wait.
+
+### 4.9 [D-29] Loss freeze and Tickets (item 4)
+
+* **While `loss_pending_until > lo` (read from the genuine Config by reference):**
+  `Instant` and `Settle` are refused (same mechanism as suspension, no committee
+  step needed, bounded by the reserve's 7-day cap); `Request` and `Cancel` are
+  allowed. So a frozen vault's **TSRA holders can queue and can cancel**, they are
+  just not paid until the freeze ends. Reason: a pending loss means the reserve is
+  being re-stated; paying par during it races the write-down.
+* **sTSRA stakers in a frozen vault** cannot unstake or stake (vault rule, 2.5b);
+  until they hold TSRA they have nothing to queue. TSRA that exited before the
+  freeze can be queued.
+* **Tickets are not in the queue.** A Ticket claim pays TSRA (loss share already
+  burned via `VaultClaimBurn`); the claimant may queue that TSRA afterwards. The
+  queue never reads or spends vault UTxOs, and the vault never reads the queue.
+* `LossBurn` and `ReportLoss` do not touch Requests, Sinks or Buffers. A loss that
+  also hits the payout asset's backing is the committee's `Defund`/`Attest`
+  problem, not a protocol path (R-5).
+
+### 4.10 [D-30] Contention (item 5)
+
+| UTxO | Touched by | Contention |
+|---|---|---|
+| Request (one per request) | its creator, then one settlement or cancel | none: new outputs, nobody shares them |
+| Sink (one per settlement tx) | the sweep | none until swept; a sweep takes many at once |
+| Buffer shard (K UTxOs) | `Instant`, `Settle` | one tx per shard per block; K shards, K set by the committee; a settler picks any shard with room |
+| Supply | `Sweep` only | once per batch, not once per request (this is the point of D-22) |
+| QueueConfig, reserve Config | by reference only; committee actions spend them | none in normal operation |
+
+A settlement transaction takes **many** Requests (their number is bounded by the
+execution budget and the 16 KB size, estimated ~20–30) and pays them all from one
+shard, so shard contention is per batch.
+
+### 4.11 [D-31] Grace period for revoked holders (item 6)
+
+**Recommended: a parameter, `grace_ms` in QueueConfig (hard cap 30 days;
+recommended default 14 days; 0 disables), exercised through an explicit,
+committee-granted record. Counsel to confirm the number and whether it may apply
+at all (e.g. sanctions).**
+
+* `GrantGrace{holder, until}` (committee M-of-N, `queue_admin`) creates a Grace
+  UTxO at the queue (a token named by the holder's key hash) with
+  `until <= lo + grace_ms`. The committee does it in the same transaction that
+  revokes the registry token, or later, or never (a sanctioned holder gets none).
+* While `kyc_redeem` is on, `Request` accepts a holder who has **either** an
+  eligibility token **or** a referenced Grace for them with `until >= hi`. A grace
+  holder can only **queue** to redeem; it does not let them mint or stake.
+* A Request already created is unaffected by a later revocation (eligibility is
+  checked at request time), so revoking never strands an in-flight Request.
+* It is opt-in per revocation by design: a rule that grants grace automatically
+  would apply to the cases where counsel says it must not.
+* Not on chain: why a holder was revoked, and whether a revoked holder's
+  payout may be withheld. Counsel.
+
+### 4.12 Decisions to confirm
+
+| # | Decision | Recommended | Needs |
+|---|---|---|---|
+| D-21 | Three scripts (`redeem_queue`, `queue_flow`, `queue_admin`); nothing existing changes | yes | you |
+| D-22 | Lock at request; Sink; batched sweep through the existing `Burn`; no reserve change | yes | you |
+| D-23 | On-chain payout from a Buffer in a payout asset; fiat leg explicitly off-chain | yes | you, counsel |
+| D-24 | Day buckets, `payable_after` stored at request, key-address payout, tip ≤ 1 ADA | yes | you |
+| D-25 | `kyc_redeem` at request/instant; none at settle | yes (2.3 decision) | – |
+| D-26 | Instant tier = shard balance and limits, `instant_max` | yes | you |
+| D-27 | Limits per shard (global ÷ shards), decreases with 7-day notice | yes | you |
+| D-28 | Suspension ≤ 3 days, 7-day reopen gap, blocks instant and settle only | yes | you |
+| D-29 | Loss freeze blocks instant and settle; request and cancel stay open | yes | you |
+| D-30 | Requests are independent UTxOs; K Buffer shards; Supply touched once per sweep; no FIFO on chain (keeper settles oldest first) | yes | you |
+| D-31 | Grace: `grace_ms` ≤ 30 days, default 14, committee-granted | yes | counsel |
+
+Defaults for QueueConfig (all committee-set within hard bounds, genesis values are
+bootstrap parameters): `settle_delay` 2 d (≤ 7 d), `min_request` 100 TSRA,
+`instant_max` 10,000 TSRA, `settle_tip` 0.2 ADA (≤ 1 ADA), `daily_limit` and
+`monthly_limit` chosen per launch, `shards` 4, `grace_ms` 14 d (≤ 30 d).
+
+**Open risks.**
+* R-1 *Ordering.* Settlement is not FIFO on chain (D-30): an adversarial settler
+  can pick which payable requests to pay first when the Buffer or the limit is
+  short. Mitigation: owners can cancel; the operator's keeper pays oldest first;
+  on-chain FIFO would need per-bucket cursors and put a shared counter on every
+  settlement. Not recommended for v1.
+* R-2 *Attested reserve lags payouts* (D-23). Committee-trust, unchanged from
+  `Burn` today.
+* R-3 *`Defund` safety is per shard,* not global: the committee could defund every
+  shard. That is a committee-run liquidity decision, bounded in effect by cancel
+  (owners get their TSRA back) but it is a liveness lever; flagged, and `Defund`
+  is allowed only when no unswept payable Requests are referenced in the same tx
+  (R-3 as written: this is not enforced).
+* R-4 *No hard floor on limits.* A decrease is delayed 7 days but unbounded
+  (`daily_limit = 0` after the notice stalls payouts forever). Proposed: reject
+  `daily_limit = 0` and `monthly_limit < daily_limit` only; stricter floors are a
+  policy choice for you.
+* R-5 *Payout-asset risk* (depeg, issuer freeze) is outside the protocol.
+* R-6 *Keeper dependence:* if no eligible keeper sweeps (D-22) supply is
+  overstated, never understated.
+* R-7 *Estimated, not measured sizes* (§4.1) and execution budget (below).
+
+### 4.13 Execution budget and sizes (targets, to be measured)
+
+The 2.5b method applies: worst-case fixtures, fixture-building cost subtracted,
+limits 14,000,000 memory / 10,000,000,000 CPU, target < 70% (design target < 50%
+for the batch paths).
+
+| Transaction | Scripts | Target |
+|---|---|---|
+| `Request` | mint marker, `queue_flow` | < 15% |
+| `Cancel` | `redeem_queue` spend, marker burn | < 10% |
+| `Instant` | `redeem_queue` (Buffer, gate), `queue_flow`, reserve **by reference only** | < 25% |
+| `Settle`, 20 Requests | 20 `redeem_queue` gates, `queue_flow` once | < 50% (report the largest batch under 70%) |
+| `Sweep`, 20 Sinks | 20 Sink gates, `queue_flow`, reserve Supply + mint | < 50% |
+| `Suspend`, `SetLimits`, `Fund`, `GrantGrace` | gate, `queue_admin` | < 15% |
+
+The gate on each Request/Sink/Buffer input must stay O(1) per input (a withdrawal
+lookup and a redeemer-tag compare, as the vault binding does). Transaction size
+is the other limit on batch size (16,384 B).
+
+### 4.14 Tests (planned)
+
+* **Request:** accepted with `kyc_redeem` off/on; refused: eligibility missing
+  when on, owner not signed, `qty < min_request`, TSRA short or extra token in the
+  Request, no marker, two markers, window over 1 h or across midnight, wrong
+  `bucket`, wrong `payable_after`, script `payout_to`, marker minted to a wallet.
+* **Cancel:** owner only; exact TSRA back; refused: other signer, short return,
+  marker kept, **allowed while suspended, while the loss freeze is on, with the
+  owner's token revoked, while paused, with an empty Buffer** (one test each).
+* **Settle:** pays exactly `qty - tip` to `payout_to`; refused: before
+  `payable_after` (by 1 ms), underpayment by 1, wrong address, tip over cap, TSRA
+  not moved to a Sink, a Request without a marker, two Requests paid once, a
+  shard not genuine, shard over daily limit, over monthly limit, suspension,
+  loss freeze, mixed batch with one unpayable Request (whole tx refused); counters
+  reset on a new day/month; limits are per shard.
+* **Instant:** the same limit/suspension/freeze matrix, `instant_max`, shard
+  balance; `kyc_redeem` on needs the token.
+* **Sweep:** exact `qty` equals the sink total; refused: qty off by 1, no Supply
+  spend, wrong reserve redeemer (`Mint`, `Attest`), TSRA left at the queue, Supply
+  planted (no thread token), sink + a Request in one tx; a *reserve*-side test that
+  `Burn` with `kyc_redeem` on still demands the keeper's token (unchanged).
+* **Admin:** Genesis (one-shot, seed); `Suspend` cap 3 days, window ≤ 1 day, 7-day
+  gap, refused with a lower bound inside the gap; `Resume`; `SetLimits` increase
+  immediate, decrease delayed 7 days, zero refused; `Fund`/`Defund` committee
+  only, shard value exact; `GrantGrace` cap `grace_ms`, committee only.
+* **Binding** (as for `vault_ops`): no withdrawal, wrong credential, non-zero
+  amount, redeemer naming another queue, a different action, an extra queue UTxO
+  riding along; publish handlers: unregister, delegate refused, register accepted.
+* **Conservation / invariants:** across a generated sequence of requests,
+  cancels, settles and sweeps, TSRA in Requests + Sinks equals pending + unswept
+  quantity; payouts never exceed shard balance or limits; `minted_supply` falls by
+  exactly the swept total; a Request is spent only by Cancel (owner) or a settlement
+  that pays it.
+* **Cross-checks:** `Burn` constructor index pinned against the reserve blueprint
+  (CI); sizes ≤ 13,000 B and ≤ 14,000 B guard.
+
+### 4.15 Mutation plan (planned)
+
+Guard-deletion and comparison-flip mutants, in batches of ≤ 14 in the
+**foreground**, with the 2.5b harness: one mutant per item of every `and { … }`
+block in the three scripts and the new `lib/` modules, plus targeted mutants for:
+`payable_after` comparison (`>=` vs `>`), the tip cap, the day/month window
+indices and reset, the `payout >= qty - tip` arithmetic, the suspension cap and
+gap, the 7-day decrease notice, the grace cap and `until >= hi`, the Burn
+constructor index, the Sink-total equality, the `RegisterCredential`-only publish
+rule, the zero-withdrawal gate, each binding check, and Cancel's three
+"never blocked" conditions (suspension, freeze, revocation). Expect equivalents
+to be listed with the reason, as in 2.5b.
+
+### 4.16 Out of scope for 2.6
+
+UI and builders (Phase 3: prompts in `docs/lovable-prompts/phase-2-6.md`); the
+keeper bot; per-holder AML limits; fiat rails; on-chain FIFO; a burn-authority
+refactor (D-22 d); mainnet.
 
 ## 5. Invariants
 1. TSRA supply never exceeds the lesser of attested reserve and mint cap.
