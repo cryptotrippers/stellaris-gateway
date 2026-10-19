@@ -715,31 +715,6 @@ function IssuerSection() {
   );
 }
 
-function PropertyPreview() {
-  return (
-    <section className="border-y border-border bg-surface">
-      <div className="home-container grid gap-7 py-10 md:grid-cols-[auto_1fr_auto] md:items-center">
-        <span className="home-icon h-14 w-14 bg-primary/10 text-primary">
-          <Building2 />
-        </span>
-        <div>
-          <Badge tone="warning">Planned — subject to legal approval</Badge>
-          <h2 className="mt-3 text-2xl font-semibold">Property: Australia & Southeast Asia</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            An exploration of fractional property ownership. Nothing is on offer yet; ownership-cap
-            contracts are not built yet.
-          </p>
-        </div>
-        <Button asChild variant="outline">
-          <Link to="/property">
-            Explore the plan <ArrowUpRight />
-          </Link>
-        </Button>
-      </div>
-    </section>
-  );
-}
-
 function HowItWorks() {
   const steps = [
     { icon: Building2, title: "Discover", body: "Browse opportunities and planned asset classes." },
