@@ -1,15 +1,50 @@
-//// The Reserve State datum and committee rules, shared by `reserve.ak` and
-//// `eligibility.ak` (which reads the committee from the genuine Reserve State
-//// so that a reserve `Rotate` carries over to eligibility issuance too).
+//// The Reserve State datums and committee rules, shared by `reserve.ak`,
+//// `eligibility.ak` and the vault (which read the committee and the switches
+//// from the genuine Config so that a reserve `Rotate` carries over to
+//// eligibility issuance and the vault too).
 
 use aiken/collection/list
 use cardano/assets.{PolicyId}
 use tessera/rules
 
+/// The Reserve State is two UTxOs at the reserve address (Phase 2.5a), told
+/// apart by their thread token (`reserve_threads.ak`) and by distinct datum
+/// constructors, so a Config can never be read as a Supply or the reverse.
+///
+/// * Config: rarely changes (committee, switches). Exits, stakes and the
+///   eligibility registry read it by reference, so it is not spent by every
+///   TSRA mint or burn.
+/// * Supply: the hot books. Spent by every mint, burn, attestation and cap
+///   change.
+///
 /// PROVISIONAL until counsel answers (SPEC.md §1): the committee model, the
 /// attestation format, any on-chain reserve asset and the KYC switches may
 /// still change.
-pub type ReserveState {
+pub type ReserveDatum {
+  ConfigDatum(ConfigState)
+  SupplyDatum(SupplyState)
+}
+
+pub type ConfigState {
+  operators: List<ByteArray>,
+  threshold: Int,
+  paused: Bool,
+  /// Per-action eligibility switches (Phase 2.3). When on, the action calls
+  /// `tessera/eligibility.eligible`. All off on Preprod.
+  kyc_mint: Bool,
+  kyc_redeem: Bool,
+  /// Read by the sTessera vault; stored here so one committee transaction
+  /// controls every switch.
+  kyc_stake: Bool,
+  /// Policy of the eligibility tokens (`validators/eligibility.ak` at launch).
+  /// Set at genesis; `SetKyc` (committee) may repoint it, e.g. to a
+  /// Midnight-issued credential policy, without a new reserve script.
+  eligibility_policy: PolicyId,
+  /// Monotonic replay counter for Config transitions.
+  epoch: Int,
+}
+
+pub type SupplyState {
   /// TSRA currently in existence (1e-6 TSRA units).
   minted_supply: Int,
   /// Reserve the committee last attested to, in the same units.
@@ -20,22 +55,8 @@ pub type ReserveState {
   attestation_epoch: Int,
   /// POSIX ms of the last attestation (genesis: the bootstrap tx's lower bound).
   attested_at: Int,
-  /// Monotonic replay counter: exactly one State transition per tx.
+  /// Monotonic replay counter for Supply transitions.
   epoch: Int,
-  operators: List<ByteArray>,
-  threshold: Int,
-  paused: Bool,
-  /// Per-action eligibility switches (Phase 2.3). When on, the action calls
-  /// `tessera/eligibility.eligible`. All off on Preprod.
-  kyc_mint: Bool,
-  kyc_redeem: Bool,
-  /// Read by the sTessera vault (not written yet); stored here so one
-  /// committee transaction controls every switch.
-  kyc_stake: Bool,
-  /// Policy of the eligibility tokens (`validators/eligibility.ak` at launch).
-  /// Set at genesis; `SetKyc` (committee) may repoint it, e.g. to a
-  /// Midnight-issued credential policy, without a new reserve script.
-  eligibility_policy: PolicyId,
 }
 
 /// At least `threshold` distinct members of `operators` signed the tx.

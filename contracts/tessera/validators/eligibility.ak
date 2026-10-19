@@ -30,23 +30,25 @@ use cardano/transaction.{
   InlineDatum, Input, NoDatum, Output, OutputReference, Transaction,
 }
 use stellaris/outputs.{genesis_out_ok}
-use stellaris/thread.{thread_name}
-use tessera/reserve_state.{ReserveState, threshold_met}
+use tessera/reserve_state.{
+  ConfigDatum, ConfigState, ReserveDatum, SupplyDatum, SupplyState, threshold_met,
+}
+use tessera/reserve_threads.{config_name, config_value, supply_value}
 
-/// The committee of the genuine Reserve State (the one reference input that
-/// holds the reserve's thread token, at the reserve address) signed the tx.
+/// The committee of the genuine Reserve Config (the one reference input that
+/// holds the reserve's `config` token, at the reserve address) signed the tx.
 fn committee_signed(tx: Transaction, reserve: PolicyId) -> Bool {
   let states =
     tx.reference_inputs
       |> list.filter(
-          fn(i) { quantity_of(i.output.value, reserve, thread_name) == 1 },
+          fn(i) { quantity_of(i.output.value, reserve, config_name) == 1 },
         )
   when states is {
     [s] ->
       if s.output.address.payment_credential == Script(reserve) {
         when s.output.datum is {
           InlineDatum(d) ->
-            if d is st: ReserveState {
+            if d is ConfigDatum(st): ReserveDatum {
               threshold_met(st.operators, st.threshold, tx.extra_signatories)
             } else {
               False
@@ -164,14 +166,8 @@ fn t_ref(i: Int) -> OutputReference {
   }
 }
 
-fn t_reserve_state(operators: List<ByteArray>, threshold: Int) -> ReserveState {
-  ReserveState {
-    minted_supply: 0,
-    attested_reserve: 0,
-    mint_cap: 0,
-    attestation_epoch: 0,
-    attested_at: 0,
-    epoch: 0,
+fn t_reserve_state(operators: List<ByteArray>, threshold: Int) -> ConfigState {
+  ConfigState {
     operators,
     threshold,
     paused: False,
@@ -179,11 +175,12 @@ fn t_reserve_state(operators: List<ByteArray>, threshold: Int) -> ReserveState {
     kyc_redeem: False,
     kyc_stake: False,
     eligibility_policy: t_policy,
+    epoch: 0,
   }
 }
 
-/// The genuine Reserve State as a reference input (committee op1+op2, 2-of-2).
-fn reserve_ref_with(st: ReserveState, with_token: Bool) -> Input {
+/// The genuine Reserve Config as a reference input (committee op1+op2, 2-of-2).
+fn reserve_ref_with(st: ConfigState, with_token: Bool) -> Input {
   let base = assets.from_lovelace(2_000_000)
   Input {
     output_reference: t_ref(9),
@@ -193,11 +190,11 @@ fn reserve_ref_with(st: ReserveState, with_token: Bool) -> Input {
         stake_credential: None,
       },
       value: if with_token {
-        base |> assets.add(t_reserve, thread_name, 1)
+        base |> assets.merge(config_value(t_reserve))
       } else {
         base
       },
-      datum: InlineDatum(st),
+      datum: InlineDatum(ConfigDatum(st)),
       reference_script: None,
     },
   }
@@ -505,4 +502,79 @@ test f6_issuing_with_a_reference_script_is_rejected() {
     t_policy,
     issue_tx([Output { ..o, reference_script: Some(t_op3) }], [t_op1, t_op2]),
   )
+}
+
+// -- Phase 2.5a: the committee comes from the Config, never the Supply
+
+fn t_supply_state() -> SupplyState {
+  SupplyState {
+    minted_supply: 0,
+    attested_reserve: 0,
+    mint_cap: 0,
+    attestation_epoch: 0,
+    attested_at: 0,
+    epoch: 0,
+  }
+}
+
+test issuing_against_a_supply_datum_under_the_config_token_is_rejected() {
+  let wrong_kind =
+    Input {
+      ..reserve_ref(),
+      output: Output {
+        ..reserve_ref().output,
+        datum: InlineDatum(SupplyDatum(t_supply_state())),
+      },
+    }
+  let tx =
+    Transaction {
+      ..issue_tx([registry_out(t_holder)], [t_op1, t_op2]),
+      reference_inputs: [wrong_kind],
+    }
+  !eligibility.mint(t_reserve, Void, t_policy, tx)
+}
+
+test issuing_against_the_supply_utxo_in_place_of_the_config_is_rejected() {
+  // the genuine Supply token, even carrying a committee-shaped datum, is no Config
+  let supply_with_committee =
+    Input {
+      ..reserve_ref(),
+      output: Output {
+        ..reserve_ref().output,
+        value: assets.from_lovelace(2_000_000) |> assets.merge(supply_value(t_reserve)),
+      },
+    }
+  let tx =
+    Transaction {
+      ..issue_tx([registry_out(t_holder)], [t_op1, t_op2]),
+      reference_inputs: [supply_with_committee],
+    }
+  !eligibility.mint(t_reserve, Void, t_policy, tx)
+}
+
+test issuing_against_two_configs_is_rejected() {
+  let second = Input { ..reserve_ref(), output_reference: t_ref(8) }
+  let tx =
+    Transaction {
+      ..issue_tx([registry_out(t_holder)], [t_op1, t_op2]),
+      reference_inputs: [reserve_ref(), second],
+    }
+  !eligibility.mint(t_reserve, Void, t_policy, tx)
+}
+
+test issuing_against_a_config_holding_two_config_tokens_is_rejected() {
+  let doubled =
+    Input {
+      ..reserve_ref(),
+      output: Output {
+        ..reserve_ref().output,
+        value: assets.from_lovelace(2_000_000) |> assets.add(t_reserve, config_name, 2),
+      },
+    }
+  let tx =
+    Transaction {
+      ..issue_tx([registry_out(t_holder)], [t_op1, t_op2]),
+      reference_inputs: [doubled],
+    }
+  !eligibility.mint(t_reserve, Void, t_policy, tx)
 }

@@ -4,71 +4,106 @@ Fill each section before the matching validator is written. Test vectors are
 listed in `DESIGN.md` §5.
 
 ## 1. Reserve State (implemented: `validators/reserve.ak`)
-Datum `ReserveState` (`lib/tessera/reserve_state.ak`): `minted_supply`,
-`attested_reserve`, `mint_cap`, `attestation_epoch`, `attested_at`, `epoch`,
-`operators`, `threshold`, `paused`, and (Phase 2.3) the eligibility switches
-`kyc_mint`, `kyc_redeem`, `kyc_stake` plus `eligibility_policy` (§1a).
 
-**Authenticity.** The genuine State is the single UTxO carrying the one-shot
-state-thread token (asset name `state`, `lib/stellaris/thread.ak`, the same
-module the vaults use) under the reserve script's own policy. `reserve.ak` is
-parameterised by a `seed` UTxO and mints the token itself, once, by consuming
-the seed. The reserve script is also the TSRA minting policy, and the backing
-is attested off-chain, so without the token anyone could plant their own State
+**Two UTxOs (Phase 2.5a).** The Reserve State is a **Config** and a **Supply**
+at the reserve address, each carrying its own one-shot thread token under the
+reserve script's policy (`config` and `supply`, `lib/tessera/reserve_threads.ak`).
+Distinct datum constructors (`ReserveDatum = ConfigDatum | SupplyDatum`) mean
+one can never be read as the other.
+
+```
+ConfigState {            -- changes only by committee action
+  operators, threshold, paused,
+  kyc_mint, kyc_redeem, kyc_stake, eligibility_policy,
+  epoch                  -- Config's own replay counter
+}
+SupplyState {            -- the hot books
+  minted_supply, attested_reserve, mint_cap,
+  attestation_epoch, attested_at,
+  epoch                  -- Supply's own replay counter
+}
+```
+
+Why the split: every TSRA mint or burn spends the Supply, and the vault, the
+eligibility registry and (later) the redemption queue all need the committee
+and the switches. Read from a single State, any in-flight transaction would be
+invalidated by supply traffic, and because `Burn` is permissionless anyone
+could keep exits failing for the price of a transaction fee. They now read the
+**Config by reference**, and only committee actions can spend it.
+
+**Authenticity.** The genuine Config and Supply are the two UTxOs carrying the
+one-shot thread tokens (`lib/stellaris/thread.ak`'s idea, two names, so the
+shared four-project `thread.ak` is untouched). `reserve.ak` is parameterised by
+a `seed` UTxO and mints both tokens itself, once, by consuming the seed. The
+reserve script is also the TSRA minting policy, and the backing is attested
+off-chain, so without the tokens anyone could plant their own Config or Supply
 at the script address (own committee, huge `attested_reserve`) and mint real
-TSRA. A State without the token is ignored on both inputs and outputs.
+TSRA. A UTxO without its token is ignored on both inputs and outputs, and a
+datum of the wrong kind under a token is not genuine.
 
-**Genesis (on-chain since Phase 2.2).** The thread-token mint is the only
-transaction that creates the State, and it checks:
+**Genesis (on-chain since Phase 2.2; two tokens since 2.5a).** The thread-token
+mint is the only transaction that creates the Config and Supply, and it checks:
 
-* the seed is consumed and exactly one `state` token is minted under the
-  policy, nothing else (no TSRA in the same transaction);
-* no State is spent alongside it;
-* exactly one output at the reserve address, holding exactly ADA plus the
-  token (no foreign tokens, no TSRA) — which also proves the token went
-  there and nowhere else;
-* an inline `ReserveState` with `minted_supply == 0`, `attestation_epoch == 0`,
-  `epoch == 0`, `attested_reserve >= 0`,
-  `0 <= mint_cap <= 1,000,000,000 TSRA` (`rules.max_mint_cap`, 1e15 units)
-  and a valid committee;
+* the seed is consumed and exactly one `config` and one `supply` token are
+  minted under the policy, nothing else (no TSRA in the same transaction);
+* no Config or Supply is spent alongside it;
+* exactly two outputs at the reserve address, each at the enterprise address
+  with no reference script: the Config holding exactly ADA plus the `config`
+  token, the Supply holding exactly ADA plus the `supply` token (no foreign
+  tokens, no TSRA) — which also proves each token went to its own output and
+  nowhere else;
+* an inline `ConfigDatum` with `epoch == 0`, a valid committee and a 28-byte
+  `eligibility_policy`;
+* an inline `SupplyDatum` with `minted_supply == 0`, `attestation_epoch == 0`,
+  `epoch == 0`, `attested_reserve >= 0`, `0 <= mint_cap <= 1,000,000,000 TSRA`
+  (`rules.max_mint_cap`, 1e15 units);
 * `attested_at` equals the transaction's validity lower bound, inside a
   finite window of at most 1 day (`rules.window_ok`). Without this, a
   genesis `attested_at` far in the future would keep `rules.fresh` true
   forever, so the committee could mint up to the genesis `attested_reserve`
   without ever attesting again.
 
-The thread token can never be burned or minted again: any mint naming it goes
-through the genesis check, which needs the (already spent) seed.
+**The thread tokens move only at genesis.** Outside it, the mint handler
+refuses *any* mint or burn of `config` or `supply`: a transaction whose mint
+names either token must be the exact genesis (one of each, seed spent), so a
+second Config, a second Supply, a burn of either, or a TSRA mint that also
+mints either is rejected.
 
 **Committee (hard limits).** A valid committee has no duplicate keys and
 `2 <= threshold <= size` (`rules.min_threshold`). The proposed launch
 committee is 3-of-5, a bootstrap parameter, not a validator constant.
 
-| Redeemer | Who | Effect on datum | TSRA mint delta |
-|---|---|---|---|
-| `Mint{qty, holder}` | M-of-N, not paused; `holder` eligible if `kyc_mint` | `minted_supply += qty` | `+qty` |
-| `Burn{qty, holder}` | anyone, even when paused; `holder` eligible if `kyc_redeem` | `minted_supply -= qty` | `-qty` |
-| `Attest{reserve}` | M-of-N | reserve, `attestation_epoch+1`, `attested_at = lower bound` | 0 |
-| `SetCap{mint_cap}` | M-of-N | `mint_cap` | 0 |
-| `SetPaused{paused}` | M-of-N | `paused` | 0 |
-| `Rotate{operators, threshold}` | current M-of-N **and** new M-of-N, even when paused | `operators`, `threshold` | 0 |
-| `SetKyc{kyc_mint, kyc_redeem, kyc_stake, eligibility_policy}` | M-of-N; policy must be 28 bytes | the three switches and `eligibility_policy` | 0 |
+| Redeemer | Spends | Reads (reference) | Who | Effect on datum | TSRA mint delta |
+|---|---|---|---|---|---|
+| `Mint{qty, holder}` | Supply | Config | M-of-N, not paused; `holder` eligible if `kyc_mint` | `minted_supply += qty` | `+qty` |
+| `Burn{qty, holder}` | Supply | Config | anyone, even when paused; `holder` eligible if `kyc_redeem` | `minted_supply -= qty` | `-qty` |
+| `Attest{reserve}` | Supply | Config | M-of-N | reserve, `attestation_epoch+1`, `attested_at = lower bound` | 0 |
+| `SetCap{mint_cap}` | Supply | Config | M-of-N | `mint_cap` | 0 |
+| `SetPaused{paused}` | Config | — | M-of-N | `paused` | 0 |
+| `Rotate{operators, threshold}` | Config | — | current M-of-N **and** new M-of-N, even when paused | `operators`, `threshold` | 0 |
+| `SetKyc{kyc_mint, kyc_redeem, kyc_stake, eligibility_policy}` | Config | — | M-of-N; policy must be 28 bytes | the three switches and `eligibility_policy` | 0 |
 
-Every transition: exactly one token-bearing State input and output; the next
-datum must **equal** the expected datum (`s0` with only the permitted fields
-changed, `epoch + 1`); the next committee is valid; the State output holds
-exactly ADA + the thread token. `SetCap` is bounded by the same
-1,000,000,000 TSRA hard ceiling as genesis. The proposed genesis `mint_cap` is
-5,000,000 TSRA; that is a bootstrap parameter the committee can later move
-with `SetCap`, not a validator limit. Minting is still bounded by the lower
-of `attested_reserve` and `mint_cap` (`rules.mint_allowed`).
+Every transition: exactly one token-bearing UTxO of its kind in and out, and
+**none of the other kind** (a Supply transition may not spend or return the
+Config and vice versa; 2.5b relaxes this for `LossBurn` only); the next datum
+must **equal** the expected datum (the old one with only the permitted fields
+changed, that kind's `epoch + 1`); the output holds exactly ADA + its thread
+token at the spent UTxO's exact address. A Supply transition also needs the
+genuine Config as a **reference input** (a missing, duplicated, planted,
+misplaced or wrong-kind Config aborts the transaction) and a valid committee in
+it. A redeemer used on the other kind's datum fails. `SetCap` is bounded by the
+same 1,000,000,000 TSRA hard ceiling as genesis. The proposed genesis
+`mint_cap` is 5,000,000 TSRA; that is a bootstrap parameter the committee can
+later move with `SetCap`, not a validator limit. Minting is still bounded by the
+lower of `attested_reserve` and `mint_cap` (`rules.mint_allowed`).
 
 **Rotation.** `Rotate` replaces `operators` and `threshold` and nothing else.
 The current committee must meet its threshold (authorisation) and so must
-the new one (liveness: a rotation cannot hand the State to keys nobody
+the new one (liveness: a rotation cannot hand the Config to keys nobody
 controls). The datum must install exactly the committee named in the
 redeemer. Rotation is allowed while paused, so a compromised key can be
-replaced during an incident.
+replaced during an incident. Because the Supply reads the committee from the
+Config, a rotation applies to the next Mint, Attest and SetCap at once.
 
 Mint requires `minted_supply + qty <= min(attested_reserve, mint_cap)`, and a
 finite validity upper bound `<= attested_at + 7 days` (`rules.fresh`).
@@ -77,12 +112,12 @@ the previous `attested_at` (`rules.window_ok`). Attesting a reserve *below*
 `minted_supply` is allowed: it reports an undercollateralised reserve honestly
 and blocks further minting.
 
-**Datum is provisional.** The `ReserveState` fields above (in particular the
-committee model, the attestation format and whether a reserve asset is held
-on-chain) depend on counsel's answers on the issuance structure and on
-DESIGN.md decision 4 (reserve asset and custodian). Expect the datum, and so
-the script hash, to change before any bootstrap; nothing should be deployed
-or pinned against this version.
+**Datums are provisional.** The `ConfigState` and `SupplyState` fields above
+(in particular the committee model, the attestation format and whether a
+reserve asset is held on-chain) depend on counsel's answers on the issuance
+structure and on DESIGN.md decision 4 (reserve asset and custodian). Expect the
+datums, and so the script hash, to change before any bootstrap; nothing should
+be deployed or pinned against this version.
 
 Known gaps:
 * ~~Committee rotation~~ — **closed in Phase 2.2** (`Rotate`, above).
@@ -90,10 +125,12 @@ Known gaps:
   moved into `reserve.ak` (thread pattern), which removed the NFT-policy /
   reserve-hash circularity and lets the mint check the genesis output.
   `state_nft.ak` is retired.
+* ~~Every TSRA mint or burn invalidates in-flight vault transactions~~ —
+  **closed in Phase 2.5a** (Config / Supply split, above).
 * Rotation has no time lock or cancellation window: the current and new
   committees can rotate in a single transaction. A delay would need a
-  pending-rotation field in the (provisional) datum.
-* Every burn spends the single State UTxO, so burns serialise (the queue
+  pending-rotation field in the (provisional) Config.
+* Every burn spends the single Supply UTxO, so burns serialise (the queue
   batches them).
 
 ## 1a. Eligibility (Phase 2.3: `lib/tessera/eligibility.ak`, `validators/eligibility.ak`)
@@ -122,8 +159,8 @@ block may start with switches on.
 **Launch implementation: the eligibility registry.** `validators/eligibility.ak`
 is both the token's minting policy and the address that holds the tokens. It
 is parameterised by the reserve script hash, and reads the committee from the
-genuine Reserve State (the one reference input carrying the reserve's thread
-token at the reserve address), so a reserve `Rotate` carries over.
+genuine Reserve Config (the one reference input carrying the reserve's
+`config` token at the reserve address), so a reserve `Rotate` carries over.
 
 * *Issue:* committee M-of-N; each minted name is a 28-byte key hash, minted
   once per transaction; every output carrying a token is at the registry,
@@ -160,10 +197,11 @@ from §1 while the switch is on.
 
 ## 2. TSRA policy
 The reserve script **is** the TSRA policy (policy id = script hash, token name
-`TSRA`), and the same policy carries the `state` thread token. A mint naming
-`state` is genesis (§1). Any other mint only requires that the genuine State
-is spent in the same transaction; the `spend` handler enforces the exact TSRA
-quantity and refuses any other token name under the policy.
+`TSRA`), and the same policy carries the `config` and `supply` thread tokens.
+A mint naming either is genesis (§1) and must be exactly one of each; any
+other mint or burn of them is refused. A TSRA mint only requires that the
+genuine Supply is spent in the same transaction; the `spend` handler enforces
+the exact TSRA quantity and refuses any other token name under the policy.
 
 ## 3. sTSRA vault (implemented: `validators/stsra_vault.ak`, Phase 2.4)
 
@@ -186,9 +224,10 @@ One script, `validators/stsra_vault.ak`, parameterised by
   Position and Ticket — the Phase 1 F-4 lesson).
 
 The committee and the `kyc_stake` switch are read from the **genuine Reserve
-State** as a reference input (the one input holding the reserve's thread
-token at the reserve address), exactly as `validators/eligibility.ak` does,
-so a reserve `Rotate` or `SetKyc` applies to the vault immediately. **[D-6]**
+Config** as a reference input (the one input holding the reserve's `config`
+token at the reserve address; the Supply is never read), exactly as
+`validators/eligibility.ak` does, so a reserve `Rotate` or `SetKyc` applies to
+the vault immediately. **[D-6]**
 
 **One State, not one per tier [D-1].** A single State UTxO holds the
 accounting of both tiers. ReportYield must update both tiers' prices
@@ -398,15 +437,15 @@ reserve that `kyc_redeem` does not gate. Flagged now so 2.5 plans it.
 | Claim | Ticket; State as reference input | none (unless a loss excess must be burned) |
 | StakeShort / StakeLong / RequestUnstake / UnlockLong | the single State | **serialised: one per State update** |
 | ReportYield / SetBounds | the single State | rare, committee-driven |
-| every action that needs the committee or `kyc_stake` | the Reserve State as reference input | **stale reference**: the Reserve State changes on every TSRA mint and burn, so a vault tx built against an old one fails and must be rebuilt **[D-6]** |
+| every action that needs the committee or `kyc_stake` | the Reserve Config as reference input | **stale reference only on a committee action**: since 2.5a the Config is spent by `Rotate`, `SetPaused` and `SetKyc`, not by TSRA mints and burns (those spend the Supply), so a vault tx built against an old Config fails only after a real change **[D-6]** |
 
 Mitigations in 2.4: Claims and transfers never touch the State; Tickets
 carry their own TSRA so the cooldown queue scales without the State;
 committee actions are rare. Stake/unstake throughput is one State
 transition per block (~20 s on Preprod) — acceptable for Preprod, and the
 known upgrade path is batching through order UTxOs (like the redemption
-queue), deferred until volume needs it. For the stale Reserve State the
-builder retries against the latest UTxO; the alternative, caching the
+queue), deferred until volume needs it. For the (now rare) stale Reserve Config
+the builder retries against the latest UTxO; the alternative, caching the
 committee and `kyc_stake` in the vault State with a permissionless `Sync`
 redeemer, removes the dependency but opens a window where a rotation or a
 `SetKyc` has not reached the vault yet.
@@ -553,11 +592,11 @@ Then a mutation pass over every guard, as in §6.
    so with `kyc_redeem` on the reserve's `Burn` refuses it. 2.5 must add a
    committee-signed loss-burn path on the reserve that `kyc_redeem` does not
    gate.
-2. **Before 2.6 — split the Reserve State?** Decide whether to split it into
-   a rarely-changing *config* UTxO (committee, switches, eligibility policy),
-   read by the vault and the queue, and a hot *supply* UTxO (minted supply,
-   attested reserve). Today every TSRA mint or burn invalidates in-flight
-   vault transactions that reference the Reserve State (§3.9, D-6).
+2. ~~Before 2.6 — split the Reserve State?~~ — **done in Phase 2.5a** (§1):
+   a rarely-changing *Config* UTxO (committee, switches, eligibility policy),
+   read by the vault, the registry and the queue, and a hot *Supply* UTxO
+   (minted supply, attested reserve). TSRA mints and burns no longer
+   invalidate in-flight vault transactions (§3.9, D-6).
 3. **For 2.5 — ReportLoss eats unvested yield first.** A loss must first be
    taken from `vest_short` / `vest_long` (yield the stakers have not yet
    received), and only the remainder from `short_assets` / `long_assets` and
@@ -766,3 +805,73 @@ The first run surfaced 3 real test gaps, each now with a test: genesis did
 not pin `vest_from`, StakeLong at the `lo` price, and SetBounds booking
 from the unfolded State. Five mutants that left a one-item `and { }` (which
 does not compile) were re-pointed to `True,` and are killed.
+
+### Phase 2.5a (Config / Supply split)
+
+167 mutants over `validators/reserve.ak` (126), `lib/tessera/reserve_state.ak` (6),
+`lib/tessera/reserve_ref.ak` (4), `lib/tessera/rules.ak` (8),
+`lib/tessera/eligibility.ak` (5) and `validators/eligibility.ak` (18). It
+re-runs every Phase 2.2 and 2.3 guard category against the split (genesis datum,
+anchor and shape; rotation; committee limits; signature threshold; pause; caps;
+freshness; thread-token identity; exact next datum; state value; quantities;
+the `eligible()` check, registry, committee source, revoke, KYC gates and
+`SetKyc`) and adds the split's own guards. 165 are killed and 2 are
+equivalent. The runs were done in batches of about 40 in the foreground, in
+scratch copies of the project (Aiken rewrites tracked files), with
+`aiken check -m <module>.{` per mutant.
+
+| Guard | Mutants | Killed by (examples) |
+|---|---|---|
+| Genesis (two tokens, two outputs) | each datum field of Config and Supply; mint exactness (both names, quantity 1 each, nothing else, seed); output count, pinning and exact values per output; datum kind per token | `genesis_with_a_third_output_at_the_reserve_is_rejected`, `genesis_mints_exactly_one_of_each_thread_token`, `genesis_config_token_on_a_supply_datum_is_rejected`, `genesis_with_a_non_zero_config_epoch_is_rejected`, `genesis_with_a_29_byte_eligibility_policy_is_rejected` |
+| Thread tokens move only at genesis | mint-handler routing on one name only, on both (`&&`), always, never; TSRA path without a Supply or looking for a Config | `a_second_config_cannot_be_minted_later`, `the_supply_token_can_never_be_burned`, `a_tsra_mint_that_also_mints_a_supply_token_is_rejected`, `a_tsra_mint_that_also_mints_a_config_is_rejected` |
+| Supply transitions | structure (spent input is the genuine Supply, Config untouched on both sides, value, address pinning, lovelace); Mint, Burn, Attest, SetCap: signature, switches, bounds, freshness, delta, exact next datum, epoch | `a_planted_supply_beside_the_genuine_one_is_rejected_even_with_the_real_committee`, `a_supply_transition_cannot_spend_the_config_and_send_its_token_away`, `f6_supply_with_a_reference_script_is_rejected`, `burn_datum_must_record_the_burn`, `set_cap_datum_must_match_the_redeemer` |
+| Config transitions | structure (spent input is the genuine Config, Supply untouched, value, pinning); SetPaused, SetKyc, Rotate: committee (and the new committee), policy length, exact next datum, epoch, fields taken from the redeemer | `a_planted_config_beside_the_genuine_one_cannot_be_spent_to_rewrite_the_committee`, `the_config_cannot_hold_tsra`, `set_paused_cannot_change_the_committee`, `rotation_can_change_the_threshold` |
+| Config reference | missing, planted, off-address, wrong-kind, doubled, two-token Config; committee read from the reference, not the Supply | `mint_without_a_config_reference_is_rejected`, `mint_against_a_planted_config_is_rejected`, `mint_against_a_supply_datum_under_the_config_token_is_rejected`, `the_committee_comes_from_the_config_reference_not_the_supply` |
+| Cross-kind | every redeemer on the other kind's datum; sole-token lookups pointed at the wrong token | `set_paused_on_the_supply_datum_is_rejected`, `mint_on_the_config_datum_is_rejected` |
+| Committee and rules | `threshold_met`, `operators_valid` parts; `rules` bounds, freshness, window; `finite_bounds` unbounded accepted | `mint_below_threshold_is_rejected`, `genesis_with_a_single_key_threshold_is_rejected`, `attestation_goes_stale_after_seven_days`, `mint_with_unbounded_validity_is_rejected` |
+| Readers of the Config | reserve_ref (vault) and the eligibility committee lookup: token, quantity, address, threshold, several Configs, wrong token | `two_config_references_are_rejected`, `issuing_against_a_config_holding_two_config_tokens_is_rejected`, `issuing_against_the_supply_utxo_in_place_of_the_config_is_rejected` |
+| Eligibility (2.3, re-run) | `eligible()` (5), issue, registry, revoke, KYC gates, `SetKyc` (switches and policy) | as in Phase 2.3 |
+
+The first run left 20 survivors that were real test gaps (the guard was there,
+no test pinned it); each now has a test and was re-run killed. Most were
+Config-side twins of guards that had only been pinned on the Supply (F-6
+pinning, exact next datum on Burn, SetCap and SetPaused, the planted-input
+rule, foreign tokens in the output), plus two mutants that needed the `rules`
+module's own tests rather than the reserve's.
+
+**Equivalent survivors (2).**
+* *`threshold_met`: `list.unique` removed* — the same equivalent survivor as
+  Phase 2.2: a committee never holds a duplicate key (genesis and every
+  Config transition require `operators_valid`), so a signer cannot be counted
+  twice.
+* *Registry: any quantity per name* (`[Pair(name, 1)]` → `[Pair(name, _)]`) —
+  the same equivalent survivor as Phase 2.3: the exact-value check on the same
+  output already requires a quantity of 1.
+
+**Old guards that did not map one to one.**
+* *Single `epoch`* became two counters (Config and Supply); each is bumped and
+  checked by its own kind's transitions. `supply_and_config_epochs_are_independent`
+  pins it.
+* *"Committee valid in the next State" on every transition* (`operators_valid(s1.operators…)`)
+  now lives only on Config transitions. A Supply transition checks the
+  committee of the Config it references instead
+  (`a_config_reference_with_an_invalid_committee_is_rejected`).
+* *The spent datum carried the committee*, so the planted-State test pinned the
+  rule "the spent input is the genuine State" through the planted committee.
+  Supply transitions now take the committee from the Config, so that rule needed
+  a new test with the real committee signing
+  (`a_planted_supply_beside_the_genuine_one_is_rejected_even_with_the_real_committee`).
+* *Eight tests that changed several State fields at once* (a Burn rewriting the
+  committee, a Rotate changing the cap or the supply, SetPaused or SetKyc moving
+  the reserve) cannot be written any more: no single datum holds both. They are
+  now "a transition of one kind cannot also spend the other"
+  (`burn_cannot_also_spend_the_config`, `set_cap_cannot_also_spend_the_config`,
+  `set_paused_cannot_also_spend_the_supply`, three `rotation_cannot_also_spend_the_supply_to_…`,
+  `set_kyc_cannot_also_spend_the_supply`,
+  `set_kyc_changing_the_policy_cannot_also_spend_the_supply`).
+* *Mint, Burn, Attest and SetCap* now also need a Config reference input; the
+  old tests were re-pointed with one added by the fixture.
+
+Tests: 397 before, 507 after (reserve 141 → 244, eligibility 21 → 25, vault 188
+→ 191). Every one of the 397 old tests still exists and passes (8 renamed as
+above, none weakened).
