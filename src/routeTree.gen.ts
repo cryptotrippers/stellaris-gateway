@@ -18,6 +18,7 @@ import { Route as StewardshipRouteImport } from './routes/stewardship'
 import { Route as StakeRouteImport } from './routes/stake'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SecurityRouteImport } from './routes/security'
+import { Route as PropertyRouteImport } from './routes/property'
 import { Route as PipelineRouteImport } from './routes/pipeline'
 import { Route as OperatorsRouteImport } from './routes/operators'
 import { Route as McpRouteImport } from './routes/mcp'
@@ -96,6 +97,11 @@ const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
 const SecurityRoute = SecurityRouteImport.update({
   id: '/security',
   path: '/security',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PropertyRoute = PropertyRouteImport.update({
+  id: '/property',
+  path: '/property',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PipelineRoute = PipelineRouteImport.update({
@@ -289,6 +295,7 @@ export interface FileRoutesByFullPath {
   '/mcp': typeof McpRoute
   '/operators': typeof OperatorsRoute
   '/pipeline': typeof PipelineRoute
+  '/property': typeof PropertyRoute
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stake': typeof StakeRoute
@@ -333,6 +340,7 @@ export interface FileRoutesByTo {
   '/mcp': typeof McpRoute
   '/operators': typeof OperatorsRoute
   '/pipeline': typeof PipelineRoute
+  '/property': typeof PropertyRoute
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stake': typeof StakeRoute
@@ -378,6 +386,7 @@ export interface FileRoutesById {
   '/mcp': typeof McpRoute
   '/operators': typeof OperatorsRoute
   '/pipeline': typeof PipelineRoute
+  '/property': typeof PropertyRoute
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stake': typeof StakeRoute
@@ -425,6 +434,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/operators'
     | '/pipeline'
+    | '/property'
     | '/security'
     | '/sitemap.xml'
     | '/stake'
@@ -469,6 +479,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/operators'
     | '/pipeline'
+    | '/property'
     | '/security'
     | '/sitemap.xml'
     | '/stake'
@@ -513,6 +524,7 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/operators'
     | '/pipeline'
+    | '/property'
     | '/security'
     | '/sitemap.xml'
     | '/stake'
@@ -559,6 +571,7 @@ export interface RootRouteChildren {
   McpRoute: typeof McpRoute
   OperatorsRoute: typeof OperatorsRoute
   PipelineRoute: typeof PipelineRoute
+  PropertyRoute: typeof PropertyRoute
   SecurityRoute: typeof SecurityRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StakeRoute: typeof StakeRoute
@@ -648,6 +661,13 @@ declare module '@tanstack/react-router' {
       path: '/security'
       fullPath: '/security'
       preLoaderRoute: typeof SecurityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/property': {
+      id: '/property'
+      path: '/property'
+      fullPath: '/property'
+      preLoaderRoute: typeof PropertyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pipeline': {
@@ -957,6 +977,7 @@ const rootRouteChildren: RootRouteChildren = {
   McpRoute: McpRoute,
   OperatorsRoute: OperatorsRoute,
   PipelineRoute: PipelineRoute,
+  PropertyRoute: PropertyRoute,
   SecurityRoute: SecurityRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StakeRoute: StakeRoute,
