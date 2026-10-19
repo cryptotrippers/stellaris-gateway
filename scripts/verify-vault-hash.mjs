@@ -202,7 +202,8 @@ const tesseraValidators = existsSync(TESSERA_PLUTUS_PATH)
 if (tesseraValidators) {
   const tesseraPin = readPins(TESSERA_TS_PATH);
   // Phase 2.2: the State NFT is minted by reserve.ak itself (thread pattern);
-  // state_nft.ak is retired. 2.3 adds eligibility, 2.4 the sTSRA vault.
+  // state_nft.ak is retired. 2.3 adds eligibility, 2.4 the sTSRA vault, 2.5b the
+  // first-loss reserve.
   targets.push(
     {
       label: "tessera reserve (Config + Supply + TSRA + thread policy)",
@@ -222,6 +223,13 @@ if (tesseraValidators) {
       label: "tessera stsra_vault (State, Positions, Tickets + sTSRA policy)",
       onChain: findIn(tesseraValidators, "stsra_vault.stsra_vault"),
       hash: tesseraPin("TESSERA_STSRA_VAULT_BLUEPRINT_HASH"),
+      cbor: "__BLUEPRINT_IMPORT__",
+      file: "src/lib/tessera-blueprint.ts",
+    },
+    {
+      label: "tessera first_loss (first-loss reserve State + thread policy)",
+      onChain: findIn(tesseraValidators, "first_loss.first_loss"),
+      hash: tesseraPin("TESSERA_FIRST_LOSS_BLUEPRINT_HASH"),
       cbor: "__BLUEPRINT_IMPORT__",
       file: "src/lib/tessera-blueprint.ts",
     },

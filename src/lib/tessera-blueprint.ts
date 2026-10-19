@@ -19,16 +19,27 @@
  * switches) and a Supply UTxO (the hot books), each with its own thread token
  * (`config`, `supply`). The reserve, eligibility and vault hashes all moved;
  * the eligibility registry and the vault now read the Config by reference.
+ * Phase 2.5b: the loss path. `first_loss.ak` (the first-loss reserve State,
+ * parameterised by its seed UTxO and the applied reserve script hash) is new;
+ * the Config gains `vault_policy` and `loss_pending_until`; the reserve gains
+ * `OpenLoss`, `CancelLoss`, `SetVault`, `LossBurn` and `VaultClaimBurn`; the
+ * vault gains `ReportLoss`, `ticket_escrow`, the freeze and class generations.
+ * The reserve, eligibility (it decodes the grown Config) and vault hashes all
+ * moved again.
  */
 
 /** `reserve.reserve` — Reserve Config + Supply spend, TSRA and thread-token policy. */
 export const TESSERA_RESERVE_BLUEPRINT_HASH =
-  "77afe2d850d3b2758db92d73ff7e35ba7e28b0458c0d56a716eb5e10";
+  "dde488e831b5a9d59e9950a98231e098806bd4366ffc1064a7ccc3f3";
 
 /** `eligibility.eligibility` — eligibility-token policy and registry address. */
 export const TESSERA_ELIGIBILITY_BLUEPRINT_HASH =
-  "67245ef1c8a1018ca860207aad2b0eb76d169fa1fe70d52da091b1ed";
+  "00ccffe5602eaa5781711ed3bb8a01ee37533a412296671b991e7675";
 
 /** `stsra_vault.stsra_vault` — sTSRA vault spend + sTSRA and thread/marker policy. */
 export const TESSERA_STSRA_VAULT_BLUEPRINT_HASH =
-  "374489919b587316c76b604dafb947b4256f6a4c24a7af8385ba079e";
+  "adb953bfd8c0255c33a111ed379dff0a8ee918ccf624f75254e94d94";
+
+/** `first_loss.first_loss` — first-loss reserve State spend + its thread-token policy. */
+export const TESSERA_FIRST_LOSS_BLUEPRINT_HASH =
+  "24f5bb9314790130530291ba6e04f9f1084c921bcd614034a1b7c4bf";

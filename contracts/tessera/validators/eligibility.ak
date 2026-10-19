@@ -175,6 +175,8 @@ fn t_reserve_state(operators: List<ByteArray>, threshold: Int) -> ConfigState {
     kyc_redeem: False,
     kyc_stake: False,
     eligibility_policy: t_policy,
+    vault_policy: #"",
+    loss_pending_until: 0,
     epoch: 0,
   }
 }

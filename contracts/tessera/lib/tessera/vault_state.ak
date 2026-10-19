@@ -3,7 +3,9 @@
 //// (redemption queue) may extend it.
 
 use aiken/collection/list
+use aiken/primitive/bytearray
 use cardano/address.{Address, VerificationKey}
+use cardano/assets.{PolicyId}
 
 /// Starting value of the cooldown loss index; only ReportLoss (2.5) lowers it.
 pub const loss_index_start: Int = 1_000_000_000_000
@@ -25,8 +27,33 @@ pub const max_long_lock_ms: Int = 7_776_000_000
 /// A hard constant, not a committee bound.
 pub const vest_period_ms: Int = 604_800_000
 
-/// Asset name of the fungible short-tier share token.
+/// Asset name of the fungible short-tier share token (generation 0).
 pub const stsra_name: ByteArray = "sTSRA"
+
+/// The short-tier share token of generation `gen` (Phase 2.5b, D-18): generation
+/// 0 is `sTSRA`; after a class is wiped out by a loss it restarts as
+/// `sTSRA` ++ the generation as 4 big-endian bytes, so old-generation shares
+/// can never be redeemed against the new generation's assets.
+pub fn stsra_name_of(gen: Int) -> ByteArray {
+  if gen == 0 {
+    stsra_name
+  } else {
+    bytearray.concat(stsra_name, bytearray.from_int_big_endian(gen, 4))
+  }
+}
+
+/// What a Ticket of `value` TSRA escrowed at `index_at_request` pays at
+/// `loss_index`: scaled by the index, never more than the escrow (floor). One
+/// function for the vault's `Claim` and the reserve's `VaultClaimBurn`, so
+/// the two can never disagree about the excess.
+pub fn ticket_payout(value: Int, loss_index: Int, index_at_request: Int) -> Int {
+  let scaled = value * loss_index / index_at_request
+  if scaled > value {
+    value
+  } else {
+    scaled
+  }
+}
 
 /// The vault's single State: both share classes' books and the bounds.
 pub type VaultState {
@@ -38,8 +65,18 @@ pub type VaultState {
   long_shares: Int,
   /// TSRA owned by class L.
   long_assets: Int,
-  /// Cooldown loss index (`loss_index_start` at genesis).
+  /// Cooldown loss index (`loss_index_start` at genesis); only `ReportLoss`
+  /// lowers it, never below `rules.min_loss_index`.
   loss_index: Int,
+  /// TSRA escrowed in open Tickets, at their CURRENT value (Phase 2.5b, D-11):
+  /// the State does not hold it, but a loss is spread over
+  /// `assets + ticket_escrow`. Raised by `RequestUnstake` (by the Ticket's
+  /// value), lowered by `ReportLoss` (by the Tickets' share of the loss) and
+  /// by `Claim` (by the payout); 0 at genesis.
+  ticket_escrow: Int,
+  /// Class generations (D-18); bumped when a loss wipes the class out.
+  short_gen: Int,
+  long_gen: Int,
   /// Reported yield not yet in the share prices (H2.1), per class. It is
   /// held in the State's TSRA and vests linearly from `vest_from` to
   /// `vest_until`; `fold` moves what has vested into `short_assets` /
@@ -53,9 +90,10 @@ pub type VaultState {
   long_lock_ms: Int,
   /// Protocol share of gross yield, at most `exchange.max_yield_fee_bps`.
   protocol_bps: Int,
-  /// Receives half the protocol cut (bootstrap parameter until 2.5).
-  first_loss_addr: Address,
-  /// Receives the other half.
+  /// The first-loss reserve's script hash (Phase 2.5b, D-10): its State is
+  /// found by the `state` thread token under this policy. Immutable.
+  first_loss: PolicyId,
+  /// Receives the protocol cut the first-loss reserve does not take.
   treasury_addr: Address,
   epoch: Int,
 }
@@ -65,6 +103,9 @@ pub type Position {
   owner: Address,
   shares: Int,
   unlock_at: Int,
+  /// The long class's generation when it was staked; an older generation was
+  /// wiped out by a loss and unlocks for 0 TSRA.
+  gen: Int,
 }
 
 /// A short-tier cooldown claim: `value` TSRA escrowed at request time,
@@ -74,6 +115,34 @@ pub type Ticket {
   value: Int,
   index_at_request: Int,
   claim_after: Int,
+}
+
+/// What the vault's spend validator is asked to do. Lives here (not in the
+/// validator) so the reserve can name `Claim` when it checks `VaultClaimBurn`.
+pub type VaultRedeemer {
+  /// Stake `amount` TSRA into the short tier for sTSRA.
+  StakeShort { amount: Int, holder: ByteArray }
+  /// Stake `amount` TSRA into a long-tier Position payable to `owner`.
+  StakeLong { amount: Int, holder: ByteArray, owner: Address }
+  /// Burn `shares` sTSRA into a cooldown Ticket payable to `owner`.
+  RequestUnstake { shares: Int, owner: Address }
+  /// Claim a Ticket after its cooldown (spends the State and the Ticket).
+  Claim
+  /// Pay out a long-tier Position after `unlock_at` (State + Position).
+  UnlockLong
+  /// Committee: credit `gross` TSRA of delivered yield.
+  ReportYield { gross: Int }
+  /// Committee: change the bounds within their hard limits.
+  SetBounds {
+    long_weight_bps: Int,
+    short_cooldown_ms: Int,
+    long_lock_ms: Int,
+    protocol_bps: Int,
+  }
+  /// Committee: a loss of `loss` TSRA (SPEC.md §3a.2). Spends the State, the
+  /// reserve Supply and Config (`LossBurn`) and, when needed, the first-loss
+  /// State.
+  ReportLoss { loss: Int }
 }
 
 /// Every UTxO at the vault address carries one of these (distinct
@@ -283,6 +352,9 @@ fn t_vesting(y: Int) -> VaultState {
     long_shares: 100,
     long_assets: 2_000_005,
     loss_index: loss_index_start,
+    ticket_escrow: 0,
+    short_gen: 0,
+    long_gen: 0,
     vest_short: y,
     vest_long: y / 3,
     vest_from: 1_000,
@@ -291,7 +363,7 @@ fn t_vesting(y: Int) -> VaultState {
     short_cooldown_ms: 604_800_000,
     long_lock_ms: 1_209_600_000,
     protocol_bps: 1_250,
-    first_loss_addr: t_key(#"f1"),
+    first_loss: #"f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1",
     treasury_addr: t_key(#"f2"),
     epoch: 0,
   }

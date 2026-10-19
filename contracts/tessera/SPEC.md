@@ -669,9 +669,12 @@ exception either.
 
 ## 3a. First-loss reserve and ReportLoss (Phase 2.5 — DESIGN CHECKPOINT, not implemented)
 
-Status: **revision 4 — re-targeted at the Config / Supply split (2.5a,
-merged as PR #14), awaiting approval of the re-targeting. No validator code
-exists for this section.** Everything below that says "Reserve State" now says
+Status: **revision 5 — implemented in Phase 2.5b.** Revision 4 re-targeted the
+design at the Config / Supply split (2.5a, PR #14) and was approved. Revision
+5 records the three places where the implementation differs from the approved
+text, each marked **[rev 5]** below: the escrow tracks the Tickets' CURRENT
+value (a flaw in the approved `T == Σ value` rule), `LossBurn` may burn 0,
+and `ReportLoss` needs something to write off. Everything below that says "Reserve State" now says
 which of the two UTxOs it means. It completes §3.8 and closes the §3.14 items 1 (loss-burn path),
 3 (unvested first) and the 3% cap deferred by D-5. Decisions continue the 2.4
 numbering: **[D-8] … [D-19]**. Review outcome: D-9 to D-16, D-18 and D-19
@@ -785,16 +788,32 @@ supply, overflow to the treasury); **D-11 and D-12 changed (Change 1,
   The first revision cut the stakers by the whole remainder *and* the Tickets
   by `R/A`, which charged more than the loss.
   * `RequestUnstake`: `T += v` (the Ticket's `value`), checked exactly.
-  * `Claim`: `T -= t.value` (the Ticket's full escrowed value, payout +
-    excess), checked exactly. **This makes `Claim` a State transition** (it
+  * **[rev 5] `ReportLoss`: `T -= r_tickets`.** The Tickets' share of the
+    loss leaves the escrow the moment it is written off.
+  * **[rev 5] `Claim`: `T = max(0, T - payout)`**, where `payout` is what
+    the Ticket is paid at the State's current index (the approved text said
+    `T -= t.value`, payout + excess, and `T == Σ value`). **Why it changed:**
+    with `T == Σ value` a Ticket that lives through two losses is charged
+    the second loss on its ORIGINAL value, although the first loss already took
+    its excess out of what it is worth. Its allocation is `v·f2`, but the
+    Claim burns only `v·(1−f1)·f2`; the difference `v·f1·f2` is written off
+    from `attested_reserve` and burned by nobody (a 50% / 50% pair of losses
+    leaves a quarter of the Ticket unabsorbed), and the stakers are charged
+    too little. Tracking the CURRENT value fixes both: `T` is what the open
+    Tickets would be paid now, so the `A + T` split, `r_tickets` and the
+    Claims' excess all describe the same money. The clamp at 0 absorbs rounding
+    dust (the floors can leave `T` a unit or two short of the last payout, and
+    the Ticket must stay claimable). **This makes `Claim` a State transition** (it
     spends the State; it used to read it by reference). Consequence: Claims
     serialise with stakes and unstakes on the State, and the §3.9 "Claims never
     touch the State" mitigation no longer holds. Accepted in review; the
     batching path (§3.9) is the upgrade if volume needs it. `Claim` still
     spends exactly one Ticket (double satisfaction, §3.13).
-  * Invariant: `T >= 0`, and `T == Σ value` over live Tickets (Tickets are
-    created only by `RequestUnstake` and destroyed only by `Claim`, each
-    marker-gated, so the datum cannot drift; genesis starts at 0).
+  * **[rev 5] Invariant: `T >= 0` and `T` ≈ Σ current value over live
+    Tickets** (exact until the first loss; afterwards within the floors'
+    dust, which only ever errs towards charging the stakers a unit more).
+    Tickets are created only by `RequestUnstake` and destroyed only by
+    `Claim`, each marker-gated; genesis starts at 0.
 * **What moves, and who burns what.**
   * At `ReportLoss`: burned = `u + d + R_stakers`, exactly (through `LossBurn`,
     3a.3). State TSRA falls by `u + R_stakers` (+ sweeps, 3a.6), first-loss
@@ -809,9 +828,10 @@ supply, overflow to the treasury); **D-11 and D-12 changed (Change 1,
     unit, and `loss_index'` is floored, which adds ≤ 1 unit per Ticket for a
     Ticket of at most 1,000,000 TSRA (`value ≤ 1e12` units against an index
     near 1e12). Hence, once all `n` Tickets open at the loss have claimed,
-    `loss_absorbed - 1 <= burned_total <= loss_absorbed + 2n` where
-    `loss_absorbed = loss - residual` (the `-1` is the stakers' floor, which
-    leaves the Tickets' exact share up to one unit above what they can owe);
+    `loss_absorbed <= burned_total <= loss_absorbed + 2n` where
+    `loss_absorbed = loss - residual` (**[rev 5]** the lower bound is 0, not -1: the Tickets' written-off share
+    is the stakers' floor's remainder, rounded up, and every Claim's excess is
+    at least its exact share, so the burn can only meet or pass the write-off);
     with no rounding (round numbers) it is exactly `loss_absorbed`. The test
     pins both the exact case and the bound (3a.9). Overshoot is Ticket-holder
     dust burned in the protocol's favour.
@@ -869,7 +889,7 @@ supply, overflow to the treasury); **D-11 and D-12 changed (Change 1,
   | `OpenLoss{until}` | **Config** | — | finite window ≤ 1 day; `lo >= loss_pending_until + loss_reopen_gap_ms`; `hi < until <= lo + max_loss_pending_ms` | Config: `loss_pending_until = until` |
   | `CancelLoss` | **Config** | — | finite window; `loss_pending_until > lo` (an active freeze) | Config: `loss_pending_until = lo` |
   | `SetVault{vault_policy}` | **Config** | — | 28-byte policy id | Config: `vault_policy` |
-  | `LossBurn{qty, written_off}` | **Supply and Config** (the only redeemer allowed to spend both) | — | finite window ≤ 1 day; `hi < loss_pending_until` (freeze active for the whole validity, read from the spent Config); `0 < qty <= minted_supply`; `written_off >= qty`; TSRA mint delta == `-qty` | Supply: `minted_supply -= qty`, `attested_reserve = max(0, attested_reserve - written_off)`; Config: `loss_pending_until = lo` |
+  | `LossBurn{qty, written_off}` | **Supply and Config** (the only redeemer allowed to spend both) | — | finite window ≤ 1 day; `hi < loss_pending_until` (freeze active for the whole validity, read from the spent Config); **[rev 5]** `0 <= qty <= minted_supply`; `written_off >= qty`; **`written_off > 0`**; TSRA mint delta == `-qty` | Supply: `minted_supply -= qty`, `attested_reserve = max(0, attested_reserve - written_off)`; Config: `loss_pending_until = lo` |
   | `VaultClaimBurn{qty}` | **Supply only** | Config (for `vault_policy` only) | **no committee, no KYC, no pause check**; see 3a.5 for the full conditions | Supply: `minted_supply -= qty`; `attested_reserve` **unchanged**. Config untouched (so the freeze is untouched) |
 
   **How `LossBurn` stays sound across two inputs.** A spend validator runs once
@@ -887,6 +907,11 @@ supply, overflow to the treasury); **D-11 and D-12 changed (Change 1,
   committee, the switches or `vault_policy`. Epochs: `LossBurn` bumps both
   counters; `VaultClaimBurn` only the Supply's.
 
+  **[rev 5] `qty == 0` is allowed.** A loss that only the open Tickets absorb
+  (no unvested yield, an empty reserve, no staked assets) burns nothing now, but
+  its backing is still written off; refusing `qty == 0` would make such a loss
+  unreportable. `written_off > 0` keeps a `LossBurn` from being a free
+  freeze-closer (`CancelLoss` does that).
   `LossBurn` is **not** gated by `kyc_redeem` (no `holder`, no eligibility
   check), works while paused, and lowers `attested_reserve` by
   `written_off`, **not** by `qty`. **[D-14, revised]** `qty` is what is burned
@@ -1072,7 +1097,8 @@ token quantity is an int64, so repeated wipes overflow it).
 | `Position` | `+ gen` |
 | `VaultRedeemer` | `+ ReportLoss{loss}`; the type moves to `lib/` so the reserve can name `Claim` |
 | `RequestUnstake` | `ticket_escrow += v` |
-| `Claim` | now spends the State (`ticket_escrow -= value`); burns exactly the excess; reads the Config by reference (freeze); with `excess > 0` also spends the reserve Supply (`VaultClaimBurn`) |
+| `ReportLoss` | **[rev 5]** `ticket_escrow -= r_tickets` |
+| `Claim` | now spends the State (**[rev 5]** `ticket_escrow = max(0, ticket_escrow - payout)`); burns exactly the excess; reads the Config by reference (freeze); with `excess > 0` also spends the reserve Supply (`VaultClaimBurn`) |
 | exits/stakes | read the reserve Config by reference (freeze); last-share exits also spend the first-loss State |
 | `ReportLoss` | spends vault State + reserve Supply + reserve Config (`LossBurn`) + first-loss State when `d > 0` or a sweep |
 | `rules.ak` / `vault_state.ak` | `max_loss_pending_ms`, `loss_reopen_gap_ms`, `min_loss_index`, `dead_price_den = 1000`, `first_loss_cap_bps = 300`, `split_loss`, `class_dead`, `sweep`, shared `ticket_payout` helpers |
@@ -1165,7 +1191,10 @@ everything with no committee action; a tx with `lo < until <= hi` is rejected
 as an exit and as a ReportLoss.
 
 *ticket_escrow:* `RequestUnstake` adds exactly `v` (one more or less
-rejected); `Claim` subtracts exactly `t.value` (not `payout`); `Claim` spends
+rejected); **[rev 5]** `Claim` subtracts exactly `payout` (not `t.value`) and
+clamps at 0; `ReportLoss` subtracts exactly `r_tickets`; a second loss sees
+what the Tickets are now worth (burned total == written off over two losses);
+`Claim` spends
 the State and no other vault UTxO but its Ticket; `ticket_escrow` never goes
 negative; a State with `ticket_escrow` out of step with the Ticket rejected;
 genesis `ticket_escrow != 0` rejected; planted Ticket still unclaimable.
@@ -1293,6 +1322,59 @@ kept in the git history of this section; what 2.5b builds on:
   pin the rule stay, and `LossBurn` gets its own both-or-neither tests.
 * **What the split buys the freeze.** Exits and stakes reference only the
   Config, which supply traffic cannot spend (3a.4, risk 5).
+
+### 3a.14 Execution budget (measured in 2.5b)
+
+The Preprod per-transaction limits are 14,000,000 memory and 10,000,000,000 CPU
+steps. `ReportLoss` runs five scripts (the vault State, the reserve Supply and
+Config under `LossBurn` — the check runs twice —, the reserve mint handler for
+the burn, and the first-loss State under `Draw`); a Claim with an excess runs
+four (vault State, Ticket, reserve Supply under `VaultClaimBurn`, reserve mint
+handler). Measured with Aiken's unit-test machine on worst-case fixtures
+(`lib/tessera/loss_fixture.ak`, which every validator's tests also run): for
+`ReportLoss`, both share classes live and then both wiped out (generation bump
+and sweep), unvested yield in both, open Tickets, the first-loss reserve drawn,
+a 3-of-5 committee, two extra wallet inputs and a change output; for the Claim,
+a Ticket at 80% of its request-time index.
+
+Each test's cost includes building the fixture transaction, which does not
+exist on chain; the fixture alone costs 875,379 memory / 268,381,201 CPU
+(ReportLoss) and 590,531 / 168,165,078 (Claim), measured separately and
+subtracted. Both figures are listed.
+
+| `ReportLoss` script | memory (net) | CPU (net) | memory (as measured) | CPU (as measured) |
+|---|---:|---:|---:|---:|
+| vault State (`ReportLoss`) | 2,423,698 | 791,552,630 | 3,299,077 | 1,059,933,831 |
+| reserve Supply (`LossBurn`) | 1,181,141 | 378,954,533 | 2,056,520 | 647,335,734 |
+| reserve Config (`LossBurn`) | 1,186,029 | 381,867,451 | 2,061,408 | 650,248,652 |
+| reserve mint handler (burn) | 231,381 | 71,874,270 | 1,106,760 | 340,255,471 |
+| first-loss State (`Draw`) | 788,276 | 269,951,671 | 1,663,655 | 538,332,872 |
+| **Sum** | **5,810,525 (41.5%)** | **1,894,200,555 (18.9%)** | 10,187,420 (72.8%) | 3,236,106,560 (32.4%) |
+
+| Claim with excess | memory (net) | CPU (net) | memory (as measured) | CPU (as measured) |
+|---|---:|---:|---:|---:|
+| vault State (`Claim`) | 1,067,964 | 367,868,402 | 1,658,495 | 536,033,480 |
+| vault Ticket (`Claim`) | 609,185 | 206,004,192 | 1,199,716 | 374,169,270 |
+| reserve Supply (`VaultClaimBurn`) | 1,321,840 | 422,390,898 | 1,912,371 | 590,555,976 |
+| reserve mint handler (burn) | 186,997 | 57,062,537 | 777,528 | 225,227,615 |
+| **Sum** | **3,185,986 (22.8%)** | **1,053,326,029 (10.5%)** | 5,548,110 (39.6%) | 1,725,986,341 (17.3%) |
+
+Reading: the target was under 70% of each limit. The net sums are 41.5% / 18.9%
+and 22.8% / 10.5%. The as-measured `ReportLoss` memory figure (72.8%) is over
+70% only because it includes five copies of the fixture-building cost, which the
+chain never pays; the net figure is the one to read, and it is an upper bound
+on the scripts' own cost (the fixture's cost may be understated if the compiler
+skipped parts of it, which only makes the net larger). What the unit tests do
+not include: the validator wrapper's decoding of the script context, a few
+thousand steps per script. **Open item:** a full-transaction evaluation
+(Ogmios / Lucid `evaluate`) once the Phase 3 builders exist should confirm
+these figures; until then they are measured, not guaranteed. No optimisation
+(a withdraw-zero shared check, the waterfall computed once) is needed or applied.
+
+**Transaction size is the tighter limit.** The four scripts are 12.4 KB (reserve),
+17.1 KB (vault), 4.5 KB (first-loss) and 2.4 KB (eligibility) compiled, against a
+16 KB transaction limit. The builders must carry them as **reference scripts**,
+never inline; `LossBurn` runs the reserve script twice but references it once.
 
 ## 4. Redemption queue
 Instant tier up to the buffer; Request UTxOs bucketed per day; payable after
@@ -1511,3 +1593,52 @@ module's own tests rather than the reserve's.
 Tests: 397 before, 507 after (reserve 141 → 244, eligibility 21 → 25, vault 188
 → 191). Every one of the 397 old tests still exists and passes (8 renamed as
 above, none weakened).
+
+### Phase 2.5b (loss path)
+
+244 new mutants over `validators/reserve.ak` (OpenLoss, CancelLoss, SetVault,
+LossBurn, VaultClaimBurn, genesis), `validators/stsra_vault.ak` (freeze,
+`ticket_escrow`, Claim, funding and the 3% cap, ReportLoss, dead classes,
+generations, last-exit sweep, genesis), `validators/first_loss.ak`,
+`lib/tessera/rules.ak`, `loss.ak`, `first_loss_state.ak`, `reserve_ref.ak` and
+`vault_state.ak`. **232 killed, 12 equivalent or redundant.** Run in batches of
+at most 16 in scratch copies, each mutant against the tests that name its
+guard; survivors were then re-run against the whole module. Eleven first-run
+survivors were real test gaps and each has a test now: `CancelLoss` minting,
+the long-class sweep of a wiped class's vesting yield, an old-generation
+Position and the live class's yield, a draw beyond the balance funded by a
+deposit, a genesis datum balance without TSRA, and the first-loss State read
+from the wrong address or preferring a stale reference.
+
+**Equivalent / redundant survivors (12).** Each is a guard that another one
+already implies; they are kept as defence in depth.
+* *LossBurn: own input holds a thread token* — `list.length(ins) == 2` with both
+  genuine UTxOs found already forces the spent input to be one of them.
+* *VaultClaimBurn: `vault_policy` is 28 bytes* — an empty policy finds no Ticket,
+  and `SetVault` only installs 28 bytes.
+* *`split_loss`: index term uses `rem` instead of `rem1`* — a negative result is
+  clamped to the index floor, the same value.
+* *`class_dead`: `shares > 0`* — with no shares `assets_after * 1000 < 0` is false.
+* *Claim, State branch: two vault inputs* — `expect [tk] = …` already fixes it.
+* *Claim, Ticket branch: two vault inputs* — the State branch, always run
+  because the State is spent, refuses a third input.
+* *Funding: `cap > balance` as `>=`* — at equality both give room 0.
+* *ReportLoss: `loss > 0`* — `written_off > 0` implies it (`written_off <= loss`).
+* *first_loss: `balance >= 0`* — `qty <= balance` and `deposit >= 0` imply it.
+* *first_loss: `s_in == s0`* — the ledger passes the spent UTxO's own datum.
+* *first_loss: the own input holds the thread token* — one genuine input and
+  the input count already imply it.
+* *`first_loss_moves`: `a.balance == before`* — `before` is read from that input.
+
+**Earlier mutants re-run against the 2.5b scripts.** The 168 Phase 2.2 / 2.3 /
+2.5a reserve and eligibility mutants were re-run against the unchanged
+2.5a-era tests (the 2.5b tests removed from the scratch copy, so they cannot
+mask a regression): all killed except the two known equivalents (`threshold_met`
+without `list.unique`; the registry's "any quantity per name"). Nine of them
+no longer apply to the rewritten `reserve_ref.ak` and one no longer compiles;
+their guards are covered by the `RR-*` mutants above and the Config-lookup
+mutants of the registry. The Phase 2.4 / 2-H vault mutants were **not** re-run
+as a set: their guards are covered by the 2.4 tests, which all still pass, and by
+the new vault mutants; a full re-run of that set is an open item.
+
+Tests: 860 before the last additions; see the run recorded in the commit.

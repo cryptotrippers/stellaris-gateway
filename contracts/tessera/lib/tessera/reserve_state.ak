@@ -40,6 +40,14 @@ pub type ConfigState {
   /// Set at genesis; `SetKyc` (committee) may repoint it, e.g. to a
   /// Midnight-issued credential policy, without a new reserve script.
   eligibility_policy: PolicyId,
+  /// Script hash of the sTSRA vault whose Tickets may use `VaultClaimBurn`
+  /// (Phase 2.5b). Empty until `SetVault` (committee) sets it; otherwise 28
+  /// bytes. A reserve script parameter is impossible (the vault is
+  /// parameterised by the reserve), so it lives here.
+  vault_policy: ByteArray,
+  /// POSIX ms until which a "loss pending" freeze is in force (Phase 2.5b);
+  /// 0 = none. Exits and stakes in the vault require `until <= lo`.
+  loss_pending_until: Int,
   /// Monotonic replay counter for Config transitions.
   epoch: Int,
 }
