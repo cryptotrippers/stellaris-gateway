@@ -25,7 +25,7 @@ export const Route = createFileRoute("/blockfrost-health")({
   head: () => ({
     meta: [
       { title: "Blockfrost Health · Stellaris" },
-      { name: "description", content: "Live status of the Blockfrost Preprod connection powering the RealFi testnet flow." },
+      { name: "description", content: "Live status of the Blockfrost Preprod connection powering the Stellaris testnet flow." },
       { property: "og:title", content: "Blockfrost Health · Stellaris" },
       { property: "og:description", content: "Current status, last check time, and failure details for the Cardano Preprod / Blockfrost integration." },
     ],
@@ -77,7 +77,7 @@ function BlockfrostHealthPage() {
           <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground">Blockfrost Health</h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
             Live status of the Blockfrost Preprod connection that powers the{" "}
-            <Link to="/testnet" className="text-primary hover:underline">RealFi testnet</Link> flow.
+            <Link to="/testnet" className="text-primary hover:underline">Stellaris testnet</Link> flow.
           </p>
         </div>
         <div className="flex items-center gap-2">

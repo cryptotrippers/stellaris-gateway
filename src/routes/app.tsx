@@ -23,7 +23,7 @@ export const Route = createFileRoute("/app")({
       { title: "Your Portfolio · Stellaris Finance" },
       { name: "description", content: "Live view of your fractional real-world asset positions on Cardano — deposits, yield, and compliance status at a glance." },
       { property: "og:title", content: "Your Portfolio · Stellaris" },
-      { property: "og:description", content: "Track your RealFi positions, yield, and impact on Cardano." },
+      { property: "og:description", content: "Track your Stellaris positions, yield, and impact on Cardano." },
       { name: "robots", content: "noindex" },
     ],
   }),

@@ -15,7 +15,8 @@ export const MORE_LINKS: { to: string; label: string; hint: string }[] = [
   { to: "/assets", label: "Accepted assets", hint: "Which Cardano assets plug in" },
   { to: "/learn", label: "Learn", hint: "Short plain-language guides" },
   { to: "/yield", label: "Earnings", hint: "How returns are paid out" },
-  { to: "/stake", label: `Stake ${BRAND.staked.ticker}`, hint: "7-day or 30-day staking (preview)" },
+  { to: "/stake", label: `Stake ${BRAND.staked.ticker}`, hint: "Flexible or locked staking (preview)" },
+  { to: "/property", label: "Property (planned)", hint: "Australia & Southeast Asia" },
   { to: "/stewardship", label: "Impact", hint: "What your money does" },
 
   { to: "/security", label: "Security", hint: "Account & protections" },
