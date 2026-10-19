@@ -669,7 +669,7 @@ exception either.
 
 ## 3a. First-loss reserve and ReportLoss (Phase 2.5 — DESIGN CHECKPOINT, not implemented)
 
-Status: **revision 5 — implemented in Phase 2.5b.** Revision 4 re-targeted the
+Status: **revision 6 — implemented in Phase 2.5b; the vault was split for size (§3a.15).** Revision 4 re-targeted the
 design at the Config / Supply split (2.5a, PR #14) and was approved. Revision
 5 records the three places where the implementation differs from the approved
 text, each marked **[rev 5]** below: the escrow tracks the Tickets' CURRENT
@@ -691,7 +691,8 @@ supply, overflow to the treasury); **D-11 and D-12 changed (Change 1,
 * **Scripts touched** (every one moves its hash; nothing is deployed yet, and
   all pins/blueprints are rebuilt once at the end, as in 2.4):
   `reserve.ak` (two new Config fields, 5 redeemers; the Supply datum does not
-  change), `eligibility.ak` (rehash only: it decodes the grown ConfigState), `stsra_vault.ak` +
+  change), `eligibility.ak` (rehash only: it decodes the grown ConfigState), `stsra_vault.ak` (its
+  ReportLoss / ReportYield / SetBounds / Claim-State checks live in `vault_ops.ak`, §3a.15) +
   `vault_state.ak` (new redeemer, datum changes, freeze reads, Claim becomes a
   State transition), new `first_loss.ak`. UI changes go in `docs/lovable-prompts/phase-2-5.md`,
   never in Lovable-owned files.
@@ -1323,58 +1324,107 @@ kept in the git history of this section; what 2.5b builds on:
 * **What the split buys the freeze.** Exits and stakes reference only the
   Config, which supply traffic cannot spend (3a.4, risk 5).
 
-### 3a.14 Execution budget (measured in 2.5b)
+### 3a.14 Execution budget (measured in 2.5b, re-measured with `vault_ops`)
 
 The Preprod per-transaction limits are 14,000,000 memory and 10,000,000,000 CPU
-steps. `ReportLoss` runs five scripts (the vault State, the reserve Supply and
-Config under `LossBurn` — the check runs twice —, the reserve mint handler for
-the burn, and the first-loss State under `Draw`); a Claim with an excess runs
-four (vault State, Ticket, reserve Supply under `VaultClaimBurn`, reserve mint
-handler). Measured with Aiken's unit-test machine on worst-case fixtures
-(`lib/tessera/loss_fixture.ak`, which every validator's tests also run): for
-`ReportLoss`, both share classes live and then both wiped out (generation bump
-and sweep), unvested yield in both, open Tickets, the first-loss reserve drawn,
-a 3-of-5 committee, two extra wallet inputs and a change output; for the Claim,
-a Ticket at 80% of its request-time index.
+steps. Measured with Aiken's unit-test machine on worst-case fixtures
+(`lib/tessera/loss_fixture.ak`, which every validator's tests also run). Each
+test's cost includes building the fixture transaction, which does not exist on
+chain; that baseline was measured separately and subtracted (the "net" columns).
+What the unit tests leave out is the validator wrapper's decoding of the script
+context, a few thousand steps per script. **Open item:** a full-transaction
+evaluation (Ogmios / Lucid `evaluate`) once the Phase 3 builders exist.
 
-Each test's cost includes building the fixture transaction, which does not
-exist on chain; the fixture alone costs 875,379 memory / 268,381,201 CPU
-(ReportLoss) and 590,531 / 168,165,078 (Claim), measured separately and
-subtracted. Both figures are listed.
+| Transaction | Scripts run | Memory (net) | CPU (net) | Memory (as measured) | CPU (as measured) |
+|---|---|---:|---:|---:|---:|
+| `ReportLoss` (both classes wiped, Tickets open, first-loss drawn) | vault State, `vault_ops`, reserve Supply, reserve Config, reserve mint, first-loss | 6,018,915 (**43.0%**) | 1,975,827,761 (**19.8%**) | 11,271,189 (80.5%) | 3,586,114,967 (35.9%) |
+| `ReportYield` (first-loss funded) | vault State, `vault_ops`, first-loss `Deposit` | 1,919,643 (**13.7%**) | 646,530,349 (**6.5%**) | 3,406,202 (24.3%) | 1,066,004,434 (10.7%) |
+| Claim **with** excess | vault State, vault Ticket, vault mint, `vault_ops`, reserve Supply, reserve mint | 3,385,073 (**24.2%**) | 1,127,473,965 (**11.3%**) | 6,928,259 (49.5%) | 2,136,464,433 (21.4%) |
+| Claim **without** excess | vault State, vault Ticket, vault mint, `vault_ops` | 1,855,775 (**13.3%**) | 637,193,966 (**6.4%**) | n/a | n/a |
 
-| `ReportLoss` script | memory (net) | CPU (net) | memory (as measured) | CPU (as measured) |
-|---|---:|---:|---:|---:|
-| vault State (`ReportLoss`) | 2,423,698 | 791,552,630 | 3,299,077 | 1,059,933,831 |
-| reserve Supply (`LossBurn`) | 1,181,141 | 378,954,533 | 2,056,520 | 647,335,734 |
-| reserve Config (`LossBurn`) | 1,186,029 | 381,867,451 | 2,061,408 | 650,248,652 |
-| reserve mint handler (burn) | 231,381 | 71,874,270 | 1,106,760 | 340,255,471 |
-| first-loss State (`Draw`) | 788,276 | 269,951,671 | 1,663,655 | 538,332,872 |
-| **Sum** | **5,810,525 (41.5%)** | **1,894,200,555 (18.9%)** | 10,187,420 (72.8%) | 3,236,106,560 (32.4%) |
+Per script, net, for the two largest cases:
 
-| Claim with excess | memory (net) | CPU (net) | memory (as measured) | CPU (as measured) |
-|---|---:|---:|---:|---:|
-| vault State (`Claim`) | 1,067,964 | 367,868,402 | 1,658,495 | 536,033,480 |
-| vault Ticket (`Claim`) | 609,185 | 206,004,192 | 1,199,716 | 374,169,270 |
-| reserve Supply (`VaultClaimBurn`) | 1,321,840 | 422,390,898 | 1,912,371 | 590,555,976 |
-| reserve mint handler (burn) | 186,997 | 57,062,537 | 777,528 | 225,227,615 |
-| **Sum** | **3,185,986 (22.8%)** | **1,053,326,029 (10.5%)** | 5,548,110 (39.6%) | 1,725,986,341 (17.3%) |
+| `ReportLoss` | memory | CPU | | Claim with excess | memory | CPU |
+|---|---:|---:|---|---|---:|---:|
+| vault State (binding) | 225,458 | 88,997,621 | | vault State (binding) | 190,928 | 73,349,142 |
+| `vault_ops` | 2,406,630 | 784,182,215 | | vault Ticket | 602,785 | 204,980,192 |
+| reserve Supply | 1,181,141 | 378,954,533 | | vault mint (marker burn) | 34,531 | 9,428,220 |
+| reserve Config | 1,186,029 | 381,867,451 | | `vault_ops` | 1,047,992 | 360,262,976 |
+| reserve mint | 231,381 | 71,874,270 | | reserve Supply | 1,321,840 | 422,390,898 |
+| first-loss `Draw` | 788,276 | 269,951,671 | | reserve mint | 186,997 | 57,062,537 |
 
-Reading: the target was under 70% of each limit. The net sums are 41.5% / 18.9%
-and 22.8% / 10.5%. The as-measured `ReportLoss` memory figure (72.8%) is over
-70% only because it includes five copies of the fixture-building cost, which the
-chain never pays; the net figure is the one to read, and it is an upper bound
-on the scripts' own cost (the fixture's cost may be understated if the compiler
-skipped parts of it, which only makes the net larger). What the unit tests do
-not include: the validator wrapper's decoding of the script context, a few
-thousand steps per script. **Open item:** a full-transaction evaluation
-(Ogmios / Lucid `evaluate`) once the Phase 3 builders exist should confirm
-these figures; until then they are measured, not guaranteed. No optimisation
-(a withdraw-zero shared check, the waterfall computed once) is needed or applied.
+The "Claim without excess" vault figures are taken from the excess case (an
+upper bound). The target was under 70% of each limit; the net sums are 43.0% /
+19.8%, 13.7% / 6.5%, 24.2% / 11.3% and 13.3% / 6.4%. The as-measured
+`ReportLoss` memory (80.5%) includes six copies of the fixture-building cost,
+which the chain never pays. Moving the checks into `vault_ops` cost about 1.5
+percentage points of memory on `ReportLoss` and 1.4 on a Claim with excess (the
+binding and a sixth / fifth script run).
 
-**Transaction size is the tighter limit.** The four scripts are 12.4 KB (reserve),
-17.1 KB (vault), 4.5 KB (first-loss) and 2.4 KB (eligibility) compiled, against a
-16 KB transaction limit. The builders must carry them as **reference scripts**,
-never inline; `LossBurn` runs the reserve script twice but references it once.
+### 3a.15 `vault_ops`: why the vault was split, and how (Phase 2.5b)
+
+**The problem.** The compiled `stsra_vault` was 17,058 bytes, over the 16,384-byte
+maximum transaction size. A reference script must itself be published in a
+transaction, so the vault could never go on chain, and reference scripts do not
+help. (`aiken build` is already `--trace-level silent`; verbose traces would be
+18,386 bytes.)
+
+**The fix.** `ReportLoss`, `ReportYield`, `SetBounds` and the State side of `Claim`
+moved into `validators/vault_ops.ak`, a withdraw-zero script. The vault's branch
+for each of those redeemers only checks:
+
+* the spent input is the genuine State (it holds the thread token);
+* the transaction withdraws **0** from `ops`' credential;
+* the redeemer of that withdrawal names **this vault's policy** and **this action**
+  (the constructor index of its `action`: `ReportLoss` 0, `ReportYield` 1,
+  `SetBounds` 2, `Claim` 3). The vault reads only those two things and never
+  decodes the action's fields.
+
+The ops script runs the full checks that were in the vault, unchanged. Its
+redeemer is `{ vault: PolicyId, action: OpsReportLoss{loss} | OpsReportYield{gross}
+| OpsSetBounds{…} | OpsClaim }`; the `loss`, `gross` and bounds that used to ride on
+the vault's redeemer now ride on it, so the vault's `ReportYield`, `SetBounds`
+and `ReportLoss` redeemers are unit constructors. The Ticket's own validator
+(`Claim`'s payout and excess burn) stays in the vault.
+
+**No hash circularity.** The vault is parameterised by `(seed, reserve, ops)`; the
+ops script by `reserve` only. It cannot be parameterised by the vault (the vault's
+hash contains the ops hash), so it finds the State by the policy its redeemer
+names, and the vault binds that field to its own policy. A parameter rather than
+a `VaultState` field: it is immutable by construction and adds nothing to the
+datum, whose 19-field equality is repeated in every branch and is what makes the
+vault large.
+
+**What the withdrawal is.** A gate, not a reward account. The ops handler requires
+`withdrawals[ops] == 0`, and the script's **publish handler accepts only
+`RegisterCredential`**: deregistration, delegation, registration-and-delegation
+and every DRep certificate are refused. Otherwise anyone could deregister the
+credential and freeze `ReportLoss`, `ReportYield`, `SetBounds` and every Claim.
+Its stake credential must be registered once before first use (a deposit).
+
+**Why an ops run cannot be borrowed.** An ops run for another vault is refused by
+the vault (the `vault` field), an ops run for another action by the tag check, a
+withdrawal from another credential or with a non-zero amount by the credential and
+amount checks, and a transaction that spends an extra vault input (a Position, a
+second Ticket) beside the State by the ops script's own input counts. A State
+spent under a moved redeemer with no ops run at all is refused.
+
+**Sizes (compiled, silent traces).**
+
+| Script | Before | After |
+|---|---:|---:|
+| eligibility | 2,365 | 2,365 |
+| first_loss | 4,466 | 4,466 |
+| reserve | 12,381 | 12,308 |
+| stsra_vault | **17,058** | **12,652** |
+| vault_ops | - | **11,100** |
+
+Every validator is at or under 13,000 bytes. `scripts/verify-vault-hash.mjs` fails
+any validator in any project above 14,000 bytes. **Phase 2.6 must not grow
+`stsra_vault` or `reserve`** (about 350 and 690 bytes of headroom); the
+redemption queue goes in its own script, and anything the queue needs from the
+vault or reserve goes into `vault_ops` (about 1.9 KB of headroom) or a new
+script, not into those two. Applying parameters adds a few dozen bytes to each.
 
 ## 4. Redemption queue
 Instant tier up to the buffer; Request UTxOs bucketed per day; payable after
@@ -1642,3 +1692,59 @@ as a set: their guards are covered by the 2.4 tests, which all still pass, and b
 the new vault mutants; a full re-run of that set is an open item.
 
 Tests: 507 before 2.5b, 869 after. The PS1 run on the clean tree: tessera 869/869, 0 compiler warnings.
+
+### Phase 2.5b, the `vault_ops` split
+
+280 mutants run after the split, in batches of at most 14 (6 parallel scratch
+copies, each mutant against the tests that name its guard; survivors re-run
+against the whole module). **265 killed, 15 equivalent or redundant.**
+
+* **Every guard that moved into `vault_ops.ak`** (the earlier 2.5b ReportLoss,
+  ReportYield, Claim and escrow mutants, re-pointed at the new file) and every
+  other guard of the vault, `vault_ops` and `vault_state.ak`: one mutant per
+  item of every `and { … }` block (replaced by `True,`): 43 in `vault_ops`, 80 in
+  `stsra_vault`, 8 in `vault_state`.
+* **The 38 Phase 2.4 / 2-H and 2.5b vault mutants that stayed** (stakes, exits,
+  generations, the last-exit sweep, the freeze, genesis), re-run against the
+  rewritten vault tests: all killed.
+* **The 27 `loss.ak` mutants**, re-run against the tests that now live in
+  `vault_ops`: all killed except the two equivalents (below).
+* **The new guards:** the ops handler's zero-withdrawal gate; the publish handler
+  (every certificate that must be refused: unregister, delegate,
+  register-and-delegate, publish-all, and the registration itself refused);
+  the vault's binding (own token, withdrawal present, amount 0, redeemer present,
+  `vault` field, action tag, credential, fail-open on a missing redeemer); the
+  four redeemer-to-tag routes and the tag constants; ops' own freeze read
+  (`open_config`, `exits_open`) and committee read.
+
+Five first-run survivors were real test gaps, and each has a test now: a zero
+yield that is otherwise correct, and the pinned State (address, reference script,
+lovelace, foreign token) on `SetBounds`, on `Claim` and on every stake and exit
+(the old F-6 tests that pinned those had moved with the code or covered only one
+redeemer). Seven more first-run misses were filter mistakes (a killer test not in
+the mutant's filter) and passed on re-run with no new test.
+
+**Equivalent / redundant survivors (15).** Each guard is implied by another one
+and is kept as defence in depth.
+* *ops `ReportLoss` `loss > 0`* (and the same mutant in the 2.5b set): implied by
+  `written_off > 0`.
+* *ops Claim, vault Claim Ticket branch and vault `UnlockLong`: `list.length(ins) == 2`*:
+  the `expect [x] = filter(ins, != state_in)` that follows already fixes it; the
+  Ticket branch's copy is also covered by the State side's run.
+* *vault `in_state == s0`* (the ledger passes the UTxO's own datum);
+  *`amount > 0`* on a short stake (`deposit_ok` implies it);
+  *`list.length(outs) == 2`* on `StakeLong` and `RequestUnstake` (`other_output`
+  already needs exactly one other output); *`shares > 0`* on `RequestUnstake`
+  (`v >= min_position_value` implies it).
+* *`cap > balance` as `>=`* (both give room 0 at equality).
+* *`split_loss` index term using `rem` for `rem1`* (the floor clamps the
+  difference) and *`class_dead`'s `shares > 0`* (with no shares
+  `assets * 1000 < 0` is false).
+
+**Earlier mutants.** The 168 Phase 2.2 / 2.3 / 2.5a reserve and eligibility
+mutants (§6, 2.5a) and the 244 first 2.5b mutants (reserve, first-loss, libs) were
+run before this split and are unaffected by it: the reserve and first-loss
+scripts are unchanged (the reserve's only change is that `Claim` is named in
+`vault_state`). The Phase 2.4 / 2-H vault mutant set that the first 2.5b pass
+listed as an open item is closed by the re-run above: its guards either moved
+(re-pointed, killed) or stayed (re-run, killed).

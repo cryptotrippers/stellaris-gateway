@@ -130,20 +130,56 @@ pub type VaultRedeemer {
   Claim
   /// Pay out a long-tier Position after `unlock_at` (State + Position).
   UnlockLong
-  /// Committee: credit `gross` TSRA of delivered yield.
-  ReportYield { gross: Int }
-  /// Committee: change the bounds within their hard limits.
-  SetBounds {
+  /// Committee: credit delivered yield. Validated by `vault_ops` (the
+  /// withdraw-zero script named in the vault's parameters): the vault only
+  /// checks that the ops run is bound to it.
+  ReportYield
+  /// Committee: change the bounds within their hard limits (`vault_ops`).
+  SetBounds
+  /// Committee: a loss (SPEC.md §3a.2; `vault_ops`). Spends the State, the
+  /// reserve Supply and Config (`LossBurn`) and, when needed, the first-loss
+  /// State.
+  ReportLoss
+}
+
+/// What `vault_ops` is asked to validate (Phase 2.5b, SPEC.md §3a.15). The
+/// State is spent under the matching `VaultRedeemer`, which only checks that
+/// the ops run exists and is bound to this vault.
+pub type OpsAction {
+  OpsReportLoss { loss: Int }
+  OpsReportYield { gross: Int }
+  OpsSetBounds {
     long_weight_bps: Int,
     short_cooldown_ms: Int,
     long_lock_ms: Int,
     protocol_bps: Int,
   }
-  /// Committee: a loss of `loss` TSRA (SPEC.md §3a.2). Spends the State, the
-  /// reserve Supply and Config (`LossBurn`) and, when needed, the first-loss
-  /// State.
-  ReportLoss { loss: Int }
+  /// The State side of a Claim: the Ticket's own validator pays the owner.
+  OpsClaim
 }
+
+/// The redeemer of the `vault_ops` withdrawal. `vault` names the vault policy
+/// whose State is being transitioned; the vault itself checks it equals its own
+/// policy, so an ops run cannot be borrowed for another vault.
+pub type OpsRedeemer {
+  vault: PolicyId,
+  action: OpsAction,
+}
+
+/// The same redeemer read by the vault, which looks only at `vault` and the
+/// constructor index of `action` (it never decodes the action's fields).
+pub type OpsEnvelope {
+  vault: PolicyId,
+  action: Data,
+}
+
+pub const ops_report_loss: Int = 0
+
+pub const ops_report_yield: Int = 1
+
+pub const ops_set_bounds: Int = 2
+
+pub const ops_claim: Int = 3
 
 /// Every UTxO at the vault address carries one of these (distinct
 /// constructors, so a Position can never be read as a State, etc.).

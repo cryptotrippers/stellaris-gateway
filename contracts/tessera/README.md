@@ -25,6 +25,7 @@ validators/reserve.ak      Reserve Config + Supply + TSRA mint policy (one scrip
 validators/eligibility.ak  Eligibility-token policy + registry (allowlist)
 validators/stsra_vault.ak  sTSRA vault: State, Positions, Tickets + sTSRA policy
 validators/first_loss.ak   First-loss reserve State (Phase 2.5b)
+validators/vault_ops.ak    Withdraw-zero script: ReportLoss, ReportYield, SetBounds, Claim accounting (2.5b)
 lib/stellaris/thread.ak    State-thread token helpers (verbatim copy of the vaults' module)
 DESIGN.md                  Design draft + decisions
 SPEC.md                    State transitions and invariants (to be filled)
@@ -38,6 +39,7 @@ SPEC.md                    State transitions and invariants (to be filled)
 | `validators/eligibility.ak` | **Written and tested** (Phase 2.3, SPEC.md §1a). Allowlist tokens, committee-issued and revocable |
 | `validators/stsra_vault.ak` | **Written and tested** (Phase 2.4, SPEC.md §3). Two-tier staking vault; `ReportYield` requires delivered funds; `ReportLoss`, the loss freeze and class generations (2.5b) |
 | `validators/first_loss.ak` | **Written and tested** (Phase 2.5b, SPEC.md §3a). TSRA that exists only to be burned against a loss; `Deposit` / `Draw` |
+| `validators/vault_ops.ak` | **Written and tested** (Phase 2.5b, SPEC.md §3a.15). Holds the vault checks that would not fit in one script; registration is the only certificate it accepts |
 | `validators/redeem_queue.ak` | Request UTxOs, daily buckets, permissionless settlement |
 
 ## Commands

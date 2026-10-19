@@ -36,6 +36,9 @@ pub const reserve_policy: PolicyId =
 pub const vault_policy: PolicyId =
   #"31313131313131313131313131313131313131313131313131313131"
 
+pub const vault_ops_policy: PolicyId =
+  #"55555555555555555555555555555555555555555555555555555555"
+
 pub const fl_policy: PolicyId =
   #"f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1"
 

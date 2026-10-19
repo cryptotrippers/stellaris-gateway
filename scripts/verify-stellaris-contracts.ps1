@@ -277,8 +277,8 @@ $rules = @(
     @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'claim_after: hi + s0.short_cooldown_ms'; Label = 'tessera sTSRA Ticket cooldown set from the upper bound (2.4)' }
     @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'lo >= p.unlock_at'; Label = 'tessera sTSRA long lock enforced at unlock (2.4)' }
     @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'list.length(own_outputs(tx.outputs, policy)) == 1,'; Label = 'tessera sTSRA a Claim leaves only the State behind, one Ticket per Claim (2.4, 2.5b)' }
-    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'paid_tsra(tx, s0.treasury_addr, reserve) >= rest + half - to_reserve,'; Label = 'tessera sTSRA yield pays the treasury what the first-loss reserve cannot take (2.5b)' }
-    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'committee_ok(tx, reserve),'; Label = 'tessera sTSRA committee from the live Reserve State (2.4)' }
+    @{ File = 'contracts/tessera/validators/vault_ops.ak'; Pattern = 'paid_tsra(tx, s0.treasury_addr, reserve) >= rest + half - to_reserve,'; Label = 'tessera sTSRA yield pays the treasury what the first-loss reserve cannot take (2.5b)' }
+    @{ File = 'contracts/tessera/validators/vault_ops.ak'; Pattern = 'committee_ok(tx, reserve),'; Label = 'tessera sTSRA committee from the live Reserve State (2.4)' }
     @{ File = 'contracts/tessera/lib/tessera/vault_state.ak'; Pattern = 'max_long_weight_bps: Int = 15_000'; Label = 'tessera sTSRA long weight hard max 1.5x (2.4)' }
     @{ File = 'contracts/tessera/lib/tessera/vault_state.ak'; Pattern = 'max_long_lock_ms: Int = 7_776_000_000'; Label = 'tessera sTSRA long lock hard max 90 days (2.4)' }
     @{ File = 'contracts/tessera/lib/tessera/vault_state.ak'; Pattern = 'max_short_cooldown_ms: Int = 1_209_600_000'; Label = 'tessera sTSRA short cooldown hard max 14 days (2.4)' }
@@ -307,14 +307,18 @@ $rules = @(
     @{ File = 'contracts/tessera/lib/tessera/rules.ak'; Pattern = 'first_loss_cap_bps: Int = 300'; Label = 'tessera first-loss reserve capped at 3% of supply (2.5b)' }
     @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'exits_open(tx, reserve, lo),'; Label = 'tessera sTSRA exits refused during a loss freeze (2.5b)' }
     @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'kyc_stake_ok(tx, reserve, holder, lo),'; Label = 'tessera sTSRA stakes refused during a loss freeze (2.5b)' }
-    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'hi < c0.loss_pending_until,'; Label = 'tessera ReportLoss needs the freeze to cover its validity (2.5b)' }
-    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'quantity_of(tx.mint, reserve, rules.tsra_name) == -sp.qty,'; Label = 'tessera ReportLoss burns exactly the waterfall (2.5b)' }
+    @{ File = 'contracts/tessera/validators/vault_ops.ak'; Pattern = 'hi < c0.loss_pending_until,'; Label = 'tessera ReportLoss needs the freeze to cover its validity (2.5b)' }
+    @{ File = 'contracts/tessera/validators/vault_ops.ak'; Pattern = 'quantity_of(tx.mint, reserve, rules.tsra_name) == -sp.qty,'; Label = 'tessera ReportLoss burns exactly the waterfall (2.5b)' }
     @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'quantity_of(tx.mint, reserve, rules.tsra_name) == -excess,'; Label = 'tessera Claim burns exactly the Ticket excess (2.5b)' }
-    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'ticket_escrow: sf.ticket_escrow - sp.r_tickets,'; Label = 'tessera ReportLoss takes the Tickets share out of the escrow (2.5b)' }
+    @{ File = 'contracts/tessera/validators/vault_ops.ak'; Pattern = 'ticket_escrow: sf.ticket_escrow - sp.r_tickets,'; Label = 'tessera ReportLoss takes the Tickets share out of the escrow (2.5b)' }
     @{ File = 'contracts/tessera/validators/first_loss.ak'; Pattern = '-tsra_delta(tx, reserve) >= qty,'; Label = 'tessera first-loss Draw is burned in the same transaction (2.5b)' }
     @{ File = 'contracts/tessera/validators/first_loss.ak'; Pattern = 'threshold_met(cfg.operators, cfg.threshold, tx.extra_signatories),'; Label = 'tessera first-loss Draw needs the reserve committee (2.5b)' }
     @{ File = 'contracts/tessera/validators/first_loss.ak'; Pattern = 'value_ok(next_out, policy, reserve, s1.balance),'; Label = 'tessera first-loss State holds exactly its balance (2.5b)' }
     @{ File = 'contracts/tessera/validators/first_loss.ak'; Pattern = 'genesis_out_ok(boot, policy),'; Label = 'tessera first-loss genesis at the enterprise address (2.5b)' }
+    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'pairs.get_first(tx.withdrawals, Script(ops)) == Some(0),'; Label = 'tessera sTSRA moved transitions need a zero withdrawal from vault_ops (2.5b)' }
+    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'e.vault == policy && tag == kind'; Label = 'tessera sTSRA binds the ops run to this vault and this action (2.5b)' }
+    @{ File = 'contracts/tessera/validators/vault_ops.ak'; Pattern = 'pairs.get_first(tx.withdrawals, account) == Some(0),'; Label = 'tessera vault_ops withdrawal is a zero-amount gate (2.5b)' }
+    @{ File = 'contracts/tessera/validators/vault_ops.ak'; Pattern = 'RegisterCredential { .. } -> True'; Label = 'tessera vault_ops accepts only its own registration, no deregistration or delegation (2.5b)' }
     @{ File = 'contracts/vault/validators/yield_vault.ak'; Pattern = 'list.all(outs, fn(o) { continuing_ok(o, own_in.output) })'; Label = 'tessera F-6 yield_vault outputs pinned (2-H)' }
     @{ File = 'contracts/vault/validators/yield_vault.ak'; Pattern = 'genesis_out_ok(boot, policy_id)'; Label = 'tessera F-6 yield_vault bootstrap at the enterprise address (2-H)' }
     @{ File = 'contracts/multi-asset-vault/validators/multi_asset_vault.ak'; Pattern = 'list.all(outs, fn(o) { continuing_ok(o, own_in.output) })'; Label = 'tessera F-6 multi_asset_vault outputs pinned (2-H)' }
@@ -325,7 +329,7 @@ $rules = @(
     @{ File = 'contracts/tessera/lib/tessera/vault_state.ak'; Pattern = 'long_lock_ms >= 2 * short_cooldown_ms,'; Label = 'tessera sTSRA long lock at least twice the cooldown (2-H)' }
     @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'let sf = fold(s0, lo)'; Label = 'tessera sTSRA vesting booked at the validity lower bound only (2-H)' }
     @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'let price_assets = short_assets_at(sf, hi)'; Label = 'tessera sTSRA stakes priced at the upper bound (2-H)' }
-    @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'hi - lo <= rules.max_attest_window,'; Label = 'tessera sTSRA ReportYield window at most 1 day (2-H)' }
+    @{ File = 'contracts/tessera/validators/vault_ops.ak'; Pattern = 'hi - lo <= rules.max_attest_window,'; Label = 'tessera sTSRA ReportYield window at most 1 day (2-H)' }
     @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'owner_authorised(tx, p.owner),'; Label = 'tessera sTSRA UnlockLong needs its owner (2-H)' }
     @{ File = 'contracts/tessera/validators/stsra_vault.ak'; Pattern = 'lovelace_of(paid) >= lovelace_of(spent.value),'; Label = 'tessera sTSRA exits return the spent UTxOs ADA (2-H)' }
     @{ File = 'contracts/tessera/validators/reserve.ak'; Pattern = '!cfg.paused,'; Label = 'tessera mint blocked while paused (Config flag, 2.5a)' }
