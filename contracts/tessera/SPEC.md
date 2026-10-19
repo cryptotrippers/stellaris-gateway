@@ -669,9 +669,10 @@ exception either.
 
 ## 3a. First-loss reserve and ReportLoss (Phase 2.5 — DESIGN CHECKPOINT, not implemented)
 
-Status: **design reviewed; two changes applied (revision 2), awaiting
-re-approval of the changed parts. No validator code exists for this
-section.** It completes §3.8 and closes the §3.14 items 1 (loss-burn path),
+Status: **revision 4 — re-targeted at the Config / Supply split (2.5a,
+merged as PR #14), awaiting approval of the re-targeting. No validator code
+exists for this section.** Everything below that says "Reserve State" now says
+which of the two UTxOs it means. It completes §3.8 and closes the §3.14 items 1 (loss-burn path),
 3 (unvested first) and the 3% cap deferred by D-5. Decisions continue the 2.4
 numbering: **[D-8] … [D-19]**. Review outcome: D-9 to D-16, D-18 and D-19
 approved as written; the 3% reading in D-10 confirmed (stop funding at 3% of
@@ -686,7 +687,8 @@ supply, overflow to the treasury); **D-11 and D-12 changed (Change 1,
   `origin/main` (bfd54f6).
 * **Scripts touched** (every one moves its hash; nothing is deployed yet, and
   all pins/blueprints are rebuilt once at the end, as in 2.4):
-  `reserve.ak` (two new datum fields, 5 redeemers), `stsra_vault.ak` +
+  `reserve.ak` (two new Config fields, 5 redeemers; the Supply datum does not
+  change), `eligibility.ak` (rehash only: it decodes the grown ConfigState), `stsra_vault.ak` +
   `vault_state.ak` (new redeemer, datum changes, freeze reads, Claim becomes a
   State transition), new `first_loss.ak`. UI changes go in `docs/lovable-prompts/phase-2-5.md`,
   never in Lovable-owned files.
@@ -697,13 +699,13 @@ supply, overflow to the treasury); **D-11 and D-12 changed (Change 1,
 
 ### 3a.1 The first-loss reserve: where it lives, funding, cap, draw
 
-* **[D-9] Its own script UTxO, `validators/first_loss.ak`.** Not a Reserve
-  State field: the Reserve State holds exactly ADA + the thread token (§1), so
-  it cannot hold TSRA, and a burn needs the TSRA physically in the
+* **[D-9] Its own script UTxO, `validators/first_loss.ak`.** Not a reserve
+  datum field: the Config and the Supply each hold exactly ADA + their thread
+  token (§1), so neither can hold TSRA, and a burn needs the TSRA physically in the
   transaction. Same pattern as the vault: parameterised by `(seed, reserve:
   PolicyId)`, mints its own one-shot `state` thread token (genesis checked
   on-chain: one output, ADA + token only, `balance == 0`, `epoch == 0`),
-  committee read live from the genuine Reserve State.
+  committee read live from the genuine reserve **Config** (reference input).
 
   ```
   FirstLossState { balance: Int, epoch: Int }
@@ -725,7 +727,10 @@ supply, overflow to the treasury); **D-11 and D-12 changed (Change 1,
 * **[D-10] Funding and the 3% cap.** `ReportYield` pays
   `to_reserve = min(cut / 2, max(0, cap - balance))`, where
   `cap = 3% × minted_supply` (both from reference inputs: the genuine
-  first-loss State and the genuine Reserve State), and the rest of the
+  first-loss State and the genuine reserve **Supply**; `ReportYield` also
+  references the Config for the committee, as in 2.4. Referencing the hot
+  Supply means a TSRA mint or burn in the same block can invalidate an
+  in-flight `ReportYield`; it is committee-driven and rare, and retried), and the rest of the
   half, `cut/2 - to_reserve`, goes to the treasury in addition to its half.
   `to_reserve > 0` requires the first-loss State to be **spent** with
   `Deposit{to_reserve}` (so the balance is updated, not donated beside it).
@@ -822,10 +827,10 @@ supply, overflow to the treasury); **D-11 and D-12 changed (Change 1,
   `index_at_request`. After >99.9999% cumulative loss later losses no longer
   reduce new Tickets; at that point the vault should be retired, not patched.
 * **Authority/atomicity.** The transaction must spend exactly: the vault State,
-  the genuine Reserve State (`LossBurn`) and, if `d > 0` or there is a sweep,
-  the genuine first-loss State (`Draw`). The vault checks all three
-  transitions' datums and the exact burn quantity itself, so a missing
-  companion input cannot pass.
+  the genuine reserve **Supply and Config** (both under `LossBurn`, 3a.3) and,
+  if `d > 0` or there is a sweep, the genuine first-loss State (`Draw`). The
+  vault checks all four transitions' datums and the exact burn quantity
+  itself, so a missing companion input cannot pass.
 * **[D-13] No on-chain cap on `loss`.** The committee can burn any amount of
   staked TSRA, the same trust it already has to mint (§1) and to attest the
   reserve. Capping a *real* loss would leave TSRA unbacked. The mitigations
@@ -834,11 +839,14 @@ supply, overflow to the treasury); **D-11 and D-12 changed (Change 1,
 
 ### 3a.3 Reserve changes (`reserve.ak`)
 
-* New datum fields: `loss_pending_until: Int` (POSIX ms; `0` = none; genesis
-  must be `0`) and `vault_policy: ByteArray` (the sTSRA vault's script hash;
-  empty = unset; genesis must be empty, otherwise 28 bytes). Hard constants in
-  `rules.ak`: `max_loss_pending_ms = 7 days`, `loss_reopen_gap_ms = 7 days`.
-* **[D-17a] `vault_policy` is a Reserve State field, not a script
+* **ConfigState gains two fields** (the SupplyState does not change):
+  `loss_pending_until: Int` (POSIX ms; `0` = none; genesis must be `0`) and
+  `vault_policy: ByteArray` (the sTSRA vault's script hash; empty = unset;
+  genesis must be empty, otherwise 28 bytes). They go in the Config, not the
+  Supply, because the vault reads them on every exit and stake and must not be
+  invalidated by supply traffic (§1). Hard constants in `rules.ak`:
+  `max_loss_pending_ms = 7 days`, `loss_reopen_gap_ms = 7 days`.
+* **[D-17a] `vault_policy` is a Reserve Config field, not a script
   parameter.** A parameter is impossible: the vault is parameterised by the
   reserve's policy, so the reserve cannot also be parameterised by the vault's
   hash (circular). `SetVault{vault_policy}` (committee M-of-N, 28 bytes) sets
@@ -849,18 +857,35 @@ supply, overflow to the treasury); **D-11 and D-12 changed (Change 1,
   *not* a trust anchor for funds, only for which vault's Tickets may use the
   ungated burn. (Recommended over "set once": a set-once field would force a
   new reserve, and so a new TSRA policy, for every vault redeploy.)
-* **[D-14] Redeemers** (committee M-of-N except `VaultClaimBurn`; each:
-  exactly one State in/out, exact next datum with only the named fields
-  changed, `epoch + 1`, State value unchanged, allowed while `paused`, mint
-  nothing unless stated):
+* **[D-14] Redeemers** (committee M-of-N except `VaultClaimBurn`; each: exact
+  next datum with only the named fields changed, that kind's `epoch + 1`,
+  thread-token UTxO value unchanged and pinned (F-6), allowed while `paused`,
+  mint nothing unless stated). **Which UTxO each one spends is part of the
+  rule** (the 2.5a rule "one kind per transition" holds for all of them
+  except `LossBurn`):
 
-  | Redeemer | Preconditions | Next datum |
-  |---|---|---|
-  | `OpenLoss{until}` | finite window ≤ 1 day; `lo >= loss_pending_until + loss_reopen_gap_ms`; `hi < until <= lo + max_loss_pending_ms` | `loss_pending_until = until` |
-  | `CancelLoss` | finite window; `loss_pending_until > lo` (an active freeze) | `loss_pending_until = lo` |
-  | `LossBurn{qty, written_off}` | finite window ≤ 1 day; `hi < loss_pending_until` (freeze active for the whole validity); `0 < qty <= minted_supply`; `written_off >= qty`; TSRA mint delta == `-qty` | `minted_supply -= qty`; `attested_reserve = max(0, attested_reserve - written_off)`; `loss_pending_until = lo` |
-  | `SetVault{vault_policy}` | 28-byte policy id | `vault_policy` |
-  | `VaultClaimBurn{qty}` | **no committee, no KYC, no pause check**; see 3a.5 for the full conditions | `minted_supply -= qty`; `attested_reserve` **unchanged**; freeze untouched |
+  | Redeemer | Spends | Reads (reference) | Preconditions | Next datum |
+  |---|---|---|---|---|
+  | `OpenLoss{until}` | **Config** | — | finite window ≤ 1 day; `lo >= loss_pending_until + loss_reopen_gap_ms`; `hi < until <= lo + max_loss_pending_ms` | Config: `loss_pending_until = until` |
+  | `CancelLoss` | **Config** | — | finite window; `loss_pending_until > lo` (an active freeze) | Config: `loss_pending_until = lo` |
+  | `SetVault{vault_policy}` | **Config** | — | 28-byte policy id | Config: `vault_policy` |
+  | `LossBurn{qty, written_off}` | **Supply and Config** (the only redeemer allowed to spend both) | — | finite window ≤ 1 day; `hi < loss_pending_until` (freeze active for the whole validity, read from the spent Config); `0 < qty <= minted_supply`; `written_off >= qty`; TSRA mint delta == `-qty` | Supply: `minted_supply -= qty`, `attested_reserve = max(0, attested_reserve - written_off)`; Config: `loss_pending_until = lo` |
+  | `VaultClaimBurn{qty}` | **Supply only** | Config (for `vault_policy` only) | **no committee, no KYC, no pause check**; see 3a.5 for the full conditions | Supply: `minted_supply -= qty`; `attested_reserve` **unchanged**. Config untouched (so the freeze is untouched) |
+
+  **How `LossBurn` stays sound across two inputs.** A spend validator runs once
+  per script input, each with its own redeemer. Both executions run the same
+  `loss_burn` check, which requires exactly one genuine Supply **and** exactly
+  one genuine Config in the inputs and both returned (exact datums, exact
+  values, pinned), the committee from the **spent** Config, and the burn.
+  Every other redeemer keeps the 2.5a rule that no input of the other kind is
+  spent, so a transaction that gives the Supply `LossBurn` and the Config any
+  other redeemer (or the reverse) fails on the Config's (or Supply's) own
+  execution, and a transaction cannot use `LossBurn` on one kind while the
+  other kind is absent. `LossBurn` is the *only* path on which the Supply
+  moves with the Config spent, and the only one that moves
+  `loss_pending_until` backwards by itself (to `lo`); it never touches the
+  committee, the switches or `vault_policy`. Epochs: `LossBurn` bumps both
+  counters; `VaultClaimBurn` only the Supply's.
 
   `LossBurn` is **not** gated by `kyc_redeem` (no `holder`, no eligibility
   check), works while paused, and lowers `attested_reserve` by
@@ -873,8 +898,9 @@ supply, overflow to the treasury); **D-11 and D-12 changed (Change 1,
   exists until the next `Attest`. The reserve checks only `written_off >= qty`
   and the clamp at 0 (it cannot see the waterfall); the **vault's `ReportLoss`
   checks both numbers against its own waterfall** (`qty == u + d + R_stakers`,
-  `written_off == loss − residual`, read from the Reserve State's spent input
-  and returned output), so a mismatched pair cannot pass. The committee
+  `written_off == loss − residual`, read from the Supply's spent input and
+  returned output, and the Config's from its own pair), so a mismatched pair
+  cannot pass. The committee
   re-attests the exact figure afterwards.
   `VaultClaimBurn` lowers `minted_supply` only: the Ticket excess it burns was
   already written off here.
@@ -888,8 +914,11 @@ supply, overflow to the treasury); **D-11 and D-12 changed (Change 1,
 
 ### 3a.4 The "loss pending" freeze
 
-* **[D-15] Rule.** Read from the genuine Reserve State (reference input).
-  The freeze is a pure function of time:
+* **[D-15] Rule.** Read from the genuine reserve **Config** (reference input;
+  `genuine_config` returns the two new fields). Only committee actions and
+  `LossBurn` ever spend the Config, so supply traffic (Mint, Burn,
+  `VaultClaimBurn`) can no longer invalidate an in-flight exit or stake that
+  references it. The freeze is a pure function of time:
 
   ```
   frozen(rs, lo) = rs.loss_pending_until > lo
@@ -901,7 +930,9 @@ supply, overflow to the treasury); **D-11 and D-12 changed (Change 1,
   opposite for its **upper** bound (`hi < until`), so no transaction can be
   valid both as a user exit and as the loss report, and a user transaction
   cannot be backdated into the window. A missing, duplicated or planted
-  Reserve State fails closed (the exit is refused), consistent with `genuine_reserve`.
+  Config fails closed (the exit is refused), as `genuine_config` already does.
+  `ReportLoss` does not reference the Config for this: it **spends** it
+  (`LossBurn`) and reads `loss_pending_until` from the spent input.
 * **Time limit (cannot freeze forever).**
   1. One freeze lasts at most `max_loss_pending_ms` (7 days) from `lo` of its
      opening transaction, enforced on-chain; there is **no extension**.
@@ -937,7 +968,9 @@ supply, overflow to the treasury); **D-11 and D-12 changed (Change 1,
 * **Why this is safe to leave ungated.** The reserve does not trust the
   caller's `qty`; it recomputes the excess from the Ticket itself. Valid only
   if **all** hold:
-  1. `vault_policy` is set (28 bytes).
+  1. `vault_policy` is set (28 bytes), read from the genuine Config as a
+     **reference input** (`genuine_config`; missing or planted aborts). This is
+     the only thing `VaultClaimBurn` reads from the Config.
   2. The transaction **spends exactly one genuine Ticket**: an input at
      `Script(vault_policy)` carrying exactly one `position` marker of that
      policy, with an inline `TicketDatum(t)`; and the redeemer for that input,
@@ -954,23 +987,26 @@ supply, overflow to the treasury); **D-11 and D-12 changed (Change 1,
      `lib/tessera/vault_state.ak` (floor, capped at `value`), used by both the
      vault's `claim` and the reserve, so the two cannot disagree.
   5. The TSRA mint delta is exactly `-qty` (and nothing else is minted under
-     the policy), and the genuine Reserve State is spent once and returned
+     the policy), and the genuine reserve **Supply** is spent once and returned
      with `minted_supply - qty`, `epoch + 1`, every other field unchanged
      (`attested_reserve` too: the backing was written off in full at
-     `ReportLoss`, via `LossBurn`'s `written_off`).
+     `ReportLoss`, via `LossBurn`'s `written_off`). **The Config is not
+     spent** (the 2.5a rule), so a Claim never touches `loss_pending_until`.
   Not checked, on purpose: committee signature, `paused`, `kyc_redeem`, the
-  freeze (a frozen vault already refuses the Claim itself).
+  freeze (a frozen vault already refuses the Claim itself, and it reads the
+  same Config by reference).
   A planted or foreign Ticket fails (2); a planted State (no thread token)
   fails (3); a different `qty` fails (4). Because `qty` is pinned to a real
   Ticket's excess, `VaultClaimBurn` cannot be used to burn arbitrary TSRA past
   `kyc_redeem`: the only quantity it will ever burn is a Ticket's loss share.
 * **Vault side.** `Claim` now requires the burn to be exactly the excess
   (`mint delta == -excess`, was `<=`; with `excess == 0` the delta must be 0),
-  and the genuine Reserve State to be spent in the same transaction when
-  `excess > 0`. Loss-hit Claims therefore also serialise on the Reserve State;
-  no-loss Claims need neither the Reserve State as an input nor a burn. (The
-  freeze check reads the Reserve State from a reference input, or from the
-  spent input when the transaction spends it.)
+  and the genuine reserve **Supply** to be spent in the same transaction when
+  `excess > 0`. Loss-hit Claims therefore also serialise on the Supply;
+  no-loss Claims need neither the Supply as an input nor a burn. In **every**
+  Claim the freeze check reads the genuine **Config by reference** (a Claim
+  never spends the Config, so the reference is always available and is the one
+  the reserve's `VaultClaimBurn` reads too).
 * `ReportLoss` itself burns through `LossBurn` (committee-signed): unvested
   yield + first-loss draw + `R_stakers`. The Tickets' share is burned later,
   Ticket by Ticket, here.
@@ -1027,18 +1063,38 @@ token quantity is an int64, so repeated wipes overflow it).
 
 | Item | Change |
 |---|---|
-| `ReserveState` | `+ loss_pending_until`, `+ vault_policy` |
-| `reserve.ak` | `+ OpenLoss, CancelLoss, LossBurn, SetVault, VaultClaimBurn`; genesis `loss_pending_until == 0`, `vault_policy` empty |
+| `ConfigState` | `+ loss_pending_until`, `+ vault_policy` (`SupplyState` unchanged) |
+| `reserve.ak` | `+ OpenLoss, CancelLoss, SetVault` (Config), `+ VaultClaimBurn` (Supply, Config by reference), `+ LossBurn` (Supply **and** Config); genesis Config `loss_pending_until == 0`, `vault_policy` empty |
+| `reserve_ref.ak` | `genuine_config` returns the grown ConfigState; one reader for the vault, `VaultClaimBurn` and the registry |
+| `eligibility.ak` | rehash only (decodes the grown `ConfigDatum`; reads the committee as before) |
 | `first_loss.ak` | new: thread token, `Deposit`, `Draw` |
 | `VaultState` | `first_loss_addr -> first_loss: PolicyId`; `+ short_gen, long_gen`; `+ ticket_escrow` |
 | `Position` | `+ gen` |
 | `VaultRedeemer` | `+ ReportLoss{loss}`; the type moves to `lib/` so the reserve can name `Claim` |
 | `RequestUnstake` | `ticket_escrow += v` |
-| `Claim` | now spends the State (`ticket_escrow -= value`); burns exactly the excess; with `excess > 0` also spends the Reserve State (`VaultClaimBurn`) |
-| exits/stakes | read Reserve State (freeze); last-share exits also spend the first-loss State |
+| `Claim` | now spends the State (`ticket_escrow -= value`); burns exactly the excess; reads the Config by reference (freeze); with `excess > 0` also spends the reserve Supply (`VaultClaimBurn`) |
+| exits/stakes | read the reserve Config by reference (freeze); last-share exits also spend the first-loss State |
+| `ReportLoss` | spends vault State + reserve Supply + reserve Config (`LossBurn`) + first-loss State when `d > 0` or a sweep |
 | `rules.ak` / `vault_state.ak` | `max_loss_pending_ms`, `loss_reopen_gap_ms`, `min_loss_index`, `dead_price_den = 1000`, `first_loss_cap_bps = 300`, `split_loss`, `class_dead`, `sweep`, shared `ticket_payout` helpers |
 
 ### 3a.9 Test list
+
+*Reserve, which UTxO (the 2.5a cross-kind tests, extended):* `OpenLoss`,
+`CancelLoss`, `SetVault` spend the Config and **cannot also spend the
+Supply**; `VaultClaimBurn` spends the Supply and **cannot also spend the
+Config**; `LossBurn` with only the Supply, or only the Config, rejected; with
+both spent, the Supply given `LossBurn` and the Config given `SetPaused` (or
+`OpenLoss`, `Rotate`, any other) rejected, and the reverse; `Mint`, `Burn`,
+`Attest`, `SetCap` still cannot spend the Config, and `Rotate`, `SetPaused`,
+`SetKyc` still cannot spend the Supply; `LossBurn` changes no Config field but
+`loss_pending_until` and `epoch` (committee, switches, policies each pinned),
+and no Supply field but `minted_supply`, `attested_reserve` and `epoch`; both
+epochs bump; a planted Config or planted Supply beside the genuine one rejected
+even when the planted one carries the real committee; a `LossBurn` committee
+taken from a *referenced* (not spent) Config rejected; `VaultClaimBurn` without
+a Config reference, with a planted one, or with `vault_policy` unset rejected;
+Config reference not spent by a Claim; thread tokens still move only at
+genesis (the 2.5a tests stay green unchanged).
 
 *Reserve:* `OpenLoss` — needs committee; `until` beyond 7 days rejected; `until
 <= hi` rejected; reopening inside the 7-day gap rejected; opening while a
@@ -1091,9 +1147,10 @@ is unchanged by ReportLoss plus every open Ticket's Claim, within `[−1, +2n]`*
 (table: round numbers exact; awkward numbers; `T = 0`; `A = 0`; clamp case
 `attested_reserve < written_off`); the committee cannot mint `R_tickets` after
 `ReportLoss` (mint at the old headroom rejected); State
-value, first-loss balance and `minted_supply` conservation; requires the Reserve
-State and (when needed) the first-loss State to be spent; **no freeze →
-rejected**; `hi >= until` rejected; Reserve input not genuine rejected; shares
+value, first-loss balance and `minted_supply` conservation; requires the
+reserve Supply **and** Config and (when needed) the first-loss State to be
+spent; **no freeze → rejected**; `hi >= until` rejected; Supply or Config not
+genuine rejected; shares
 unchanged except dead classes; `loss <= 0` rejected; changing any bound
 rejected; **a price can fall only via ReportLoss** (property test: for every
 other redeemer on a table of States, per-share price and `loss_index` do not
@@ -1101,7 +1158,9 @@ fall).
 
 *Freeze:* `Claim`, `UnlockLong`, `RequestUnstake`, `StakeShort`, `StakeLong`
 each rejected with `until > lo`, accepted with `lo == until` and after; a
-missing or planted Reserve State rejected; a freeze that **lapses** unfreezes
+missing or planted Config rejected (a Supply in its place rejected); a Mint or
+Burn between the user's build and submit does not invalidate the exit (the
+exit references the Config only); a freeze that **lapses** unfreezes
 everything with no committee action; a tx with `lo < until <= hi` is rejected
 as an exit and as a ReportLoss.
 
@@ -1113,7 +1172,7 @@ genesis `ticket_escrow != 0` rejected; planted Ticket still unclaimable.
 
 *Claim excess / conservation:* `payout + excess == v`; Claim burns **exactly**
 the excess (one more, one less rejected; `excess == 0` needs mint delta 0 and
-no Reserve input); with `excess > 0` the Reserve State must be spent; the
+no Supply input); with `excess > 0` the Supply must be spent (`VaultClaimBurn`); the
 index floor never divides by zero; Claim after a drop pays `v·idx/idx_req`.
 **Conservation, end to end:** simulate a ReportLoss then every open Ticket's
 Claim over a table of states (round numbers: burned total == `loss`
@@ -1136,7 +1195,7 @@ windfall; `ReportYield` into the emptied class allocates it nothing.
 *Funding:* `to_reserve` capped at 3% of `minted_supply` minus balance; overflow
 to treasury; conservation `to_reserve + to_treasury + net == gross`;
 `to_reserve > 0` requires the first-loss State spent with a matching
-`Deposit`; planted first-loss or Reserve State rejected.
+`Deposit`; planted first-loss State, Supply or Config rejected.
 
 ### 3a.10 Mutation plan
 
@@ -1152,7 +1211,8 @@ Expected guard groups, about 140 mutants:
 | Index / escrow | floor removed; formula uses `A` instead of `A + T`, or `rem` instead of `rem'`; applied only to one class; not applied at all; `ticket_escrow` not updated on `RequestUnstake` / `Claim`; Claim subtracts `payout` not `value`; stakers charged the whole remainder (double charge) |
 | Burn/conservation | burn ≠ `u + d + R_stakers`; `written_off` ≠ `loss − residual` (omits `R_tickets`, or equals `qty`); `attested_reserve` lowered by `qty` instead of `written_off`; clamp at 0 dropped; `written_off >= qty` dropped; sweep burned instead of deposited; State value unchecked; `minted_supply` / `attested_reserve` not lowered |
 | VaultClaimBurn | Ticket not required; marker unchecked; address unchecked; redeemer unchecked; State thread token unchecked; `qty` not pinned to the excess (`==` → `<=`, `>=`); `ticket_payout` cap dropped; `attested_reserve` lowered; committee / KYC / pause wrongly required; two Tickets accepted; `vault_policy` unset accepted; Claim burn `==` → `<=` |
-| Freeze | `>` ↔ `>=`; `lo` ↔ `hi`; each of the five actions unfrozen in turn; fail-open on missing Reserve State; 7-day constants ×10; gap dropped; extension allowed; `OpenLoss` window unchecked |
+| Freeze | `>` ↔ `>=`; `lo` ↔ `hi`; each of the five actions unfrozen in turn; fail-open on missing Config; freeze read from the Supply or from a spent Config in an exit; 7-day constants ×10; gap dropped; extension allowed; `OpenLoss` window unchecked |
+| Split (which UTxO) | `LossBurn` accepted with only the Supply, or only the Config; the other input's redeemer unchecked; committee read from a reference Config instead of the spent one; `LossBurn` allowed to change a Config field other than `loss_pending_until`/`epoch` (committee, switches, `vault_policy` each); Config epoch not bumped; `OpenLoss`/`CancelLoss`/`SetVault` allowed to spend the Supply; `VaultClaimBurn` allowed to spend the Config, or accepted without a Config reference; `vault_policy` read from a planted Config; the 2.5a one-kind rule relaxed for any other redeemer |
 | Reserve redeemers | committee dropped; `kyc_redeem` wrongly applied; pause check added; next datum unchecked; epoch not bumped |
 | first_loss | thread token ignored; draw above balance; draw unburned; deposit unmatched; committee dropped |
 | Dead class | threshold off by one; generation not bumped; sweep omitted; invariant dropped; `mint_shares` zero branch |
@@ -1168,18 +1228,32 @@ guards on redeemers that already fix the number of vault inputs, as in §3.13.
 2. Same-block front-running at the opening of a freeze; secondary-market sales
    of sTSRA during a freeze.
 3. `Claim` is now a State transition (`ticket_escrow`), so it contends with
-   stakes and unstakes; loss-hit Claims also contend on the Reserve State, and
-   last-share exits on the first-loss State.
+   stakes and unstakes; loss-hit Claims also contend on the reserve Supply (not the Config), and
+   last-share exits on the first-loss State. `ReportYield` references the hot
+   Supply for the 3% cap (3a.1), so a same-block mint or burn can invalidate it.
 4. Tickets and stakers bear the same rate, but the Ticket burn is rounded up
    per Ticket (< 2 units each, 3a.2): a few units of Ticket-holder dust, in the
    protocol's favour.
-5. Every exit/stake reads the Reserve State for the freeze; see 3a.13 for
-   why that makes the config/supply split a 2.5 item.
+5. Every exit/stake reads the reserve **Config** for the freeze. After the
+   split (2.5a, 3a.13) only committee actions and `LossBurn` spend it, so
+   supply traffic cannot invalidate or grief an exit. `LossBurn` itself
+   invalidates in-flight exits once (they are frozen anyway). The Supply is
+   still contended by Mint, Burn, Attest and loss-hit Claims.
 6. `VaultClaimBurn` adds a second ungated burn path to the reserve. It is
    pinned to a real Ticket's recomputed excess (3a.5), but it is new
    attack surface and gets its own mutation group.
 
 ### 3a.12 Decisions to confirm
+
+**Revision 4 (2.5a merged as PR #14) — to approve: the re-targeting only, no
+new decision.** `loss_pending_until` and `vault_policy` live in the Config
+(3a.3); `OpenLoss`, `CancelLoss`, `SetVault` are Config transitions;
+`LossBurn` spends Supply **and** Config (the one redeemer allowed to spend
+both); `VaultClaimBurn` spends the Supply only and reads `vault_policy` from
+the Config by reference; the vault's freeze check reads the Config by
+reference. Two consequences the earlier text hid, both accepted here:
+`ReportYield` references the hot Supply for the 3% cap (3a.1), and a
+`VaultClaimBurn` needs the Config reference after all (3a.5).
 
 Revision 2 **approved** (D-11, D-12, D-17, D-17a, D-20), with one fix applied
 as revision 3: **D-14** — `LossBurn{qty, written_off}` lowers `attested_reserve`
@@ -1195,53 +1269,30 @@ re-approve:**
   with `E = A + T`.
 * **D-17 (replaced)** — `VaultClaimBurn{qty}`: ungated, pinned to a genuine
   Ticket's recomputed excess.
-* **D-17a (new)** — `vault_policy` is a Reserve State field set by
+* **D-17a (new)** — `vault_policy` is a Reserve Config field set by
   `SetVault` (a reserve script parameter is impossible: circular hash).
 * **D-20 (new, recommendation in 3a.13)** — split the Reserve State into
   config and supply UTxOs in 2.5, staged as 2.5a before the loss logic.
 
-### 3a.13 Reserve State: config / supply split — recommendation (D-20)
+### 3a.13 Reserve State: config / supply split (D-20) — done in Phase 2.5a
 
-Question (§3.14 item 2): decide the split in 2.5 or 2.6? **Recommendation:
-decide now and do it in 2.5, as a first stage "2.5a" that changes no
-behaviour, with its own approval stop, before the loss logic ("2.5b").**
+Implemented and merged as PR #14 (§1). The recommendation and its reasoning are
+kept in the git history of this section; what 2.5b builds on:
 
-Why now:
-1. **The freeze makes it a liveness issue, not a convenience.** Every exit
-   (and stake) now references the Reserve State, and the State is spent by every
-   TSRA mint and burn. `Burn` is permissionless and, with `kyc_redeem` off,
-   ungated and allowed for 1 unit, so anyone can spend the State once per
-   block for about the transaction fee and make in-flight exits that
-   reference it fail. With config split out, exits reference a UTxO that only
-   committee actions can change, so this stops being possible. (The vault State
-   itself remains contended by stakes/unstakes, the existing §3.9 limit.)
-2. **One hash change instead of two.** 2.5 already changes the reserve datum,
-   the vault, and what `eligibility.ak` and the vault read. Splitting in 2.6
-   changes all of them again after the loss logic has been tested.
-3. The queue (2.6) would otherwise be written against the hot State.
-
-Shape (same reserve script and policy; two thread tokens, `config` and
-`supply`, both minted once at genesis):
-* **ConfigState**: `operators`, `threshold`, `paused`, `kyc_mint`,
-  `kyc_redeem`, `kyc_stake`, `eligibility_policy`, `vault_policy`,
-  `loss_pending_until`, `epoch`. Changed by `Rotate`, `SetPaused`, `SetKyc`,
-  `SetVault`, `OpenLoss`, `CancelLoss` and the freeze-closing step of
-  `LossBurn`. Read by reference by `Mint`, `Burn`, the vault, the
-  eligibility registry and (later) the queue.
-* **SupplyState**: `minted_supply`, `attested_reserve`, `mint_cap`,
-  `attestation_epoch`, `attested_at`, `epoch`. Changed by `Mint`, `Burn`,
-  `Attest`, `SetCap`, `LossBurn`, `VaultClaimBurn`.
-* `ReportLoss` then spends vault State, SupplyState, ConfigState and (when
-  needed) first-loss State: four script inputs, committee-driven and rare.
-
-Cost and risk, stated plainly: it rewrites the validator with the largest test
-suite (`reserve.ak`, 43 mutants plus the 2.3 gates), changes genesis (two
-outputs, two tokens, a check for each), and moves the committee source for
-`eligibility.ak`. Mitigation: 2.5a re-runs the whole existing 2.2 and 2.3 suite
-and mutation pass against the split with no behaviour change allowed, and stops
-for review before any loss code is written. If you decline the split, the
-fallback is to keep one State and accept the exit-grief vector above as an
-audit item; 2.5b is otherwise identical.
+* **ConfigState** (changes by committee action; read by reference by the vault,
+  the registry, `VaultClaimBurn` and later the queue): the 2.5a fields plus
+  `vault_policy` and `loss_pending_until`, added in 2.5b (3a.3). Spent by
+  `Rotate`, `SetPaused`, `SetKyc`, `SetVault`, `OpenLoss`, `CancelLoss`
+  and `LossBurn`.
+* **SupplyState** (unchanged by 2.5b): spent by `Mint`, `Burn`, `Attest`,
+  `SetCap`, `LossBurn` and `VaultClaimBurn`.
+* `ReportLoss` spends the vault State, the Supply, the Config and (when
+  needed) the first-loss State: four script inputs, committee-driven and rare.
+* **What 2.5b relaxes.** 2.5a's rule "a transition spends one kind and none of
+  the other" gets exactly one exception, `LossBurn` (3a.3). The 2.5a tests that
+  pin the rule stay, and `LossBurn` gets its own both-or-neither tests.
+* **What the split buys the freeze.** Exits and stakes reference only the
+  Config, which supply traffic cannot spend (3a.4, risk 5).
 
 ## 4. Redemption queue
 Instant tier up to the buffer; Request UTxOs bucketed per day; payable after
