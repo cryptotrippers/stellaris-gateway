@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AlertTriangle, ShieldCheck, ArrowDown } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { AlertTriangle, ShieldCheck, ArrowDown, FileCheck, KeyRound } from "lucide-react";
 import { BRAND } from "@/config/brand";
 import { TRANSPARENCY as T } from "@/data/transparency.mock";
 
