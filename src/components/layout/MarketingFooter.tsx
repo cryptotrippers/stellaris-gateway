@@ -27,6 +27,7 @@ const COLS: Col[] = [
     title: "Learn & build",
     links: [
       ["Learn", "/learn"],
+      ["Ask Stellaris", "/ask"],
       ["Developers", "/developers"],
       ["For Issuers", "/funding"],
     ],

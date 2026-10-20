@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AppRouteImport } from './routes/app'
+import { Route as AskRouteImport } from './routes/ask'
 import { Route as AssetsRouteImport } from './routes/assets'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as BlockfrostHealthRouteImport } from './routes/blockfrost-health'
@@ -35,6 +36,7 @@ import { Route as YieldRouteImport } from './routes/yield'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotwellKnownChar93SecurityChar91DotChar93txtRouteImport } from './routes/[.well-known]/security[.]txt'
+import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as FundingIndexRouteImport } from './routes/funding.index'
 import { Route as FundingIdRouteImport } from './routes/funding.$id'
 import { Route as FundingNewRouteImport } from './routes/funding.new'
@@ -68,6 +70,11 @@ const AboutRoute = AboutRouteImport.update({
 const AppRoute = AppRouteImport.update({
   id: '/app',
   path: '/app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AskRoute = AskRouteImport.update({
+  id: '/ask',
+  path: '/ask',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AssetsRoute = AssetsRouteImport.update({
@@ -188,6 +195,11 @@ const Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute =
     path: '/.well-known/security.txt',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiChatRoute = ApiChatRouteImport.update({
+  id: '/api/chat',
+  path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FundingIndexRoute = FundingIndexRouteImport.update({
   id: '/funding/',
   path: '/funding/',
@@ -292,6 +304,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/app': typeof AppRoute
+  '/ask': typeof AskRoute
   '/assets': typeof AssetsRoute
   '/auth': typeof AuthRoute
   '/blockfrost-health': typeof BlockfrostHealthRoute
@@ -315,6 +328,7 @@ export interface FileRoutesByFullPath {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.well-known/security.txt': typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
+  '/api/chat': typeof ApiChatRoute
   '/funding/$id': typeof FundingIdRoute
   '/funding/new': typeof FundingNewRoute
   '/governance/$sip': typeof GovernanceSipRoute
@@ -339,6 +353,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/app': typeof AppRoute
+  '/ask': typeof AskRoute
   '/assets': typeof AssetsRoute
   '/auth': typeof AuthRoute
   '/blockfrost-health': typeof BlockfrostHealthRoute
@@ -360,6 +375,7 @@ export interface FileRoutesByTo {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.well-known/security.txt': typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
+  '/api/chat': typeof ApiChatRoute
   '/funding/$id': typeof FundingIdRoute
   '/funding/new': typeof FundingNewRoute
   '/governance/$sip': typeof GovernanceSipRoute
@@ -385,6 +401,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/app': typeof AppRoute
+  '/ask': typeof AskRoute
   '/assets': typeof AssetsRoute
   '/auth': typeof AuthRoute
   '/blockfrost-health': typeof BlockfrostHealthRoute
@@ -408,6 +425,7 @@ export interface FileRoutesById {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.well-known/security.txt': typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
+  '/api/chat': typeof ApiChatRoute
   '/funding/$id': typeof FundingIdRoute
   '/funding/new': typeof FundingNewRoute
   '/governance/$sip': typeof GovernanceSipRoute
@@ -434,6 +452,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/app'
+    | '/ask'
     | '/assets'
     | '/auth'
     | '/blockfrost-health'
@@ -457,6 +476,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/.well-known/security.txt'
+    | '/api/chat'
     | '/funding/$id'
     | '/funding/new'
     | '/governance/$sip'
@@ -481,6 +501,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/app'
+    | '/ask'
     | '/assets'
     | '/auth'
     | '/blockfrost-health'
@@ -502,6 +523,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/.well-known/security.txt'
+    | '/api/chat'
     | '/funding/$id'
     | '/funding/new'
     | '/governance/$sip'
@@ -526,6 +548,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/app'
+    | '/ask'
     | '/assets'
     | '/auth'
     | '/blockfrost-health'
@@ -549,6 +572,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/.well-known/security.txt'
+    | '/api/chat'
     | '/funding/$id'
     | '/funding/new'
     | '/governance/$sip'
@@ -574,6 +598,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   AppRoute: typeof AppRoute
+  AskRoute: typeof AskRoute
   AssetsRoute: typeof AssetsRoute
   AuthRoute: typeof AuthRoute
   BlockfrostHealthRoute: typeof BlockfrostHealthRoute
@@ -597,6 +622,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute: typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
+  ApiChatRoute: typeof ApiChatRoute
   FundingIdRoute: typeof FundingIdRoute
   FundingNewRoute: typeof FundingNewRoute
   IssuersIdRoute: typeof IssuersIdRoute
@@ -632,6 +658,13 @@ declare module '@tanstack/react-router' {
       path: '/app'
       fullPath: '/app'
       preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ask': {
+      id: '/ask'
+      path: '/ask'
+      fullPath: '/ask'
+      preLoaderRoute: typeof AskRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/assets': {
@@ -793,6 +826,13 @@ declare module '@tanstack/react-router' {
       path: '/.well-known/security.txt'
       fullPath: '/.well-known/security.txt'
       preLoaderRoute: typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/chat': {
+      id: '/api/chat'
+      path: '/api/chat'
+      fullPath: '/api/chat'
+      preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/funding/': {
@@ -988,6 +1028,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   AppRoute: AppRoute,
+  AskRoute: AskRoute,
   AssetsRoute: AssetsRoute,
   AuthRoute: AuthRoute,
   BlockfrostHealthRoute: BlockfrostHealthRoute,
@@ -1013,6 +1054,7 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute:
     Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute,
+  ApiChatRoute: ApiChatRoute,
   FundingIdRoute: FundingIdRoute,
   FundingNewRoute: FundingNewRoute,
   IssuersIdRoute: IssuersIdRoute,
