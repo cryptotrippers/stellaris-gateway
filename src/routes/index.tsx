@@ -878,7 +878,9 @@ function ProtocolArchitecture() {
             ))}
           </ul>
           <div className="mt-6 flex items-center gap-3 border-t border-deep-foreground/15 pt-5">
-            <StatusPill status="pending" />
+            <span className="inline-flex items-center rounded-full border border-gold/50 px-2 py-0.5 text-xs font-medium text-gold">
+              Pending
+            </span>
             <p className="text-xs opacity-75">
               Independent security audit not yet completed.
             </p>
