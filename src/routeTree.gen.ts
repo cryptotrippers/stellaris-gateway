@@ -35,6 +35,7 @@ import { Route as YieldRouteImport } from './routes/yield'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotwellKnownChar93SecurityChar91DotChar93txtRouteImport } from './routes/[.well-known]/security[.]txt'
+import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as FundingIndexRouteImport } from './routes/funding.index'
 import { Route as FundingIdRouteImport } from './routes/funding.$id'
 import { Route as FundingNewRouteImport } from './routes/funding.new'
@@ -188,6 +189,11 @@ const Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute =
     path: '/.well-known/security.txt',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiChatRoute = ApiChatRouteImport.update({
+  id: '/api/chat',
+  path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FundingIndexRoute = FundingIndexRouteImport.update({
   id: '/funding/',
   path: '/funding/',
@@ -315,6 +321,7 @@ export interface FileRoutesByFullPath {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.well-known/security.txt': typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
+  '/api/chat': typeof ApiChatRoute
   '/funding/$id': typeof FundingIdRoute
   '/funding/new': typeof FundingNewRoute
   '/governance/$sip': typeof GovernanceSipRoute
@@ -360,6 +367,7 @@ export interface FileRoutesByTo {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.well-known/security.txt': typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
+  '/api/chat': typeof ApiChatRoute
   '/funding/$id': typeof FundingIdRoute
   '/funding/new': typeof FundingNewRoute
   '/governance/$sip': typeof GovernanceSipRoute
@@ -408,6 +416,7 @@ export interface FileRoutesById {
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.well-known/security.txt': typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
+  '/api/chat': typeof ApiChatRoute
   '/funding/$id': typeof FundingIdRoute
   '/funding/new': typeof FundingNewRoute
   '/governance/$sip': typeof GovernanceSipRoute
@@ -457,6 +466,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/.well-known/security.txt'
+    | '/api/chat'
     | '/funding/$id'
     | '/funding/new'
     | '/governance/$sip'
@@ -502,6 +512,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/.well-known/security.txt'
+    | '/api/chat'
     | '/funding/$id'
     | '/funding/new'
     | '/governance/$sip'
@@ -549,6 +560,7 @@ export interface FileRouteTypes {
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/.well-known/security.txt'
+    | '/api/chat'
     | '/funding/$id'
     | '/funding/new'
     | '/governance/$sip'
@@ -597,6 +609,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute: typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
+  ApiChatRoute: typeof ApiChatRoute
   FundingIdRoute: typeof FundingIdRoute
   FundingNewRoute: typeof FundingNewRoute
   IssuersIdRoute: typeof IssuersIdRoute
@@ -793,6 +806,13 @@ declare module '@tanstack/react-router' {
       path: '/.well-known/security.txt'
       fullPath: '/.well-known/security.txt'
       preLoaderRoute: typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/chat': {
+      id: '/api/chat'
+      path: '/api/chat'
+      fullPath: '/api/chat'
+      preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/funding/': {
@@ -1013,6 +1033,7 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute:
     Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute,
+  ApiChatRoute: ApiChatRoute,
   FundingIdRoute: FundingIdRoute,
   FundingNewRoute: FundingNewRoute,
   IssuersIdRoute: IssuersIdRoute,
