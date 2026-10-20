@@ -2,7 +2,7 @@ import { createFileRoute, Link, Outlet, useMatchRoute, useNavigate } from "@tans
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, LayoutGrid, List, AlertTriangle, RotateCcw } from "lucide-react";
-import { AppShell } from "@/components/layout/AppShell";
+import { MarketingLayout } from "@/components/layout/MarketingLayout";
 import { Badge } from "@/components/ui/StatusBadge";
 import { FundingBar } from "@/components/ui/funding-bar";
 import { formatAda, lovelaceToAda } from "@/lib/format";
@@ -48,7 +48,7 @@ export const Route = createFileRoute("/marketplace")({
 function MarketplaceLayout() {
   const matchRoute = useMatchRoute();
   const onDetail = matchRoute({ to: "/marketplace/$id" });
-  return <AppShell>{onDetail ? <Outlet /> : <MarketplaceIndex />}</AppShell>;
+  return <MarketingLayout><div className="home-container py-6 md:py-10">{onDetail ? <Outlet /> : <MarketplaceIndex />}</div></MarketingLayout>;
 }
 
 const SORTS: Record<string, string> = {
