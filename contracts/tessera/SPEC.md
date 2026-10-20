@@ -1428,9 +1428,9 @@ script, not into those two. Applying parameters adds a few dozen bytes to each.
 
 ## 4. Redemption queue (Phase 2.6 — DESIGN CHECKPOINT, nothing implemented)
 
-Status: **revision 2.** D-21 to D-31 approved as recommended. Revision 2 adds D-32
-(short mode), D-33 (Defund notice and veto), D-34 (limit floor) and D-35 (the Sink
-invariant), awaiting approval. R-2 stays an audit item (A-1).
+Status: **revision 2, approved** (0825b2b). D-21 to D-35 approved as committed: short
+mode (D-32), Defund notice and veto-by-presence (D-33), the 1% limit floor (D-34) and
+the Sink invariant (D-35). R-2 stays an audit item (A-1).
 
 Baseline: §4 of the skeleton ("instant
 tier up to the buffer; Request UTxOs bucketed per day; payable after
@@ -1862,20 +1862,20 @@ at all (e.g. sanctions).**
 | # | Decision | Recommended | Needs |
 |---|---|---|---|
 | D-21 | Four scripts (`redeem_queue`, `queue_flow`, `queue_admin`, `queue_short`); nothing existing changes | approved | – |
-| D-22 | Lock at request; Sink; batched sweep through the existing `Burn`; no reserve change | yes | you |
-| D-23 | On-chain payout from a Buffer in a payout asset; fiat leg explicitly off-chain | yes | you, counsel |
-| D-24 | Day buckets, `payable_after` stored at request, key-address payout, tip ≤ 1 ADA | yes | you |
-| D-25 | `kyc_redeem` at request/instant; none at settle | yes (2.3 decision) | – |
-| D-26 | Instant tier = shard balance and limits, `instant_max` | yes | you |
-| D-27 | Limits per shard (global ÷ shards), decreases with 7-day notice | yes | you |
-| D-28 | Suspension ≤ 3 days, 7-day reopen gap, blocks instant and settle only | yes | you |
-| D-29 | Loss freeze blocks instant and settle; request and cancel stay open | yes | you |
+| D-22 | Lock at request; Sink; batched sweep through the existing `Burn`; no reserve change | approved | – |
+| D-23 | On-chain payout from a Buffer in a payout asset; fiat leg explicitly off-chain | approved | – |
+| D-24 | Day buckets, `payable_after` stored at request, key-address payout, tip ≤ 1 ADA | approved | – |
+| D-25 | `kyc_redeem` at request/instant; none at settle | approved (2.3 decision) | – |
+| D-26 | Instant tier = shard balance and limits, `instant_max` | approved | – |
+| D-27 | Limits per shard (global ÷ shards), decreases with 7-day notice | approved | – |
+| D-28 | Suspension ≤ 3 days, 7-day reopen gap, blocks instant and settle only | approved | – |
+| D-29 | Loss freeze blocks instant and settle; request and cancel stay open | approved | – |
 | D-30 | Requests are independent UTxOs; K Buffer shards; Supply touched once per sweep; no cursor in normal mode (oldest-day-first only in short mode, D-32) | approved | – |
-| D-31 | Grace: `grace_ms` ≤ 30 days, default 14, committee-granted | yes | counsel |
-| D-32 | Short mode: lazy registration, one ShortState, oldest-day-first over registered Requests, permissionless entry by evidence | yes | you |
-| D-33 | Defund: 7-day notice, anyone's veto by showing unpaid payable Requests, refused in short mode | yes | you |
-| D-34 | Daily limit floor = max(10,000 TSRA, 1% of minted supply), checked at every write and at `ApplyLimits`, `SyncFloor` | yes | you |
-| D-35 | I-Q1: a Sink is spendable only in a tx that burns all its TSRA through the reserve | yes | you |
+| D-31 | Grace: `grace_ms` ≤ 30 days, default 14, committee-granted | approved | – |
+| D-32 | Short mode: lazy registration, one ShortState, oldest-day-first over registered Requests, permissionless entry by evidence | approved | – |
+| D-33 | Defund: 7-day notice, anyone's veto by showing unpaid payable Requests, refused in short mode | approved | – |
+| D-34 | Daily limit floor = max(10,000 TSRA, 1% of minted supply), checked at every write and at `ApplyLimits`, `SyncFloor` | approved | – |
+| D-35 | I-Q1: a Sink is spendable only in a tx that burns all its TSRA through the reserve | approved | – |
 
 Defaults for QueueConfig (all committee-set within hard bounds, genesis values are
 bootstrap parameters): `settle_delay` 2 d (≤ 7 d), `min_request` 100 TSRA,
