@@ -17,9 +17,14 @@ import {
   Layers,
   Clock3,
   Landmark,
+  Eye,
+  Boxes,
+  FileCode2,
+  Globe,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/StatusBadge";
+import { StatusPill } from "@/components/brand/StatusPill";
 import { StellarisWordmark } from "@/components/brand/Logo";
 import { MarketingNav } from "@/components/layout/MarketingNav";
 import { MarketingFooter } from "@/components/layout/MarketingFooter";
@@ -121,8 +126,10 @@ function LandingPage() {
         </section>
         <AssetClasses />
         <HowItWorks />
+        <ClarityStandard />
         <FeaturedAssets />
         <WhyBlockchain />
+        <ProtocolArchitecture />
         <ProductModel />
         <ReservePreview />
         <TransparencyLinks />
@@ -324,80 +331,166 @@ function ProductModel() {
 }
 
 function ReservePreview() {
+  const [view, setView] = useState<"overview" | "methodology">("overview");
   return (
     <section className="border-y border-border bg-secondary/40">
-      <div className="home-container home-section grid gap-10 lg:grid-cols-[1fr_1.15fr]">
-        <div>
-          <p className="home-eyebrow">Transparency, by design</p>
-          <h2 className="mt-3 text-3xl font-semibold leading-tight md:text-4xl">
-            See what sits
-            <br className="hidden md:block" /> behind the token.
-          </h2>
-          <p className="mt-5 max-w-md text-sm leading-relaxed text-muted-foreground">
-            Four reserve sleeves. Published target bands. A first-loss reserve designed to absorb
-            losses before stakers — not a guarantee against loss.
-          </p>
-          <div className="mt-6 border-l-2 border-success pl-4">
-            <p className="text-sm font-semibold">The protocol pays before stakers</p>
-            <p className="mt-1 max-w-md text-xs leading-relaxed text-muted-foreground">
-              In the intended loss order, originator collateral comes first, then the protocol
-              first-loss reserve, the overcollateral buffer, stakers and finally {BRAND.base.ticker}{" "}
-              holders.
+      <div className="home-container home-section">
+        <div className="flex flex-wrap items-end justify-between gap-6">
+          <div className="max-w-2xl">
+            <p className="home-eyebrow">Transparency, by design</p>
+            <h2 className="mt-3 text-3xl font-semibold leading-tight md:text-4xl">
+              See what sits behind the token.
+            </h2>
+            <p className="mt-4 text-sm leading-relaxed text-muted-foreground md:text-base">
+              Four reserve sleeves with published target bands, and a first-loss reserve designed
+              to absorb losses before stakers — not a guarantee against loss.
             </p>
           </div>
-          <Button asChild variant="link" className="mt-6 px-0">
-            <Link to="/transparency">
-              Full reserve breakdown <ArrowUpRight />
-            </Link>
-          </Button>
-        </div>
-        <div>
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold">Reserve allocation</h3>
-            <Badge tone="warning">Testnet preview — illustrative data</Badge>
+          <div className="home-toggle" role="group" aria-label="Reserve view">
+            <button
+              type="button"
+              aria-pressed={view === "overview"}
+              onClick={() => setView("overview")}
+            >
+              Overview
+            </button>
+            <button
+              type="button"
+              aria-pressed={view === "methodology"}
+              onClick={() => setView("methodology")}
+            >
+              Methodology
+            </button>
           </div>
-          <div className="space-y-5">
-            {TRANSPARENCY.sleeves.map((sleeve) => (
-              <div key={sleeve.id}>
-                <div className="mb-2 flex justify-between gap-4 text-sm">
-                  <span className="font-medium">{sleeve.name}</span>
-                  <span className="number-display font-semibold">{sleeve.sharePct}%</span>
-                </div>
-                <meter
-                  className={`home-meter home-meter-${sleeve.id}`}
-                  min={0}
-                  max={100}
-                  value={sleeve.sharePct}
-                  aria-label={`${sleeve.name} illustrative allocation`}
-                >
-                  {sleeve.sharePct}%
-                </meter>
-                <p className="mt-1.5 text-xs text-muted-foreground">
-                  Target band {sleeve.targetMinPct}–{sleeve.targetMaxPct}% · {sleeve.detail}
+        </div>
+
+        {view === "overview" ? (
+          <div className="mt-10 grid gap-10 lg:grid-cols-[1fr_1.15fr]">
+            <div>
+              <div className="border-l-2 border-success pl-4">
+                <p className="text-sm font-semibold">The protocol pays before stakers</p>
+                <p className="mt-1 max-w-md text-xs leading-relaxed text-muted-foreground">
+                  In the intended loss order, originator collateral comes first, then the protocol
+                  first-loss reserve, the overcollateral buffer, stakers and finally{" "}
+                  {BRAND.base.ticker} holders.
                 </p>
               </div>
-            ))}
-          </div>
-          <div className="mt-6 grid grid-cols-2 gap-4 border-t border-border pt-5">
-            <div>
-              <p className="text-xs text-muted-foreground">First-loss reserve</p>
-              <p className="mt-1 text-xl font-semibold">
-                {TRANSPARENCY.firstLoss.levelPct}%{" "}
-                <span className="text-xs font-normal text-muted-foreground">
-                  / {TRANSPARENCY.firstLoss.targetPct}% target
-                </span>
-              </p>
+              <div className="mt-6 grid grid-cols-2 gap-4">
+                <div className="home-card p-4">
+                  <p className="text-xs text-muted-foreground">First-loss reserve</p>
+                  <p className="mt-1 text-xl font-semibold">
+                    {TRANSPARENCY.firstLoss.levelPct}%{" "}
+                    <span className="text-xs font-normal text-muted-foreground">
+                      / {TRANSPARENCY.firstLoss.targetPct}% target
+                    </span>
+                  </p>
+                </div>
+                <div className="home-card p-4">
+                  <p className="text-xs text-muted-foreground">Overcollateralisation</p>
+                  <p className="mt-1 text-xl font-semibold">
+                    {TRANSPARENCY.overcollateral.ratioPct}%
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Target {TRANSPARENCY.overcollateral.targetMinPct}–
+                    {TRANSPARENCY.overcollateral.targetMaxPct}%
+                  </p>
+                </div>
+              </div>
+              <Button asChild variant="link" className="mt-6 px-0">
+                <Link to="/transparency">
+                  Full reserve breakdown <ArrowUpRight />
+                </Link>
+              </Button>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Overcollateralisation</p>
-              <p className="mt-1 text-xl font-semibold">{TRANSPARENCY.overcollateral.ratioPct}%</p>
-              <p className="text-xs text-muted-foreground">
-                Target {TRANSPARENCY.overcollateral.targetMinPct}–
-                {TRANSPARENCY.overcollateral.targetMaxPct}%
-              </p>
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold">Reserve allocation</h3>
+                <Badge tone="warning">Testnet preview — illustrative data</Badge>
+              </div>
+              <div className="space-y-5">
+                {TRANSPARENCY.sleeves.map((sleeve) => (
+                  <div key={sleeve.id}>
+                    <div className="mb-2 flex justify-between gap-4 text-sm">
+                      <span className="font-medium">{sleeve.name}</span>
+                      <span className="number-display font-semibold">{sleeve.sharePct}%</span>
+                    </div>
+                    <meter
+                      className={`home-meter home-meter-${sleeve.id}`}
+                      min={0}
+                      max={100}
+                      value={sleeve.sharePct}
+                      aria-label={`${sleeve.name} illustrative allocation`}
+                    >
+                      {sleeve.sharePct}%
+                    </meter>
+                    <p className="mt-1.5 text-xs text-muted-foreground">
+                      Target band {sleeve.targetMinPct}–{sleeve.targetMaxPct}% · {sleeve.detail}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="mt-10">
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold">How the reserve is intended to work</h3>
+              <StatusPill status="illustrative" />
+            </div>
+            <div className="grid gap-5 md:grid-cols-2">
+              <div className="home-card p-6">
+                <h4 className="font-semibold">Sleeves &amp; bands</h4>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  Reserves are held across four sleeves — liquid cash and money-market funds
+                  (60–70%), short investment-grade bonds (0–10%), multi-originator credit
+                  (20–30%) and marketplace real-world assets (5–10%). Rebalancing is intended to
+                  keep each sleeve inside its published band.
+                </p>
+              </div>
+              <div className="home-card p-6">
+                <h4 className="font-semibold">Redemption policy</h4>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  Redemptions draw on cash first, then money-market funds, then short
+                  investment-grade assets. Credit and marketplace assets are not sold to meet
+                  redemptions.
+                </p>
+              </div>
+              <div className="home-card p-6">
+                <h4 className="font-semibold">Loss order</h4>
+                <ol className="mt-3 space-y-2 text-sm">
+                  {[
+                    "Originator collateral & covenants",
+                    "Protocol first-loss reserve",
+                    "Overcollateral buffer",
+                    `Stakers (${BRAND.staked.ticker})`,
+                    `${BRAND.base.ticker} holders`,
+                  ].map((step, i) => (
+                    <li key={step} className="flex items-center gap-3">
+                      <span className="home-step-num home-step-sm">{i + 1}</span>
+                      <span className={i === 1 ? "font-semibold" : "text-muted-foreground"}>
+                        {step}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Losses are possible at every level; this order is a design, not a promise.
+                </p>
+              </div>
+              <div className="home-card p-6">
+                <h4 className="font-semibold">Controls</h4>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                  Reserve operations are designed for M-of-N multi-signature control with on-chain
+                  hard limits, and an automatic 7-day pause if a reserve attestation is missed.
+                </p>
+              </div>
+            </div>
+            <p className="mt-5 text-xs text-muted-foreground">
+              Methodology describes the intended design. Figures on this page are illustrative
+              preview data, not live reserve balances.
+            </p>
+          </div>
+        )}
       </div>
     </section>
   );
@@ -651,26 +744,183 @@ function IssuerSection() {
   );
 }
 
+function ClarityStandard() {
+  const labels = [
+    {
+      status: "published" as const,
+      body: "On chain or in a public document, with a source you can check yourself.",
+    },
+    {
+      status: "pending" as const,
+      body: "Real work in progress — an audit, an approval, an attestation. It stays labelled pending until it is done.",
+    },
+    {
+      status: "illustrative" as const,
+      body: "Preview figures that show how the model works. Never presented as real balances or live returns.",
+    },
+    {
+      status: "not_applicable" as const,
+      body: "Deliberately not offered — no card payments, no promised returns, no claims we cannot evidence.",
+    },
+  ];
+  return (
+    <section className="border-y border-border bg-surface">
+      <div className="home-container home-section grid gap-10 lg:grid-cols-[0.9fr_1.1fr]">
+        <div>
+          <p className="home-eyebrow">The Clarity Standard</p>
+          <h2 className="mt-3 text-3xl font-semibold leading-tight md:text-4xl">
+            Every claim wears a label.
+          </h2>
+          <p className="mt-4 max-w-md text-sm leading-relaxed text-muted-foreground md:text-base">
+            Across Stellaris, every figure, status and statement carries one of four labels — so
+            you can always tell what is proven, what is in progress and what is only a plan.
+          </p>
+          <div className="mt-5 flex items-center gap-3">
+            <StatusPill status="pending" />
+            <p className="text-xs text-muted-foreground">
+              A full Clarity matrix on every project page is in progress.
+            </p>
+          </div>
+          <div className="mt-6 flex flex-wrap gap-5 text-sm font-medium">
+            <Link to="/security" className="inline-flex items-center gap-1 text-teal hover:underline">
+              Security &amp; controls <ArrowUpRight className="h-4 w-4" />
+            </Link>
+            <Link
+              to="/transparency"
+              className="inline-flex items-center gap-1 text-teal hover:underline"
+            >
+              Reserve methodology <ArrowUpRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {labels.map((item) => (
+            <div key={item.status} className="home-card p-5">
+              <StatusPill status={item.status} />
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{item.body}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ProtocolArchitecture() {
+  const layers = [
+    {
+      icon: Wallet,
+      name: "Your wallet",
+      body: "A supported CIP-30 Cardano wallet. You hold your own tokens and sign every transaction — Stellaris never takes custody of your wallet keys.",
+      status: "published" as const,
+    },
+    {
+      icon: Boxes,
+      name: "The Stellaris app",
+      body: "Marketplace, offering registry, portfolio and the staking preview. Demo projects and illustrative figures are labelled as such, everywhere they appear.",
+      status: "demo" as const,
+    },
+    {
+      icon: FileCode2,
+      name: "Smart contracts",
+      body: "Vault and fraction-token validators. Their compiled hashes are pinned in the app and checked against a fresh contract build on every change, so the code you inspect is the code that runs.",
+      status: "published" as const,
+    },
+    {
+      icon: Globe,
+      name: "Cardano Preprod",
+      body: "A public Cardano test network — test funds only, no real money. Every transaction can be inspected on a public explorer.",
+      status: "published" as const,
+    },
+  ];
+  const assurances = [
+    "Preprod only — the app refuses mainnet configuration.",
+    "Contract drift guard — the build fails if the pinned contract hashes change.",
+    "On-chain script state is checked with dedicated verification scripts.",
+  ];
+  return (
+    <section className="home-dark-section">
+      <div className="home-container home-section grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
+        <div>
+          <p className="home-eyebrow text-gold">Protocol architecture</p>
+          <h2 className="mt-3 text-3xl font-semibold leading-tight md:text-4xl">
+            Built in layers you can inspect.
+          </h2>
+          <ol className="mt-8 space-y-0">
+            {layers.map((layer, i) => (
+              <li key={layer.name}>
+                {i > 0 && <span className="home-arch-connector" aria-hidden="true" />}
+                <div className="home-arch-layer">
+                  <span className="home-arch-num">{i + 1}</span>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <layer.icon className="h-4 w-4 text-teal-bright" aria-hidden="true" />
+                      <h3 className="font-semibold">{layer.name}</h3>
+                    </div>
+                    <p className="mt-2 text-sm leading-relaxed opacity-75">{layer.body}</p>
+                  </div>
+                  <StatusPill status={layer.status} className="shrink-0" />
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+        <div className="lg:pt-24">
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-gold">
+            What holds it together
+          </h3>
+          <ul className="mt-5 space-y-4">
+            {assurances.map((a) => (
+              <li key={a} className="flex items-start gap-3 text-sm leading-relaxed opacity-85">
+                <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-teal-bright" aria-hidden="true" />
+                {a}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-6 flex items-center gap-3 border-t border-deep-foreground/15 pt-5">
+            <span className="inline-flex items-center rounded-full border border-gold/50 px-2 py-0.5 text-xs font-medium text-gold">
+              Pending
+            </span>
+            <p className="text-xs opacity-75">
+              Independent security audit not yet completed.
+            </p>
+          </div>
+          <Button
+            asChild
+            variant="outline"
+            className="mt-6 border-teal-bright/40 bg-transparent text-deep-foreground hover:bg-teal/10 hover:text-deep-foreground"
+          >
+            <Link to="/developers">
+              Contracts &amp; verification <ArrowUpRight />
+            </Link>
+          </Button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function HowItWorks() {
   const steps = [
-    { icon: Building2, title: "Discover", body: "Browse opportunities and planned asset classes." },
-    { icon: ShieldCheck, title: "Review", body: "Read the asset, risks, fees and exit terms." },
+    { icon: Building2, title: "Discover", body: "Browse opportunities and planned asset classes — demo projects are marked, never mixed with real offerings." },
+    { icon: ShieldCheck, title: "Review", body: "Read the asset, its evidence, risks, fees and exit terms before anything else." },
     { icon: Landmark, title: "Get eligible", body: "Complete onboarding and any eligibility checks — a wallet alone is not enough." },
-    { icon: Wallet, title: "Participate", body: "Use supported Cardano infrastructure when a valid offering is open." },
-    { icon: Layers, title: "Follow", body: "Track holdings, transactions and reporting in your portfolio." },
+    { icon: Wallet, title: "Participate", body: "Use supported Cardano infrastructure when a valid offering is open. You sign every transaction yourself." },
+    { icon: Layers, title: "Follow", body: "Track holdings, transactions and per-asset reporting in your portfolio." },
   ];
   return (
     <section id="how-it-works" className="home-container home-section scroll-mt-20">
       <SectionHeading
         eyebrow="How Stellaris works"
         title="Five steps, with the rules in view."
+        description="From browsing to holding, each step shows its terms up front. Nothing on this page is a live offering — the marketplace runs on the Cardano Preprod test network."
       />
-      <ol className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
+      <ol className="home-steps mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-5">
         {steps.map((step, i) => (
-          <li key={step.title} className="home-card p-5">
+          <li key={step.title} className="home-card home-step p-5">
             <div className="flex items-center justify-between">
               <span className="home-step-num">{i + 1}</span>
-              <step.icon className="h-5 w-5 text-muted-foreground" />
+              <step.icon className="h-5 w-5 text-teal" />
             </div>
             <h3 className="mt-5 text-lg font-semibold">{step.title}</h3>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.body}</p>
