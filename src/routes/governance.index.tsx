@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { LayoutDashboard, FileText, Vault, Users, Activity, PlusCircle, ChevronRight, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/StatusBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { getProtocolStats } from "@/lib/governance.functions";
@@ -50,7 +49,7 @@ function GovernancePage() {
   const active: GovTab = tab ?? "overview";
 
   return (
-    <AppShell>
+    <div className="home-container py-6 md:py-10">
       <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
         <GovSidebar active={active} />
         <div>
@@ -73,7 +72,7 @@ function GovernancePage() {
           </div>
         </div>
       </div>
-    </AppShell>
+    </div>
   );
 }
 

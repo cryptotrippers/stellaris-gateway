@@ -2,7 +2,6 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { ArrowLeft, ChevronRight, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
-import { AppShell } from "@/components/layout/AppShell";
 import { createVaultProposal } from "@/lib/governance-vault.functions";
 
 export const Route = createFileRoute("/governance/new")({
@@ -52,7 +51,7 @@ function NewProposal() {
   }
 
   return (
-    <AppShell>
+    <div className="home-container py-6 md:py-10">
       <Link
         to="/governance"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
@@ -211,7 +210,7 @@ function NewProposal() {
       )}
 
       <style>{`.input{width:100%;border:1px solid var(--color-border);background:var(--color-surface);border-radius:0.75rem;padding:0.65rem 0.85rem;font-size:0.875rem;color:var(--color-foreground);outline:none} .input:focus{border-color:var(--color-primary);box-shadow:0 0 0 3px oklch(0.55 0.19 258 / 0.2)}`}</style>
-    </AppShell>
+    </div>
   );
 }
 
