@@ -4,7 +4,6 @@ import { LayoutDashboard, FileText, Vault, Users, Activity, PlusCircle, ChevronR
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Badge } from "@/components/ui/StatusBadge";
-import { Badge } from "@/components/ui/StatusBadge";
 import { supabase } from "@/integrations/supabase/client";
 import { getProtocolStats } from "@/lib/governance.functions";
 import { listAssetVaults, type AssetVaultRow } from "@/lib/asset-vaults.functions";
