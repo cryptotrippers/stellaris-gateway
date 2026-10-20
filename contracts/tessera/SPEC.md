@@ -1428,7 +1428,11 @@ script, not into those two. Applying parameters adds a few dozen bytes to each.
 
 ## 4. Redemption queue (Phase 2.6 — DESIGN CHECKPOINT, nothing implemented)
 
-Status: **revision 1, awaiting approval.** Baseline: §4 of the skeleton ("instant
+Status: **revision 2.** D-21 to D-31 approved as recommended. Revision 2 adds D-32
+(short mode), D-33 (Defund notice and veto), D-34 (limit floor) and D-35 (the Sink
+invariant), awaiting approval. R-2 stays an audit item (A-1).
+
+Baseline: §4 of the skeleton ("instant
 tier up to the buffer; Request UTxOs bucketed per day; payable after
 `bucket_end + settle_delay` (max 7 days); permissionless settlement to `owner`;
 owner cancel before settlement") plus the 2.3 decision that `kyc_redeem` is
@@ -1464,18 +1468,28 @@ would cost O(N²).)
 
 | Script | Purpose | Holds | Est. size |
 |---|---|---|---:|
-| `redeem_queue` (mint + spend; params `seed, reserve, flow, admin`) | marker mint/burn; the UTxOs at its address; `Cancel`; gates every other spend to `queue_flow` or `queue_admin` | Request, Sink, Buffer shards, QueueConfig, Grace | 6,000–8,000 |
-| `queue_flow` (withdraw-zero; param `reserve`) | user flow: `Request`, `Instant`, `Settle`, `Sweep`, limit accounting | – | 9,000–11,500 |
-| `queue_admin` (withdraw-zero; param `reserve`) | committee flow: `Genesis`, `Suspend`, `Resume`, `SetLimits`, `Fund`, `Defund`, `GrantGrace` | – | 6,000–8,500 |
+| `redeem_queue` (mint + spend; params `seed, reserve, flow, admin, short`) | marker mint/burn; the UTxOs at its address; plain `Cancel`; gates every other spend to `queue_flow`, `queue_admin` or `queue_short` | Request, Sink, Buffer shards, QueueConfig, ShortState, Grace | 6,300–8,500 |
+| `queue_flow` (withdraw-zero; param `reserve`) | user flow in normal mode: `Request`, `Instant`, `Settle`, `Sweep`, limit accounting | – | 9,250–11,750 |
+| `queue_admin` (withdraw-zero; param `reserve`) | committee flow: `Genesis`, `Suspend`, `Resume`, `AnnounceLimits`, `ApplyLimits`, `SyncFloor`, `Fund`, `AnnounceDefund`, `Defund`, `GrantGrace` | – | 7,000–9,000 |
+| `queue_short` (withdraw-zero; param `reserve`) | stress flow: `EnterShort`, `Register`, `PayShort`, `ExitShort`, `CancelRegistered`, `VetoDefund` (D-32, D-33) | – | 7,000–8,500 (stub floor 4,667, measured) |
 
-`queue_flow` and `queue_admin` publish handlers accept only `RegisterCredential`
+`queue_flow`, `queue_admin` and `queue_short` publish handlers accept only `RegisterCredential`
 (the 2.5b condition), and their withdrawal amount must be 0. The queue binds the
 withdraw redeemer's `queue` field and action tag exactly as the vault binds ops.
-**These sizes are estimates**, not measurements (the only measured anchor is
-`vault_ops` at 11,100 B for four heavy transitions). First step of the
-implementation, before any real logic: compile stubs of the three validators with
-representative data decoding and report real sizes; if any estimate fails, stop
-and re-split (§4.10).
+
+**Sizes.** Estimates, except one measurement: a scratch stub of `queue_short`'s four
+state-machine transitions (`Enter`, `Register`, `Pay`, `Exit`, with simplified payment
+checks, no binding, no limits, no Cancel, no veto) compiled to **4,667 B**. Adding
+the binding, the limit-room test, `CancelRegistered`, `VetoDefund` and the real
+payment checks is what takes the estimate to 7,000–8,500. The other ranges are
+anchored on `vault_ops` (11,100 B for four heavy transitions) and `first_loss`
+(4,466 B). The short-mode design adds to existing scripts: `redeem_queue` about
+300–500 B (the ShortState variant, routing of registered Requests, one more Request
+datum field `reg_episode`) and `queue_flow` about 250 B (the normal-mode
+"short mode is off" reference-input check). **Worst case is `queue_flow` at
+11,750 B, 1,250 B under the target.** First step of the implementation, before any real
+logic: compile stubs of all four validators and report real sizes; if any estimate
+fails, stop and re-split.
 
 ### 4.2 [D-22] How TSRA is burned (item 2)
 
@@ -1516,6 +1530,49 @@ shrink the reserve and is the clean long-term shape, but rewrites the merged,
 mutation-tested `VaultClaimBurn` path. Not for 2.6; revisit if a third burner
 appears.
 
+### 4.2a [D-35] Invariant I-Q1: a Sink can only be burned
+
+**I-Q1. A Sink UTxO is spendable ONLY in a transaction that burns its entire TSRA
+through the reserve's `Burn`. Nothing else, ever.** No cancel, no refund, no
+committee path, no re-route, no change of datum, not even in an emergency: if
+TSRA is in a Sink, the only thing that can happen to it is that it ceases to exist.
+
+How it is enforced (all of it must hold, in one place, `queue_flow`'s `Sweep`):
+
+1. The spend handler for a Sink datum in `redeem_queue` accepts **one** redeemer, the
+   gate to `Sweep`; every other redeemer, and a Sink input under any other action
+   of the same withdrawal (for example a `Settle` that also lists a Sink), fails.
+   The Sink datum has no owner and no alternative branch to add one to.
+2. `Sweep` requires the genuine reserve Supply (thread token) to be spent in the
+   same transaction with a redeemer that decodes to the reserve's `Burn`
+   (constructor 1) whose `qty` equals the **total TSRA in all Sink inputs**.
+3. No output at the queue address carries any TSRA, and no output anywhere
+   carries TSRA that came from a Sink input: the entire amount is burned (the
+   reserve checks `delta == -qty`; the sweep checks the outputs).
+4. Every input at the queue address in a `Sweep` is a Sink (a Sweep cannot also
+   carry a Request, a Buffer shard or the config along).
+5. A Sink input must hold only TSRA and lovelace (no other token), so nothing else
+   can be trapped or smuggled out through the sweep.
+6. The Sink lovelace goes to whoever builds the sweep (that is the keeper's
+   incentive); it is not part of the invariant.
+
+*Creation is unconstrained:* anyone can send TSRA to a Sink, which is a donation
+that can only be burned; `Settle` and `Instant` are the only ways the protocol
+creates one.
+
+*Tests for I-Q1:* a Sink spent with the owner's signature but no Supply; with a
+Supply spent under `Mint`, `Attest`, `SetCap`, `VaultClaimBurn`, `LossBurn`; with a
+`Burn` for one unit less / more than the Sink total; with a planted Supply (no
+thread token); with TSRA left at the queue address; with TSRA sent to a wallet and
+a smaller `Burn`; with a Request or Shard input alongside; with a Sink holding a
+foreign token; a Sink under every other queue redeemer (`Cancel`, `Settle`,
+`Instant`, each admin and short action); two Sinks plus one correct `Burn`
+(accepted); accepted: one Sink and many Sinks, each exactly burned.
+*Mutants for I-Q1:* delete each of the six conditions; `Burn` constructor index 1 -> 0
+or 2; `qty ==` total -> `<=` or `>=`; total over only the first Sink; the "no TSRA
+output" check on the wrong address; the Sink gate accepting a second redeemer;
+the single-redeemer rule replaced by `True`.
+
 ### 4.3 [D-23] Who funds settlement; evidence of payout (item 1)
 
 **Recommended: payout is on chain, in a configured payout asset, from a
@@ -1525,8 +1582,8 @@ Buffer; the fiat leg is explicitly not evidenced on chain.**
   each holding the payout asset (`payout_policy`, `payout_name` in QueueConfig;
   on Preprod a committee-minted test asset) plus a shard thread token. The
   committee funds a shard (`Fund`) and may withdraw surplus (`Defund`), both
-  M-of-N via `queue_admin`. `Defund` is **not** tied to outstanding Requests
-  (that cannot be checked without enumerating them; see R-3).
+  M-of-N via `queue_admin`. `Defund` has a 7-day public notice, can be vetoed by anyone who
+  shows unpaid payable Requests, and is refused in short mode (D-33, §4.3a).
 * A settlement transaction pays `qty` payout units **to the Request's `payout_to`
   address** out of a shard. The payment itself is the evidence: a Request is
   settled **iff** its owner's address received `qty` in the same transaction.
@@ -1543,6 +1600,38 @@ Buffer; the fiat leg is explicitly not evidenced on chain.**
   `attested_reserve - minted_supply` is larger than the cash. Minting still needs
   a committee signature and a fresh attestation, so this is a committee-trust
   point, not a new hole (R-2).
+
+### 4.3a [D-33] Defund: notice, veto, no Defund in short mode (R-3)
+
+**Which of the two forms you offered is enforceable: neither, exactly.** The
+"total currently payable" is not tracked (no counters, by design, so that Requests
+do not serialise) and "no Request is past `payable_after` and unpaid" is an
+**absence**, which a script cannot prove without enumerating every UTxO. What
+is cheap to prove on chain is a **presence**: a referenced Request that is payable
+and unpaid. So the rule is built on that, with two backstops:
+
+1. **7-day public notice.** `AnnounceDefund{shard, amount}` (committee M-of-N,
+   `queue_admin`) writes `pending_defund { shard, amount, effective_at = lo + 7 days }`
+   to the QueueConfig (one pending at a time; anything else on the Config is
+   unchanged). It lapses 7 days after `effective_at` (re-announce).
+2. **Veto by anyone** (`VetoDefund`, `queue_short`). Anyone may reference payable
+   Request UTxOs (marker, `payable_after <= lo`, current datum) whose total
+   `qty` exceeds `shard balance - amount`; the pending Defund is then cleared.
+   A permissionless proof of "this Defund would leave payable Requests uncovered".
+3. **Not in short mode.** `Defund` (committee) executes only if `lo >= effective_at`,
+   not lapsed, the amount equals the announcement, the shard is the announced one,
+   `ShortState` (reference input) is inactive, and it clears the pending record.
+   Short mode is exactly "the Buffer cannot pay a Request" (D-32), so when the
+   Buffer is under stress the committee cannot drain it.
+
+*Why this and not the tracked total:* a tracked total would be a counter touched by
+every Request, Cancel and Settle. *Residual:* the veto needs someone to look, and
+shows only the Requests it references (about 40 per transaction); the committee
+could announce a Defund that leaves the Buffer short of Requests nobody shows.
+The notice is public for 7 days, short mode blocks the execution once a Request
+is overdue, and owners can cancel at any time. Documented, not hidden.
+*Cost:* `AnnounceDefund`, `Defund` and the config field in `queue_admin` (counted in its 7,000–9,000 B);
+`VetoDefund` in `queue_short` (counted in its 7,000–8,500 B).
 
 ### 4.4 [D-24] Requests, buckets, cancel
 
@@ -1609,11 +1698,41 @@ limits. Anything above that goes through the daily-bucket path.
 * A Request that does not fit today's limit stays pending (nothing is lost, it
   can be cancelled) and is paid on a later day.
 * **The committee's power over limits is bounded:** an *increase* applies at once;
-  a *decrease* is announced (`pending_limits` + `effective_at`) and applies only
-  `limit_notice` (7 days) later, so lowering the limits cannot be used as an
-  open-ended, un-time-limited suspension. A hard floor is not proposed (see R-4).
+  a *decrease* is announced (`pending_limits` + `effective_at`), applies only
+  `limit_notice` (7 days) later, and only through an explicit `ApplyLimits` that
+  re-checks the floor (D-34), so lowering the limits cannot be used as an
+  open-ended suspension, and neither can a limit that has fallen below the floor.
 * Per-holder limits (AML) are **not** on chain: they would need per-holder state
   and a shared registry. Out of scope unless counsel requires it.
+
+### 4.7a [D-34] Limit floor (R-4)
+
+`floor = max(min_daily_limit, minted_supply / 100)`, with `min_daily_limit` a
+constant of **10,000 TSRA** (units of the payout asset, par). `minted_supply` is
+read from the genuine reserve **Supply by reference**.
+
+* `daily_limit >= floor` is required wherever a limit is written: at genesis, on an
+  increase, on the announcement of a decrease, **and again at `ApplyLimits` when a
+  decrease takes effect** ("including after the notice period"). Also
+  `monthly_limit >= daily_limit`.
+* Supply grows, so a limit that was legal can fall below 1%. `SyncFloor` (anyone, no
+  committee) raises `daily_limit` to the current floor (and `monthly_limit` to at
+  least that) when it is below. So no limit stays under the floor for longer than one
+  transaction after anyone cares to fix it, and zero is impossible.
+* The **hot path never reads the Supply**: `Settle` and `Instant` read only
+  `QueueConfig.daily_limit`. A Supply reference input on every payout would make
+  every payout fail whenever a mint or burn lands between building and submitting
+  (the problem the 2.5a Config/Supply split removed). Only `queue_admin` reads it.
+* 1% of supply a day still lets a determined committee slow redemptions to about 100
+  days for the full supply; that is the policy number you chose, and the
+  7-day announced decrease plus the floor are the protection. Say if you want 2%.
+* *Cost:* about 400–600 B in `queue_admin` (counted in its range). *Tests:* the limit
+  exactly at the floor (accepted) and one unit below (refused) at genesis, increase,
+  announcement, `ApplyLimits`; a limit legal at announcement and below the floor at
+  application (refused) after the supply grew; `SyncFloor` raises, never lowers;
+  `SyncFloor` with a fake Supply (no thread token) refused; zero refused.
+  *Mutants:* `max` -> `min`; `/ 100` -> `/ 10` and `/ 1000`; `>=` -> `>`; floor skipped
+  at `ApplyLimits`; floor skipped at announcement; `SyncFloor` allowed to lower.
 
 ### 4.8 [D-28] Suspension under stress (item 3)
 
@@ -1628,6 +1747,61 @@ limits. Anything above that goes through the daily-bucket path.
   day. Recommended 3 days (not 7) because the daily path already adds up to 7
   days of `settle_delay`; the committee can still re-suspend after the gap.
 * A suspension does not change any stored `payable_after`; requests simply wait.
+
+### 4.8a [D-32] Short mode: oldest-day-first, stress only (R-1)
+
+**Normal settlement is unchanged (D-30: no shared cursor).** When the Buffer
+cannot pay, settlement becomes strictly oldest-day-first. This is the cheapest form
+I can find that is actually enforceable, and what it costs.
+
+*Why a bare cursor is not enough:* a cursor "pay day 3 before day 4" needs a
+proof that **no unpaid day-3 Request exists**, and absence cannot be proved without
+a maintained count. A count per day touched by every Request and Cancel would put a
+shared UTxO on all requests, which you ruled out. So: **lazy registration**, with one
+`ShortState` UTxO that nothing spends in normal operation.
+
+* **ShortState** (one UTxO, thread token, at the queue address, created at Genesis):
+  `{ active, episode, since, reg_deadline, last_exit, tallies: List<{day, open}> }`,
+  `tallies` sorted by day. In normal mode it is **referenced** (by `Settle`,
+  `Instant`, `Defund`), never spent.
+* **Enter** (anyone, `queue_short`). Evidence, all by reference: one Request UTxO
+  (marker) at least **24 h past its `payable_after`** with `qty <= probe_max`
+  (= `instant_max`, 10,000 TSRA), **and every Buffer shard** (the count must equal
+  `shards`, distinct thread tokens) unable to pay it (balance or day/month room below
+  its `qty`); not suspended and no loss freeze (those are not a funds shortage); at
+  least 24 h since the last exit. `probe_max` stops one huge Request from forcing
+  short mode. Effect: `active`, `episode + 1`, `reg_deadline = lo + 24 h`, empty tallies.
+* **Register** (anyone). Spends payable, unregistered Requests and re-creates them
+  identical except `reg_episode = episode`; adds their `qty` to the tallies by bucket
+  (sorted insertion: an older day goes to the head). **No payments during the
+  24-hour window**, so every payable Request has a public day to be registered by its
+  owner or by the keeper. Registration stays open afterwards.
+* **PayShort** (anyone), only after `reg_deadline`: spends **registered** Requests of
+  the **head day** only, pays them as `Settle` does (same payout, tip, limits and
+  Sink rules), and subtracts the total from the head tally (the head is removed at 0).
+  Order within a day is free. `Instant` and normal `Settle` are refused while
+  `active` (they would jump the queue).
+* **Cancel of a registered Request** goes through `queue_short` and takes its
+  `qty` off its day's tally (any day); the plain, unregistered Cancel is unchanged and
+  still never blocked by a rule.
+* **Exit** (anyone): after `reg_deadline` when `tallies == []`; `last_exit = lo`.
+
+*Guarantee:* among registered Requests, payment is strictly oldest-day-first, and no
+unregistered Request can be paid while short mode is on. *Residual (R-1b):* a Request
+that was payable at entry and that nobody registered within the 24-hour window can be
+overtaken by registered newer ones; registration is permissionless so the keeper and
+the owner can both do it, and a Request that was not payable at entry has a later
+bucket than anything payable at entry, so it cannot be an older one that was skipped.
+
+*Contention:* every short-mode action serialises on `ShortState` (accepted).
+Normal mode adds one reference input to `Settle` and `Instant`; a short-mode
+transition invalidates in-flight settlements, which is intended.
+*Cost, bytes:* `queue_short` 7,000–8,500 B (stub of the state machine: 4,667 B,
+measured); `redeem_queue` +300–500 B; `queue_flow` +250 B. *Cost, budget (estimate,
+unmeasured):* normal `Settle` and `Instant` +<1% (one reference input); `Register` and
+`PayShort` with 20 Requests under 35% memory (list work is O(Requests x days));
+`EnterShort` under 15%. **All fit the size limit, so no alternative is needed.**
+
 
 ### 4.9 [D-29] Loss freeze and Tickets (item 4)
 
@@ -1656,6 +1830,7 @@ limits. Anything above that goes through the daily-bucket path.
 | Buffer shard (K UTxOs) | `Instant`, `Settle` | one tx per shard per block; K shards, K set by the committee; a settler picks any shard with room |
 | Supply | `Sweep` only | once per batch, not once per request (this is the point of D-22) |
 | QueueConfig, reserve Config | by reference only; committee actions spend them | none in normal operation |
+| ShortState | referenced by normal `Settle`/`Instant`/`Defund`; spent only in short mode | none in normal operation; in short mode every action serialises on it (accepted, D-32) |
 
 A settlement transaction takes **many** Requests (their number is bounded by the
 execution budget and the 16 KB size, estimated ~20–30) and pays them all from one
@@ -1686,7 +1861,7 @@ at all (e.g. sanctions).**
 
 | # | Decision | Recommended | Needs |
 |---|---|---|---|
-| D-21 | Three scripts (`redeem_queue`, `queue_flow`, `queue_admin`); nothing existing changes | yes | you |
+| D-21 | Four scripts (`redeem_queue`, `queue_flow`, `queue_admin`, `queue_short`); nothing existing changes | approved | – |
 | D-22 | Lock at request; Sink; batched sweep through the existing `Burn`; no reserve change | yes | you |
 | D-23 | On-chain payout from a Buffer in a payout asset; fiat leg explicitly off-chain | yes | you, counsel |
 | D-24 | Day buckets, `payable_after` stored at request, key-address payout, tip ≤ 1 ADA | yes | you |
@@ -1695,8 +1870,12 @@ at all (e.g. sanctions).**
 | D-27 | Limits per shard (global ÷ shards), decreases with 7-day notice | yes | you |
 | D-28 | Suspension ≤ 3 days, 7-day reopen gap, blocks instant and settle only | yes | you |
 | D-29 | Loss freeze blocks instant and settle; request and cancel stay open | yes | you |
-| D-30 | Requests are independent UTxOs; K Buffer shards; Supply touched once per sweep; no FIFO on chain (keeper settles oldest first) | yes | you |
+| D-30 | Requests are independent UTxOs; K Buffer shards; Supply touched once per sweep; no cursor in normal mode (oldest-day-first only in short mode, D-32) | approved | – |
 | D-31 | Grace: `grace_ms` ≤ 30 days, default 14, committee-granted | yes | counsel |
+| D-32 | Short mode: lazy registration, one ShortState, oldest-day-first over registered Requests, permissionless entry by evidence | yes | you |
+| D-33 | Defund: 7-day notice, anyone's veto by showing unpaid payable Requests, refused in short mode | yes | you |
+| D-34 | Daily limit floor = max(10,000 TSRA, 1% of minted supply), checked at every write and at `ApplyLimits`, `SyncFloor` | yes | you |
+| D-35 | I-Q1: a Sink is spendable only in a tx that burns all its TSRA through the reserve | yes | you |
 
 Defaults for QueueConfig (all committee-set within hard bounds, genesis values are
 bootstrap parameters): `settle_delay` 2 d (≤ 7 d), `min_request` 100 TSRA,
@@ -1704,22 +1883,22 @@ bootstrap parameters): `settle_delay` 2 d (≤ 7 d), `min_request` 100 TSRA,
 `monthly_limit` chosen per launch, `shards` 4, `grace_ms` 14 d (≤ 30 d).
 
 **Open risks.**
-* R-1 *Ordering.* Settlement is not FIFO on chain (D-30): an adversarial settler
-  can pick which payable requests to pay first when the Buffer or the limit is
-  short. Mitigation: owners can cancel; the operator's keeper pays oldest first;
-  on-chain FIFO would need per-bucket cursors and put a shared counter on every
-  settlement. Not recommended for v1.
-* R-2 *Attested reserve lags payouts* (D-23). Committee-trust, unchanged from
-  `Burn` today.
-* R-3 *`Defund` safety is per shard,* not global: the committee could defund every
-  shard. That is a committee-run liquidity decision, bounded in effect by cancel
-  (owners get their TSRA back) but it is a liveness lever; flagged, and `Defund`
-  is allowed only when no unswept payable Requests are referenced in the same tx
-  (R-3 as written: this is not enforced).
-* R-4 *No hard floor on limits.* A decrease is delayed 7 days but unbounded
-  (`daily_limit = 0` after the notice stalls payouts forever). Proposed: reject
-  `daily_limit = 0` and `monthly_limit < daily_limit` only; stricter floors are a
-  policy choice for you.
+* R-1 *Ordering (revised).* Normal settlement is not first-in-first-out (D-30); in short
+  mode it is oldest-day-first over registered Requests (D-32). Residual R-1b: a
+  Request payable at entry that nobody registers in the first 24 hours can be
+  overtaken. Entering short mode needs a real shortage (the evidence is a
+  Request of at most `probe_max` that no shard can pay).
+* **A-1 (audit item, formerly R-2).** *The attested reserve lags payouts* (D-23).
+  `Burn` does not lower `attested_reserve`, so between a payout and the next
+  `Attest` the mint headroom `attested_reserve - minted_supply` is larger than
+  the cash. Minting still needs a committee signature and a fresh attestation, so
+  this is a committee-trust point, unchanged from the `Burn` of 2.2, not a new hole.
+  To be listed in the external audit scope; not changed here.
+* R-3 *`Defund` (revised).* Closed as far as it is enforceable (D-33): the tracked
+  total and the "no overdue Request" absence are not provable, so the rule is notice,
+  veto by presence, and a block in short mode. Residual: the veto shows only the
+  Requests it references.
+* R-4 *Limit floor (closed by D-34).* Remaining policy point: 1% a day.
 * R-5 *Payout-asset risk* (depeg, issuer freeze) is outside the protocol.
 * R-6 *Keeper dependence:* if no eligible keeper sweeps (D-22) supply is
   overstated, never understated.
@@ -1736,9 +1915,14 @@ for the batch paths).
 | `Request` | mint marker, `queue_flow` | < 15% |
 | `Cancel` | `redeem_queue` spend, marker burn | < 10% |
 | `Instant` | `redeem_queue` (Buffer, gate), `queue_flow`, reserve **by reference only** | < 25% |
-| `Settle`, 20 Requests | 20 `redeem_queue` gates, `queue_flow` once | < 50% (report the largest batch under 70%) |
+| `Settle`, 20 Requests | 20 `redeem_queue` gates, `queue_flow` once, ShortState by reference | < 50% (report the largest batch under 70%) |
 | `Sweep`, 20 Sinks | 20 Sink gates, `queue_flow`, reserve Supply + mint | < 50% |
 | `Suspend`, `SetLimits`, `Fund`, `GrantGrace` | gate, `queue_admin` | < 15% |
+| `AnnounceLimits`, `ApplyLimits`, `SyncFloor`, `AnnounceDefund`, `Defund` | gate, `queue_admin`, reserve Supply by reference | < 15% |
+| `EnterShort` | `queue_short`, 1 + K references | < 15% |
+| `Register`, 20 Requests | 20 gates, `queue_short` | < 35% |
+| `PayShort`, 20 Requests | 20 gates, `queue_short` (+ payout checks) | < 50% |
+| `VetoDefund`, 40 references | gate, `queue_short` | < 25% |
 
 The gate on each Request/Sink/Buffer input must stay O(1) per input (a withdrawal
 lookup and a redeemer-tag compare, as the vault binding does). Transaction size
@@ -1777,6 +1961,25 @@ is the other limit on batch size (16,384 B).
   quantity; payouts never exceed shard balance or limits; `minted_supply` falls by
   exactly the swept total; a Request is spent only by Cancel (owner) or a settlement
   that pays it.
+* **Short mode (D-32):** `EnterShort` accepted with a 24 h-overdue Request of at
+  most `probe_max` that every shard cannot pay; refused: not overdue by 1 ms, a
+  Request over `probe_max`, one shard missing from the references, a duplicated
+  shard, a shard that can pay, suspended, loss freeze, inside the 24 h re-entry gap,
+  already active, a planted Request (no marker). `Register`: tallies add up, an
+  older day goes to the head, a not-yet-payable Request refused, a Request registered
+  twice refused, the output datum changed beyond `reg_episode` refused. `PayShort`:
+  refused inside the window (by 1 ms), a non-head day, an unregistered Request, a
+  Request of an old episode, over-subtracting the tally; normal `Settle` and
+  `Instant` refused while active; `ExitShort` refused with a non-empty tally or inside
+  the window; `CancelRegistered` lowers the right day's tally and cannot take more than
+  it holds; a stale registration (older episode) cancels plainly.
+* **Defund (D-33):** `AnnounceDefund` sets the 7-day notice; `Defund` refused one
+  millisecond early, after lapse, with another amount or shard, in short mode, and
+  with the announcement missing; `VetoDefund` accepted with referenced payable
+  Requests whose total exceeds `balance - amount`, refused at equality, with a
+  not-yet-payable Request, a duplicated reference, a planted Request.
+* **Limit floor (D-34):** see §4.7a. **Sink invariant (D-35):** see §4.2a.
+
 * **Cross-checks:** `Burn` constructor index pinned against the reserve blueprint
   (CI); sizes ≤ 13,000 B and ≤ 14,000 B guard.
 
@@ -1792,6 +1995,15 @@ constructor index, the Sink-total equality, the `RegisterCredential`-only publis
 rule, the zero-withdrawal gate, each binding check, and Cancel's three
 "never blocked" conditions (suspension, freeze, revocation). Expect equivalents
 to be listed with the reason, as in 2.5b.
+
+Added in revision 2: **every item of every `and { }` block of `queue_short`**; the 24 h
+overdue, window, re-entry and `probe_max` constants (off by one, and swapped
+operators); "every shard referenced" (count, distinctness); tally insert order and
+subtraction; head-day-only; the `reg_episode` comparison; the veto sum (`>` vs `>=`)
+and its reference dedup; the Defund notice, lapse and short-mode check; the floor
+mutants (§4.7a); the I-Q1 mutants (§4.2a). The register-twice and cancel-tally
+mutants are the ones most likely to survive and are written first.
+
 
 ### 4.16 Out of scope for 2.6
 
