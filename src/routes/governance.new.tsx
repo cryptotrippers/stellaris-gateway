@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { ArrowLeft, ChevronRight, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
-import { MarketingLayout } from "@/components/layout/MarketingLayout";
+import { Link } from "@tanstack/react-router";
 import { createVaultProposal } from "@/lib/governance-vault.functions";
 
 export const Route = createFileRoute("/governance/new")({

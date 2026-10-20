@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { AlertTriangle, ShieldCheck, ArrowDown, FileCheck, KeyRound } from "lucide-react";
 import { BRAND } from "@/config/brand";
 import { TRANSPARENCY as T } from "@/data/transparency.mock";
+import { MarketingLayout } from "@/components/layout/MarketingLayout";
 
 export const Route = createFileRoute("/transparency")({
   head: () => ({
@@ -29,6 +30,7 @@ function TransparencyPage() {
   const ocOk = oc.ratioPct >= oc.targetMinPct && oc.ratioPct <= oc.targetMaxPct;
 
   return (
+    <MarketingLayout>
     <div className="mx-auto max-w-[1200px] px-4 md:px-6 py-10 space-y-8">
       <div>
         <div className="inline-flex items-center gap-2 rounded-full border border-warning/40 bg-warning/10 px-3 py-1 text-xs text-warning">
@@ -143,6 +145,7 @@ function TransparencyPage() {
 
       <Protection />
     </div>
+    </MarketingLayout>
   );
 }
 

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AlertTriangle, Building2, Globe2, Home } from "lucide-react";
 import { BRAND } from "@/config/brand";
+import { MarketingLayout } from "@/components/layout/MarketingLayout";
 
 export const Route = createFileRoute("/property")({
   head: () => ({
@@ -34,6 +35,7 @@ function Meter({ label, pct, note }: { label: string; pct: number; note: string 
 
 function PropertyPage() {
   return (
+    <MarketingLayout>
     <div className="mx-auto max-w-4xl px-4 md:px-6 py-10 space-y-8">
       <div>
         <div className="inline-flex items-center gap-2 rounded-full border border-warning/40 bg-warning/10 px-3 py-1 text-xs text-warning">
@@ -90,5 +92,6 @@ function PropertyPage() {
         </div>
       </section>
     </div>
+    </MarketingLayout>
   );
 }

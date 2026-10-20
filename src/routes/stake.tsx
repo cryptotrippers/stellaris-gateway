@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Clock, Lock, AlertTriangle, CheckCircle2, Info } from "lucide-react";
 import { BRAND } from "@/config/brand";
+import { MarketingLayout } from "@/components/layout/MarketingLayout";
 import { STAKE_TIERS, MOCK_BASE_BALANCE, type StakeTierId } from "@/data/staking.mock";
 
 export const Route = createFileRoute("/stake")({
@@ -35,6 +36,7 @@ function StakePage() {
   const yearly = valid ? (n * tier.aprPct) / 100 : 0;
 
   return (
+    <MarketingLayout>
     <div className="mx-auto max-w-3xl px-4 md:px-6 py-10">
       <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-warning/40 bg-warning/10 px-3 py-1 text-xs text-warning">
         <AlertTriangle className="h-3.5 w-3.5" /> Testnet preview — illustrative data, nothing is staked
@@ -141,5 +143,6 @@ function StakePage() {
         )}
       </div>
     </div>
+    </MarketingLayout>
   );
 }
