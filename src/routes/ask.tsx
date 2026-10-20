@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { useEffect, useRef, useState } from "react";
@@ -216,9 +216,9 @@ function AskPage() {
           This is a testnet preview. Nothing here is financial, legal or tax advice, and no
           real-money offering is available. Rates shown on this site are illustrative targets, not
           promises. For the full picture see{" "}
-          <a href="/terms" className="text-primary underline-offset-4 hover:underline">
+          <Link to="/terms" className="text-primary underline-offset-4 hover:underline">
             terms &amp; risk
-          </a>
+          </Link>
           .
         </p>
       </main>

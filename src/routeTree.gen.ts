@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AppRouteImport } from './routes/app'
+import { Route as AskRouteImport } from './routes/ask'
 import { Route as AssetsRouteImport } from './routes/assets'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as BlockfrostHealthRouteImport } from './routes/blockfrost-health'
@@ -69,6 +70,11 @@ const AboutRoute = AboutRouteImport.update({
 const AppRoute = AppRouteImport.update({
   id: '/app',
   path: '/app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AskRoute = AskRouteImport.update({
+  id: '/ask',
+  path: '/ask',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AssetsRoute = AssetsRouteImport.update({
@@ -298,6 +304,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/app': typeof AppRoute
+  '/ask': typeof AskRoute
   '/assets': typeof AssetsRoute
   '/auth': typeof AuthRoute
   '/blockfrost-health': typeof BlockfrostHealthRoute
@@ -346,6 +353,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/app': typeof AppRoute
+  '/ask': typeof AskRoute
   '/assets': typeof AssetsRoute
   '/auth': typeof AuthRoute
   '/blockfrost-health': typeof BlockfrostHealthRoute
@@ -393,6 +401,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/app': typeof AppRoute
+  '/ask': typeof AskRoute
   '/assets': typeof AssetsRoute
   '/auth': typeof AuthRoute
   '/blockfrost-health': typeof BlockfrostHealthRoute
@@ -443,6 +452,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/app'
+    | '/ask'
     | '/assets'
     | '/auth'
     | '/blockfrost-health'
@@ -491,6 +501,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/app'
+    | '/ask'
     | '/assets'
     | '/auth'
     | '/blockfrost-health'
@@ -537,6 +548,7 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/app'
+    | '/ask'
     | '/assets'
     | '/auth'
     | '/blockfrost-health'
@@ -586,6 +598,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   AppRoute: typeof AppRoute
+  AskRoute: typeof AskRoute
   AssetsRoute: typeof AssetsRoute
   AuthRoute: typeof AuthRoute
   BlockfrostHealthRoute: typeof BlockfrostHealthRoute
@@ -645,6 +658,13 @@ declare module '@tanstack/react-router' {
       path: '/app'
       fullPath: '/app'
       preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ask': {
+      id: '/ask'
+      path: '/ask'
+      fullPath: '/ask'
+      preLoaderRoute: typeof AskRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/assets': {
@@ -1008,6 +1028,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   AppRoute: AppRoute,
+  AskRoute: AskRoute,
   AssetsRoute: AssetsRoute,
   AuthRoute: AuthRoute,
   BlockfrostHealthRoute: BlockfrostHealthRoute,
