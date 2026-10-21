@@ -28,7 +28,13 @@ import {
 } from "lucide-react";
 import type { AssetVaultRow } from "@/lib/asset-vaults.shared";
 import { registerAssetVault } from "@/lib/asset-vaults.functions";
-import { bootstrapYieldVault, deriveYieldVaultAddress } from "@/lib/vault-bootstrap";
+import {
+  bootstrapYieldVault,
+  deriveYieldVaultAddress,
+  type BootstrapResult,
+} from "@/lib/vault-bootstrap";
+import { Button } from "@/components/ui/button";
+import { retryPendingConfirmation } from "@/components/deploy/confirmation-retry";
 import { getVaultChainState } from "@/lib/yield-chain.functions";
 import { YIELD_VAULT_VERSION } from "@/lib/yield-vault";
 import { cardanoscanAddress, cardanoscanTx, lovelaceToAda, short } from "@/lib/chain-format";
@@ -149,6 +155,9 @@ function DriftRow({
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
   const [seedInfo, setSeedInfo] = useState<{ seed: string; threadUnit: string } | null>(null);
+  const [submitted, setSubmitted] = useState<BootstrapResult | null>(null);
+  const [registered, setRegistered] = useState(false);
+  const [waiting, setWaiting] = useState(false);
 
   const oldState = useQuery({
     queryKey: ["vault-chain-state", vault.script_address],
@@ -163,33 +172,43 @@ function DriftRow({
     setError(null);
     setBusy(true);
     try {
-      const res = await bootstrapYieldVault({
-        assetId: vault.asset_id,
-        operators: vault.operator_key_hashes,
-        threshold: vault.signature_threshold,
-      });
-      await registerAssetVault({
-        data: {
-          assetId: res.assetId,
-          vaultVersion: res.vaultVersion,
-          network: vault.network === "mainnet" ? "mainnet" : "preprod",
-          scriptHash: res.scriptHash,
-          scriptAddress: res.address,
-          operators: res.operators,
-          threshold: res.threshold,
-          bootstrapTxHash: res.txHash,
-          reportingCadence: vault.reporting_cadence ?? undefined,
-        },
-      });
+      const res =
+        submitted ??
+        (await bootstrapYieldVault({
+          assetId: vault.asset_id,
+          operators: vault.operator_key_hashes,
+          threshold: vault.signature_threshold,
+        }));
+      setSubmitted(res);
       setTxHash(res.txHash);
       setSeedInfo({
         seed: `${res.seed.txHash}#${res.seed.outputIndex}`,
         threadUnit: res.threadUnit,
       });
+      setWaiting(true);
+      await retryPendingConfirmation(
+        () =>
+          registerAssetVault({
+            data: {
+              assetId: res.assetId,
+              vaultVersion: res.vaultVersion,
+              network: vault.network === "mainnet" ? "mainnet" : "preprod",
+              scriptHash: res.scriptHash,
+              scriptAddress: res.address,
+              operators: res.operators,
+              threshold: res.threshold,
+              bootstrapTxHash: res.txHash,
+              reportingCadence: vault.reporting_cadence ?? undefined,
+            },
+          }),
+        () => setWaiting(true),
+      );
+      setRegistered(true);
       onDone();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
+      setWaiting(false);
       setBusy(false);
     }
   };
@@ -246,9 +265,7 @@ function DriftRow({
           <div className="mt-1 text-muted-foreground">
             {stranded && stranded > 0n ? (
               <>
-                <span className="text-warning">
-                  {lovelaceToAda(stranded)} ADA still locked
-                </span>{" "}
+                <span className="text-warning">{lovelaceToAda(stranded)} ADA still locked</span>{" "}
                 across {positions} position UTxO{positions === 1 ? "" : "s"} plus the state UTxO.
               </>
             ) : (
@@ -263,8 +280,8 @@ function DriftRow({
             every position at the superseded address so depositors are made whole.
           </li>
           <li>
-            Have {vault.signature_threshold} of {vault.operator_key_hashes.length} operators sign the
-            final spend of the old state UTxO back to the treasury.
+            Have {vault.signature_threshold} of {vault.operator_key_hashes.length} operators sign
+            the final spend of the old state UTxO back to the treasury.
           </li>
           <li>
             Confirm the{" "}
@@ -292,7 +309,9 @@ function DriftRow({
         <div className="mt-3 flex items-start gap-2 rounded-md border border-success/40 bg-success/10 p-3 text-sm text-success">
           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
-            New ledger deployed and the registry now points at the new address.{" "}
+            {registered
+              ? "New ledger registered at the new address."
+              : "Bootstrap submitted — registry update pending."}{" "}
             <a href={cardanoscanTx(txHash)} target="_blank" rel="noreferrer" className="underline">
               View transaction
             </a>
@@ -304,23 +323,29 @@ function DriftRow({
               <p className="mt-2 text-[11px] text-muted-foreground">
                 Developer step: pin this seed in src/lib/vault-instances.ts under
                 YIELD_VAULT_SEEDS[&quot;{vault.asset_id}&quot;] as{" "}
-                {"{ txHash: \"...\", outputIndex: N }"}. Until that commit is deployed, deposits
-                and withdrawals for this vault are unavailable.
+                {'{ txHash: "...", outputIndex: N }'}. Until that commit is deployed, deposits and
+                withdrawals for this vault are unavailable.
               </p>
             </div>
           )}
         </div>
       )}
 
-      <button
+      <Button
         type="button"
         onClick={redeploy}
-        disabled={disabled || busy || Boolean(txHash)}
+        disabled={disabled || busy || registered}
         className="mt-4 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
       >
         {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-        {busy ? "Awaiting wallet signature…" : "Deploy updated script & re-point registry"}
-      </button>
+        {waiting
+          ? "Waiting for confirmation & updating registry…"
+          : busy
+            ? "Awaiting wallet signature…"
+            : submitted
+              ? "Retry registration"
+              : "Deploy updated script & re-point registry"}
+      </Button>
       {disabled && (
         <div className="mt-2 text-[11px] text-muted-foreground">
           Requires the admin role and the registered master wallet connected.
