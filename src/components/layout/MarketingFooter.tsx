@@ -10,7 +10,7 @@ const COLS: Col[] = [
     links: [
       ["Real-world assets", "/marketplace"],
       ["Fractions", "/offerings"],
-      [BRAND.productName, "/stake"],
+      [BRAND.productName, "/tessera"],
       ["Property (planned)", "/property"],
     ],
   },

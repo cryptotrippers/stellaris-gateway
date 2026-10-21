@@ -9,7 +9,7 @@ import { trackEvent } from "@/lib/analytics";
 
 const LINKS = [
   { to: "/marketplace", label: "Explore" },
-  { to: "/stake", label: BRAND.productName },
+  { to: "/tessera", label: BRAND.productName },
   { to: "/transparency", label: "Transparency" },
   { to: "/learn", label: "Learn" },
   { to: "/ask", label: "Ask" },
