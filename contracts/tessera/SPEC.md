@@ -1428,9 +1428,10 @@ script, not into those two. Applying parameters adds a few dozen bytes to each.
 
 ## 4. Redemption queue (Phase 2.6 — DESIGN CHECKPOINT, nothing implemented)
 
-Status: **revision 2, approved** (0825b2b). D-21 to D-35 approved as committed: short
-mode (D-32), Defund notice and veto-by-presence (D-33), the 1% limit floor (D-34) and
-the Sink invariant (D-35). R-2 stays an audit item (A-1).
+Status: **revision 2, approved** (0825b2b), **implemented** in Phase 2.6 (§4.17 lists the
+deviations, §4.18 the tests and the mutation pass). D-21 to D-35 approved as committed:
+short mode (D-32), Defund notice and veto-by-presence (D-33), the 1% limit floor (D-34)
+and the Sink invariant (D-35). R-2 stays an audit item (A-1).
 
 Baseline: §4 of the skeleton ("instant
 tier up to the buffer; Request UTxOs bucketed per day; payable after
@@ -1468,10 +1469,10 @@ would cost O(N²).)
 
 | Script | Purpose | Holds | Est. size |
 |---|---|---|---:|
-| `redeem_queue` (mint + spend; params `seed, reserve, flow, admin, short`) | marker mint/burn; the UTxOs at its address; plain `Cancel`; gates every other spend to `queue_flow`, `queue_admin` or `queue_short` | Request, Sink, Buffer shards, QueueConfig, ShortState, Grace | 6,300–8,500 |
-| `queue_flow` (withdraw-zero; param `reserve`) | user flow in normal mode: `Request`, `Instant`, `Settle`, `Sweep`, limit accounting | – | 9,250–11,750 |
-| `queue_admin` (withdraw-zero; param `reserve`) | committee flow: `Genesis`, `Suspend`, `Resume`, `AnnounceLimits`, `ApplyLimits`, `SyncFloor`, `Fund`, `AnnounceDefund`, `Defund`, `GrantGrace` | – | 7,000–9,000 |
-| `queue_short` (withdraw-zero; param `reserve`) | stress flow: `EnterShort`, `Register`, `PayShort`, `ExitShort`, `CancelRegistered`, `VetoDefund` (D-32, D-33) | – | 7,000–8,500 (stub floor 4,667, measured) |
+| `redeem_queue` (mint + spend; params `seed, reserve, flow, admin, short`) | marker mint/burn; the UTxOs at its address; plain `Cancel`; gates every other spend to `queue_flow`, `queue_admin` or `queue_short` | Request, Sink, Buffer shards, QueueConfig, ShortState, Grace | **3,128** (estimated 6,300–8,500) |
+| `queue_flow` (withdraw-zero; param `reserve`) | user flow: `Request`, `Instant`, `Settle`, `Sweep`, limit accounting, and `PayShort` (short mode, §4.17) | – | **12,436** (estimated 9,250–11,750) |
+| `queue_admin` (withdraw-zero; param `reserve`) | committee flow: `Genesis`, `Suspend`, `Resume`, `AnnounceLimits`, `ApplyLimits`, `SyncFloor`, `Fund`, `AnnounceDefund`, `Defund`, `GrantGrace` | – | **12,704** (estimated 7,000–9,000) |
+| `queue_short` (withdraw-zero; param `reserve`) | stress flow: `EnterShort`, `Register`, `ExitShort`, `CancelRegistered`, `VetoDefund` (D-32, D-33); `PayShort` moved to `queue_flow` | – | **11,165** (estimated 7,000–8,500) |
 
 `queue_flow`, `queue_admin` and `queue_short` publish handlers accept only `RegisterCredential`
 (the 2.5b condition), and their withdrawal amount must be 0. The queue binds the
@@ -1928,6 +1929,24 @@ The gate on each Request/Sink/Buffer input must stay O(1) per input (a withdrawa
 lookup and a redeemer-tag compare, as the vault binding does). Transaction size
 is the other limit on batch size (16,384 B).
 
+**Batch caps (hard limits for builders, measured in Phase 2.6).** The scripts do not
+enforce a batch size (the ledger's execution limit does); a builder must not exceed these,
+which keep each transaction under its target. Memory, fixture cost subtracted, per-input
+gates of `redeem_queue` included (108 k for the first queue input, 72 k for each other):
+
+| Transaction | Cap | Memory at the cap | Target | Next size up |
+|---|---:|---:|---|---|
+| `Settle` | 20 Requests | 47.3% | < 50% | 21 is about 49.3% (not measured) |
+| `Sweep` | 20 Sinks | 23.8% | < 50% | – |
+| `PayShort` | **16** Requests | 49.1% | < 50% | 17 is about 51.5% |
+| `Register` | **12** Requests | 34.9% | < 35% | 14 is 40.3% |
+| `VetoDefund` | **30** referenced Requests | 24.0% | < 25% | 40 is 30.9% |
+| `Instant`, `Request`, `Cancel` | 1 each | 8.0% / 4.9% / 1.6% | < 25% / 15% / 10% | – |
+
+A queue deeper than a cap is paid, registered or shown over several transactions. CPU
+stays under 32% at every cap. `Register` at 12 clears its target by 0.1 point: a builder
+that sees a larger fixture (more days in the tallies, longer addresses) should use 10.
+
 ### 4.14 Tests (planned)
 
 * **Request:** accepted with `kyc_redeem` off/on; refused: eligibility missing
@@ -2010,6 +2029,135 @@ mutants are the ones most likely to survive and are written first.
 UI and builders (Phase 3: prompts in `docs/lovable-prompts/phase-2-6.md`); the
 keeper bot; per-holder AML limits; fiat rails; on-chain FIFO; a burn-authority
 refactor (D-22 d); mainnet.
+
+### 4.17 Implementation notes (Phase 2.6, as built)
+
+The scripts are `validators/redeem_queue.ak`, `queue_flow.ak`, `queue_admin.ak` and
+`queue_short.ak`, with `lib/tessera/queue_state.ak` (datums, redeemers, constants and the
+pure rules), `queue_ctx.ak` (genuine-UTxO selection), `queue_pay.ak` (shard and Sink
+output rules shared by Settle and PayShort) and `queue_fixture.ak` (tests only).
+`stsra_vault`, `reserve`, `vault_ops`, `first_loss` and `eligibility` are byte-identical
+(their blueprint hashes are unchanged).
+
+**Sizes (compiled, bytes).** `redeem_queue` 3,128 · `queue_flow` 12,436 · `queue_admin`
+12,704 · `queue_short` 11,165. Target ≤ 13,000, CI fails above 14,000. The stub step
+(binding and dispatch only, no logic) compiled to 428–629 B per withdraw script and 495
+B for `redeem_queue`: floors, not estimates. The first complete logic measured
+`queue_flow` 11,556, `queue_admin` 13,460 and `queue_short` **13,676**; the last two were
+over target and were brought under it (below).
+
+**Deviations from the design above.**
+
+1. **PayShort lives in `queue_flow`** (`FlowPayShort`), not in `queue_short`.
+   `queue_short` with PayShort compiled to 13,676 B. PayShort is `Settle` with the
+   ShortState spent instead of referenced, so it shares every payment rule with it
+   (`settle(…, short_mode)`); `queue_flow` grew by about 900 B and `queue_short` fell to
+   11,165 B. `queue_short` keeps `EnterShort`, `Register`, `ExitShort`,
+   `CancelRegistered` and `VetoDefund`. Tests and mutants for PayShort are in
+   `queue_flow`.
+2. **`redeem_queue` parameters are `(seed, reserve, flow, admin, short)`**, as
+   designed; `reserve` is used by `Cancel` to check that the TSRA leaves the queue.
+3. **The binding check also runs when a Cancel is the first queue input.** Found while
+   writing the tests: if the first queue input is a Cancel and the others run under a
+   script naming a different queue, nothing checked the binding (a shard could be spent
+   under an unbound `queue_flow` run). The first queue input now checks that every
+   script that runs names this queue, however it is spent; a non-first `Run` input
+   still checks that a script runs at all. Test:
+   `a_cancel_first_cannot_hide_an_unbound_script_that_runs_the_other_inputs`.
+4. **I-Q1 is enforced one level above the spend handler.** The gate in `redeem_queue`
+   reads a `Run` input without decoding its datum (a full decode cost about 25,000 memory
+   per input in a batch). "A Sink moves only in a Sweep" is instead enforced where the
+   inputs are classified: `Sweep` accepts only Sinks and the Supply `Burn`; **every
+   other action of the three scripts requires an exact set of queue inputs and refuses a
+   Sink among them** (`Request`: none; `Instant`: one shard; `Settle`: shard plus
+   Requests; `PayShort`: shard, ShortState plus Requests; every admin action; `Register`,
+   `Enter`, `Exit`, `CancelRegistered`, `VetoDefund`). Tests: `*_refuses_a_sink_input`,
+   `*_may_not_carry_another_queue_input`, `a_sink_has_no_cancel`; mutants for each
+   condition were killed (§4.18).
+5. **`Settle` and `PayShort` do not re-check each Request's marker and TSRA value.** For
+   `n` Request inputs the transaction must burn exactly `n` markers (`mint == -n`).
+   Markers live only in Request UTxOs (minted into them by `Request`, kept by `Register`,
+   burned by `Cancel` and settlement) and each holds exactly one, so a planted lookalike
+   cannot be among the `n`. The value of a genuine Request was pinned at creation and
+   `Register` re-creates it identically. Saves about 0.1 M memory per Request.
+6. **The keeper's tip is in lovelace** (§4.4), so `Settle` requires `payout_to` to receive
+   at least `qty` payout units and at least the Request's lovelace less `settle_tip`.
+   The §4.14 test list's "`qty − tip`" wording conflated the two; the tests follow §4.3/4.4.
+7. **`SetLimits` is `AnnounceLimits`:** raising both limits applies at once; anything else
+   is announced and applies through `ApplyLimits`. `ApplyLimits` is a committee action;
+   `SyncFloor` is permissionless. `max_shards` is 8 (a 16-shard Genesis used about
+   85% of the memory budget).
+8. **A stale registration cancels through `CancelRegistered`** with the ShortState only
+   referenced; the plain `Cancel` refuses any registered Request. `CancelRegistered` is
+   owner-signed and does not repeat the plain Cancel's "TSRA must leave the queue" check.
+9. **Not testable as listed in §4.14:** "a duplicated reference" in the Defund veto (the
+   ledger forbids duplicate reference inputs) and "shard balance" for `Instant` (the
+   ledger forbids a negative output; the exact value rule is tested).
+10. **Property tests use deterministic spreads** (30 and 20 samples) because
+    `aiken/fuzz` is a separate package and the project has no such dependency.
+11. **Grace UTxOs are never spent** and are not revocable before expiry; each grant is a
+    new UTxO. `until` is capped by `grace_ms`.
+
+**Execution budget** (14,000,000 memory / 10,000,000,000 CPU; fixture-building cost
+subtracted; the per-input gates of `redeem_queue` added: first input 108 k memory, each
+other input 72 k, so 20 inputs cost 1.51 M memory and 0.80 B CPU):
+
+| Transaction | Script | Memory | CPU | Target | |
+|---|---|---:|---:|---|---|
+| `Request` | flow | 4.9% | 2.3% | < 15% | met |
+| `Cancel` | gate | 1.6% | 0.8% | < 10% | met |
+| `Instant` | flow + 1 gate | 8.0% | 3.9% | < 25% | met |
+| `Settle`, 20 Requests | flow + 20 gates | **47.3%** | 25.7% | < 50% | met |
+| `PayShort`, 20 Requests | flow + 20 gates | **58.9%** | 31.7% | < 50% | not met at 20; **cap 16** (49.1%), §4.13 |
+| `Sweep`, 20 Sinks | flow + 20 gates | 23.8% | 14.3% | < 50% | met |
+| `Register`, 20 Requests | short + 20 gates | **56.0%** | 30.2% | < 35% | not met at 20; **cap 12** (34.9%), §4.13 |
+| `VetoDefund`, 40 references | short | **30.9%** | 13.7% | < 25% | not met at 40; **cap 30** (24.0%), §4.13 |
+| `EnterShort` (K = 4) | short | 13.6% | 6.2% | < 15% | met |
+| `CancelRegistered` | short | 4.9% | 2.3% | – | – |
+| `ExitShort` | short | 2.2% | 1.1% | – | – |
+| Admin actions (Suspend, limits, Fund, Defund, Grace) | admin | 6–12% (fixture included) | 2.5–5.5% | < 15% | met |
+| `Genesis`, 4 shards | admin | 19.3% (fixture included) | 8.7% | one-time | – |
+
+Batch sizes under 50% memory: `Settle` 20 (measured), `PayShort` 16, `Register` 17 (16
+measured, 18 is 50.7%). The short-mode paths missed their design targets: the cost per
+Request is about 0.27 M memory in `PayShort` and 0.32 M in `Register`, almost all of it
+data decoding and list traversal in the script, not the gates. A batch above the limit is
+simply split over several transactions.
+
+### 4.18 Tests and mutation (Phase 2.6)
+
+**Tests:** 434 in the queue modules (`queue_flow` 160, `queue_short` 106, `queue_admin`
+110, `redeem_queue` 35, `queue_state` 23), including every item of §4.14 (see the
+deviations above for the two that cannot be written as listed), the I-Q1 set, the
+short-mode set, the Defund veto, the floor and `SyncFloor`, and "Cancel never blocked".
+The whole Tessera suite passes: 1,347 tests (reserve 374, stsra_vault 208, vault_ops 178,
+first_loss 53, eligibility 32, queue 434, libraries 68). The mutation pass ran on the
+final logic; `max_shards` 16 to 8 and the removal of an unused constant came after it and
+change no comparison.
+
+**Mutation pass.** 413 mutants, generated mechanically from the production code of the
+four scripts and the three libraries: every item of every `and { … }` block deleted
+(151) and every spaced comparison or `+`/`-` flipped (262), including the Burn tag,
+the Sink conditions, the floor, the notice periods, the tallies and every
+short-mode constant. Run in foreground batches of up to 21 with 7 workers.
+
+* First pass: 64 survivors. 51 were test gaps: a refusal that another check caused
+  (a window or output that was also wrong), or a boundary not tested. Each got a test
+  and was re-run and **killed**.
+* **13 survivors remain, all equivalent or unreachable**: `n > 0` in `Request`, `Settle`
+  (the mint equation `[Pair(request, ±n)]` cannot hold with `n = 0`: a Value has no zero
+  entry) and `qty > 0` in `Instant` (a zero or negative Sink cannot be built: the Sink
+  must hold a TSRA entry); `reg_episode != 0` in `CancelRegistered` (an unregistered
+  Request cancelled through it behaves exactly like the plain Cancel);
+  the marker check in `CancelRegistered` (the burn of one marker requires the marker to
+  be in the Request); `list.length(shards) == c.shards` in Genesis (implied by the
+  output count and the distinct-index count); `>` against `>=` where both branches
+  return the same value (`SyncFloor`'s monthly limit, `limit_floor`'s `max`, the order
+  tests in `tally_add` and `tally_sub`).
+* **Score: 400 of 413 killed (96.9%); 400 of 400 non-equivalent killed.**
+* No shared library of the earlier phases was touched (`rules`, `reserve_state`,
+  `reserve_ref`, `eligibility` and the thread libraries are unchanged), so their mutants
+  need no re-run; the whole Tessera test suite was re-run instead.
 
 ## 5. Invariants
 1. TSRA supply never exceeds the lesser of attested reserve and mint cap.

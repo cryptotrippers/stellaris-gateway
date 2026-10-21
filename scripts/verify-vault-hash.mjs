@@ -195,9 +195,10 @@ if (fractionValidators) {
   );
 }
 
-const tesseraValidators = existsSync(TESSERA_PLUTUS_PATH)
-  ? (JSON.parse(readFileSync(TESSERA_PLUTUS_PATH, "utf8"))?.validators ?? [])
+const tesseraBlueprint = existsSync(TESSERA_PLUTUS_PATH)
+  ? JSON.parse(readFileSync(TESSERA_PLUTUS_PATH, "utf8"))
   : null;
+const tesseraValidators = tesseraBlueprint ? (tesseraBlueprint.validators ?? []) : null;
 
 if (tesseraValidators) {
   const tesseraPin = readPins(TESSERA_TS_PATH);
@@ -240,7 +241,52 @@ if (tesseraValidators) {
       cbor: "__BLUEPRINT_IMPORT__",
       file: "src/lib/tessera-blueprint.ts",
     },
+    {
+      label: "tessera redeem_queue (queue address, markers + thread tokens)",
+      onChain: findIn(tesseraValidators, "redeem_queue.redeem_queue"),
+      hash: tesseraPin("TESSERA_REDEEM_QUEUE_BLUEPRINT_HASH"),
+      cbor: "__BLUEPRINT_IMPORT__",
+      file: "src/lib/tessera-blueprint.ts",
+    },
+    {
+      label: "tessera queue_flow (withdraw-zero: Request, Instant, Settle, PayShort, Sweep)",
+      onChain: findIn(tesseraValidators, "queue_flow.queue_flow", ".withdraw"),
+      hash: tesseraPin("TESSERA_QUEUE_FLOW_BLUEPRINT_HASH"),
+      cbor: "__BLUEPRINT_IMPORT__",
+      file: "src/lib/tessera-blueprint.ts",
+    },
+    {
+      label: "tessera queue_admin (withdraw-zero: committee actions of the queue)",
+      onChain: findIn(tesseraValidators, "queue_admin.queue_admin", ".withdraw"),
+      hash: tesseraPin("TESSERA_QUEUE_ADMIN_BLUEPRINT_HASH"),
+      cbor: "__BLUEPRINT_IMPORT__",
+      file: "src/lib/tessera-blueprint.ts",
+    },
+    {
+      label: "tessera queue_short (withdraw-zero: short mode and the Defund veto)",
+      onChain: findIn(tesseraValidators, "queue_short.queue_short", ".withdraw"),
+      hash: tesseraPin("TESSERA_QUEUE_SHORT_BLUEPRINT_HASH"),
+      cbor: "__BLUEPRINT_IMPORT__",
+      file: "src/lib/tessera-blueprint.ts",
+    },
   );
+
+  // Phase 2.6: queue_flow's Sweep reads the reserve's `Burn` redeemer by its
+  // constructor index (an exact pin of `reserve_burn_tag` in queue_state.ak). A
+  // reordering of `ReserveRedeemer` would silently turn the Sweep check into a
+  // check for another reserve action, so it fails the build instead.
+  const queueStateSrc = readFileSync(resolve("contracts/tessera/lib/tessera/queue_state.ak"), "utf8");
+  const pinnedBurnTag = Number(queueStateSrc.match(/pub const reserve_burn_tag:\s*Int\s*=\s*(\d+)/)?.[1]);
+  const burnCtor = tesseraBlueprint?.definitions?.["reserve/ReserveRedeemer"]?.anyOf?.find(
+    (c) => c.title === "Burn",
+  );
+  if (!Number.isInteger(pinnedBurnTag) || burnCtor?.index !== pinnedBurnTag) {
+    console.error(
+      `[verify-vault-hash] reserve_burn_tag (${pinnedBurnTag}) does not match the Burn constructor index of ReserveRedeemer in the reserve blueprint (${burnCtor?.index}).`,
+    );
+    process.exit(1);
+  }
+  console.log(`[verify-vault-hash] OK — queue_state.reserve_burn_tag = ${pinnedBurnTag} matches ReserveRedeemer.Burn.`);
 } else {
   console.log(
     "[verify-vault-hash] contracts/tessera/plutus.json not present — skipping Tessera pins.",

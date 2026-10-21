@@ -12,7 +12,7 @@
 
 use aiken/collection/list
 use aiken/primitive/bytearray
-use cardano/address.{Address}
+use cardano/address.{Address, Script}
 use cardano/assets.{PolicyId}
 
 // ---------------------------------------------------------------- constants
@@ -64,8 +64,8 @@ pub const min_daily_limit: Int = 10_000_000_000
 /// The floor's supply part: `minted_supply / floor_div` (1%).
 pub const floor_div: Int = 100
 
-/// At most this many Buffer shards.
-pub const max_shards: Int = 16
+
+pub const max_shards: Int = 8
 
 // Token names under the queue policy (the queue script hash).
 pub const config_name: ByteArray = "queue"
@@ -177,6 +177,9 @@ pub type FlowAction {
   FlowInstant { holder: ByteArray, qty: Int }
   FlowSettle
   FlowSweep
+  /// Short mode (D-32): pay the head day's registered Requests. Lives here
+  /// because it is `Settle` with the ShortState spent instead of referenced.
+  FlowPayShort
 }
 
 pub type FlowRedeemer {
@@ -212,7 +215,6 @@ pub type AdminRedeemer {
 pub type ShortAction {
   EnterShort
   Register
-  PayShort
   ExitShort
   CancelRegistered
   VetoDefund
@@ -347,4 +349,216 @@ pub fn head_day(ts: List<Tally>) -> Option<Int> {
 
 pub fn tallies_empty(ts: List<Tally>) -> Bool {
   list.is_empty(ts)
+}
+
+/// A genesis QueueConfig: every parameter within its hard bound, nothing
+/// pending, no suspension, limits at or above the floor.
+pub fn config_valid(c: QueueConfig, floor: Int) -> Bool {
+  bytearray.length(c.payout_policy) == 28 && bytearray.length(c.payout_name) <= 32 && c.settle_delay >= 0 && c.settle_delay <= max_settle_delay && c.min_request > 0 && c.instant_max > 0 && c.settle_tip >= 0 && c.settle_tip <= max_settle_tip && c.shards >= 1 && c.shards <= max_shards && c.grace_ms >= 0 && c.grace_ms <= max_grace_ms && c.suspended_until == 0 && c.pending_limits == None && c.pending_defund == None && c.epoch == 0 && limits_ok(
+    c.daily_limit,
+    c.monthly_limit,
+    floor,
+  )
+}
+
+/// `Suspend`: a finite window of at most a day, the previous suspension ended
+/// at least the reopen gap ago, the new one outlasts the transaction and is at
+/// most 3 days long from `lo`.
+pub fn can_suspend(lo: Int, hi: Int, until: Int, previous_until: Int) -> Bool {
+  hi >= lo && hi - lo <= day_ms && lo >= previous_until + suspend_reopen_gap_ms && hi < until && until <= lo + max_suspend_ms
+}
+
+/// A suspension is in force at `lo`.
+pub fn suspended(until: Int, lo: Int) -> Bool {
+  until > lo
+}
+
+// ------------------------------------------------------------------ tests
+
+fn cfg_ok() -> QueueConfig {
+  QueueConfig {
+    payout_policy: #"99999999999999999999999999999999999999999999999999999999",
+    payout_name: "USDM",
+    settle_delay: 2 * day_ms,
+    min_request: 100_000_000,
+    instant_max: 10_000_000_000,
+    settle_tip: 200_000,
+    daily_limit: 40_000_000_000,
+    monthly_limit: 400_000_000_000,
+    shards: 4,
+    grace_ms: 14 * day_ms,
+    suspended_until: 0,
+    pending_limits: None,
+    pending_defund: None,
+    epoch: 0,
+  }
+}
+
+test the_floor_is_ten_thousand_tsra_for_a_small_supply() {
+  limit_floor(0) == 10_000_000_000 && limit_floor(500_000_000_000) == 10_000_000_000
+}
+
+test the_floor_is_one_percent_of_a_large_supply() {
+  limit_floor(2_000_000_000_000) == 20_000_000_000 && limit_floor(1_000_000_000_000) == 10_000_000_000 && limit_floor(
+    1_000_000_000_100,
+  ) == 10_000_000_001
+}
+
+test the_floor_uses_whole_division() {
+  limit_floor(1_000_000_000_099) == 10_000_000_000
+}
+
+test limits_must_reach_the_floor_and_the_monthly_the_daily() {
+  limits_ok(10_000_000_000, 10_000_000_000, 10_000_000_000) && !limits_ok(
+    9_999_999_999,
+    10_000_000_000,
+    10_000_000_000,
+  ) && !limits_ok(10_000_000_000, 9_999_999_999, 10_000_000_000) && !limits_ok(0, 0, 10_000_000_000)
+}
+
+test day_and_month_windows() {
+  day_of(0) == 0 && day_of(day_ms - 1) == 0 && day_of(day_ms) == 1 && month_of(29) == 0 && month_of(
+    30,
+  ) == 1 && month_of(59) == 1 && month_of(60) == 2
+}
+
+test payable_after_is_the_end_of_the_bucket_plus_the_delay() {
+  payable_after_of(20, 2 * day_ms) == 23 * day_ms && payable_after_of(0, 0) == day_ms
+}
+
+test shard_names_are_distinct_six_byte_names() {
+  shard_name(0) != shard_name(1) && bytearray.length(shard_name(15)) == 6 && bytearray.at(
+    shard_name(15),
+    5,
+  ) == 15 && bytearray.take(shard_name(3), 5) == "shard"
+}
+
+fn sh(day: Int, pd: Int, month: Int, pm: Int) -> ShardState {
+  ShardState { day, paid_day: pd, month, paid_month: pm }
+}
+
+test a_shard_accepts_up_to_its_caps_and_not_a_unit_more() {
+  shard_after(sh(20, 9, 0, 9), 20, 1, 10, 10) == Some(sh(20, 10, 0, 10)) && shard_after(sh(20, 9, 0, 9), 20, 2, 10, 10) == None && shard_after(
+    sh(20, 0, 0, 99),
+    20,
+    1,
+    10,
+    100,
+  ) == Some(sh(20, 1, 0, 100)) && shard_after(sh(20, 0, 0, 99), 20, 2, 10, 100) == None
+}
+
+test a_new_day_resets_the_daily_counter_only() {
+  shard_after(sh(20, 10, 0, 50), 21, 5, 10, 100) == Some(sh(21, 5, 0, 55))
+}
+
+test a_new_month_resets_the_monthly_counter() {
+  shard_after(sh(29, 0, 0, 100), 30, 5, 10, 100) == Some(sh(30, 5, 1, 5))
+}
+
+test a_shard_never_moves_to_an_earlier_window() {
+  shard_after(sh(20, 0, 0, 0), 19, 1, 10, 100) == None && shard_after(sh(30, 0, 1, 0), 29, 1, 10, 100) == None
+}
+
+test tally_add_keeps_the_days_sorted_and_merges_equal_days() {
+  let a = tally_add([], 5, 1)
+  let b = tally_add(a, 3, 2)
+  let c = tally_add(b, 9, 3)
+  let d = tally_add(c, 5, 10)
+  b == [Tally { day: 3, open: 2 }, Tally { day: 5, open: 1 }] && d == [
+    Tally { day: 3, open: 2 },
+    Tally { day: 5, open: 11 },
+    Tally { day: 9, open: 3 },
+  ] && tallies_sorted(d)
+}
+
+test tally_sub_lowers_one_day_and_drops_it_at_zero() {
+  let ts = [Tally { day: 3, open: 2 }, Tally { day: 5, open: 11 }, Tally { day: 9, open: 3 }]
+  tally_sub(ts, 5, 1) == Some([Tally { day: 3, open: 2 }, Tally { day: 5, open: 10 }, Tally { day: 9, open: 3 }]) && tally_sub(
+    ts,
+    3,
+    2,
+  ) == Some([Tally { day: 5, open: 11 }, Tally { day: 9, open: 3 }]) && tally_sub(ts, 9, 3) == Some(
+    [Tally { day: 3, open: 2 }, Tally { day: 5, open: 11 }],
+  )
+}
+
+test tally_sub_refuses_an_absent_day_or_more_than_it_holds() {
+  let ts = [Tally { day: 3, open: 2 }, Tally { day: 5, open: 11 }]
+  tally_sub(ts, 4, 1) == None && tally_sub(ts, 3, 3) == None && tally_sub(ts, 6, 1) == None && tally_sub([], 1, 1) == None
+}
+
+test tallies_must_be_strictly_increasing_and_positive() {
+  tallies_sorted([]) && tallies_sorted([Tally { day: 1, open: 1 }, Tally { day: 2, open: 1 }]) && !tallies_sorted(
+    [Tally { day: 2, open: 1 }, Tally { day: 1, open: 1 }],
+  ) && !tallies_sorted([Tally { day: 1, open: 1 }, Tally { day: 1, open: 1 }]) && !tallies_sorted(
+    [Tally { day: 1, open: 0 }],
+  )
+}
+
+test the_head_day_is_the_oldest() {
+  head_day([]) == None && head_day([Tally { day: 4, open: 1 }, Tally { day: 6, open: 1 }]) == Some(4) && tallies_empty([]) && !tallies_empty(
+    [Tally { day: 4, open: 1 }],
+  )
+}
+
+test a_genesis_config_within_every_bound_is_valid() {
+  config_valid(cfg_ok(), 10_000_000_000)
+}
+
+test every_genesis_bound_is_exact() {
+  let c = cfg_ok()
+  config_valid(QueueConfig { ..c, settle_delay: max_settle_delay }, 10_000_000_000) && !config_valid(
+    QueueConfig { ..c, settle_delay: max_settle_delay + 1 },
+    10_000_000_000,
+  ) && config_valid(QueueConfig { ..c, settle_tip: max_settle_tip }, 10_000_000_000) && !config_valid(
+    QueueConfig { ..c, settle_tip: max_settle_tip + 1 },
+    10_000_000_000,
+  ) && config_valid(QueueConfig { ..c, grace_ms: max_grace_ms }, 10_000_000_000) && !config_valid(
+    QueueConfig { ..c, grace_ms: max_grace_ms + 1 },
+    10_000_000_000,
+  ) && config_valid(QueueConfig { ..c, shards: max_shards }, 10_000_000_000) && !config_valid(
+    QueueConfig { ..c, shards: max_shards + 1 },
+    10_000_000_000,
+  ) && !config_valid(QueueConfig { ..c, shards: 0 }, 10_000_000_000) && config_valid(
+    QueueConfig { ..c, settle_delay: 0, settle_tip: 0, grace_ms: 0 },
+    10_000_000_000,
+  ) && !config_valid(c, 40_000_000_001)
+}
+
+test genesis_config_names_are_bounded() {
+  let c = cfg_ok()
+  config_valid(QueueConfig { ..c, payout_name: "" }, 10_000_000_000) && config_valid(
+    QueueConfig { ..c, payout_name: "12345678901234567890123456789012" },
+    10_000_000_000,
+  ) && !config_valid(
+    QueueConfig { ..c, payout_name: "123456789012345678901234567890123" },
+    10_000_000_000,
+  ) && !config_valid(QueueConfig { ..c, payout_policy: #"9999" }, 10_000_000_000)
+}
+
+test a_suspension_is_bounded_in_length_and_spacing() {
+  let lo = 10 * day_ms
+  can_suspend(lo, lo + 1, lo + max_suspend_ms, 0) && !can_suspend(lo, lo + 1, lo + max_suspend_ms + 1, 0) && !can_suspend(
+    lo,
+    lo + 1,
+    lo + 1,
+    0,
+  ) && can_suspend(lo, lo + 1, lo + 2, lo - suspend_reopen_gap_ms) && !can_suspend(
+    lo,
+    lo + 1,
+    lo + 2,
+    lo - suspend_reopen_gap_ms + 1,
+  ) && can_suspend(lo, lo + day_ms, lo + day_ms + 1, 0) && !can_suspend(lo, lo + day_ms + 1, lo + day_ms + 2, 0)
+}
+
+test a_suspension_is_in_force_until_its_end() {
+  suspended(10, 9) && !suspended(10, 10) && !suspended(0, 0)
+}
+
+test a_zero_tally_is_never_sorted_even_before_another_day() {
+  !tallies_sorted([Tally { day: 1, open: 0 }, Tally { day: 2, open: 1 }])
+}
+
+test a_suspension_may_open_and_end_in_a_zero_length_window() {
+  can_suspend(10 * day_ms, 10 * day_ms, 10 * day_ms + 1, 0)
 }
