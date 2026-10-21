@@ -29,6 +29,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StakeRouteImport } from './routes/stake'
 import { Route as StewardshipRouteImport } from './routes/stewardship'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as TesseraRouteImport } from './routes/tessera'
 import { Route as TestnetRouteImport } from './routes/testnet'
 import { Route as TransparencyRouteImport } from './routes/transparency'
 import { Route as UpgradeRouteImport } from './routes/upgrade'
@@ -155,6 +156,11 @@ const StewardshipRoute = StewardshipRouteImport.update({
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TesseraRoute = TesseraRouteImport.update({
+  id: '/tessera',
+  path: '/tessera',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TestnetRoute = TestnetRouteImport.update({
@@ -321,6 +327,7 @@ export interface FileRoutesByFullPath {
   '/stake': typeof StakeRoute
   '/stewardship': typeof StewardshipRoute
   '/terms': typeof TermsRoute
+  '/tessera': typeof TesseraRoute
   '/testnet': typeof TestnetRoute
   '/transparency': typeof TransparencyRoute
   '/upgrade': typeof UpgradeRouteWithChildren
@@ -369,6 +376,7 @@ export interface FileRoutesByTo {
   '/stake': typeof StakeRoute
   '/stewardship': typeof StewardshipRoute
   '/terms': typeof TermsRoute
+  '/tessera': typeof TesseraRoute
   '/testnet': typeof TestnetRoute
   '/transparency': typeof TransparencyRoute
   '/yield': typeof YieldRoute
@@ -418,6 +426,7 @@ export interface FileRoutesById {
   '/stake': typeof StakeRoute
   '/stewardship': typeof StewardshipRoute
   '/terms': typeof TermsRoute
+  '/tessera': typeof TesseraRoute
   '/testnet': typeof TestnetRoute
   '/transparency': typeof TransparencyRoute
   '/upgrade': typeof UpgradeRouteWithChildren
@@ -469,6 +478,7 @@ export interface FileRouteTypes {
     | '/stake'
     | '/stewardship'
     | '/terms'
+    | '/tessera'
     | '/testnet'
     | '/transparency'
     | '/upgrade'
@@ -517,6 +527,7 @@ export interface FileRouteTypes {
     | '/stake'
     | '/stewardship'
     | '/terms'
+    | '/tessera'
     | '/testnet'
     | '/transparency'
     | '/yield'
@@ -565,6 +576,7 @@ export interface FileRouteTypes {
     | '/stake'
     | '/stewardship'
     | '/terms'
+    | '/tessera'
     | '/testnet'
     | '/transparency'
     | '/upgrade'
@@ -615,6 +627,7 @@ export interface RootRouteChildren {
   StakeRoute: typeof StakeRoute
   StewardshipRoute: typeof StewardshipRoute
   TermsRoute: typeof TermsRoute
+  TesseraRoute: typeof TesseraRoute
   TestnetRoute: typeof TestnetRoute
   TransparencyRoute: typeof TransparencyRoute
   UpgradeRoute: typeof UpgradeRouteWithChildren
@@ -777,6 +790,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tessera': {
+      id: '/tessera'
+      path: '/tessera'
+      fullPath: '/tessera'
+      preLoaderRoute: typeof TesseraRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/testnet': {
@@ -1045,6 +1065,7 @@ const rootRouteChildren: RootRouteChildren = {
   StakeRoute: StakeRoute,
   StewardshipRoute: StewardshipRoute,
   TermsRoute: TermsRoute,
+  TesseraRoute: TesseraRoute,
   TestnetRoute: TestnetRoute,
   TransparencyRoute: TransparencyRoute,
   UpgradeRoute: UpgradeRouteWithChildren,
