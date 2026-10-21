@@ -6,6 +6,7 @@
 
 # Vault setup confirmation
 
-- [ ] Confirm the registration timing failure across all three setup screens.
-- [ ] Retry pending registration without another wallet transaction, and retain seed details.
-- [ ] Run regression checks and resolve the monitoring finding.
+- [x] Confirm the registration timing failure across all three setup screens.
+- [x] Retry pending registration without another wallet transaction, and retain seed details.
+- [x] Run regression checks and resolve the monitoring finding.
+- [ ] Verify a fresh signed Preprod bootstrap end to end — requires the operator's connected signing wallet.
