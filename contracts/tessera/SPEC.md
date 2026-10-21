@@ -2130,8 +2130,7 @@ simply split over several transactions.
 110, `redeem_queue` 35, `queue_state` 23), including every item of §4.14 (see the
 deviations above for the two that cannot be written as listed), the I-Q1 set, the
 short-mode set, the Defund veto, the floor and `SyncFloor`, and "Cancel never blocked".
-The whole Tessera suite passes: 1,347 tests (reserve 374, stsra_vault 208, vault_ops 178,
-first_loss 53, eligibility 32, queue 434, libraries 68). The mutation pass ran on the
+The whole Tessera suite passes: 1,340 tests (`aiken check`, 0 warnings). The mutation pass ran on the
 final logic; `max_shards` 16 to 8 and the removal of an unused constant came after it and
 change no comparison.
 
