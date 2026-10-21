@@ -2,8 +2,7 @@
 export async function retryPendingConfirmation<T>(
   register: () => Promise<T>,
   onPending: () => void,
-  wait: (ms: number) => Promise<void> = (ms) =>
-    new Promise((resolve) => setTimeout(resolve, ms)),
+  wait: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 ): Promise<T> {
   for (let attempt = 0; ; attempt++) {
     try {

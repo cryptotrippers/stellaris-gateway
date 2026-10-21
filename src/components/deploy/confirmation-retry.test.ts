@@ -8,11 +8,17 @@ describe("bootstrap registration confirmation", () => {
     let feesRecorded = 0;
     const waits: number[] = [];
     const submitted = { txHash: "submitted-once", seed: "retained-seed" };
-    const registered = await retryPendingConfirmation(async () => {
-      registrations++;
-      if (registrations < 3) throw new Error("NOT_CONFIRMED: not on chain yet");
-      return submitted;
-    }, () => {}, async (ms) => { waits.push(ms); });
+    const registered = await retryPendingConfirmation(
+      async () => {
+        registrations++;
+        if (registrations < 3) throw new Error("NOT_CONFIRMED: not on chain yet");
+        return submitted;
+      },
+      () => {},
+      async (ms) => {
+        waits.push(ms);
+      },
+    );
     if (registered === submitted) feesRecorded++;
     assert.equal(registered, submitted);
     assert.equal(registrations, 3);
@@ -24,10 +30,19 @@ describe("bootstrap registration confirmation", () => {
     for (const message of ["Unauthorized", "No genuine State at address"]) {
       let calls = 0;
       let waits = 0;
-      await assert.rejects(retryPendingConfirmation(async () => {
-        calls++;
-        throw new Error(message);
-      }, () => {}, async () => { waits++; }), { message });
+      await assert.rejects(
+        retryPendingConfirmation(
+          async () => {
+            calls++;
+            throw new Error(message);
+          },
+          () => {},
+          async () => {
+            waits++;
+          },
+        ),
+        { message },
+      );
       assert.equal(calls, 1);
       assert.equal(waits, 0);
     }
@@ -36,12 +51,27 @@ describe("bootstrap registration confirmation", () => {
   test("stops after thirty waits and permits a later registration-only retry", async () => {
     let calls = 0;
     let waits = 0;
-    await assert.rejects(retryPendingConfirmation(async () => {
-      calls++;
-      throw new Error("NOT_CONFIRMED");
-    }, () => {}, async () => { waits++; }), /do not bootstrap again/);
+    await assert.rejects(
+      retryPendingConfirmation(
+        async () => {
+          calls++;
+          throw new Error("NOT_CONFIRMED");
+        },
+        () => {},
+        async () => {
+          waits++;
+        },
+      ),
+      /do not bootstrap again/,
+    );
     assert.equal(calls, 31);
     assert.equal(waits, 30);
-    assert.equal(await retryPendingConfirmation(async () => "same-tx", () => {}), "same-tx");
+    assert.equal(
+      await retryPendingConfirmation(
+        async () => "same-tx",
+        () => {},
+      ),
+      "same-tx",
+    );
   });
 });

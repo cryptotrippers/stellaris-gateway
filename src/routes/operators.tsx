@@ -1,7 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, CheckCircle2, ExternalLink, Loader2, ShieldCheck, Wallet } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ExternalLink,
+  Loader2,
+  ShieldCheck,
+  Wallet,
+} from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { Badge } from "@/components/ui/StatusBadge";
@@ -25,8 +32,6 @@ import { ClaimTreasuryCard } from "@/components/operators/ClaimTreasuryCard";
 import { RebootstrapVaultCard } from "@/components/operators/RebootstrapVaultCard";
 import { OpenOfferingCard } from "@/components/operators/OpenOfferingCard";
 import { listOfferings } from "@/lib/offerings.functions";
-
-
 
 export const Route = createFileRoute("/operators")({
   head: () => ({
@@ -52,7 +57,6 @@ export const Route = createFileRoute("/operators")({
   },
   component: OperatorConsole,
 });
-
 
 interface AssetLite {
   id: string;
@@ -113,7 +117,11 @@ function OperatorConsole() {
       .eq("status", "asset_created")
       .then(({ data }) =>
         setApprovedIds(
-          new Set(((data ?? []) as { asset_id: string | null }[]).flatMap((r) => (r.asset_id ? [r.asset_id] : []))),
+          new Set(
+            ((data ?? []) as { asset_id: string | null }[]).flatMap((r) =>
+              r.asset_id ? [r.asset_id] : [],
+            ),
+          ),
         ),
       );
   }, []);
@@ -128,8 +136,6 @@ function OperatorConsole() {
   const candidates = (assets ?? []).filter((a) => !registered.has(a.id));
   const eligible = candidates.filter((a) => approvalReason(a, approvedIds).ok);
   const blocked = candidates.filter((a) => !approvalReason(a, approvedIds).ok);
-
-
 
   return (
     <AppShell>
@@ -156,7 +162,11 @@ function OperatorConsole() {
           {roles.length === 0 ? (
             <Badge tone="muted">none</Badge>
           ) : (
-            roles.map((r) => <Badge key={r} tone="accent">{r}</Badge>)
+            roles.map((r) => (
+              <Badge key={r} tone="accent">
+                {r}
+              </Badge>
+            ))
           )}
         </div>
       )}
@@ -172,7 +182,6 @@ function OperatorConsole() {
       )}
 
       {!signedOut && isAdmin && <MasterWalletGate status={master} />}
-
 
       <section className="mt-8">
         <h2 className="text-sm font-medium text-foreground">Registered vaults</h2>
@@ -229,7 +238,8 @@ function OperatorConsole() {
             <ul className="mt-1 space-y-0.5 text-muted-foreground">
               {blocked.map((a) => (
                 <li key={a.id}>
-                  <span className="font-mono text-[11px]">{a.id}</span> — {approvalReason(a, approvedIds).label}
+                  <span className="font-mono text-[11px]">{a.id}</span> —{" "}
+                  {approvalReason(a, approvedIds).label}
                 </li>
               ))}
             </ul>
@@ -245,14 +255,11 @@ function OperatorConsole() {
         key={eligible.some((a) => a.id === preselect) ? preselect : "none"}
         assets={eligible}
         initialAssetId={eligible.some((a) => a.id === preselect) ? preselect : ""}
-
         disabled={!canBootstrap}
         onDone={() => {
           vaultsQ.refetch();
         }}
       />
-
-
 
       <RebootstrapVaultCard
         vaults={vaultsQ.data ?? []}
@@ -281,8 +288,6 @@ function OperatorConsole() {
         }}
       />
     </AppShell>
-
-
   );
 }
 
@@ -343,26 +348,32 @@ function BootstrapForm({
     }
     setBusy("submit");
     try {
-      const res = result ?? await bootstrapYieldVault({
-        assetId,
-        operators,
-        threshold,
-        feeBps,
-        treasuryPkh: treasuryPkh.trim().toLowerCase() || undefined,
-      });
+      const res =
+        result ??
+        (await bootstrapYieldVault({
+          assetId,
+          operators,
+          threshold,
+          feeBps,
+          treasuryPkh: treasuryPkh.trim().toLowerCase() || undefined,
+        }));
       setResult(res);
       setWaiting(true);
-      await retryPendingConfirmation(() => registerAssetVault({
-        data: {
-          assetId: res.assetId,
-          vaultVersion: res.vaultVersion,
-          scriptHash: res.scriptHash,
-          scriptAddress: res.address,
-          operators: res.operators,
-          threshold: res.threshold,
-          bootstrapTxHash: res.txHash,
-        },
-      }), () => setWaiting(true));
+      await retryPendingConfirmation(
+        () =>
+          registerAssetVault({
+            data: {
+              assetId: res.assetId,
+              vaultVersion: res.vaultVersion,
+              scriptHash: res.scriptHash,
+              scriptAddress: res.address,
+              operators: res.operators,
+              threshold: res.threshold,
+              bootstrapTxHash: res.txHash,
+            },
+          }),
+        () => setWaiting(true),
+      );
       await recordVaultFeeSchedule({
         data: {
           assetId: res.assetId,
@@ -499,7 +510,9 @@ function BootstrapForm({
           <div className="flex items-start gap-2 text-success">
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
-              {registered ? "Vault ledger registered." : "Bootstrap submitted — registration pending."}{" "}
+              {registered
+                ? "Vault ledger registered."
+                : "Bootstrap submitted — registration pending."}{" "}
               <a
                 href={cardanoscanTx(result.txHash)}
                 target="_blank"
@@ -519,17 +532,13 @@ function BootstrapForm({
               <div className="text-muted-foreground">Script hash</div>
               <div className="mt-0.5 break-all font-mono text-foreground">{result.scriptHash}</div>
             </div>
-            <CopyRow
-              label="Seed"
-              value={`${result.seed.txHash}#${result.seed.outputIndex}`}
-            />
+            <CopyRow label="Seed" value={`${result.seed.txHash}#${result.seed.outputIndex}`} />
             <CopyRow label="State token" value={result.threadUnit} />
           </div>
           <p className="mt-3 text-[11px] text-muted-foreground">
             Developer step: pin this seed in src/lib/vault-instances.ts under
-            YIELD_VAULT_SEEDS[&quot;{assetId}&quot;] as {"{ txHash: \"...\", outputIndex: N }"}.
-            Until that commit is deployed, deposits and withdrawals for this vault are
-            unavailable.
+            YIELD_VAULT_SEEDS[&quot;{assetId}&quot;] as {'{ txHash: "...", outputIndex: N }'}. Until
+            that commit is deployed, deposits and withdrawals for this vault are unavailable.
           </p>
         </div>
       )}
@@ -540,8 +549,18 @@ function BootstrapForm({
         disabled={disabled || registered || busy !== null || !assetId || operators.length === 0}
         className="mt-5 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
       >
-        {busy === "submit" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-        {waiting ? "Waiting for confirmation & saving registration…" : busy === "submit" ? "Awaiting wallet signature…" : result ? "Retry registration" : "Bootstrap vault ledger"}
+        {busy === "submit" ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <ShieldCheck className="h-4 w-4" />
+        )}
+        {waiting
+          ? "Waiting for confirmation & saving registration…"
+          : busy === "submit"
+            ? "Awaiting wallet signature…"
+            : result
+              ? "Retry registration"
+              : "Bootstrap vault ledger"}
       </Button>
     </section>
   );

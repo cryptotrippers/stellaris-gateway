@@ -147,7 +147,6 @@ export function DeploymentWizard() {
   const [publishErr, setPublishErr] = useState<string | null>(null);
   const refHomePlaceholder = isPlaceholderHome();
 
-
   const roles = rolesQ.data?.roles ?? [];
   const isAdmin = roles.includes("admin");
   const signedOut = Boolean(rolesQ.error);
@@ -190,7 +189,6 @@ export function DeploymentWizard() {
       setPublishing(null);
     }
   }
-
 
   // Reset the downstream steps whenever the target asset changes.
   useEffect(() => {
@@ -244,28 +242,34 @@ export function DeploymentWizard() {
     setBootstrapping(true);
     setBootstrapErr(null);
     try {
-      const res = bootstrapRes ?? await bootstrapYieldVault({
-        assetId,
-        operators: operatorList,
-        threshold,
-        feeBps,
-        treasuryPkh: treasury.trim().toLowerCase() || undefined,
-      });
+      const res =
+        bootstrapRes ??
+        (await bootstrapYieldVault({
+          assetId,
+          operators: operatorList,
+          threshold,
+          feeBps,
+          treasuryPkh: treasury.trim().toLowerCase() || undefined,
+        }));
       setBootstrapTx(res.txHash);
       setBootstrapRes(res);
       setWaitingForBootstrap(true);
-      await retryPendingConfirmation(() => registerAssetVault({
-        data: {
-          assetId: res.assetId,
-          vaultVersion: res.vaultVersion,
-          network: APP_NETWORK,
-          scriptHash: res.scriptHash,
-          scriptAddress: res.address,
-          operators: res.operators,
-          threshold: res.threshold,
-          bootstrapTxHash: res.txHash,
-        },
-      }), () => setWaitingForBootstrap(true));
+      await retryPendingConfirmation(
+        () =>
+          registerAssetVault({
+            data: {
+              assetId: res.assetId,
+              vaultVersion: res.vaultVersion,
+              network: APP_NETWORK,
+              scriptHash: res.scriptHash,
+              scriptAddress: res.address,
+              operators: res.operators,
+              threshold: res.threshold,
+              bootstrapTxHash: res.txHash,
+            },
+          }),
+        () => setWaitingForBootstrap(true),
+      );
       setBootstrapRegistered(true);
       vaultsQ.refetch();
     } catch (e) {
@@ -359,10 +363,10 @@ export function DeploymentWizard() {
       {/* Step 1 — preflight ------------------------------------------------ */}
       <Step index={1} title="Preflight" done={preflightOk}>
         <ul className="flex flex-col gap-1.5 text-sm">
-          <Check ok={APP_NETWORK === "preprod"}>
-            App is pointed at Preprod ({APP_NETWORK})
+          <Check ok={APP_NETWORK === "preprod"}>App is pointed at Preprod ({APP_NETWORK})</Check>
+          <Check ok={wallet.connected}>
+            Wallet connected{wallet.provider ? ` (${wallet.provider})` : ""}
           </Check>
-          <Check ok={wallet.connected}>Wallet connected{wallet.provider ? ` (${wallet.provider})` : ""}</Check>
           <Check ok={pre.ok}>{pre.ok ? "Wallet network matches the app" : pre.reason}</Check>
           <Check ok={!signedOut && isAdmin}>
             {signedOut
@@ -418,8 +422,8 @@ export function DeploymentWizard() {
           <div className="mt-3 rounded-lg border border-border bg-secondary/40 p-3 text-[11px] text-muted-foreground">
             This asset already has a registered vault at{" "}
             <span className="font-mono">{short(existing.script_address, 12, 8)}</span>. Each
-            bootstrap creates a new, separate vault. Only the one pinned in the build is used by
-            the app.
+            bootstrap creates a new, separate vault. Only the one pinned in the build is used by the
+            app.
           </div>
         )}
         {derived && (
@@ -439,9 +443,13 @@ export function DeploymentWizard() {
         <section className="mt-5 rounded-xl border border-primary/30 bg-primary/5 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div className="text-[10px] uppercase tracking-widest text-primary">sfm-02 verification</div>
+              <div className="text-[10px] uppercase tracking-widest text-primary">
+                sfm-02 verification
+              </div>
               <h3 className="mt-1 text-sm font-semibold text-foreground">Verify sfm-02 state</h3>
-              <p className="mt-1 text-xs text-muted-foreground">Checks the derived address, state UTxO, balance, and registry match.</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Checks the derived address, state UTxO, balance, and registry match.
+              </p>
             </div>
             <button
               type="button"
@@ -457,23 +465,55 @@ export function DeploymentWizard() {
           {sfm02VerifyErr && <ErrorNote>{sfm02VerifyErr}</ErrorNote>}
           {sfm02NotPinned && (
             <div className="mt-4 rounded-lg border border-border bg-background/60 p-3 text-[11px] text-muted-foreground">
-              Not bootstrapped in this build — sfm-02 has no pinned yield_vault seed, so there is
-              no address to check yet.
+              Not bootstrapped in this build — sfm-02 has no pinned yield_vault seed, so there is no
+              address to check yet.
             </div>
           )}
           {sfm02Verified && (
             <div className="mt-4 grid gap-2 sm:grid-cols-3">
-              <VerificationResult label="State UTxO" ok={sfm02Verified.found} value={sfm02Verified.found ? "Found on chain" : "Not found"} />
-              <VerificationResult label="Locked balance" ok={sfm02Verified.found} value={`${lovelaceToAda(sfm02Verified.locked)} ADA`} />
+              <VerificationResult
+                label="State UTxO"
+                ok={sfm02Verified.found}
+                value={sfm02Verified.found ? "Found on chain" : "Not found"}
+              />
+              <VerificationResult
+                label="Locked balance"
+                ok={sfm02Verified.found}
+                value={`${lovelaceToAda(sfm02Verified.locked)} ADA`}
+              />
               <VerificationResult
                 label="Derived address match"
                 ok={sfm02Verified.addressMatches}
                 value={sfm02MatchLabel(sfm02Verified)}
               />
               <div className="sm:col-span-3 rounded-lg border border-border bg-background/60 p-3 text-[11px] text-muted-foreground">
-                <div>Derived yield_vault: <span className="font-mono text-foreground">{short(sfm02Verified.derivedAddress, 16, 10)}</span></div>
-                {sfm02Verified.registeredAddress && <div className="mt-1">Registered: <span className="font-mono text-foreground">{short(sfm02Verified.registeredAddress, 16, 10)}</span></div>}
-                {sfm02Verified.stateTx && <div className="mt-1">State transaction: <a href={cardanoscanTx(sfm02Verified.stateTx)} target="_blank" rel="noreferrer" className="font-mono text-primary hover:underline">{short(sfm02Verified.stateTx, 10, 8)}</a></div>}
+                <div>
+                  Derived yield_vault:{" "}
+                  <span className="font-mono text-foreground">
+                    {short(sfm02Verified.derivedAddress, 16, 10)}
+                  </span>
+                </div>
+                {sfm02Verified.registeredAddress && (
+                  <div className="mt-1">
+                    Registered:{" "}
+                    <span className="font-mono text-foreground">
+                      {short(sfm02Verified.registeredAddress, 16, 10)}
+                    </span>
+                  </div>
+                )}
+                {sfm02Verified.stateTx && (
+                  <div className="mt-1">
+                    State transaction:{" "}
+                    <a
+                      href={cardanoscanTx(sfm02Verified.stateTx)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="font-mono text-primary hover:underline"
+                    >
+                      {short(sfm02Verified.stateTx, 10, 8)}
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -538,11 +578,17 @@ export function DeploymentWizard() {
           <Button
             type="button"
             onClick={runBootstrap}
-            disabled={!preflightOk || !derived || !committee.ok || bootstrapping || bootstrapRegistered}
+            disabled={
+              !preflightOk || !derived || !committee.ok || bootstrapping || bootstrapRegistered
+            }
             className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50"
           >
             {bootstrapping && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            {waitingForBootstrap ? "Waiting for confirmation & saving registration…" : bootstrapRes ? "Retry registration" : "Sign & submit bootstrap tx"}
+            {waitingForBootstrap
+              ? "Waiting for confirmation & saving registration…"
+              : bootstrapRes
+                ? "Retry registration"
+                : "Sign & submit bootstrap tx"}
           </Button>
           {operatorList.length > 0 && !committee.ok && (
             <span className="text-[11px] text-destructive">{committee.reason}</span>
@@ -555,7 +601,9 @@ export function DeploymentWizard() {
             <div className="grid gap-2">
               <div>
                 <div className="text-muted-foreground">Vault address</div>
-                <div className="mt-0.5 break-all font-mono text-foreground">{bootstrapRes.address}</div>
+                <div className="mt-0.5 break-all font-mono text-foreground">
+                  {bootstrapRes.address}
+                </div>
               </div>
               <div>
                 <div className="text-muted-foreground">Script hash</div>
@@ -572,7 +620,7 @@ export function DeploymentWizard() {
             <p className="mt-3 text-muted-foreground">
               Developer step: pin this seed in src/lib/vault-instances.ts under
               YIELD_VAULT_SEEDS[&quot;{bootstrapRes.assetId}&quot;] as{" "}
-              {"{ txHash: \"...\", outputIndex: N }"}. Until that commit is deployed, deposits and
+              {'{ txHash: "...", outputIndex: N }'}. Until that commit is deployed, deposits and
               withdrawals for this vault are unavailable.
             </p>
           </div>
@@ -580,7 +628,11 @@ export function DeploymentWizard() {
       </Step>
 
       {/* Step 4 — witness the Stage 3 vault --------------------------------- */}
-      <Step index={4} title="Witness the vault validator with a first deposit" done={Boolean(depositTx)}>
+      <Step
+        index={4}
+        title="Witness the vault validator with a first deposit"
+        done={Boolean(depositTx)}
+      >
         <p className="text-sm text-muted-foreground">
           The Stage 3 <code className="font-mono text-xs">vault</code> validator has no state UTxO —
           it only appears on chain once a transaction pays into its address. A small self-owned
@@ -624,7 +676,11 @@ export function DeploymentWizard() {
           disabled={verifying || (!bootstrapRes && !existing)}
           className="mt-3 inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-foreground disabled:opacity-50"
         >
-          {verifying ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+          {verifying ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <ShieldCheck className="h-3.5 w-3.5" />
+          )}
           Check the deployed state
         </button>
         {verifyErr && <ErrorNote>{verifyErr}</ErrorNote>}
@@ -661,10 +717,10 @@ export function DeploymentWizard() {
         done={VALIDATOR_KEYS.every((k) => Boolean(refScripts[k]))}
       >
         <p className="text-sm text-muted-foreground">
-          Each validator is published once into its own UTxO at the dedicated
-          reference-script address, so later transactions can point at it instead of carrying the
-          full script. Publishing spends real ADA into a UTxO that must never be spent again — the
-          server re-derives and re-checks the script on chain before recording anything.
+          Each validator is published once into its own UTxO at the dedicated reference-script
+          address, so later transactions can point at it instead of carrying the full script.
+          Publishing spends real ADA into a UTxO that must never be spent again — the server
+          re-derives and re-checks the script on chain before recording anything.
         </p>
         {refHomePlaceholder && (
           <ErrorNote>
@@ -708,7 +764,9 @@ export function DeploymentWizard() {
                   <button
                     type="button"
                     onClick={() => runPublishRefScript(key)}
-                    disabled={!isAdmin || !pre.ok || refHomePlaceholder || Boolean(publishing) || !existing}
+                    disabled={
+                      !isAdmin || !pre.ok || refHomePlaceholder || Boolean(publishing) || !existing
+                    }
                     className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50"
                   >
                     {busy && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
@@ -730,25 +788,28 @@ export function DeploymentWizard() {
   );
 }
 
-function sfm02MatchLabel(result: { registeredAddress: string | null; addressMatches: boolean }): string {
+function sfm02MatchLabel(result: {
+  registeredAddress: string | null;
+  addressMatches: boolean;
+}): string {
   if (result.registeredAddress === null) return "No registry entry";
   return result.addressMatches ? "Matches registry" : "Registry is stale";
 }
 
-function VerificationResult({
-  label,
-  ok,
-  value,
-}: {
-  label: string;
-  ok: boolean;
-  value: string;
-}) {
+function VerificationResult({ label, ok, value }: { label: string; ok: boolean; value: string }) {
   return (
-    <div className={`rounded-lg border p-3 ${ok ? "border-primary/30 bg-primary/5" : "border-warning/30 bg-warning/10"}`}>
+    <div
+      className={`rounded-lg border p-3 ${ok ? "border-primary/30 bg-primary/5" : "border-warning/30 bg-warning/10"}`}
+    >
       <div className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</div>
-      <div className={`mt-1 text-xs font-semibold ${ok ? "text-primary" : "text-warning-foreground"}`}>
-        {ok ? <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" /> : <AlertTriangle className="mr-1 inline h-3.5 w-3.5" />}
+      <div
+        className={`mt-1 text-xs font-semibold ${ok ? "text-primary" : "text-warning-foreground"}`}
+      >
+        {ok ? (
+          <CheckCircle2 className="mr-1 inline h-3.5 w-3.5" />
+        ) : (
+          <AlertTriangle className="mr-1 inline h-3.5 w-3.5" />
+        )}
         {value}
       </div>
     </div>
