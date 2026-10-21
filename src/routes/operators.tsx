@@ -6,6 +6,8 @@ import { AppShell } from "@/components/layout/AppShell";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { Badge } from "@/components/ui/StatusBadge";
 import { CopyRow } from "@/components/ui/CopyRow";
+import { Button } from "@/components/ui/button";
+import { retryPendingConfirmation } from "@/components/deploy/confirmation-retry";
 import { supabase } from "@/integrations/supabase/client";
 import { getMyRoles, listAssetVaults, registerAssetVault } from "@/lib/asset-vaults.functions";
 import { MAX_FEE_BPS, formatFeeBps } from "@/lib/vault-fees";
@@ -14,8 +16,8 @@ import {
   bootstrapYieldVault,
   getConnectedOperatorKeyHash,
   validateCommittee,
+  type BootstrapResult,
 } from "@/lib/vault-bootstrap";
-import type { VaultSeed } from "@/lib/vault-instances";
 import { cardanoscanAddress, cardanoscanTx, short } from "@/lib/chain-format";
 import { MasterWalletGate, useMasterWallet } from "@/components/admin/MasterWalletGate";
 import { AccrueYieldCard } from "@/components/operators/AccrueYieldCard";
@@ -304,13 +306,9 @@ function BootstrapForm({
 
   const [busy, setBusy] = useState<null | "wallet" | "submit">(null);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<{
-    txHash: string;
-    address: string;
-    scriptHash: string;
-    seed: VaultSeed;
-    threadUnit: string;
-  } | null>(null);
+  const [result, setResult] = useState<BootstrapResult | null>(null);
+  const [registered, setRegistered] = useState(false);
+  const [waiting, setWaiting] = useState(false);
 
   const operators = operatorsText
     .split(/[\s,]+/)
@@ -319,6 +317,7 @@ function BootstrapForm({
 
   useEffect(() => {
     setResult(null);
+    setRegistered(false);
     setError(null);
   }, [assetId]);
 
@@ -344,14 +343,16 @@ function BootstrapForm({
     }
     setBusy("submit");
     try {
-      const res = await bootstrapYieldVault({
+      const res = result ?? await bootstrapYieldVault({
         assetId,
         operators,
         threshold,
         feeBps,
         treasuryPkh: treasuryPkh.trim().toLowerCase() || undefined,
       });
-      await registerAssetVault({
+      setResult(res);
+      setWaiting(true);
+      await retryPendingConfirmation(() => registerAssetVault({
         data: {
           assetId: res.assetId,
           vaultVersion: res.vaultVersion,
@@ -361,7 +362,7 @@ function BootstrapForm({
           threshold: res.threshold,
           bootstrapTxHash: res.txHash,
         },
-      });
+      }), () => setWaiting(true));
       await recordVaultFeeSchedule({
         data: {
           assetId: res.assetId,
@@ -372,17 +373,12 @@ function BootstrapForm({
           setTxHash: res.txHash,
         },
       });
-      setResult({
-        txHash: res.txHash,
-        address: res.address,
-        scriptHash: res.scriptHash,
-        seed: res.seed,
-        threadUnit: res.threadUnit,
-      });
+      setRegistered(true);
       onDone();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
+      setWaiting(false);
       setBusy(null);
     }
   };
@@ -400,6 +396,7 @@ function BootstrapForm({
           <span className="text-muted-foreground">Asset</span>
           <select
             value={assetId}
+            disabled={busy !== null || Boolean(result)}
             onChange={(e) => setAssetId(e.target.value)}
             className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
           >
@@ -502,7 +499,7 @@ function BootstrapForm({
           <div className="flex items-start gap-2 text-success">
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
             <span>
-              Vault ledger created.{" "}
+              {registered ? "Vault ledger registered." : "Bootstrap submitted — registration pending."}{" "}
               <a
                 href={cardanoscanTx(result.txHash)}
                 target="_blank"
@@ -537,15 +534,15 @@ function BootstrapForm({
         </div>
       )}
 
-      <button
+      <Button
         type="button"
         onClick={submit}
-        disabled={disabled || busy !== null || !assetId || operators.length === 0}
+        disabled={disabled || registered || busy !== null || !assetId || operators.length === 0}
         className="mt-5 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
       >
         {busy === "submit" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-        {busy === "submit" ? "Awaiting wallet signature…" : "Bootstrap vault ledger"}
-      </button>
+        {waiting ? "Waiting for confirmation & saving registration…" : busy === "submit" ? "Awaiting wallet signature…" : result ? "Retry registration" : "Bootstrap vault ledger"}
+      </Button>
     </section>
   );
 }

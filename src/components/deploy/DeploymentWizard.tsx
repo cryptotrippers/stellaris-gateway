@@ -30,6 +30,8 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/StatusBadge";
 import { CopyRow } from "@/components/ui/CopyRow";
+import { Button } from "@/components/ui/button";
+import { retryPendingConfirmation } from "./confirmation-retry";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getMyRoles,
@@ -113,6 +115,8 @@ export function DeploymentWizard() {
   const [bootstrapTx, setBootstrapTx] = useState<string | null>(null);
   const [bootstrapRes, setBootstrapRes] = useState<BootstrapResult | null>(null);
   const [bootstrapErr, setBootstrapErr] = useState<string | null>(null);
+  const [bootstrapRegistered, setBootstrapRegistered] = useState(false);
+  const [waitingForBootstrap, setWaitingForBootstrap] = useState(false);
 
   const [depositAda, setDepositAda] = useState("3");
   const [depositing, setDepositing] = useState(false);
@@ -194,6 +198,7 @@ export function DeploymentWizard() {
     setDeriveErr(null);
     setBootstrapTx(null);
     setBootstrapRes(null);
+    setBootstrapRegistered(false);
     setBootstrapErr(null);
     setDepositTx(null);
     setDepositErr(null);
@@ -239,7 +244,7 @@ export function DeploymentWizard() {
     setBootstrapping(true);
     setBootstrapErr(null);
     try {
-      const res = await bootstrapYieldVault({
+      const res = bootstrapRes ?? await bootstrapYieldVault({
         assetId,
         operators: operatorList,
         threshold,
@@ -248,7 +253,8 @@ export function DeploymentWizard() {
       });
       setBootstrapTx(res.txHash);
       setBootstrapRes(res);
-      await registerAssetVault({
+      setWaitingForBootstrap(true);
+      await retryPendingConfirmation(() => registerAssetVault({
         data: {
           assetId: res.assetId,
           vaultVersion: res.vaultVersion,
@@ -259,11 +265,13 @@ export function DeploymentWizard() {
           threshold: res.threshold,
           bootstrapTxHash: res.txHash,
         },
-      });
+      }), () => setWaitingForBootstrap(true));
+      setBootstrapRegistered(true);
       vaultsQ.refetch();
     } catch (e) {
       setBootstrapErr(decodeVaultError(e));
     } finally {
+      setWaitingForBootstrap(false);
       setBootstrapping(false);
     }
   }
@@ -383,6 +391,7 @@ export function DeploymentWizard() {
             Asset
             <select
               value={assetId}
+              disabled={bootstrapping || Boolean(bootstrapRes)}
               onChange={(e) => setAssetId(e.target.value)}
               className="min-w-56 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
             >
@@ -472,7 +481,7 @@ export function DeploymentWizard() {
       )}
 
       {/* Step 3 — bootstrap the yield vault --------------------------------- */}
-      <Step index={3} title="Deploy the yield vault state UTxO" done={Boolean(bootstrapTx)}>
+      <Step index={3} title="Deploy the yield vault state UTxO" done={bootstrapRegistered}>
         <p className="text-sm text-muted-foreground">
           Creates the single ledger UTxO every deposit, accrual, and redemption balances against,
           and fixes the operator committee.
@@ -526,15 +535,15 @@ export function DeploymentWizard() {
           >
             Use my connected wallet key
           </button>
-          <button
+          <Button
             type="button"
             onClick={runBootstrap}
-            disabled={!preflightOk || !derived || !committee.ok || bootstrapping}
+            disabled={!preflightOk || !derived || !committee.ok || bootstrapping || bootstrapRegistered}
             className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50"
           >
             {bootstrapping && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            Sign &amp; submit bootstrap tx
-          </button>
+            {waitingForBootstrap ? "Waiting for confirmation & saving registration…" : bootstrapRes ? "Retry registration" : "Sign & submit bootstrap tx"}
+          </Button>
           {operatorList.length > 0 && !committee.ok && (
             <span className="text-[11px] text-destructive">{committee.reason}</span>
           )}
