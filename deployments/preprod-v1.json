@@ -1,0 +1,40 @@
+{
+  "label": "preprod-v1",
+  "network": "Preprod",
+  "provisional": true,
+  "commit": "c3f0d86a3029caf0a63c7efeb48ed43a4f01fb6a",
+  "reserve": {
+    "status": "confirmed",
+    "seed": {
+      "txHash": "8cbcf67c9fb6040ab36200537dc6861b89f1742307eef30b5427929894bd9a2b",
+      "outputIndex": 0
+    },
+    "scriptHash": "938b32e0f660dc06d3b58a20103cbe5ae1cc00531b53c7ba191d7400",
+    "tsraPolicyId": "938b32e0f660dc06d3b58a20103cbe5ae1cc00531b53c7ba191d7400",
+    "tsraUnit": "938b32e0f660dc06d3b58a20103cbe5ae1cc00531b53c7ba191d740054535241",
+    "configUnit": "938b32e0f660dc06d3b58a20103cbe5ae1cc00531b53c7ba191d7400636f6e666967",
+    "supplyUnit": "938b32e0f660dc06d3b58a20103cbe5ae1cc00531b53c7ba191d7400737570706c79",
+    "address": "addr_test1wzfckvhq7esdcpknkk9zqypuhedwrnqq2vd483a6rywhgqq9q5crd",
+    "genesisTx": "f0ebcf81548b2a9a0778e782a6f623951be361c90122d7ca01e61352fb4cff59",
+    "attestedAt": 1792566923000,
+    "committee": {
+      "operators": [
+        "c9329c2f39ebff39ee0e2d2c5a31f1573f7ad25d392a0e38324b30b3",
+        "a63b0b85b307d9bf47e95e7887dd6bcb3f10dd13c48fa2d4bda028e5",
+        "8612fcf3f7b28fc1f4bd4e3bb7dad6e97fa4fa691e1a94437c8fc38c",
+        "3f4c841efec8d364036f7621a08136abde99434df29e88a5376ef7aa",
+        "2c418b91993adc8153ca6cc22063236aeffcd2a0458e01452320ecc8"
+      ],
+      "threshold": 3
+    },
+    "mintCap": "5000000000000",
+    "submittedAt": "2026-10-21T07:17:24.647Z",
+    "configUtxo": "f0ebcf81548b2a9a0778e782a6f623951be361c90122d7ca01e61352fb4cff59#0",
+    "supplyUtxo": "f0ebcf81548b2a9a0778e782a6f623951be361c90122d7ca01e61352fb4cff59#1",
+    "confirmedAt": "2026-10-21T07:17:47.958Z"
+  },
+  "eligibility": {
+    "scriptHash": "4e7095a5b44c90cf61994ea9c6b2e09cf89a7504a6c2cbdcbc0a03fd",
+    "status": "derived-not-deployed"
+  }
+}
