@@ -1,0 +1,11 @@
+{
+  "_comment": "Copy to committee.preprod.json. Five Preprod committee payment addresses (addr_test1...) or 56-hex payment key hashes. Test-only keys. Threshold must be 2..5.",
+  "operators": [
+    "addr_test1_REPLACE_WITH_COMMITTEE_MEMBER_1",
+    "addr_test1_REPLACE_WITH_COMMITTEE_MEMBER_2",
+    "addr_test1_REPLACE_WITH_COMMITTEE_MEMBER_3",
+    "addr_test1_REPLACE_WITH_COMMITTEE_MEMBER_4",
+    "addr_test1_REPLACE_WITH_COMMITTEE_MEMBER_5"
+  ],
+  "threshold": 3
+}
