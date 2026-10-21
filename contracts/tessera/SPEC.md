@@ -2664,7 +2664,7 @@ over 13,000 B, stop and re-split before writing logic.
 | D-37 | The datum of §7.2 (incl. `backing_bps`, `loss_pending_until`, `paused`, epochs) | yes | you |
 | D-38 | One NAV UTxO; 15-min limit on rises, none on drops; 1-h window | yes | you |
 | D-39 | Reader rules 1-5 (24 h max age, freeze via Config, 7-d attestation, backing haircut) | yes | you, and any lender partner |
-| D-40 | **Full CIP-68 compliance by editing the genesis of `reserve` and `stsra_vault` and renaming the tokens** (+40 B, +63 B) | yes, before mainnet: it is the only way wallets recognise the tokens | **you: this breaks your no-growth rule.** If refused: B below |
+| D-40 | **Full CIP-68 compliance by editing the genesis of `reserve` and `stsra_vault` and renaming the tokens** (+40 B, +63 B) | **open, not decided.** Option A would orphan the deployed preprod-v1 TSRA (§7.11); option B has a registry submission in flight (§7.11) | **you: A breaks your no-growth rule, and orphans preprod-v1.** If refused: B below |
 | D-41 | `token_metadata`: committee M-of-N, `decimals`/`version` immutable, 7-day notice for `name`/`ticker`, shape checked | yes | you |
 | D-42 | BRAND is the source; CI compares the committed genesis datums to it | yes | you |
 | D-43 | CIP-68 reference for sTSRA generation 0 only | yes | you |
@@ -2686,3 +2686,56 @@ skips them can be fooled by a stale high price during a loss. (2) The single NAV
 spent by a keeper at an inconvenient moment: the 15-minute limit bounds it, the formula fallback
 removes it. (3) D-40 re-hashes five scripts and the 2.6 queue; Preprod only, but every pin and
 every live-state script moves in one PR.
+
+### 7.11 Evidence for option B: the preprod-v1 registry submission, and what option A would break
+
+*Recorded 2026-10-22 from the owner's report and `deployments/preprod-v1.json` on branch
+`phase4-tessera-bootstrap`. D-40 stays **open**; the owner will update the status below.*
+
+**The deployed TSRA (preprod-v1).** The reserve is deployed and confirmed on Preprod:
+
+| | |
+|---|---|
+| Reserve blueprint hash (pinned, unapplied) | `3f400bf9…` |
+| Applied reserve hash = TSRA policy id | `938b32e0f660dc06d3b58a20103cbe5ae1cc00531b53c7ba191d7400` |
+| Applied to seed | `8cbcf67c…9a2b#0` |
+| Genesis transaction | `f0ebcf81548b2a9a0778e782a6f623951be361c90122d7ca01e61352fb4cff59`, confirmed 2026-10-21 |
+| TSRA unit | policy id + `54535241` ("TSRA", **no CIP-68 label prefix**) |
+| Config / Supply UTxOs | `f0ebcf81…ff59#0` / `#1` |
+| Vault, eligibility | not deployed (`eligibility`: derived, not deployed) |
+
+**The registry submission (option B, in flight).** A metadata entry for the TSRA unit was signed
+with a dedicated metadata key, **with no `policy` field** (the policy is a Plutus script, so
+there is no native-script signature to put there). The pull request to
+`cardano-foundation/metadata-registry-testnet` is pending.
+
+**Status: submitted, not yet accepted or wallet-verified.** What would settle it: (1) the PR
+merges, and (2) a wallet (or explorer) shows the name and ticker for the unit. Until both, this
+is evidence that option B is *attemptable* for a Plutus-minted policy, not that it works. I have
+not verified the registry's rules for script policies or any wallet's behaviour.
+
+**What option A would do to preprod-v1.** Option A edits `reserve.ak` (the genesis mint rule) and
+renames the token (`rules.tsra_name` gains the `0014df10` label). Either change gives a **different
+applied script, hence a different policy id and a different TSRA unit**. The deployed TSRA policy
+`938b32e0…7400`, its Config and Supply UTxOs, its attestation and any TSRA already minted would be
+**orphaned**: nothing in the new scripts would recognise them, and a re-bootstrap (new seed, new
+genesis, new committee transaction) would be needed. It is cheap while nothing but a test genesis
+exists on Preprod, and it gets steadily more expensive once TSRA circulates or integrators
+(wallets, a lender) have pinned `938b32e0…7400`. That is a cost of A that §7.0 did not include.
+
+**How option B would register the TSRA unit (to be confirmed against the registry's current
+rules, which I have not read):**
+
+* subject: the unit itself, `938b32e0…7400` + `54535241`;
+* fields: `name`, `description`, `ticker`, `decimals` (6), `url`, `logo`, taken from `BRAND`
+  (so D-42 applies to this path too: CI compares the submitted entry to `BRAND`);
+* signed with the metadata key, no `policy` field, as in the pending submission;
+* updating it means a new signed entry (the registry versions entries; details unverified), not an on-chain action: the
+  committee gets no on-chain role for metadata under B, and `token_metadata` (D-41) is not built.
+
+**Consequences for the rest of §7 if B is chosen:** D-41 (`token_metadata`) and D-43 (generation
+metadata) fall away; `nav` (D-36 to D-39) is unaffected and is the larger part of the work. The sTSRA vault is not deployed, so its token
+name could still be labelled before deployment without orphaning anything (a hybrid: registry for
+TSRA, a labelled name for sTSRA); but without the reference NFT minted by the vault's own policy a
+labelled name gives wallets nothing to read, so I do not recommend the hybrid.
+
