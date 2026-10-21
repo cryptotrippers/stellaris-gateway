@@ -1,4 +1,5 @@
-import { describe, expect, test } from "bun:test";
+import { describe, test } from "node:test";
+import assert from "node:assert/strict";
 import { retryPendingConfirmation } from "./confirmation-retry";
 
 describe("bootstrap registration confirmation", () => {
@@ -12,35 +13,35 @@ describe("bootstrap registration confirmation", () => {
       if (registrations < 3) throw new Error("NOT_CONFIRMED: not on chain yet");
       return submitted;
     }, () => {}, async (ms) => { waits.push(ms); });
-    feesRecorded++;
-    expect(registered).toBe(submitted);
-    expect(registrations).toBe(3);
-    expect(waits).toEqual([10_000, 10_000]);
-    expect(feesRecorded).toBe(1);
+    if (registered === submitted) feesRecorded++;
+    assert.equal(registered, submitted);
+    assert.equal(registrations, 3);
+    assert.deepEqual(waits, [10_000, 10_000]);
+    assert.equal(feesRecorded, 1);
   });
 
   test("does not retry authorization or invalid state errors", async () => {
     for (const message of ["Unauthorized", "No genuine State at address"]) {
       let calls = 0;
       let waits = 0;
-      await expect(retryPendingConfirmation(async () => {
+      await assert.rejects(retryPendingConfirmation(async () => {
         calls++;
         throw new Error(message);
-      }, () => {}, async () => { waits++; })).rejects.toThrow(message);
-      expect(calls).toBe(1);
-      expect(waits).toBe(0);
+      }, () => {}, async () => { waits++; }), { message });
+      assert.equal(calls, 1);
+      assert.equal(waits, 0);
     }
   });
 
   test("stops after thirty waits and permits a later registration-only retry", async () => {
     let calls = 0;
     let waits = 0;
-    await expect(retryPendingConfirmation(async () => {
+    await assert.rejects(retryPendingConfirmation(async () => {
       calls++;
       throw new Error("NOT_CONFIRMED");
-    }, () => {}, async () => { waits++; })).rejects.toThrow("do not bootstrap again");
-    expect(calls).toBe(31);
-    expect(waits).toBe(30);
-    expect(await retryPendingConfirmation(async () => "same-tx", () => {})).toBe("same-tx");
+    }, () => {}, async () => { waits++; }), /do not bootstrap again/);
+    assert.equal(calls, 31);
+    assert.equal(waits, 30);
+    assert.equal(await retryPendingConfirmation(async () => "same-tx", () => {}), "same-tx");
   });
 });
