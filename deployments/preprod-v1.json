@@ -190,5 +190,41 @@
     "status": "confirmed",
     "submittedAt": "2026-10-22T22:44:12.741Z",
     "confirmedAt": "2026-10-22T22:44:54.251Z"
+  },
+  "stage5a": {
+    "attest": {
+      "attestedReserve": "100000000000",
+      "attestedAt": 1792710518000,
+      "tx": "17b6288b99247245d587ec070f78ba68571161a21f942991eadd4b00481aa243",
+      "status": "confirmed",
+      "submittedAt": "2026-10-22T23:10:45.553Z",
+      "confirmedAt": "2026-10-22T23:11:18.266Z"
+    },
+    "mint": {
+      "qty": "10000000000",
+      "to": "addr_test1vpf6yc96tace29j6nj504pvj8z0rm2vvyhjaff0md8s5lrsv0c0f5",
+      "mintedSupplyAfter": "10000000000",
+      "tx": "f43976c6148e0e29da7b247668dd66740d84922e1248846a9ea9be8aa11c8c35",
+      "status": "confirmed",
+      "submittedAt": "2026-10-22T23:11:18.803Z",
+      "confirmedAt": "2026-10-22T23:11:50.557Z"
+    },
+    "stake": {
+      "amount": "1000000000",
+      "stsraMinted": "1000000000",
+      "to": "addr_test1vpf6yc96tace29j6nj504pvj8z0rm2vvyhjaff0md8s5lrsv0c0f5",
+      "tx": "6d2ac302df3f4082c248312700b62773c0e49349192dc7dc6f4ad628e0d8aac1",
+      "status": "confirmed",
+      "submittedAt": "2026-10-22T23:11:51.003Z",
+      "confirmedAt": "2026-10-22T23:12:07.763Z"
+    },
+    "fund": {
+      "amount": "20000000000",
+      "shard": "ca55e1296c48da13b5dfe00db5428f5097830c4aeee974f3778d88913d425bb7#2",
+      "tx": "4a7f9eab619c1abf56f5f6ac32e112ea93bb28aa780dd31063ca73a1ba6fe7a5",
+      "status": "confirmed",
+      "submittedAt": "2026-10-22T23:12:08.243Z",
+      "confirmedAt": "2026-10-22T23:12:29.700Z"
+    }
   }
 }
