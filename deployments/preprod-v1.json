@@ -94,5 +94,101 @@
     "status": "confirmed",
     "submittedAt": "2026-10-22T21:48:45.199Z",
     "confirmedAt": "2026-10-22T21:49:06.969Z"
+  },
+  "tusd": {
+    "policyId": "e13ff0eeb0dc21dd67ea0e6a7e10343936d519201e7b65d035fc045a",
+    "unit": "e13ff0eeb0dc21dd67ea0e6a7e10343936d519201e7b65d035fc045a74555344",
+    "decimals": 6,
+    "minted": "1000000000000",
+    "nativeScript": {
+      "type": "sig",
+      "keyHash": "53a260ba5f7195165a9ca8fa8592389e3da98c25e5d4a5fb69e14f8e"
+    },
+    "mintTx": "d9729acf9315e171d3844b15af3cfe040680e62141c49fe8e34237546a192bc9",
+    "holder": "addr_test1vpf6yc96tace29j6nj504pvj8z0rm2vvyhjaff0md8s5lrsv0c0f5",
+    "status": "confirmed",
+    "submittedAt": "2026-10-22T22:41:37.253Z",
+    "confirmedAt": "2026-10-22T22:42:23.777Z"
+  },
+  "refFlow": {
+    "scriptHash": "bf2e6f6f7fdc2f567a67133494140e57ced77e4501142dab1def085a",
+    "lockAddress": "addr_test1wpfdc02rkmfyvh5kzzwwwk4kr2l9a8qa3g7feehl3ga022qez7f2d",
+    "refUtxo": "7b8744fa1f57bb454c2cb95dc83387427a66152e2d325560f48225c957f4a0c8#0",
+    "lovelaceLocked": "54659420",
+    "status": "confirmed",
+    "submittedAt": "2026-10-22T22:42:24.249Z",
+    "confirmedAt": "2026-10-22T22:42:51.018Z"
+  },
+  "refAdmin": {
+    "scriptHash": "4a7b639cbbc9da3030f674cf7c5ad28afe8b1480c2325d513b9f1b11",
+    "lockAddress": "addr_test1wpfdc02rkmfyvh5kzzwwwk4kr2l9a8qa3g7feehl3ga022qez7f2d",
+    "refUtxo": "a6648a37bd4326d10e07ac543d1dd89f446092350e8191bc111a0cdb485c4109#0",
+    "lovelaceLocked": "55810190",
+    "status": "confirmed",
+    "submittedAt": "2026-10-22T22:42:51.460Z",
+    "confirmedAt": "2026-10-22T22:43:08.208Z"
+  },
+  "refShort": {
+    "scriptHash": "8bcf87176033968f4baeddd2d64e3946967eb939cb2703352fd06fcc",
+    "lockAddress": "addr_test1wpfdc02rkmfyvh5kzzwwwk4kr2l9a8qa3g7feehl3ga022qez7f2d",
+    "refUtxo": "4897bb6ae3ebe98f368adf9f782503b4ca909164c2a9972a34563cf9454d9d75#0",
+    "lovelaceLocked": "49177100",
+    "status": "confirmed",
+    "submittedAt": "2026-10-22T22:43:08.660Z",
+    "confirmedAt": "2026-10-22T22:44:05.465Z"
+  },
+  "queueStake": {
+    "flow": {
+      "scriptHash": "bf2e6f6f7fdc2f567a67133494140e57ced77e4501142dab1def085a",
+      "rewardAddress": "stake_test17zljumm00lwz74n6vufnf9q5petua4m7g5q3gtdtrhhssksrjhkld"
+    },
+    "admin": {
+      "scriptHash": "4a7b639cbbc9da3030f674cf7c5ad28afe8b1480c2325d513b9f1b11",
+      "rewardAddress": "stake_test17p98kcuuh0ya5vps7e6v7lz66290azc5srpryh238w03kygs8rru0"
+    },
+    "short": {
+      "scriptHash": "8bcf87176033968f4baeddd2d64e3946967eb939cb2703352fd06fcc",
+      "rewardAddress": "stake_test17z9ulpchvqeedr6t4mwa94jw89rfvl4e889jwqe49lgxlnqz2w6ga"
+    },
+    "registrationTx": "d07356a3986bdb78c5e0f56b58da605d12d88eeb5029222a27be29189a278443",
+    "status": "confirmed",
+    "submittedAt": "2026-10-22T22:44:05.866Z",
+    "confirmedAt": "2026-10-22T22:44:12.312Z"
+  },
+  "queue": {
+    "seed": {
+      "txHash": "d07356a3986bdb78c5e0f56b58da605d12d88eeb5029222a27be29189a278443",
+      "outputIndex": 0
+    },
+    "scriptHash": "64021fe6d4fbc2fb828e593311c238ea76401598fba83160c9930860",
+    "address": "addr_test1wpjqy8lx6nau97uz3evnxywz8r48vsq4nra6svtqexfsscq0m2ptg",
+    "configUnit": "64021fe6d4fbc2fb828e593311c238ea76401598fba83160c99308607175657565",
+    "shortUnit": "64021fe6d4fbc2fb828e593311c238ea76401598fba83160c993086073686f7274",
+    "shardUnits": [
+      "64021fe6d4fbc2fb828e593311c238ea76401598fba83160c9930860736861726400",
+      "64021fe6d4fbc2fb828e593311c238ea76401598fba83160c9930860736861726401",
+      "64021fe6d4fbc2fb828e593311c238ea76401598fba83160c9930860736861726402",
+      "64021fe6d4fbc2fb828e593311c238ea76401598fba83160c9930860736861726403"
+    ],
+    "params": {
+      "payoutUnit": "e13ff0eeb0dc21dd67ea0e6a7e10343936d519201e7b65d035fc045a74555344",
+      "settleDelayMs": 172800000,
+      "minRequest": "100000000",
+      "instantMax": "10000000000",
+      "settleTip": "200000",
+      "dailyLimit": "50000000000",
+      "monthlyLimit": "500000000000",
+      "shards": 4,
+      "graceMs": 1209600000
+    },
+    "signers": [
+      "c9329c2f39ebff39ee0e2d2c5a31f1573f7ad25d392a0e38324b30b3",
+      "a63b0b85b307d9bf47e95e7887dd6bcb3f10dd13c48fa2d4bda028e5",
+      "8612fcf3f7b28fc1f4bd4e3bb7dad6e97fa4fa691e1a94437c8fc38c"
+    ],
+    "genesisTx": "ca55e1296c48da13b5dfe00db5428f5097830c4aeee974f3778d88913d425bb7",
+    "status": "confirmed",
+    "submittedAt": "2026-10-22T22:44:12.741Z",
+    "confirmedAt": "2026-10-22T22:44:54.251Z"
   }
 }
