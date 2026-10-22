@@ -49,7 +49,7 @@ export type StageName = "firstLoss" | "opsStake" | "vault" | "setVault";
 export const STAGES: StageName[] = ["firstLoss", "opsStake", "vault", "setVault"];
 
 export interface Built {
-  name: StageName;
+  name: string;
   tx: TxSignBuilder;
   record: Record<string, unknown>;
 }

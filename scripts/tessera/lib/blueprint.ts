@@ -17,6 +17,10 @@ import {
 import {
   TESSERA_ELIGIBILITY_BLUEPRINT_HASH,
   TESSERA_FIRST_LOSS_BLUEPRINT_HASH,
+  TESSERA_QUEUE_ADMIN_BLUEPRINT_HASH,
+  TESSERA_QUEUE_FLOW_BLUEPRINT_HASH,
+  TESSERA_QUEUE_SHORT_BLUEPRINT_HASH,
+  TESSERA_REDEEM_QUEUE_BLUEPRINT_HASH,
   TESSERA_RESERVE_BLUEPRINT_HASH,
   TESSERA_STSRA_VAULT_BLUEPRINT_HASH,
   TESSERA_VAULT_OPS_BLUEPRINT_HASH,
@@ -132,4 +136,43 @@ export function enterpriseAddress(network: Network, s: AppliedScript): string {
 /** The script's reward (stake) address — the withdraw-zero gate for `vault_ops`. */
 export function rewardAddress(network: Network, s: AppliedScript): string {
   return validatorToRewardAddress(network, s.script);
+}
+
+/** The three queue withdraw-zero scripts, each applied to the reserve (Phase 2.6). */
+export function applyQueueScripts(reserveHash: string, path = BLUEPRINT_PATH) {
+  return {
+    flow: apply(
+      "queue_flow.queue_flow.withdraw",
+      TESSERA_QUEUE_FLOW_BLUEPRINT_HASH,
+      [reserveHash],
+      path,
+    ),
+    admin: apply(
+      "queue_admin.queue_admin.withdraw",
+      TESSERA_QUEUE_ADMIN_BLUEPRINT_HASH,
+      [reserveHash],
+      path,
+    ),
+    short: apply(
+      "queue_short.queue_short.withdraw",
+      TESSERA_QUEUE_SHORT_BLUEPRINT_HASH,
+      [reserveHash],
+      path,
+    ),
+  };
+}
+
+/** `redeem_queue` applied to `(seed, reserve, flow, admin, short)`: the queue address and policy. */
+export function applyRedeemQueue(
+  seed: Seed,
+  reserveHash: string,
+  q: { flow: string; admin: string; short: string },
+  path = BLUEPRINT_PATH,
+) {
+  return apply(
+    "redeem_queue.redeem_queue.mint",
+    TESSERA_REDEEM_QUEUE_BLUEPRINT_HASH,
+    [seedData(seed), reserveHash, q.flow, q.admin, q.short],
+    path,
+  );
 }
