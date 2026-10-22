@@ -2478,10 +2478,13 @@ listed as an open item is closed by the re-run above: its guards either moved
 
 ## 7. NAV datum and token metadata (Phase 2.7 — DESIGN CHECKPOINT, nothing implemented)
 
-Status: **revision 2.** D-40 **decided by the owner on 2026-10-23: option B** (token metadata in
-the CIP-26 off-chain registry, no CIP-68 reference NFTs, no change to `reserve.ak` or
-`stsra_vault.ak`). D-36 to D-39, D-42 and D-44 await approval. Decisions are numbered [D-36]…
-(2.6 ended at D-35).
+Status: **revision 2, approved (69ae751); implemented in part.** D-40 **decided by the owner on
+2026-10-23: option B** (token metadata in the CIP-26 off-chain registry, no CIP-68 reference
+NFTs, no change to `reserve.ak` or `stsra_vault.ak`). D-36 to D-39 and D-42 approved as written.
+**D-44 decided: the `nav` script is deferred** and built when an integrator asks (§7.8).
+What is implemented: `lib/tessera/nav.ak` with its tests, the integrator procedure
+`docs/tessera-reading-the-price.md`, and the registry body generator and CI check (§7.6, §7.12).
+Decisions are numbered [D-36]… (2.6 ended at D-35).
 
 Two deliverables: a **NAV datum** that publishes the price of sTSRA and the reserve's health in
 one place any script can read, and **token metadata** (name, ticker, decimals, logo) so wallets
@@ -2626,31 +2629,26 @@ the repository.
 
 | Script | Purpose | Size |
 |---|---|---:|
-| `nav` (spend + mint, params `seed, reserve, vault`) | thread token, `Publish`; recomputation of §7.2 | **5,884 B measured (stub)**; final 6,000–6,800 est. |
-| `lib/tessera/nav.ak` | formulas and `nav_usable` (compiled into `nav` where used) | – |
+| `nav` (spend + mint, params `seed, reserve, vault`) | thread token, `Publish`; recomputation of §7.2. **Deferred (D-44): built when an integrator asks** | **5,884 B measured (stub, scratch, not committed)**; final 6,000–6,800 est. |
+| `lib/tessera/nav.ak` | formulas, `nav_usable`, rule-5 and rule-6 helpers. **Implemented**; no validator imports it, so no script changes | – |
 | ~~`token_metadata`~~ | withdrawn with CIP-68 (D-41) | – |
 
 Existing scripts: **unchanged, 0 bytes added.** First implementation step: compile the real stub
 of `nav` and report its size before writing the rest.
 
-### 7.8 [D-44] Is a `nav` script needed at all?
+### 7.8 [D-44, decided: defer the `nav` script] Is a `nav` script needed at all?
 
-**Alternative: no `nav` script.** The States are authoritative and never stale; a reader can
-reference the vault State, the Supply, the Config and the first-loss State and compute the price with
-the §7.2 formulas, applying rules 2-5 of §7.4. That ships `lib/tessera/nav.ak`, its tests and a
-documented procedure and adds no script and no UTxO to contend on.
+**Decision (owner, 2026-10-23).** The `nav` script is **not built now.** 2.7 ships
+`lib/tessera/nav.ak` (the §7.2 formulas, `nav_usable` for reader rules 2-5, the rule-5 haircut
+and the rule-6 helper) and the direct-read procedure `docs/tessera-reading-the-price.md`. The `nav`
+script (**≈5.9 KB measured** as a stub, no change to any other script) is built **when an integrator
+asks** for a UTxO oracle. D-38 (its publishing rules) stays approved and applies then.
 
-**What `nav` adds:** (1) a **stable, versioned interface**: an integrator reads one small datum and
-does not have to decode the 19-field `VaultState`, whose schema has changed between phases
-(2.4, 2.5b) and may change again; (2) one input instead of four; (3) a dated record
-(`published_at`) readers can enforce staleness on. **What it costs:** one more script and UTxO to
-deploy and keep alive (a keeper publishes at least daily), and a datum that is always at least slightly
-stale.
-
-**Recommended:** build `nav` (5.9 KB, no change to any other script), because the schema-stability point
-is real for lenders and DEXs; ship `lib/tessera/nav.ak` and the direct-read procedure first in the same
-phase as the fallback. **If no integrator has asked for a UTxO oracle, defer the script and ship only the
-library and the procedure** — that is an acceptable 2.7. Your call.
+*Why this is safe:* the States are authoritative and never stale; a reader that references the vault
+State, the Supply, the Config and the first-loss State and applies §7.4 gets a price at least as fresh
+as any published NAV. *What waiting costs:* an integrator must decode the 19-field `VaultState` (its
+schema changed between phases) and reference four UTxOs instead of one; a stable, versioned interface
+and a dated record arrive with the script.
 
 ### 7.9 Tests, mutation plan, budget
 
@@ -2675,15 +2673,15 @@ library and the procedure** — that is an acceptable 2.7. Your call.
 
 | # | Decision | Recommended | Status |
 |---|---|---|---|
-| D-36 | NAV derived on-chain from the States, permissionless publish | yes | awaiting approval |
-| D-37 | The datum of §7.2 (incl. `backing_bps`, `loss_pending_until`, `paused`, epochs) | yes | awaiting approval |
-| D-38 | One NAV UTxO; 15-min limit on rises, none on drops; 1-h window | yes | awaiting approval |
-| D-39 | Reader rules 1-5 (24 h max age, freeze via Config, 7-d attestation, backing haircut) | yes | awaiting approval, and any lender partner |
+| D-36 | NAV derived on-chain from the States, permissionless publish | yes | **approved** (69ae751); formulas implemented in `nav.ak`, publishing with the deferred script |
+| D-37 | The datum of §7.2 (incl. `backing_bps`, `loss_pending_until`, `paused`, epochs) | yes | **approved**; implemented (`NavDatum`, `derive`) |
+| D-38 | One NAV UTxO; 15-min limit on rises, none on drops; 1-h window | yes | **approved**; applies when the `nav` script is built |
+| D-39 | Reader rules 1-5 (24 h max age, freeze via Config, 7-d attestation, backing haircut) | yes | **approved**; implemented (`nav_usable`, `haircut_bps`, `strict_matches`) |
 | D-40 | Token metadata via the CIP-26 registry; no CIP-68, no change to `reserve`/`stsra_vault` | **option B** | **decided (owner, 2026-10-23)**; registry PR #2995 submitted, not yet accepted or wallet-verified |
 | D-41 | `token_metadata` script (CIP-68 reference NFTs) | – | **withdrawn** with option A |
-| D-42 | BRAND is the source; CI compares the committed registry entry bodies to it | yes | awaiting approval |
+| D-42 | BRAND is the source; CI compares the committed registry entry bodies to it | yes | **approved**; implemented (§7.12) |
 | D-43 | CIP-68 reference for sTSRA generation 0 only | – | **withdrawn**: the registry takes an entry per generation when it occurs |
-| D-44 | Build the `nav` script, or ship only the library and the direct-read procedure | build it (library first); defer if no integrator needs a UTxO oracle | **your call** |
+| D-44 | Build the `nav` script, or ship only the library and the direct-read procedure | – | **decided (owner, 2026-10-23): defer the script**; library and procedure shipped |
 
 **Open items for you:** the logo artwork (an image for the registry and `BRAND.logo`); whether any lender
 partner needs a shorter staleness than 24 h (D-39 is a ceiling); counsel's view on a description that says
@@ -2695,3 +2693,41 @@ inconvenient moment: the 15-minute limit bounds it and the formula fallback remo
 display depends on the registry accepting a Plutus-policy entry with no `policy` field and on the wallet reading
 it; neither is verified yet, and the on-chain tokens work regardless. (4) The metadata key can rename the
 tokens as shown in wallets; custody is the control.
+
+### 7.12 Implementation notes (Phase 2.7)
+
+* **`lib/tessera/nav.ak`** holds `NavDatum` (20 fields, §7.2), `derive` (uses `vault_state.fold` at `lo`
+  and `exchange.exchange_rate_e6`), `backing_bps`, `nav_usable` (version 1, `max_age` between 1 ms and the
+  24 h ceiling, `published_at <= lo`, age against the upper bound, freeze in the datum **and** in the Config,
+  not paused, attestation at most 7 days old when published), `haircut_bps`, `haircut_value`,
+  `short_value` and `strict_matches`. 32 tests: par, yield, rounding, no shares (par), dead class (0),
+  after a loss, vesting at start, half time and end, monotonic through vesting, every datum field,
+  zero minted, backing at, under and over 10,000, the haircut cap and rounding, and each rule at its
+  boundary (24 h, 7 d, freeze at exactly `lo`, paused, version, future `published_at`, `max_age` over the
+  ceiling or not positive), strict mode, and a 40-case deterministic spread against the vault's own
+  exchange rate. The module imports `loss_fixture` for its tests only; a third party copying it drops
+  that import and the tests.
+* **Mutation (foreground, 7 workers):** 46 mutants of `lib/tessera/nav.ak` — every item of the one `and { }`
+  block, every spaced comparison and `+`/`-`, every integer literal of 10 or more (+1), and 17 targeted
+  ones (version, no `fold`, each price taken from the wrong class, each datum field dropped or taken from
+  the wrong State, strict mode `&&`/`||`, `short_value` operator, rules 2 and 4 measured against `lo`
+  instead of the bounds, an uncapped haircut). **44 killed, 2 equivalent survivors, 44 of 44
+  non-equivalent killed (95.7% raw).** The two survivors are in `haircut_bps`
+  (`backing_bps < 10_000` as `<=`, and the literal as 10,001): at exactly 10,000 both branches return
+  10,000. First pass: 3 survivors; two were test gaps (the supply fixture had `attested_reserve == minted_supply`,
+  so a swapped source was invisible; and rule 4 was only tested with `lo == published_at`) and got tests.
+* **Reading procedure:** `docs/tessera-reading-the-price.md` (which UTxOs, by thread token; formulas;
+  rules; behaviour; test vectors).
+* **Registry bodies (D-42).** `BRAND` gains `url`, `logo` (placeholder path
+  `public/brand/tessera-logo.png`; no file yet, so no `logo` in the bodies) and a `preprod` block
+  (`nameSuffix`, `baseDescription`): **the entry submitted in registry PR #2995 is not the product text**
+  ("Tessera (Preprod)", a test-asset description, the project url, no logo), so a Preprod body is BRAND plus
+  that overlay, and a mainnet body would use BRAND's own descriptions. `contracts/tessera/registry/units.json`
+  lists the units (TSRA now; sTSRA when the vault is deployed) with the PR's submitted values;
+  `scripts/build-token-registry.mjs` writes `<subject>.json` bodies; `scripts/verify-token-registry.mjs`
+  (called by `verify-vault-hash`, so by the PS1 and CI) fails if a body differs from BRAND, a body is missing
+  or stray, or a submitted field no longer equals what was submitted. The submitted values were read from the
+  PR's diff page on 2026-10-23 through a summariser, not from the raw file: **diff them against the PR once.**
+  Signatures are made offline and are not in the repository.
+* **No existing script changed:** `nav.ak` is imported by no validator, `plutus.json` is byte-identical, and
+  the pinned hashes and sizes are unchanged (§7.0).

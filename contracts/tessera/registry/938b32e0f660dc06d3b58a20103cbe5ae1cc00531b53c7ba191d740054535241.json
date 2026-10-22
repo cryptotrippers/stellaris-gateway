@@ -1,0 +1,8 @@
+{
+  "subject": "938b32e0f660dc06d3b58a20103cbe5ae1cc00531b53c7ba191d740054535241",
+  "name": "Tessera (Preprod)",
+  "ticker": "TSRA",
+  "description": "Preprod test token for the Tessera protocol by Stellaris. Dollar-referenced test asset with no monetary value.",
+  "decimals": 6,
+  "url": "https://stellarischain.com"
+}

@@ -1,0 +1,27 @@
+{
+  "_comment": "Tessera units that have (or will have) a CIP-26 token registry entry. A unit is added when its policy is deployed: sTSRA when the vault is. scripts/build-token-registry.mjs writes <subject>.json bodies from src/config/brand.ts; scripts/verify-token-registry.mjs fails CI when a committed body differs. The bodies are UNSIGNED; the signature is made offline with the dedicated metadata key and is not in this repository.",
+  "units": [
+    {
+      "label": "TSRA",
+      "network": "preprod",
+      "deployment": "preprod-v1",
+      "brand": "base",
+      "policyId": "938b32e0f660dc06d3b58a20103cbe5ae1cc00531b53c7ba191d7400",
+      "assetNameHex": "54535241",
+      "submission": {
+        "repo": "cardano-foundation/metadata-registry-testnet",
+        "pr": 2995,
+        "commit": "9d16a786b267f7d05bb719f9a2528feedbd9e50a",
+        "status": "submitted, not yet accepted or wallet-verified",
+        "note": "submittedValues were read from the PR diff on 2026-10-23 (no logo, no signatures here). The committed body must equal them.",
+        "submittedValues": {
+          "name": "Tessera (Preprod)",
+          "ticker": "TSRA",
+          "description": "Preprod test token for the Tessera protocol by Stellaris. Dollar-referenced test asset with no monetary value.",
+          "decimals": 6,
+          "url": "https://stellarischain.com"
+        }
+      }
+    }
+  ]
+}

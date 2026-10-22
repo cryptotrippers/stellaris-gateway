@@ -6,6 +6,24 @@
 export const BRAND = {
   productName: "Tessera",
   decimals: 6,
+  /** Project site, published in the token registry entries. */
+  url: "https://stellarischain.com",
+  /**
+   * Logo file for the token registry entries. PLACEHOLDER PATH: the artwork is an
+   * open item (SPEC.md §7.5). While the file does not exist, registry entries
+   * carry no `logo`; when it is added they must be regenerated and re-submitted.
+   */
+  logo: "public/brand/tessera-logo.png",
+  /**
+   * Preprod registry entries describe test assets, not the product (registry PR
+   * #2995). `scripts/build-token-registry.mjs` appends `nameSuffix` to the name and
+   * uses `baseDescription` for TSRA; a mainnet entry uses the descriptions below.
+   */
+  preprod: {
+    nameSuffix: " (Preprod)",
+    baseDescription:
+      "Preprod test token for the Tessera protocol by Stellaris. Dollar-referenced test asset with no monetary value.",
+  },
   base: {
     ticker: "TSRA",
     name: "Tessera",
