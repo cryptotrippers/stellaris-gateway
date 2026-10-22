@@ -36,5 +36,63 @@
   "eligibility": {
     "scriptHash": "4e7095a5b44c90cf61994ea9c6b2e09cf89a7504a6c2cbdcbc0a03fd",
     "status": "derived-not-deployed"
+  },
+  "firstLoss": {
+    "seed": {
+      "txHash": "f0ebcf81548b2a9a0778e782a6f623951be361c90122d7ca01e61352fb4cff59",
+      "outputIndex": 2
+    },
+    "scriptHash": "ccfb81fa54e33ebc3b3239a1a1f15ea11eb175005f66cba9ab028fbe",
+    "address": "addr_test1wrx0hq062n3na0pmxgu6rg03t6s3avt4qp0kdjaf4vpgl0st4fq8g",
+    "stateUnit": "ccfb81fa54e33ebc3b3239a1a1f15ea11eb175005f66cba9ab028fbe7374617465",
+    "genesisTx": "6482d92e60cbaf98678ffc721c578709e120f63599d21f7d4fbd961b6b91699f",
+    "status": "confirmed",
+    "submittedAt": "2026-10-22T21:45:43.480Z",
+    "confirmedAt": "2026-10-22T21:45:59.873Z"
+  },
+  "opsStake": {
+    "scriptHash": "32e3297312809c82cce6df5eabe55a4e9ea4b4e19e549df0c3a2972f",
+    "rewardAddress": "stake_test17qewx2tnz2qfeqkvum04a2l9tf8faf95ux09f80scw3fwtcelz6s9",
+    "registrationTx": "5f43e2ba17798ae46c3b9b8cfd72af0342042bc81ffa1bf7907d74f0a4e324b9",
+    "status": "confirmed",
+    "submittedAt": "2026-10-22T21:46:00.321Z",
+    "confirmedAt": "2026-10-22T21:46:47.185Z"
+  },
+  "vault": {
+    "seed": {
+      "txHash": "5f43e2ba17798ae46c3b9b8cfd72af0342042bc81ffa1bf7907d74f0a4e324b9",
+      "outputIndex": 0
+    },
+    "scriptHash": "b52a0afbc9be3fd2e587bbe7925caaaaebac982d392e8bbbe58454ac",
+    "stsraPolicyId": "b52a0afbc9be3fd2e587bbe7925caaaaebac982d392e8bbbe58454ac",
+    "stsraUnit": "b52a0afbc9be3fd2e587bbe7925caaaaebac982d392e8bbbe58454ac7354535241",
+    "address": "addr_test1wz6j5zhmexlrl5h9s7a70yju424whtyc95ujazamukz9ftqwujfnm",
+    "stateUnit": "b52a0afbc9be3fd2e587bbe7925caaaaebac982d392e8bbbe58454ac7374617465",
+    "opsHash": "32e3297312809c82cce6df5eabe55a4e9ea4b4e19e549df0c3a2972f",
+    "firstLossHash": "ccfb81fa54e33ebc3b3239a1a1f15ea11eb175005f66cba9ab028fbe",
+    "treasuryAddress": "addr_test1vpf6yc96tace29j6nj504pvj8z0rm2vvyhjaff0md8s5lrsv0c0f5",
+    "bounds": {
+      "longWeightBps": 12500,
+      "shortCooldownMs": 604800000,
+      "longLockMs": 2592000000,
+      "protocolBps": 1250
+    },
+    "genesisTx": "336f51b22f099a9ce7c5f220424d5c8b714f6984e42e4e041c980a1570902f55",
+    "status": "confirmed",
+    "submittedAt": "2026-10-22T21:46:47.763Z",
+    "confirmedAt": "2026-10-22T21:48:44.740Z"
+  },
+  "setVault": {
+    "vaultPolicy": "b52a0afbc9be3fd2e587bbe7925caaaaebac982d392e8bbbe58454ac",
+    "setVaultTx": "d294ca561345ddc5128e821c3afb41980b126252741502c901e53171301efe23",
+    "signers": [
+      "c9329c2f39ebff39ee0e2d2c5a31f1573f7ad25d392a0e38324b30b3",
+      "a63b0b85b307d9bf47e95e7887dd6bcb3f10dd13c48fa2d4bda028e5",
+      "8612fcf3f7b28fc1f4bd4e3bb7dad6e97fa4fa691e1a94437c8fc38c"
+    ],
+    "configInput": "f0ebcf81548b2a9a0778e782a6f623951be361c90122d7ca01e61352fb4cff59#0",
+    "status": "confirmed",
+    "submittedAt": "2026-10-22T21:48:45.199Z",
+    "confirmedAt": "2026-10-22T21:49:06.969Z"
   }
 }
