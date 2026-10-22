@@ -31,6 +31,12 @@
  * into `vault_ops.ak`, a withdraw-zero script. The vault is now parameterised
  * by `(seed, reserve, ops)`; `vault_ops` by the reserve only. `verify-vault-hash`
  * fails any validator above 14,000 bytes.
+ * Phase 2.6: the redemption queue. `redeem_queue.ak` (the queue address, request
+ * markers and thread tokens) is parameterised by `(seed, reserve, flow, admin,
+ * short)`; `queue_flow`, `queue_admin` and `queue_short` are withdraw-zero
+ * scripts parameterised by the reserve only, whose stake credentials must be
+ * registered (they accept no other certificate). The reserve, eligibility, vault,
+ * `vault_ops` and `first_loss` hashes are unchanged.
  */
 
 /** `reserve.reserve` — Reserve Config + Supply spend, TSRA and thread-token policy. */
@@ -57,3 +63,31 @@ export const TESSERA_VAULT_OPS_BLUEPRINT_HASH =
 /** `first_loss.first_loss` — first-loss reserve State spend + its thread-token policy. */
 export const TESSERA_FIRST_LOSS_BLUEPRINT_HASH =
   "24f5bb9314790130530291ba6e04f9f1084c921bcd614034a1b7c4bf";
+
+/**
+ * `redeem_queue.redeem_queue` — the queue address (Requests, Sinks, Buffer shards,
+ * QueueConfig, ShortState, Grace) and the policy of its markers and thread tokens.
+ */
+export const TESSERA_REDEEM_QUEUE_BLUEPRINT_HASH =
+  "37ab0d6532a5e4d1dbabf74917c4edd22f37d8fc2fede758bf323554";
+
+/**
+ * `queue_flow.queue_flow` — withdraw-zero script for `Request`, `Instant`, `Settle`,
+ * `PayShort` and `Sweep`. Its stake credential must be registered.
+ */
+export const TESSERA_QUEUE_FLOW_BLUEPRINT_HASH =
+  "cd62e468d291d2f4dae69230d73c9ced51e6f2c8fbbbf3e7e3251e54";
+
+/**
+ * `queue_admin.queue_admin` — withdraw-zero script for the committee's queue
+ * actions (`Genesis`, `Suspend`, `Resume`, limits, `Fund`, `Defund`, `GrantGrace`).
+ */
+export const TESSERA_QUEUE_ADMIN_BLUEPRINT_HASH =
+  "7641bce2b26a17618ee552f87b60105359375859b6c84170c1902a4c";
+
+/**
+ * `queue_short.queue_short` — withdraw-zero script for short mode (`EnterShort`,
+ * `Register`, `ExitShort`, `CancelRegistered`) and the `VetoDefund` notice veto.
+ */
+export const TESSERA_QUEUE_SHORT_BLUEPRINT_HASH =
+  "1b1b4e08836e2b9da4b663c0fe7b8ae73a687b47837e5d5fea8890d1";
