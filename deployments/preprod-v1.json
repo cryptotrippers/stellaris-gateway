@@ -1,0 +1,304 @@
+{
+  "label": "preprod-v1",
+  "network": "Preprod",
+  "provisional": true,
+  "commit": "c3f0d86a3029caf0a63c7efeb48ed43a4f01fb6a",
+  "reserve": {
+    "status": "confirmed",
+    "seed": {
+      "txHash": "8cbcf67c9fb6040ab36200537dc6861b89f1742307eef30b5427929894bd9a2b",
+      "outputIndex": 0
+    },
+    "scriptHash": "938b32e0f660dc06d3b58a20103cbe5ae1cc00531b53c7ba191d7400",
+    "tsraPolicyId": "938b32e0f660dc06d3b58a20103cbe5ae1cc00531b53c7ba191d7400",
+    "tsraUnit": "938b32e0f660dc06d3b58a20103cbe5ae1cc00531b53c7ba191d740054535241",
+    "configUnit": "938b32e0f660dc06d3b58a20103cbe5ae1cc00531b53c7ba191d7400636f6e666967",
+    "supplyUnit": "938b32e0f660dc06d3b58a20103cbe5ae1cc00531b53c7ba191d7400737570706c79",
+    "address": "addr_test1wzfckvhq7esdcpknkk9zqypuhedwrnqq2vd483a6rywhgqq9q5crd",
+    "genesisTx": "f0ebcf81548b2a9a0778e782a6f623951be361c90122d7ca01e61352fb4cff59",
+    "attestedAt": 1792566923000,
+    "committee": {
+      "operators": [
+        "c9329c2f39ebff39ee0e2d2c5a31f1573f7ad25d392a0e38324b30b3",
+        "a63b0b85b307d9bf47e95e7887dd6bcb3f10dd13c48fa2d4bda028e5",
+        "8612fcf3f7b28fc1f4bd4e3bb7dad6e97fa4fa691e1a94437c8fc38c",
+        "3f4c841efec8d364036f7621a08136abde99434df29e88a5376ef7aa",
+        "2c418b91993adc8153ca6cc22063236aeffcd2a0458e01452320ecc8"
+      ],
+      "threshold": 3
+    },
+    "mintCap": "5000000000000",
+    "submittedAt": "2026-10-21T07:17:24.647Z",
+    "configUtxo": "f0ebcf81548b2a9a0778e782a6f623951be361c90122d7ca01e61352fb4cff59#0",
+    "supplyUtxo": "f0ebcf81548b2a9a0778e782a6f623951be361c90122d7ca01e61352fb4cff59#1",
+    "confirmedAt": "2026-10-21T07:17:47.958Z"
+  },
+  "eligibility": {
+    "scriptHash": "4e7095a5b44c90cf61994ea9c6b2e09cf89a7504a6c2cbdcbc0a03fd",
+    "status": "derived-not-deployed"
+  },
+  "firstLoss": {
+    "seed": {
+      "txHash": "f0ebcf81548b2a9a0778e782a6f623951be361c90122d7ca01e61352fb4cff59",
+      "outputIndex": 2
+    },
+    "scriptHash": "ccfb81fa54e33ebc3b3239a1a1f15ea11eb175005f66cba9ab028fbe",
+    "address": "addr_test1wrx0hq062n3na0pmxgu6rg03t6s3avt4qp0kdjaf4vpgl0st4fq8g",
+    "stateUnit": "ccfb81fa54e33ebc3b3239a1a1f15ea11eb175005f66cba9ab028fbe7374617465",
+    "genesisTx": "6482d92e60cbaf98678ffc721c578709e120f63599d21f7d4fbd961b6b91699f",
+    "status": "confirmed",
+    "submittedAt": "2026-10-22T21:45:43.480Z",
+    "confirmedAt": "2026-10-22T21:45:59.873Z"
+  },
+  "opsStake": {
+    "scriptHash": "32e3297312809c82cce6df5eabe55a4e9ea4b4e19e549df0c3a2972f",
+    "rewardAddress": "stake_test17qewx2tnz2qfeqkvum04a2l9tf8faf95ux09f80scw3fwtcelz6s9",
+    "registrationTx": "5f43e2ba17798ae46c3b9b8cfd72af0342042bc81ffa1bf7907d74f0a4e324b9",
+    "status": "confirmed",
+    "submittedAt": "2026-10-22T21:46:00.321Z",
+    "confirmedAt": "2026-10-22T21:46:47.185Z"
+  },
+  "vault": {
+    "seed": {
+      "txHash": "5f43e2ba17798ae46c3b9b8cfd72af0342042bc81ffa1bf7907d74f0a4e324b9",
+      "outputIndex": 0
+    },
+    "scriptHash": "b52a0afbc9be3fd2e587bbe7925caaaaebac982d392e8bbbe58454ac",
+    "stsraPolicyId": "b52a0afbc9be3fd2e587bbe7925caaaaebac982d392e8bbbe58454ac",
+    "stsraUnit": "b52a0afbc9be3fd2e587bbe7925caaaaebac982d392e8bbbe58454ac7354535241",
+    "address": "addr_test1wz6j5zhmexlrl5h9s7a70yju424whtyc95ujazamukz9ftqwujfnm",
+    "stateUnit": "b52a0afbc9be3fd2e587bbe7925caaaaebac982d392e8bbbe58454ac7374617465",
+    "opsHash": "32e3297312809c82cce6df5eabe55a4e9ea4b4e19e549df0c3a2972f",
+    "firstLossHash": "ccfb81fa54e33ebc3b3239a1a1f15ea11eb175005f66cba9ab028fbe",
+    "treasuryAddress": "addr_test1vpf6yc96tace29j6nj504pvj8z0rm2vvyhjaff0md8s5lrsv0c0f5",
+    "bounds": {
+      "longWeightBps": 12500,
+      "shortCooldownMs": 604800000,
+      "longLockMs": 2592000000,
+      "protocolBps": 1250
+    },
+    "genesisTx": "336f51b22f099a9ce7c5f220424d5c8b714f6984e42e4e041c980a1570902f55",
+    "status": "confirmed",
+    "submittedAt": "2026-10-22T21:46:47.763Z",
+    "confirmedAt": "2026-10-22T21:48:44.740Z"
+  },
+  "setVault": {
+    "vaultPolicy": "b52a0afbc9be3fd2e587bbe7925caaaaebac982d392e8bbbe58454ac",
+    "setVaultTx": "d294ca561345ddc5128e821c3afb41980b126252741502c901e53171301efe23",
+    "signers": [
+      "c9329c2f39ebff39ee0e2d2c5a31f1573f7ad25d392a0e38324b30b3",
+      "a63b0b85b307d9bf47e95e7887dd6bcb3f10dd13c48fa2d4bda028e5",
+      "8612fcf3f7b28fc1f4bd4e3bb7dad6e97fa4fa691e1a94437c8fc38c"
+    ],
+    "configInput": "f0ebcf81548b2a9a0778e782a6f623951be361c90122d7ca01e61352fb4cff59#0",
+    "status": "confirmed",
+    "submittedAt": "2026-10-22T21:48:45.199Z",
+    "confirmedAt": "2026-10-22T21:49:06.969Z"
+  },
+  "tusd": {
+    "policyId": "e13ff0eeb0dc21dd67ea0e6a7e10343936d519201e7b65d035fc045a",
+    "unit": "e13ff0eeb0dc21dd67ea0e6a7e10343936d519201e7b65d035fc045a74555344",
+    "decimals": 6,
+    "minted": "1000000000000",
+    "nativeScript": {
+      "type": "sig",
+      "keyHash": "53a260ba5f7195165a9ca8fa8592389e3da98c25e5d4a5fb69e14f8e"
+    },
+    "mintTx": "d9729acf9315e171d3844b15af3cfe040680e62141c49fe8e34237546a192bc9",
+    "holder": "addr_test1vpf6yc96tace29j6nj504pvj8z0rm2vvyhjaff0md8s5lrsv0c0f5",
+    "status": "confirmed",
+    "submittedAt": "2026-10-22T22:41:37.253Z",
+    "confirmedAt": "2026-10-22T22:42:23.777Z"
+  },
+  "refFlow": {
+    "scriptHash": "bf2e6f6f7fdc2f567a67133494140e57ced77e4501142dab1def085a",
+    "lockAddress": "addr_test1wpfdc02rkmfyvh5kzzwwwk4kr2l9a8qa3g7feehl3ga022qez7f2d",
+    "refUtxo": "7b8744fa1f57bb454c2cb95dc83387427a66152e2d325560f48225c957f4a0c8#0",
+    "lovelaceLocked": "54659420",
+    "status": "confirmed",
+    "submittedAt": "2026-10-22T22:42:24.249Z",
+    "confirmedAt": "2026-10-22T22:42:51.018Z"
+  },
+  "refAdmin": {
+    "scriptHash": "4a7b639cbbc9da3030f674cf7c5ad28afe8b1480c2325d513b9f1b11",
+    "lockAddress": "addr_test1wpfdc02rkmfyvh5kzzwwwk4kr2l9a8qa3g7feehl3ga022qez7f2d",
+    "refUtxo": "a6648a37bd4326d10e07ac543d1dd89f446092350e8191bc111a0cdb485c4109#0",
+    "lovelaceLocked": "55810190",
+    "status": "confirmed",
+    "submittedAt": "2026-10-22T22:42:51.460Z",
+    "confirmedAt": "2026-10-22T22:43:08.208Z"
+  },
+  "refShort": {
+    "scriptHash": "8bcf87176033968f4baeddd2d64e3946967eb939cb2703352fd06fcc",
+    "lockAddress": "addr_test1wpfdc02rkmfyvh5kzzwwwk4kr2l9a8qa3g7feehl3ga022qez7f2d",
+    "refUtxo": "4897bb6ae3ebe98f368adf9f782503b4ca909164c2a9972a34563cf9454d9d75#0",
+    "lovelaceLocked": "49177100",
+    "status": "confirmed",
+    "submittedAt": "2026-10-22T22:43:08.660Z",
+    "confirmedAt": "2026-10-22T22:44:05.465Z"
+  },
+  "queueStake": {
+    "flow": {
+      "scriptHash": "bf2e6f6f7fdc2f567a67133494140e57ced77e4501142dab1def085a",
+      "rewardAddress": "stake_test17zljumm00lwz74n6vufnf9q5petua4m7g5q3gtdtrhhssksrjhkld"
+    },
+    "admin": {
+      "scriptHash": "4a7b639cbbc9da3030f674cf7c5ad28afe8b1480c2325d513b9f1b11",
+      "rewardAddress": "stake_test17p98kcuuh0ya5vps7e6v7lz66290azc5srpryh238w03kygs8rru0"
+    },
+    "short": {
+      "scriptHash": "8bcf87176033968f4baeddd2d64e3946967eb939cb2703352fd06fcc",
+      "rewardAddress": "stake_test17z9ulpchvqeedr6t4mwa94jw89rfvl4e889jwqe49lgxlnqz2w6ga"
+    },
+    "registrationTx": "d07356a3986bdb78c5e0f56b58da605d12d88eeb5029222a27be29189a278443",
+    "status": "confirmed",
+    "submittedAt": "2026-10-22T22:44:05.866Z",
+    "confirmedAt": "2026-10-22T22:44:12.312Z"
+  },
+  "queue": {
+    "seed": {
+      "txHash": "d07356a3986bdb78c5e0f56b58da605d12d88eeb5029222a27be29189a278443",
+      "outputIndex": 0
+    },
+    "scriptHash": "64021fe6d4fbc2fb828e593311c238ea76401598fba83160c9930860",
+    "address": "addr_test1wpjqy8lx6nau97uz3evnxywz8r48vsq4nra6svtqexfsscq0m2ptg",
+    "configUnit": "64021fe6d4fbc2fb828e593311c238ea76401598fba83160c99308607175657565",
+    "shortUnit": "64021fe6d4fbc2fb828e593311c238ea76401598fba83160c993086073686f7274",
+    "shardUnits": [
+      "64021fe6d4fbc2fb828e593311c238ea76401598fba83160c9930860736861726400",
+      "64021fe6d4fbc2fb828e593311c238ea76401598fba83160c9930860736861726401",
+      "64021fe6d4fbc2fb828e593311c238ea76401598fba83160c9930860736861726402",
+      "64021fe6d4fbc2fb828e593311c238ea76401598fba83160c9930860736861726403"
+    ],
+    "params": {
+      "payoutUnit": "e13ff0eeb0dc21dd67ea0e6a7e10343936d519201e7b65d035fc045a74555344",
+      "settleDelayMs": 172800000,
+      "minRequest": "100000000",
+      "instantMax": "10000000000",
+      "settleTip": "200000",
+      "dailyLimit": "50000000000",
+      "monthlyLimit": "500000000000",
+      "shards": 4,
+      "graceMs": 1209600000
+    },
+    "signers": [
+      "c9329c2f39ebff39ee0e2d2c5a31f1573f7ad25d392a0e38324b30b3",
+      "a63b0b85b307d9bf47e95e7887dd6bcb3f10dd13c48fa2d4bda028e5",
+      "8612fcf3f7b28fc1f4bd4e3bb7dad6e97fa4fa691e1a94437c8fc38c"
+    ],
+    "genesisTx": "ca55e1296c48da13b5dfe00db5428f5097830c4aeee974f3778d88913d425bb7",
+    "status": "confirmed",
+    "submittedAt": "2026-10-22T22:44:12.741Z",
+    "confirmedAt": "2026-10-22T22:44:54.251Z"
+  },
+  "stage5a": {
+    "attest": {
+      "attestedReserve": "100000000000",
+      "attestedAt": 1792710518000,
+      "tx": "17b6288b99247245d587ec070f78ba68571161a21f942991eadd4b00481aa243",
+      "status": "confirmed",
+      "submittedAt": "2026-10-22T23:10:45.553Z",
+      "confirmedAt": "2026-10-22T23:11:18.266Z"
+    },
+    "mint": {
+      "qty": "10000000000",
+      "to": "addr_test1vpf6yc96tace29j6nj504pvj8z0rm2vvyhjaff0md8s5lrsv0c0f5",
+      "mintedSupplyAfter": "10000000000",
+      "tx": "f43976c6148e0e29da7b247668dd66740d84922e1248846a9ea9be8aa11c8c35",
+      "status": "confirmed",
+      "submittedAt": "2026-10-22T23:11:18.803Z",
+      "confirmedAt": "2026-10-22T23:11:50.557Z"
+    },
+    "stake": {
+      "amount": "1000000000",
+      "stsraMinted": "1000000000",
+      "to": "addr_test1vpf6yc96tace29j6nj504pvj8z0rm2vvyhjaff0md8s5lrsv0c0f5",
+      "tx": "6d2ac302df3f4082c248312700b62773c0e49349192dc7dc6f4ad628e0d8aac1",
+      "status": "confirmed",
+      "submittedAt": "2026-10-22T23:11:51.003Z",
+      "confirmedAt": "2026-10-22T23:12:07.763Z"
+    },
+    "fund": {
+      "amount": "20000000000",
+      "shard": "ca55e1296c48da13b5dfe00db5428f5097830c4aeee974f3778d88913d425bb7#2",
+      "tx": "4a7f9eab619c1abf56f5f6ac32e112ea93bb28aa780dd31063ca73a1ba6fe7a5",
+      "status": "confirmed",
+      "submittedAt": "2026-10-22T23:12:08.243Z",
+      "confirmedAt": "2026-10-22T23:12:29.700Z"
+    }
+  },
+  "stage5b": {
+    "refVault": {
+      "scriptHash": "b52a0afbc9be3fd2e587bbe7925caaaaebac982d392e8bbbe58454ac",
+      "refUtxo": "a83ef041b8f2a9650ec48921b698a89c2224c183b91d3934bf89717a622617c0#0",
+      "status": "confirmed",
+      "submittedAt": "2026-10-23T00:50:50.344Z",
+      "confirmedAt": "2026-10-23T00:52:02.182Z"
+    },
+    "refOps": {
+      "scriptHash": "32e3297312809c82cce6df5eabe55a4e9ea4b4e19e549df0c3a2972f",
+      "refUtxo": "31190d572179db77765ea835347013aaa851f294eef19c302f3ffca35969c6e1#0",
+      "status": "confirmed",
+      "submittedAt": "2026-10-23T00:52:02.614Z",
+      "confirmedAt": "2026-10-23T00:52:09.343Z"
+    },
+    "refFirstLoss": {
+      "scriptHash": "ccfb81fa54e33ebc3b3239a1a1f15ea11eb175005f66cba9ab028fbe",
+      "refUtxo": "2d1ebbc16e0f4abdf83d7770ea37581c4f3622fee39a1db8f11fb40a817001a5#0",
+      "status": "confirmed",
+      "submittedAt": "2026-10-23T00:52:09.755Z",
+      "confirmedAt": "2026-10-23T00:52:16.184Z"
+    },
+    "refReserve": {
+      "scriptHash": "938b32e0f660dc06d3b58a20103cbe5ae1cc00531b53c7ba191d7400",
+      "refUtxo": "9515cc7ac77351150cb9090a259dc0c4d011079fa645cd3267f4ed6f29dc50cb#0",
+      "status": "confirmed",
+      "submittedAt": "2026-10-23T00:52:16.619Z",
+      "confirmedAt": "2026-10-23T00:52:53.473Z"
+    },
+    "reportYield": {
+      "gross": "100000000",
+      "toFirstLoss": "6250000",
+      "toTreasury": "6250000",
+      "vestShort": "87500000",
+      "vestLong": "0",
+      "vestUntil": 1793321318000,
+      "tx": "d31afac5cbd08b5344278d11c0e80579406d34dacbff5b7e15ebabb3f23fadbb",
+      "status": "confirmed",
+      "submittedAt": "2026-10-23T00:52:53.911Z",
+      "confirmedAt": "2026-10-23T00:53:40.429Z"
+    },
+    "unstake": {
+      "shares": "400000000",
+      "ticketValue": "400000000",
+      "claimAfter": 1793324918000,
+      "claimAfterIso": "2026-10-30T01:48:38.000Z",
+      "ticket": "ab627dfed29accd9c60f2039d904ee31be53b3750257a0407ed77c4da900a62d#1",
+      "tx": "ab627dfed29accd9c60f2039d904ee31be53b3750257a0407ed77c4da900a62d",
+      "status": "confirmed",
+      "submittedAt": "2026-10-23T00:53:40.836Z",
+      "confirmedAt": "2026-10-23T00:54:22.311Z"
+    },
+    "request": {
+      "qty": "500000000",
+      "payoutTo": "addr_test1vpf6yc96tace29j6nj504pvj8z0rm2vvyhjaff0md8s5lrsv0c0f5",
+      "bucket": 20749,
+      "payableAfter": 1792972800000,
+      "payableAfterIso": "2026-10-26T00:00:00.000Z",
+      "request": "c8022e9259ac9683c68cee87af5f51dac6c6787e88277d781d08f3fbddbfb96c#0",
+      "tx": "c8022e9259ac9683c68cee87af5f51dac6c6787e88277d781d08f3fbddbfb96c",
+      "status": "confirmed",
+      "submittedAt": "2026-10-23T00:54:22.730Z",
+      "confirmedAt": "2026-10-23T00:54:29.184Z"
+    },
+    "instant": {
+      "qty": "250000000",
+      "shard": "4a7f9eab619c1abf56f5f6ac32e112ea93bb28aa780dd31063ca73a1ba6fe7a5#0",
+      "paidTo": "addr_test1vpf6yc96tace29j6nj504pvj8z0rm2vvyhjaff0md8s5lrsv0c0f5",
+      "tx": "50aa721db12bcdcf69674631caf52901aeee58c9fb5c5ff2d6293fed4a7d3da1",
+      "status": "confirmed",
+      "submittedAt": "2026-10-23T00:54:29.588Z",
+      "confirmedAt": "2026-10-23T00:55:01.106Z"
+    }
+  }
+}

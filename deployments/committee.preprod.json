@@ -1,0 +1,10 @@
+{
+    "operators":  [
+                      "addr_test1vryn98p0884l7w0wpckjck3379tn77kjt5uj5r3cxf9npvc0tagtw",
+                      "addr_test1vznrkzu9kvran068a9083p7ad09n7yxaz0zglgk5hksz3egansaxz",
+                      "addr_test1vzrp9l8n77egls05h48rhd766m5hlf86dy0p49zr0j8u8rqzqqrf7",
+                      "addr_test1vql5epq7lmydxeqrdamzrgypx64aax2rfhefaz99xah002sjaj7pp",
+                      "addr_test1vqkyrzu3nyadeq2nefkvygrryd4wllxj5pzcuq29yvswejq9vsr4c"
+                  ],
+    "threshold":  3
+}
