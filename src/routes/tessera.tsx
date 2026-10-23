@@ -5,6 +5,7 @@ import { TRANSPARENCY as T } from "@/data/transparency.mock";
 import { MarketingLayout } from "@/components/layout/MarketingLayout";
 import { SectionHeader } from "@/components/brand/SectionHeader";
 import { StatusPill } from "@/components/brand/StatusPill";
+import { TesseraLiveDashboard } from "@/components/brand/TesseraLiveDashboard";
 
 const B = BRAND.base.ticker;
 const S = BRAND.staked.ticker;
@@ -15,12 +16,12 @@ export const Route = createFileRoute("/tessera")({
       { title: `${BRAND.productName} (${B} / ${S}) · Stellaris` },
       {
         name: "description",
-        content: `How ${BRAND.productName} works: reserve composition, ${B} token mechanics and how staked ${S} earns a variable share of reserve yield. Testnet preview.`,
+        content: `Live read-only ${BRAND.productName} Cardano Preprod deployment: reserve, ${S} vault and redemption queue, plus an illustrative token explainer. Test tokens have no monetary value.`,
       },
       { property: "og:title", content: `${BRAND.productName} · Stellaris` },
       {
         property: "og:description",
-        content: `Reserve composition, ${B} mechanics and the ${S} explanation — testnet preview with illustrative data.`,
+        content: `Live Cardano Preprod test data for ${B} and ${S}, with a separately labelled illustrative reserve and token explainer. No monetary value.`,
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -39,6 +40,7 @@ const METER_CLS: Record<string, string> = {
 function TesseraPage() {
   return (
     <MarketingLayout>
+      <TesseraLiveDashboard />
       {/* Hero */}
       <section className="home-dark-section">
         <div className="home-container home-section">
@@ -52,7 +54,8 @@ function TesseraPage() {
           <p className="mt-5 max-w-2xl text-base leading-relaxed opacity-80">
             {B} aims to hold 1 USD of value per token. Staking it as {S} shares in the reserve
             portfolio's yield — at a target, variable rate that can fall. This is a testnet
-            preview: every figure on this page is illustrative and no real money is involved.
+             explainer: every figure below is illustrative, separate from the live Preprod data
+             above, and no real money is involved.
           </p>
           <div className="mt-8 grid gap-4 md:grid-cols-2">
             {[
@@ -91,7 +94,7 @@ function TesseraPage() {
                     <h3 className="font-display text-lg font-semibold">{s.name}</h3>
                     <p className="mt-1 text-sm text-muted-foreground">{s.detail}</p>
                   </div>
-                  <p className="number-display font-display text-2xl font-semibold text-teal">{s.sharePct}%</p>
+                  <div className="text-right"><p className="number-display font-display text-2xl font-semibold text-teal">{s.sharePct}%</p><StatusPill status="illustrative" /></div>
                 </div>
                 <meter
                   className={`home-meter mt-5 ${METER_CLS[s.id] ?? ""}`}
@@ -110,11 +113,13 @@ function TesseraPage() {
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <div className="home-card p-6">
             <p className="text-xs text-muted-foreground">Overcollateralisation</p>
+            <StatusPill status="illustrative" className="mt-2" />
             <p className="mt-1 font-display text-2xl font-semibold">{T.overcollateral.ratioPct}%</p>
             <p className="text-xs text-muted-foreground">Target {T.overcollateral.targetMinPct}–{T.overcollateral.targetMaxPct}%</p>
           </div>
           <div className="home-card p-6">
             <p className="text-xs text-muted-foreground">Protocol first-loss reserve</p>
+            <StatusPill status="illustrative" className="mt-2" />
             <p className="mt-1 font-display text-2xl font-semibold">{T.firstLoss.levelPct}%</p>
             <p className="text-xs text-muted-foreground">Target {T.firstLoss.targetPct}% of supply</p>
           </div>
@@ -162,6 +167,7 @@ function TesseraPage() {
         <div className="mt-10 grid gap-4 md:grid-cols-2">
           <div className="home-card p-6">
             <div className="flex items-center gap-2"><Timer className="h-5 w-5 text-teal" /><h3 className="font-display text-lg font-semibold">Flexible</h3></div>
+            <StatusPill status="illustrative" className="mt-3" />
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
               4.5% illustrative target, variable. Unstaking starts a 7-day cooldown (protocol bounds
               7–14 days). No yield accrues while cooling down, but the position still shares losses.
@@ -169,6 +175,7 @@ function TesseraPage() {
           </div>
           <div className="home-card p-6">
             <div className="flex items-center gap-2"><Lock className="h-5 w-5 text-teal" /><h3 className="font-display text-lg font-semibold">Locked</h3></div>
+            <StatusPill status="illustrative" className="mt-3" />
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
               A 30-day position (not a separate token) with a 1.25× yield weight, capped at 1.5×. Only
               the owner can unlock once the term ends.
@@ -176,8 +183,8 @@ function TesseraPage() {
           </div>
         </div>
         <ul className="mt-6 grid gap-3 text-sm text-muted-foreground md:grid-cols-3">
-          <li className="home-card p-5">Yield is credited gradually over 7 days, not in one lump.</li>
-          <li className="home-card p-5">The protocol keeps 12.5% of yield (capped at 20%); half goes to the first-loss reserve. It never takes principal.</li>
+          <li className="home-card p-5"><StatusPill status="illustrative" className="mb-2" /><p>Yield is credited gradually over 7 days, not in one lump.</p></li>
+          <li className="home-card p-5"><StatusPill status="illustrative" className="mb-2" /><p>The protocol keeps 12.5% of yield (capped at 20%); half goes to the first-loss reserve. It never takes principal.</p></li>
           <li className="home-card p-5">Staking may require an eligibility check before it is available.</li>
         </ul>
         <div className="mt-8 flex flex-wrap gap-3">
