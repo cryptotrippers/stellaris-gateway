@@ -102,7 +102,13 @@ test("document types are limited to the project's kind", () => {
   assert.equal(findCategory("renewables", "title_deed"), null);
   assert.ok(findCategory("private_credit", "facility_agreement"));
   // Common sections exist for every project type.
-  for (const t of ["renewables", "real_estate", "private_credit", "infrastructure", "other"] as const) {
+  for (const t of [
+    "renewables",
+    "real_estate",
+    "private_credit",
+    "infrastructure",
+    "other",
+  ] as const) {
     assert.ok(findCategory(t, "constitutional"));
     assert.ok(findCategory(t, "financial_statements"));
     const keys = documentSectionsFor(t).flatMap((s) => s.categories.map((c) => c.key));
@@ -132,7 +138,9 @@ test("review notes and history are hidden from investors", () => {
     reviewedAt: null,
     reviewNote: "internal",
     releasedAt: null,
-    history: [{ at: "2026-01-02T00:00:00Z", action: "released", actor: "administrator", note: null }],
+    history: [
+      { at: "2026-01-02T00:00:00Z", action: "released", actor: "administrator", note: null },
+    ],
   };
   const forInvestor = toProjectDocument(meta, investor)!;
   assert.equal(forInvestor.reviewNote, null);

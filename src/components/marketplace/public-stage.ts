@@ -2,11 +2,23 @@ import type { PipelineStage } from "@/lib/accelerator.shared";
 
 /** Public pipeline vocabulary. Rejected or withdrawn applications are never shown publicly. */
 export const PUBLIC_STAGES = [
-  { key: "initial_review", label: "Under Initial Review", blurb: "Submitted; no evidence reviewed yet." },
+  {
+    key: "initial_review",
+    label: "Under Initial Review",
+    blurb: "Submitted; no evidence reviewed yet.",
+  },
   { key: "due_diligence", label: "Due Diligence", blurb: "Evidence is being reviewed." },
   { key: "awaiting_decision", label: "Awaiting Decision", blurb: "In front of a governance vote." },
-  { key: "preparing_offering", label: "Preparing Offering", blurb: "Approved on testnet; no vault yet." },
-  { key: "funding_open", label: "Funding Open (testnet)", blurb: "Vault live on Preprod — test deposits only." },
+  {
+    key: "preparing_offering",
+    label: "Preparing Offering",
+    blurb: "Approved on testnet; no vault yet.",
+  },
+  {
+    key: "funding_open",
+    label: "Funding Open (testnet)",
+    blurb: "Vault live on Preprod — test deposits only.",
+  },
   { key: "operating", label: "Operating", blurb: "On-chain accruals recorded (test ADA)." },
   { key: "completed", label: "Completed", blurb: "Exited under its terms." },
 ] as const;

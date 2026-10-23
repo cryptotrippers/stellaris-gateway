@@ -9,7 +9,13 @@ export const MAX_DOCUMENT_BYTES = 25 * 1024 * 1024;
 export const MAX_DOCUMENTS_PER_PROJECT = 60;
 export const SIGNED_LINK_SECONDS = 300;
 
-export type DocumentStatus = "uploading" | "pending" | "released" | "rejected" | "withdrawn" | "superseded";
+export type DocumentStatus =
+  | "uploading"
+  | "pending"
+  | "released"
+  | "rejected"
+  | "withdrawn"
+  | "superseded";
 
 export const STATUS_LABEL: Record<DocumentStatus, string> = {
   uploading: "Upload not finished",
@@ -36,7 +42,11 @@ const FILE_TYPES: Record<FileKind, { ext: string[]; mime: string[]; label: strin
     mime: ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
     label: "Excel spreadsheet",
   },
-  csv: { ext: ["csv"], mime: ["text/csv", "application/csv", "application/vnd.ms-excel"], label: "CSV" },
+  csv: {
+    ext: ["csv"],
+    mime: ["text/csv", "application/csv", "application/vnd.ms-excel"],
+    label: "CSV",
+  },
   txt: { ext: ["txt"], mime: ["text/plain"], label: "Text" },
 };
 
@@ -59,7 +69,10 @@ export function canonicalMime(kind: FileKind): string {
 export function fileKindOf(fileName: string, declaredMime: string): FileKind | null {
   const ext = fileName.toLowerCase().split(".").pop() ?? "";
   const mime = declaredMime.toLowerCase().split(";")[0]!.trim();
-  for (const [kind, t] of Object.entries(FILE_TYPES) as [FileKind, (typeof FILE_TYPES)[FileKind]][]) {
+  for (const [kind, t] of Object.entries(FILE_TYPES) as [
+    FileKind,
+    (typeof FILE_TYPES)[FileKind],
+  ][]) {
     if (!t.ext.includes(ext)) continue;
     if (mime && mime !== "application/octet-stream" && !t.mime.includes(mime)) return null;
     return kind;
@@ -86,7 +99,12 @@ export function bytesMatchKind(kind: FileKind, head: Uint8Array): boolean {
       const sample = head.subarray(0, 4096);
       if (sample.includes(0)) return false;
       const lower = new TextDecoder().decode(sample.subarray(0, 512)).trimStart().toLowerCase();
-      return !(lower.startsWith("<!doctype html") || lower.startsWith("<html") || lower.startsWith("<svg") || lower.startsWith("<script"));
+      return !(
+        lower.startsWith("<!doctype html") ||
+        lower.startsWith("<html") ||
+        lower.startsWith("<svg") ||
+        lower.startsWith("<script")
+      );
     }
   }
 }
@@ -110,7 +128,10 @@ export interface Viewer {
 }
 
 /** Whether a viewer may see a document in the list, and open its file. */
-export function documentAccess(viewer: Viewer, status: DocumentStatus): { list: boolean; open: boolean } {
+export function documentAccess(
+  viewer: Viewer,
+  status: DocumentStatus,
+): { list: boolean; open: boolean } {
   if (viewer.isAdmin || viewer.isOwner) return { list: true, open: status !== "uploading" };
   if (status !== "released") return { list: false, open: false };
   return { list: true, open: viewer.signedIn };
@@ -119,7 +140,8 @@ export function documentAccess(viewer: Viewer, status: DocumentStatus): { list: 
 /** Released documents stay on record until an administrator withdraws them. */
 export function canRemove(viewer: Viewer, status: DocumentStatus): boolean {
   if (viewer.isAdmin) return status !== "released";
-  if (viewer.isOwner) return status === "uploading" || status === "pending" || status === "rejected";
+  if (viewer.isOwner)
+    return status === "uploading" || status === "pending" || status === "rejected";
   return false;
 }
 
@@ -150,7 +172,10 @@ export function reviewTransition(
     reopen: "pending",
   };
   if (!allowed[decision].includes(from)) {
-    return { ok: false, reason: `A document that is "${STATUS_LABEL[from]}" cannot be changed with "${DECISION_LABEL[decision]}".` };
+    return {
+      ok: false,
+      reason: `A document that is "${STATUS_LABEL[from]}" cannot be changed with "${DECISION_LABEL[decision]}".`,
+    };
   }
   return { ok: true, to: to[decision] };
 }

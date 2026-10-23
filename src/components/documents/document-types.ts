@@ -8,7 +8,13 @@ import {
   type Viewer,
 } from "./document-rules";
 
-export type HistoryAction = "submitted" | "released" | "rejected" | "withdrawn" | "reopened" | "superseded";
+export type HistoryAction =
+  | "submitted"
+  | "released"
+  | "rejected"
+  | "withdrawn"
+  | "reopened"
+  | "superseded";
 
 export interface DocumentHistoryEntry {
   at: string;

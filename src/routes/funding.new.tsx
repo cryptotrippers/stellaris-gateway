@@ -108,11 +108,13 @@ function NewFundingRequest() {
         <div className="home-container py-10 md:py-14">
           <div className="card-institutional mx-auto mt-10 max-w-2xl p-8 text-center">
             <CheckCircle2 className="mx-auto h-8 w-8 text-success" aria-hidden="true" />
-            <h1 className="mt-4 font-display text-2xl font-semibold text-foreground">Request submitted</h1>
+            <h1 className="mt-4 font-display text-2xl font-semibold text-foreground">
+              Request submitted
+            </h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              <span className="font-mono">{doneSlug}</span> is now in the public pipeline. Nothing has
-              been created on chain: a governance proposal must pass before operators bootstrap a vault
-              and the fee terms are written into its datum.
+              <span className="font-mono">{doneSlug}</span> is now in the public pipeline. Nothing
+              has been created on chain: a governance proposal must pass before operators bootstrap
+              a vault and the fee terms are written into its datum.
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-3">
               <button
@@ -157,7 +159,10 @@ function NewFundingRequest() {
         </p>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[240px_1fr]">
-          <ol className="flex gap-2 overflow-x-auto pb-2 lg:flex-col lg:gap-1 lg:overflow-visible" aria-label="Application sections">
+          <ol
+            className="flex gap-2 overflow-x-auto pb-2 lg:flex-col lg:gap-1 lg:overflow-visible"
+            aria-label="Application sections"
+          >
             {STEPS.map((s, i) => (
               <li key={s} className="shrink-0">
                 <button
@@ -165,12 +170,18 @@ function NewFundingRequest() {
                   onClick={() => setStep(i)}
                   aria-current={i === step ? "step" : undefined}
                   className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                    i === step ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    i === step
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                   }`}
                 >
                   <span
                     className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-semibold ${
-                      i === step ? "bg-primary-foreground text-primary" : i < step ? "bg-success text-success-foreground" : "bg-secondary text-muted-foreground"
+                      i === step
+                        ? "bg-primary-foreground text-primary"
+                        : i < step
+                          ? "bg-success text-success-foreground"
+                          : "bg-secondary text-muted-foreground"
                     }`}
                   >
                     {i < step ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : i + 1}
@@ -190,10 +201,20 @@ function NewFundingRequest() {
               {step === 0 && (
                 <div className="space-y-4">
                   <Field label="Project name">
-                    <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Nordic Wind III" className="input" />
+                    <input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="e.g. Nordic Wind III"
+                      className="input"
+                    />
                   </Field>
                   <Field label="Asset identifier">
-                    <input value={assetSlug} onChange={(e) => setAssetSlug(e.target.value)} placeholder="nordic-wind-03" className="input font-mono" />
+                    <input
+                      value={assetSlug}
+                      onChange={(e) => setAssetSlug(e.target.value)}
+                      placeholder="nordic-wind-03"
+                      className="input font-mono"
+                    />
                     <Hint>
                       Lowercase letters, numbers and hyphens. This becomes the vault&apos;s on-chain
                       parameter if the request is approved, so it can never change afterwards.
@@ -220,7 +241,12 @@ function NewFundingRequest() {
                     </div>
                   </fieldset>
                   <Field label="Location (optional)">
-                    <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Jutland, Denmark" className="input" />
+                    <input
+                      value={location}
+                      onChange={(e) => setLocation(e.target.value)}
+                      placeholder="e.g. Jutland, Denmark"
+                      className="input"
+                    />
                   </Field>
                   <Field label="Description">
                     <textarea
@@ -238,12 +264,24 @@ function NewFundingRequest() {
               {step === 1 && (
                 <div className="space-y-4">
                   <Field label="Legal issuer">
-                    <input value={issuer} onChange={(e) => setIssuer(e.target.value)} placeholder="Entity legally responsible for the asset" className="input" />
-                    <Hint>The registered name of the company, trust or SPV that holds the asset.</Hint>
+                    <input
+                      value={issuer}
+                      onChange={(e) => setIssuer(e.target.value)}
+                      placeholder="Entity legally responsible for the asset"
+                      className="input"
+                    />
+                    <Hint>
+                      The registered name of the company, trust or SPV that holds the asset.
+                    </Hint>
                   </Field>
                   <NotCollected
                     title="Collected on your issuer profile after you submit"
-                    items={["Jurisdiction of registration", "Registration number", "Legal wrapper type (SPV, trust, company, co-operative, foundation)", "Website"]}
+                    items={[
+                      "Jurisdiction of registration",
+                      "Registration number",
+                      "Legal wrapper type (SPV, trust, company, co-operative, foundation)",
+                      "Website",
+                    ]}
                     note="Add these on the request page once it is created. An administrator reviews the profile before Gate A."
                   />
                 </div>
@@ -252,17 +290,43 @@ function NewFundingRequest() {
               {step === 2 && (
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="Target raise (ADA)">
-                    <input value={targetAda} onChange={(e) => setTargetAda(e.target.value)} inputMode="decimal" className="input tabular-nums" />
+                    <input
+                      value={targetAda}
+                      onChange={(e) => setTargetAda(e.target.value)}
+                      inputMode="decimal"
+                      className="input tabular-nums"
+                    />
                   </Field>
                   <Field label="Minimum deposit (ADA)">
-                    <input value={minDepositAda} onChange={(e) => setMinDepositAda(e.target.value)} inputMode="decimal" className="input tabular-nums" />
-                    <Hint>The contract enforces a 10 ADA floor on the first deposit into a vault.</Hint>
+                    <input
+                      value={minDepositAda}
+                      onChange={(e) => setMinDepositAda(e.target.value)}
+                      inputMode="decimal"
+                      className="input tabular-nums"
+                    />
+                    <Hint>
+                      The contract enforces a 10 ADA floor on the first deposit into a vault.
+                    </Hint>
                   </Field>
                   <Field label="Maturity (months, optional)">
-                    <input value={maturityMonths} onChange={(e) => setMaturityMonths(e.target.value)} inputMode="numeric" className="input tabular-nums" />
+                    <input
+                      value={maturityMonths}
+                      onChange={(e) => setMaturityMonths(e.target.value)}
+                      inputMode="numeric"
+                      className="input tabular-nums"
+                    />
                   </Field>
                   <div className="sm:col-span-2">
-                    <NotCollected title="Not collected yet" items={["Soft cap", "Hard cap", "Funding deadline", "Use of proceeds and milestones"]} note="These need the escrow and milestone services, which are still being built." />
+                    <NotCollected
+                      title="Not collected yet"
+                      items={[
+                        "Soft cap",
+                        "Hard cap",
+                        "Funding deadline",
+                        "Use of proceeds and milestones",
+                      ]}
+                      note="These need the escrow and milestone services, which are still being built."
+                    />
                   </div>
                 </div>
               )}
@@ -274,17 +338,20 @@ function NewFundingRequest() {
                       value={evidence}
                       onChange={(e) => setEvidence(e.target.value)}
                       rows={5}
-                      placeholder={"https://registry.example/title-deed\nhttps://auditor.example/report.pdf"}
+                      placeholder={
+                        "https://registry.example/title-deed\nhttps://auditor.example/report.pdf"
+                      }
                       className="input min-h-[120px] resize-y font-mono text-xs"
                     />
                     <Hint>
-                      Ownership, licences, offtake agreements, independent audits. Reviewers will read
-                      these; unverifiable claims get rejected. Links are public — do not share
+                      Ownership, licences, offtake agreements, independent audits. Reviewers will
+                      read these; unverifiable claims get rejected. Links are public — do not share
                       confidential files.
                     </Hint>
                   </Field>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <FeatureStatus stage="awaiting_backend" /> Private uploads open with the secure data room.
+                    <FeatureStatus stage="awaiting_backend" /> Private uploads open with the secure
+                    data room.
                   </div>
                 </div>
               )}
@@ -292,7 +359,12 @@ function NewFundingRequest() {
               {step === 4 && (
                 <div className="space-y-4">
                   <Field label="Reporting cadence">
-                    <input value={reportingCadence} onChange={(e) => setReportingCadence(e.target.value)} placeholder="Quarterly" className="input" />
+                    <input
+                      value={reportingCadence}
+                      onChange={(e) => setReportingCadence(e.target.value)}
+                      placeholder="Quarterly"
+                      className="input"
+                    />
                   </Field>
                   <div className="rounded-md border border-border bg-secondary/20 p-4">
                     <Field label={`Management fee — ${formatFeeBps(feeBps)}`}>
@@ -307,9 +379,9 @@ function NewFundingRequest() {
                       />
                     </Field>
                     <p className="mt-2 text-[11px] text-muted-foreground">
-                      Charged annually on accounted vault assets, prorated by time and settled at each
-                      accrual by minting shares to the treasury — no lovelace leaves the vault, holders are
-                      diluted by exactly the fee owed. The validator caps the rate at{" "}
+                      Charged annually on accounted vault assets, prorated by time and settled at
+                      each accrual by minting shares to the treasury — no lovelace leaves the vault,
+                      holders are diluted by exactly the fee owed. The validator caps the rate at{" "}
                       {formatFeeBps(MAX_FEE_BPS)} and rejects retroactive changes.
                     </p>
                     <div className="mt-4">
@@ -324,11 +396,13 @@ function NewFundingRequest() {
                     </div>
                   </div>
                   <div className="rounded-md border border-border bg-secondary/20 p-4">
-                    <span className="text-sm text-muted-foreground">Projected net APY at this fee rate</span>
+                    <span className="text-sm text-muted-foreground">
+                      Projected net APY at this fee rate
+                    </span>
                     <p className="mt-1 text-[11px] text-muted-foreground">
-                      Illustrative only, computed with the same fee formula the validator enforces on
-                      chain. Not a promise of returns — actual yield depends entirely on the underlying
-                      asset.
+                      Illustrative only, computed with the same fee formula the validator enforces
+                      on chain. Not a promise of returns — actual yield depends entirely on the
+                      underlying asset.
                     </p>
                     <div className="mt-3 overflow-x-auto">
                       <table className="w-full min-w-[420px] text-xs tabular-nums">
@@ -342,23 +416,43 @@ function NewFundingRequest() {
                         <tbody>
                           {apyMatrix.map((row) => (
                             <tr key={row.grossApyBps} className="border-t border-border">
-                              <td className="py-1.5 text-foreground">{formatFeeBps(row.grossApyBps)}</td>
-                              <td className="py-1.5 text-muted-foreground">{formatFeeBps(feeBps)}</td>
-                              <td className="py-1.5 font-medium text-foreground">{formatFeeBps(row.netApyBps)}</td>
+                              <td className="py-1.5 text-foreground">
+                                {formatFeeBps(row.grossApyBps)}
+                              </td>
+                              <td className="py-1.5 text-muted-foreground">
+                                {formatFeeBps(feeBps)}
+                              </td>
+                              <td className="py-1.5 font-medium text-foreground">
+                                {formatFeeBps(row.netApyBps)}
+                              </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
                   </div>
-                  <NotCollected title="Not collected yet" items={["Revenue model and offtake pricing", "Operating expense budget", "Debt and tax obligations", "Reserve policy"]} note="The Asset-to-Yield Engine will define these fields with the backend team." />
+                  <NotCollected
+                    title="Not collected yet"
+                    items={[
+                      "Revenue model and offtake pricing",
+                      "Operating expense budget",
+                      "Debt and tax obligations",
+                      "Reserve policy",
+                    ]}
+                    note="The Asset-to-Yield Engine will define these fields with the backend team."
+                  />
                 </div>
               )}
 
               {step === 5 && (
                 <NotCollected
                   title="Investor rights are not collected by this form yet"
-                  items={["What a participation unit entitles its holder to", "Voting and information rights", "Transfer restrictions and lock-ups", "What happens on default or wind-down"]}
+                  items={[
+                    "What a participation unit entitles its holder to",
+                    "Voting and information rights",
+                    "Transfer restrictions and lock-ups",
+                    "What happens on default or wind-down",
+                  ]}
                   note="Rights must come from approved legal documents. Until a project has them, Stellaris shows that no rights are offered. You can continue without filling anything here."
                   stage="awaiting_legal"
                 />
@@ -367,7 +461,12 @@ function NewFundingRequest() {
               {step === 6 && (
                 <NotCollected
                   title="Risk information is not collected by this form yet"
-                  items={["Asset-specific operating risks", "Counterparty and offtaker risk", "Jurisdiction and regulatory risk", "Insurance coverage and gaps"]}
+                  items={[
+                    "Asset-specific operating risks",
+                    "Counterparty and offtaker risk",
+                    "Jurisdiction and regulatory risk",
+                    "Insurance coverage and gaps",
+                  ]}
                   note="Every passport already lists the standard testnet, contract, issuer, legal and liquidity risks. Project-specific risk fields arrive with the backend data contract."
                 />
               )}
@@ -379,19 +478,26 @@ function NewFundingRequest() {
                     <Summary label="Identifier" value={assetSlug || "—"} mono />
                     <Summary label="Issuer" value={issuer || "—"} />
                     <Summary label="Target" value={targetAda ? `${targetAda} ₳` : "—"} />
-                    <Summary label="Min deposit" value={minDepositAda ? `${minDepositAda} ₳` : "—"} />
+                    <Summary
+                      label="Min deposit"
+                      value={minDepositAda ? `${minDepositAda} ₳` : "—"}
+                    />
                     <Summary label="Management fee" value={formatFeeBps(feeBps)} />
                     <Summary label="Reporting" value={reportingCadence || "—"} />
-                    <Summary label="Evidence links" value={String(evidence.split(/\r?\n/).filter((l) => l.trim()).length)} />
+                    <Summary
+                      label="Evidence links"
+                      value={String(evidence.split(/\r?\n/).filter((l) => l.trim()).length)}
+                    />
                     <Summary label="Category" value={category} />
                   </dl>
                   <p className="text-[11px] text-muted-foreground">
-                    Submitting records a public request. It does not create an asset, derive a vault, or
-                    move any funds. The server checks every field again before saving.
+                    Submitting records a public request. It does not create an asset, derive a
+                    vault, or move any funds. The server checks every field again before saving.
                   </p>
                   <div className="rounded-md border border-border bg-secondary/20 p-4">
                     <span className="text-sm text-muted-foreground">
-                      Platform terms — version <span className="font-mono">{FUNDING_TERMS_VERSION}</span>
+                      Platform terms — version{" "}
+                      <span className="font-mono">{FUNDING_TERMS_VERSION}</span>
                     </span>
                     <div className="mt-2 max-h-40 space-y-3 overflow-y-auto rounded border border-border bg-background p-3 text-[11px] leading-relaxed text-muted-foreground">
                       {FUNDING_TERMS_SECTIONS.map((s) => (
@@ -402,7 +508,12 @@ function NewFundingRequest() {
                       ))}
                     </div>
                     <label className="mt-3 flex items-start gap-2 text-sm text-foreground">
-                      <input type="checkbox" checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} className="mt-0.5" />
+                      <input
+                        type="checkbox"
+                        checked={termsAccepted}
+                        onChange={(e) => setTermsAccepted(e.target.checked)}
+                        className="mt-0.5"
+                      />
                       <span>
                         I have read and agree to the{" "}
                         <Link to="/terms" target="_blank" className="text-primary underline">
@@ -417,7 +528,10 @@ function NewFundingRequest() {
             </div>
 
             {error && (
-              <div role="alert" className="mt-4 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              <div
+                role="alert"
+                className="mt-4 flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"
+              >
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
                 <span>{error}</span>
               </div>

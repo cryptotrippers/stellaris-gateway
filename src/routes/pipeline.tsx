@@ -9,7 +9,11 @@ import { listPipeline } from "@/lib/accelerator.functions";
 import type { PipelineProject } from "@/lib/accelerator.shared";
 import { ReadinessMeter } from "@/components/accelerator/ReadinessMeter";
 import { VerificationBadge } from "@/components/accelerator/ProjectToolkit";
-import { PUBLIC_STAGES, publicStage, type PublicStageKey } from "@/components/marketplace/public-stage";
+import {
+  PUBLIC_STAGES,
+  publicStage,
+  type PublicStageKey,
+} from "@/components/marketplace/public-stage";
 
 const TITLE = "Project Pipeline — real-world assets on Stellaris";
 const DESCRIPTION =
@@ -29,7 +33,8 @@ export const Route = createFileRoute("/pipeline")({
   component: PipelinePage,
 });
 
-const ada = (lovelace: number) => (lovelace / 1_000_000).toLocaleString(undefined, { maximumFractionDigits: 0 });
+const ada = (lovelace: number) =>
+  (lovelace / 1_000_000).toLocaleString(undefined, { maximumFractionDigits: 0 });
 
 type Row = PipelineProject & { publicKey: PublicStageKey };
 
@@ -61,7 +66,10 @@ function PipelinePage() {
           description="Every stage a project passes through, in the open. Confidential issuer information, withdrawn and rejected applications are never shown here."
         />
 
-        <ol className="mt-10 grid grid-cols-2 gap-2 md:grid-cols-4 lg:grid-cols-7" aria-label="Pipeline stages">
+        <ol
+          className="mt-10 grid grid-cols-2 gap-2 md:grid-cols-4 lg:grid-cols-7"
+          aria-label="Pipeline stages"
+        >
           {PUBLIC_STAGES.map((s, i) => {
             const n = counts.get(s.key) ?? 0;
             const active = stage === s.key;
@@ -73,10 +81,20 @@ function PipelinePage() {
                   aria-pressed={active}
                   className={`flex h-full w-full flex-col rounded-xl border p-4 text-left transition-colors ${active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card hover:border-teal/50"}`}
                 >
-                  <span className={`text-[11px] font-semibold ${active ? "text-primary-foreground/80" : "text-teal"}`}>Stage {i + 1}</span>
+                  <span
+                    className={`text-[11px] font-semibold ${active ? "text-primary-foreground/80" : "text-teal"}`}
+                  >
+                    Stage {i + 1}
+                  </span>
                   <span className="mt-1 text-sm font-semibold">{s.label}</span>
-                  <span className={`mt-1 text-xs ${active ? "text-primary-foreground/80" : "text-muted-foreground"}`}>{s.blurb}</span>
-                  <span className="number-display mt-3 font-display text-2xl font-semibold">{q.isLoading ? "…" : n}</span>
+                  <span
+                    className={`mt-1 text-xs ${active ? "text-primary-foreground/80" : "text-muted-foreground"}`}
+                  >
+                    {s.blurb}
+                  </span>
+                  <span className="number-display mt-3 font-display text-2xl font-semibold">
+                    {q.isLoading ? "…" : n}
+                  </span>
                 </button>
               </li>
             );
@@ -85,7 +103,11 @@ function PipelinePage() {
 
         <div className="mt-10">
           {q.isLoading ? (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-busy="true" aria-label="Loading pipeline">
+            <div
+              className="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
+              aria-busy="true"
+              aria-label="Loading pipeline"
+            >
               {[0, 1, 2].map((i) => (
                 <div key={i} className="h-56 animate-pulse rounded-2xl bg-secondary" />
               ))}
@@ -100,7 +122,9 @@ function PipelinePage() {
           ) : visible.length === 0 ? (
             <div className="card-institutional p-8 text-center">
               <p className="text-sm text-muted-foreground">
-                {stage === "all" ? "No projects are in the pipeline yet." : "No projects are at this stage right now."}{" "}
+                {stage === "all"
+                  ? "No projects are in the pipeline yet."
+                  : "No projects are at this stage right now."}{" "}
                 <Link to="/for-issuers" className="font-medium text-teal hover:underline">
                   Propose a project
                 </Link>
@@ -130,13 +154,17 @@ function ProjectCard({ p }: { p: Row }) {
     <article className="card-institutional flex min-w-0 flex-col p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="truncate font-display text-base font-semibold text-foreground">{p.name}</h2>
+          <h2 className="truncate font-display text-base font-semibold text-foreground">
+            {p.name}
+          </h2>
           <p className="mt-0.5 truncate text-xs text-muted-foreground">
             {p.category}
             {p.location ? ` · ${p.location}` : ""}
           </p>
         </div>
-        <span className="shrink-0 rounded-full border border-teal/30 bg-teal/10 px-2.5 py-0.5 text-[11px] font-medium text-teal">{label}</span>
+        <span className="shrink-0 rounded-full border border-teal/30 bg-teal/10 px-2.5 py-0.5 text-[11px] font-medium text-teal">
+          {label}
+        </span>
       </div>
       {p.issuer && (
         <div className="mt-3">
@@ -160,11 +188,19 @@ function ProjectCard({ p }: { p: Row }) {
       </dl>
       <div className="mt-auto pt-4">
         {p.assetId ? (
-          <Link to="/marketplace/$id" params={{ id: p.assetId }} className="inline-flex items-center gap-1.5 text-xs font-medium text-teal">
+          <Link
+            to="/marketplace/$id"
+            params={{ id: p.assetId }}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-teal"
+          >
             Open Asset Passport <ArrowRight className="h-3 w-3" aria-hidden="true" />
           </Link>
         ) : (
-          <Link to="/funding/$id" params={{ id: p.slug }} className="inline-flex items-center gap-1.5 text-xs font-medium text-teal">
+          <Link
+            to="/funding/$id"
+            params={{ id: p.slug }}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-teal"
+          >
             Review evidence <ArrowRight className="h-3 w-3" aria-hidden="true" />
           </Link>
         )}

@@ -18,9 +18,8 @@ export function ScriptCacheGuard() {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const { SCRIPT_BUILD_ID, readStoredScriptBuildId, writeStoredScriptBuildId } = await import(
-        "@/lib/script-identity"
-      );
+      const { SCRIPT_BUILD_ID, readStoredScriptBuildId, writeStoredScriptBuildId } =
+        await import("@/lib/script-identity");
       if (cancelled) return;
       const previous = readStoredScriptBuildId();
       if (previous !== SCRIPT_BUILD_ID) {

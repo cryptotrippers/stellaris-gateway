@@ -13,7 +13,11 @@ export const Route = createFileRoute("/document-review")({
   head: () => ({
     meta: [
       { title: "Document Review Queue · Stellaris" },
-      { name: "description", content: "Administrator queue of project documents awaiting a release or rejection decision." },
+      {
+        name: "description",
+        content:
+          "Administrator queue of project documents awaiting a release or rejection decision.",
+      },
       { property: "og:title", content: "Document Review Queue · Stellaris" },
       { property: "og:description", content: "Administrator-only document review queue." },
       { property: "og:type", content: "website" },
@@ -38,17 +42,22 @@ function DocumentReviewPage() {
     <MarketingLayout>
       <div className="home-container py-10 md:py-14">
         <p className="home-eyebrow">Administrator</p>
-        <h1 className="mt-2 font-display text-3xl font-semibold text-foreground">Document review queue</h1>
+        <h1 className="mt-2 font-display text-3xl font-semibold text-foreground">
+          Document review queue
+        </h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Files issuers have uploaded that are waiting for a decision, oldest first. Open a project&apos;s
-          document room to read the file and approve its release to investors or reject it with a reason.
+          Files issuers have uploaded that are waiting for a decision, oldest first. Open a
+          project&apos;s document room to read the file and approve its release to investors or
+          reject it with a reason.
         </p>
 
         {loading ? (
           <p className="mt-8 text-sm text-muted-foreground">Checking your session…</p>
         ) : !user ? (
           <div className="mt-8 card-institutional p-8 text-center">
-            <p className="text-sm text-muted-foreground">Sign in with an administrator account to review documents.</p>
+            <p className="text-sm text-muted-foreground">
+              Sign in with an administrator account to review documents.
+            </p>
             <Button asChild className="mt-4">
               <Link to="/auth">
                 <LogIn /> Sign in
@@ -64,7 +73,8 @@ function DocumentReviewPage() {
         ) : q.isError ? (
           <div role="alert" className="mt-8 card-institutional p-6">
             <p className="flex items-center gap-2 font-medium text-foreground">
-              <ShieldAlert className="h-4 w-4 text-destructive" aria-hidden="true" /> {q.error.message}
+              <ShieldAlert className="h-4 w-4 text-destructive" aria-hidden="true" />{" "}
+              {q.error.message}
             </p>
             <Button variant="outline" size="sm" className="mt-4" onClick={() => q.refetch()}>
               <RefreshCw /> Try again
@@ -81,13 +91,22 @@ function DocumentReviewPage() {
               ].map(([label, n]) => (
                 <div key={label} className="card-institutional p-4">
                   <dt className="text-xs text-muted-foreground">{label}</dt>
-                  <dd className="mt-1 font-display text-2xl font-semibold tabular-nums text-foreground">{n}</dd>
+                  <dd className="mt-1 font-display text-2xl font-semibold tabular-nums text-foreground">
+                    {n}
+                  </dd>
                 </div>
               ))}
             </dl>
             <div className="mt-6 flex items-center justify-between gap-3">
-              <h2 className="font-display text-lg font-semibold text-foreground">Awaiting a decision</h2>
-              <Button variant="outline" size="sm" onClick={() => q.refetch()} disabled={q.isFetching}>
+              <h2 className="font-display text-lg font-semibold text-foreground">
+                Awaiting a decision
+              </h2>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => q.refetch()}
+                disabled={q.isFetching}
+              >
                 <RefreshCw className={q.isFetching ? "animate-spin" : ""} /> Refresh
               </Button>
             </div>
@@ -100,17 +119,29 @@ function DocumentReviewPage() {
                 {q.data.items.map((item) => {
                   const cat = findCategory(item.projectType, item.document.categoryKey);
                   return (
-                    <li key={item.document.id} className="card-institutional flex flex-wrap items-center justify-between gap-4 p-4">
+                    <li
+                      key={item.document.id}
+                      className="card-institutional flex flex-wrap items-center justify-between gap-4 p-4"
+                    >
                       <div className="flex min-w-0 items-start gap-3">
-                        <FileText className="mt-0.5 h-5 w-5 shrink-0 text-teal" aria-hidden="true" />
+                        <FileText
+                          className="mt-0.5 h-5 w-5 shrink-0 text-teal"
+                          aria-hidden="true"
+                        />
                         <div className="min-w-0">
-                          <p className="break-words text-sm font-medium text-foreground">{item.document.title}</p>
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            {item.projectName} · {PROJECT_TYPE_LABEL[item.projectType]} · {cat?.category.label ?? item.document.categoryKey}
+                          <p className="break-words text-sm font-medium text-foreground">
+                            {item.document.title}
                           </p>
                           <p className="mt-0.5 text-xs text-muted-foreground">
-                            {item.document.kind.toUpperCase()} · {formatBytes(item.document.size)} · submitted{" "}
-                            {new Date(item.document.submittedAt ?? item.document.uploadedAt).toLocaleString()}
+                            {item.projectName} · {PROJECT_TYPE_LABEL[item.projectType]} ·{" "}
+                            {cat?.category.label ?? item.document.categoryKey}
+                          </p>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {item.document.kind.toUpperCase()} · {formatBytes(item.document.size)} ·
+                            submitted{" "}
+                            {new Date(
+                              item.document.submittedAt ?? item.document.uploadedAt,
+                            ).toLocaleString()}
                             {item.document.version > 1 ? ` · version ${item.document.version}` : ""}
                           </p>
                         </div>

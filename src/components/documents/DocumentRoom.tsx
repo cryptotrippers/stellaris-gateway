@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   AlertCircle,
@@ -29,7 +29,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import {
   ACCEPTED_SUMMARY,
   ACCEPT_ATTRIBUTE,
@@ -81,13 +80,24 @@ const FILTERS: { key: Filter; label: string; match: (s: DocumentStatus) => boole
   { key: "pending", label: "Awaiting review", match: (s) => s === "pending" },
   { key: "released", label: "Released", match: (s) => s === "released" },
   { key: "rejected", label: "Rejected", match: (s) => s === "rejected" },
-  { key: "inactive", label: "Withdrawn or replaced", match: (s) => s === "withdrawn" || s === "superseded" || s === "uploading" },
+  {
+    key: "inactive",
+    label: "Withdrawn or replaced",
+    match: (s) => s === "withdrawn" || s === "superseded" || s === "uploading",
+  },
 ];
 
 const dateText = (iso: string | null) =>
-  iso ? new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "—";
+  iso
+    ? new Date(iso).toLocaleDateString(undefined, {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
+    : "—";
 
-const errorText = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong. Please try again.");
+const errorText = (e: unknown) =>
+  e instanceof Error ? e.message : "Something went wrong. Please try again.";
 
 export function DocumentRoom({
   fundingRequestId,
@@ -100,7 +110,9 @@ export function DocumentRoom({
 }) {
   const qc = useQueryClient();
   const { query, authLoading } = useDocumentRoom(fundingRequestId, category);
-  const [upload, setUpload] = useState<{ categoryKey?: string; replaces?: ProjectDocument } | null>(null);
+  const [upload, setUpload] = useState<{ categoryKey?: string; replaces?: ProjectDocument } | null>(
+    null,
+  );
   const [filter, setFilter] = useState<Filter>("all");
 
   const type = query.data?.projectType ?? projectTypeOf(category);
@@ -132,9 +144,13 @@ export function DocumentRoom({
 
   if (query.isError) {
     return (
-      <div role="alert" className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm">
+      <div
+        role="alert"
+        className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm"
+      >
         <p className="flex items-center gap-2 font-medium text-foreground">
-          <AlertCircle className="h-4 w-4 text-destructive" aria-hidden="true" /> Documents didn&apos;t load.
+          <AlertCircle className="h-4 w-4 text-destructive" aria-hidden="true" /> Documents
+          didn&apos;t load.
         </p>
         <p className="mt-1 text-muted-foreground">{errorText(query.error)}</p>
         <Button variant="outline" size="sm" className="mt-3" onClick={() => query.refetch()}>
@@ -147,14 +163,16 @@ export function DocumentRoom({
   const sections = documentSectionsFor(type);
   const visibleSections = sections
     .map((s) => ({ section: s, docs: shown.filter((d) => d.sectionKey === s.key) }))
-    .filter(({ docs }) => insider ? filter === "all" || docs.length > 0 : docs.length > 0);
+    .filter(({ docs }) => (insider ? filter === "all" || docs.length > 0 : docs.length > 0));
   const emptyForInvestors = sections.length - visibleSections.length;
 
   return (
     <div>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-teal">{PROJECT_TYPE_LABEL[type]} document profile</p>
+          <p className="text-xs font-medium uppercase tracking-wider text-teal">
+            {PROJECT_TYPE_LABEL[type]} document profile
+          </p>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
             {insider && viewer.isAdmin
               ? "You hold the administrator role. Approve documents for release to investors, reject them with a reason, or withdraw them."
@@ -173,7 +191,11 @@ export function DocumentRoom({
       </div>
 
       {insider && (
-        <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Filter documents by status">
+        <div
+          className="mt-4 flex flex-wrap gap-2"
+          role="group"
+          aria-label="Filter documents by status"
+        >
           {FILTERS.map((f) => {
             const n = f.key === "all" ? all.length : all.filter((d) => f.match(d.status)).length;
             return (
@@ -183,7 +205,9 @@ export function DocumentRoom({
                 aria-pressed={filter === f.key}
                 onClick={() => setFilter(f.key)}
                 className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                  filter === f.key ? "border-primary bg-primary text-primary-foreground" : "border-border bg-surface text-muted-foreground hover:text-foreground"
+                  filter === f.key
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-surface text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {f.label} <span className="tabular-nums">({n})</span>
@@ -210,7 +234,9 @@ export function DocumentRoom({
       <div className="mt-5 space-y-4">
         {visibleSections.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-            {insider ? "No documents match this filter." : "No documents have been released to investors yet."}
+            {insider
+              ? "No documents match this filter."
+              : "No documents have been released to investors yet."}
           </div>
         ) : (
           visibleSections.map(({ section, docs }) => (
@@ -231,16 +257,17 @@ export function DocumentRoom({
 
       {!insider && emptyForInvestors > 0 && visibleSections.length > 0 && (
         <p className="mt-3 text-xs text-muted-foreground">
-          {emptyForInvestors} other document {emptyForInvestors === 1 ? "section has" : "sections have"} nothing released yet.
+          {emptyForInvestors} other document{" "}
+          {emptyForInvestors === 1 ? "section has" : "sections have"} nothing released yet.
         </p>
       )}
 
       <div className="mt-5 flex flex-wrap items-start gap-2 rounded-xl bg-secondary/50 p-3 text-xs text-muted-foreground">
         <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
         <p>
-          Files are stored privately. Each open creates a personal link that expires after five minutes, and
-          every open is recorded. The fingerprint shown for each file lets you confirm the copy you hold is the
-          one that was reviewed.
+          Files are stored privately. Each open creates a personal link that expires after five
+          minutes, and every open is recorded. The fingerprint shown for each file lets you confirm
+          the copy you hold is the one that was reviewed.
           {!viewer.signedIn && (
             <>
               {" "}
@@ -302,12 +329,19 @@ function SectionBlock({
         className="flex w-full items-start justify-between gap-3 text-left"
       >
         <span className="min-w-0">
-          <span className="block font-display text-sm font-semibold text-foreground">{section.label}</span>
+          <span className="block font-display text-sm font-semibold text-foreground">
+            {section.label}
+          </span>
           <span className="mt-0.5 block text-xs text-muted-foreground">{section.description}</span>
         </span>
         <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-          {docs.length === 0 ? "Nothing uploaded" : `${docs.length} ${docs.length === 1 ? "file" : "files"}`}
-          <ChevronDown className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`} aria-hidden="true" />
+          {docs.length === 0
+            ? "Nothing uploaded"
+            : `${docs.length} ${docs.length === 1 ? "file" : "files"}`}
+          <ChevronDown
+            className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`}
+            aria-hidden="true"
+          />
         </span>
       </button>
       <ul id={panelId} hidden={!open} className="mt-3 space-y-3">
@@ -327,7 +361,12 @@ function SectionBlock({
                     </span>
                   )}
                   {insider && (
-                    <Button variant="ghost" size="sm" onClick={() => onUpload(c.key)} aria-label={`Upload ${c.label}`}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onUpload(c.key)}
+                      aria-label={`Upload ${c.label}`}
+                    >
                       <Upload /> Upload
                     </Button>
                   )}
@@ -408,7 +447,9 @@ function DocumentRow({
     if (!decision) return;
     setBusy("review");
     try {
-      await reviewFn({ data: { fundingRequestId, documentId: doc.id, decision, note: note.trim() || undefined } });
+      await reviewFn({
+        data: { fundingRequestId, documentId: doc.id, decision, note: note.trim() || undefined },
+      });
       toast.success(
         decision === "release"
           ? "Released. Signed-in investors can now open this document."
@@ -443,7 +484,8 @@ function DocumentRow({
   }
 
   const noteRequired = decision ? decisionNeedsNote(decision) : false;
-  const canReplace = insider && ["released", "pending", "rejected", "withdrawn"].includes(doc.status);
+  const canReplace =
+    insider && ["released", "pending", "rejected", "withdrawn"].includes(doc.status);
 
   return (
     <li className="rounded-lg border border-border bg-card p-3">
@@ -453,11 +495,18 @@ function DocumentRow({
           <div className="min-w-0">
             <p className="break-words text-sm font-medium text-foreground">
               {doc.title}
-              {doc.version > 1 && <span className="ml-2 text-xs font-normal text-muted-foreground">Version {doc.version}</span>}
+              {doc.version > 1 && (
+                <span className="ml-2 text-xs font-normal text-muted-foreground">
+                  Version {doc.version}
+                </span>
+              )}
             </p>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              {doc.kind.toUpperCase()} · {formatBytes(doc.size)} · Uploaded {dateText(doc.uploadedAt)}
-              {doc.releasedAt && doc.status === "released" ? ` · Released ${dateText(doc.releasedAt)}` : ""}
+              {doc.kind.toUpperCase()} · {formatBytes(doc.size)} · Uploaded{" "}
+              {dateText(doc.uploadedAt)}
+              {doc.releasedAt && doc.status === "released"
+                ? ` · Released ${dateText(doc.releasedAt)}`
+                : ""}
             </p>
             {doc.sha256 && (
               <p className="mt-0.5 font-mono text-[11px] text-muted-foreground" title={doc.sha256}>
@@ -467,7 +516,9 @@ function DocumentRow({
             {doc.description && <p className="mt-1 text-xs text-foreground">{doc.description}</p>}
           </div>
         </div>
-        <span className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${STATUS_CLASS[doc.status]}`}>
+        <span
+          className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-medium ${STATUS_CLASS[doc.status]}`}
+        >
           {STATUS_LABEL[doc.status]}
         </span>
       </div>
@@ -475,7 +526,9 @@ function DocumentRow({
       {insider && doc.reviewNote && (
         <p
           className={`mt-2 rounded-md p-2 text-xs ${
-            doc.status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-secondary text-foreground"
+            doc.status === "rejected"
+              ? "bg-destructive/10 text-destructive"
+              : "bg-secondary text-foreground"
           }`}
         >
           <span className="font-medium">Administrator note:</span> {doc.reviewNote}
@@ -485,7 +538,12 @@ function DocumentRow({
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {doc.canOpen ? (
           <>
-            <Button size="sm" variant="outline" onClick={() => open(false)} disabled={busy !== null}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => open(false)}
+              disabled={busy !== null}
+            >
               {busy === "open" ? <Loader2 className="animate-spin" /> : <ExternalLink />} Open
             </Button>
             <Button size="sm" variant="ghost" onClick={() => open(true)} disabled={busy !== null}>
@@ -508,7 +566,9 @@ function DocumentRow({
           <Button
             key={d}
             size="sm"
-            variant={d === "release" ? "default" : d === "reject" || d === "withdraw" ? "outline" : "ghost"}
+            variant={
+              d === "release" ? "default" : d === "reject" || d === "withdraw" ? "outline" : "ghost"
+            }
             onClick={() => {
               setDecision(d);
               setNote("");
@@ -520,13 +580,27 @@ function DocumentRow({
           </Button>
         ))}
         {doc.canRemove && (
-          <Button size="sm" variant="ghost" className="text-destructive" onClick={() => setConfirmRemove(true)} disabled={busy !== null}>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-destructive"
+            onClick={() => setConfirmRemove(true)}
+            disabled={busy !== null}
+          >
             <Trash2 /> Remove
           </Button>
         )}
         {insider && doc.history && doc.history.length > 0 && (
-          <Button size="sm" variant="ghost" onClick={() => setShowHistory((v) => !v)} aria-expanded={showHistory}>
-            <ChevronDown className={showHistory ? "rotate-180 transition-transform" : "transition-transform"} /> History
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setShowHistory((v) => !v)}
+            aria-expanded={showHistory}
+          >
+            <ChevronDown
+              className={showHistory ? "rotate-180 transition-transform" : "transition-transform"}
+            />{" "}
+            History
           </Button>
         )}
       </div>
@@ -554,10 +628,19 @@ function DocumentRow({
             />
           </label>
           <div className="mt-2 flex gap-2">
-            <Button size="sm" onClick={decide} disabled={busy !== null || (noteRequired && note.trim().length < 10)}>
+            <Button
+              size="sm"
+              onClick={decide}
+              disabled={busy !== null || (noteRequired && note.trim().length < 10)}
+            >
               {busy === "review" && <Loader2 className="animate-spin" />} Confirm
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setDecision(null)} disabled={busy !== null}>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setDecision(null)}
+              disabled={busy !== null}
+            >
               Cancel
             </Button>
           </div>
@@ -568,8 +651,13 @@ function DocumentRow({
         <ol className="mt-3 space-y-1 border-l border-border pl-3 text-xs text-muted-foreground">
           {doc.history.map((h, i) => (
             <li key={`${h.at}-${i}`}>
-              <span className="text-foreground">{dateText(h.at)}</span> · {historyLabel(h.action)} by{" "}
-              {h.actor === "system" ? "the system" : h.actor === "issuer" ? "the issuer" : "an administrator"}
+              <span className="text-foreground">{dateText(h.at)}</span> · {historyLabel(h.action)}{" "}
+              by{" "}
+              {h.actor === "system"
+                ? "the system"
+                : h.actor === "issuer"
+                  ? "the issuer"
+                  : "an administrator"}
               {h.note ? ` — “${h.note}”` : ""}
             </li>
           ))}
@@ -663,7 +751,8 @@ function UploadPanel({
     if (!file) return "Choose a file to upload.";
     if (file.size === 0) return "That file is empty.";
     if (file.size > MAX_DOCUMENT_BYTES) return "Files can be at most 25 MB.";
-    if (!fileKindOf(file.name, file.type)) return `That file type is not accepted. Use ${ACCEPTED_SUMMARY}.`;
+    if (!fileKindOf(file.name, file.type))
+      return `That file type is not accepted. Use ${ACCEPTED_SUMMARY}.`;
     return null;
   }
 
@@ -710,7 +799,11 @@ function UploadPanel({
   }
 
   return (
-    <form onSubmit={submit} className="mt-4 rounded-xl border border-teal/30 bg-teal/5 p-4" aria-label="Upload a document">
+    <form
+      onSubmit={submit}
+      className="mt-4 rounded-xl border border-teal/30 bg-teal/5 p-4"
+      aria-label="Upload a document"
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-display text-sm font-semibold text-foreground">
@@ -722,7 +815,14 @@ function UploadPanel({
               : "Administrators review every file. Investors only see it after it is approved for release."}
           </p>
         </div>
-        <Button type="button" variant="ghost" size="icon" onClick={onClose} disabled={busy} aria-label="Close upload form">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          disabled={busy}
+          aria-label="Close upload form"
+        >
           <X />
         </Button>
       </div>
@@ -748,7 +848,11 @@ function UploadPanel({
               </optgroup>
             ))}
           </select>
-          {chosen && <span className="mt-1 block text-[11px] text-muted-foreground">{chosen.category.hint}</span>}
+          {chosen && (
+            <span className="mt-1 block text-[11px] text-muted-foreground">
+              {chosen.category.hint}
+            </span>
+          )}
         </label>
         <label className="block text-sm">
           <span className="text-muted-foreground">Title</span>
@@ -789,7 +893,10 @@ function UploadPanel({
       </div>
 
       {error && (
-        <p role="alert" className="mt-3 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-2 text-sm text-destructive">
+        <p
+          role="alert"
+          className="mt-3 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-2 text-sm text-destructive"
+        >
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" /> {error}
         </p>
       )}

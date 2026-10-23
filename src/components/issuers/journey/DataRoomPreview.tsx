@@ -2,12 +2,19 @@ import { Link } from "@tanstack/react-router";
 import { ExternalLink, FileText, FolderLock, Lock } from "lucide-react";
 import { CHECKLIST_ITEMS, type ChecklistRow } from "@/lib/accelerator.shared";
 import { useDocumentRoom } from "@/components/documents/use-document-room";
-import { documentSectionsFor, projectTypeOf, PROJECT_TYPE_LABEL } from "@/components/documents/document-taxonomy";
+import {
+  documentSectionsFor,
+  projectTypeOf,
+  PROJECT_TYPE_LABEL,
+} from "@/components/documents/document-taxonomy";
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   missing: { label: "Not submitted", cls: "border-border bg-muted text-muted-foreground" },
   submitted: { label: "Under review", cls: "border-teal/30 bg-teal/10 text-teal" },
-  verified: { label: "Verified by administrator", cls: "border-success/30 bg-success/10 text-success" },
+  verified: {
+    label: "Verified by administrator",
+    cls: "border-success/30 bg-success/10 text-success",
+  },
   rejected: { label: "Rejected", cls: "border-destructive/30 bg-destructive/10 text-destructive" },
 };
 
@@ -35,13 +42,15 @@ export function DataRoomPreview({
     documentSectionsFor(type).flatMap((s) => s.categories.map((c) => [c.key, c.supports] as const)),
   );
   const count = (status: string) => docs.filter((d) => d.status === status).length;
-  const filesFor = (checkKey: string) => docs.filter((d) => supportsOf.get(d.categoryKey) === checkKey && d.status !== "superseded");
+  const filesFor = (checkKey: string) =>
+    docs.filter((d) => supportsOf.get(d.categoryKey) === checkKey && d.status !== "superseded");
 
   return (
     <div>
       <div className="rounded-xl border border-teal/30 bg-teal/5 p-4">
         <p className="flex items-center gap-2 text-sm font-medium text-foreground">
-          <FolderLock className="h-4 w-4 text-teal" aria-hidden="true" /> Private document room · {PROJECT_TYPE_LABEL[type]}
+          <FolderLock className="h-4 w-4 text-teal" aria-hidden="true" /> Private document room ·{" "}
+          {PROJECT_TYPE_LABEL[type]}
         </p>
         {query.isLoading ? (
           <p className="mt-2 text-xs text-muted-foreground">Loading documents…</p>
@@ -56,7 +65,9 @@ export function DataRoomPreview({
             ].map(([label, n]) => (
               <div key={label} className="rounded-lg bg-card p-2">
                 <dt className="text-[11px] text-muted-foreground">{label}</dt>
-                <dd className="font-display text-lg font-semibold tabular-nums text-foreground">{n}</dd>
+                <dd className="font-display text-lg font-semibold tabular-nums text-foreground">
+                  {n}
+                </dd>
               </div>
             ))}
           </dl>
@@ -87,7 +98,11 @@ export function DataRoomPreview({
                     <FileText className="h-4 w-4 text-teal" aria-hidden="true" /> {item.label}
                   </p>
                 </div>
-                <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium ${st.cls}`}>{st.label}</span>
+                <span
+                  className={`shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium ${st.cls}`}
+                >
+                  {st.label}
+                </span>
               </div>
               <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
                 <div>
@@ -108,14 +123,22 @@ export function DataRoomPreview({
                 </div>
               </dl>
               {row?.note && (
-                <p className={`mt-2 rounded-lg px-2.5 py-1.5 text-xs ${row.status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-secondary/70 text-foreground"}`}>
+                <p
+                  className={`mt-2 rounded-lg px-2.5 py-1.5 text-xs ${row.status === "rejected" ? "bg-destructive/10 text-destructive" : "bg-secondary/70 text-foreground"}`}
+                >
                   {row.status === "rejected" ? "Rejection reason: " : "Reviewer note: "}
                   {row.note}
                 </p>
               )}
               {row?.evidence_url && (
-                <a href={row.evidence_url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 break-all text-xs text-teal hover:underline">
-                  Public evidence link <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
+                <a
+                  href={row.evidence_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 inline-flex items-center gap-1 break-all text-xs text-teal hover:underline"
+                >
+                  Public evidence link{" "}
+                  <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
                 </a>
               )}
             </li>
