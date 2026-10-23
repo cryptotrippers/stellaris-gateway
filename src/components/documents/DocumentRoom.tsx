@@ -57,11 +57,10 @@ import {
   completeDocumentUpload,
   createDocumentUpload,
   getDocumentLink,
-  getDocumentRoom,
-  listReleasedDocuments,
   removeDocument,
   reviewDocument,
 } from "./documents.functions";
+import { documentRoomKey, useDocumentRoom } from "./use-document-room";
 
 type Audience = "room" | "investor";
 type Filter = "all" | "pending" | "released" | "rejected" | "inactive";
@@ -89,26 +88,6 @@ const dateText = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "—";
 
 const errorText = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong. Please try again.");
-
-export const documentRoomKey = (fundingRequestId: string) => ["document-room", fundingRequestId] as const;
-
-/** Loads the document room as the current visitor may see it. */
-export function useDocumentRoom(fundingRequestId: string, category: string) {
-  const { user, loading } = useSupabaseUser();
-  const fetchRoom = useServerFn(getDocumentRoom);
-  const fetchReleased = useServerFn(listReleasedDocuments);
-  const query = useQuery({
-    queryKey: [...documentRoomKey(fundingRequestId), user?.id ?? "signed-out"],
-    enabled: !loading,
-    staleTime: 30_000,
-    queryFn: async (): Promise<{ viewer: DocumentRoomViewer; projectType: ProjectType; documents: ProjectDocument[] }> => {
-      if (user) return fetchRoom({ data: { fundingRequestId } });
-      const res = await fetchReleased({ data: { fundingRequestId } });
-      return { viewer: SIGNED_OUT, projectType: projectTypeOf(category), documents: res.documents };
-    },
-  });
-  return { query, authLoading: loading };
-}
 
 export function DocumentRoom({
   fundingRequestId,

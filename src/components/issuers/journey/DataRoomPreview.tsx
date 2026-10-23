@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ExternalLink, FileText, FolderLock, Lock } from "lucide-react";
 import { CHECKLIST_ITEMS, type ChecklistRow } from "@/lib/accelerator.shared";
-import { useDocumentRoom } from "@/components/documents/DocumentRoom";
+import { useDocumentRoom } from "@/components/documents/use-document-room";
 import { documentSectionsFor, projectTypeOf, PROJECT_TYPE_LABEL } from "@/components/documents/document-taxonomy";
 
 const STATUS: Record<string, { label: string; cls: string }> = {
