@@ -1,5 +1,11 @@
 # Home page refresh
 
+# Tessera live Preprod dashboard
+
+- [x] Add the read-only live snapshot, countdowns, contracts and clear test-data disclosures.
+- [x] Label illustrative explainer figures separately.
+- [x] Test amount/time calculations and verify live data, retry and mobile layout.
+
 # For Issuers
 
 - [x] Create dedicated B2B page and eligibility process; update issuer navigation.
