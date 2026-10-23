@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
-import { LEAD_STATUSES, type } from "@/components/issuers/lead-schema";
+import { LEAD_STATUSES } from "@/components/issuers/lead-schema";
 import { listIssuerLeads, updateIssuerLead } from "@/components/issuers/leads.functions";
 
 export const Route = createFileRoute("/issuer-leads")({
