@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, FileText, Loader2 } from "lucide-react";
-import { AppShell } from "@/components/layout/AppShell";
+import { MarketingLayout } from "@/components/layout/MarketingLayout";
 import { listFundingRequests } from "@/lib/funding-requests.functions";
 import { formatFeeBps } from "@/lib/vault-fees";
 
@@ -34,7 +34,8 @@ function FundingPage() {
   const rows = q.data ?? [];
 
   return (
-    <AppShell>
+    <MarketingLayout>
+      <div className="home-container py-10 md:py-14">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">Funding requests</h1>
@@ -136,6 +137,7 @@ function FundingPage() {
           ))}
         </div>
       )}
-    </AppShell>
+    </div>
+    </MarketingLayout>
   );
 }

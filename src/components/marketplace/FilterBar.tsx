@@ -63,7 +63,7 @@ export function FilterBar({
           <Button
             type="button"
             variant="outline"
-            className="h-11 md:hidden"
+            className="h-11 shrink-0 md:hidden"
             aria-expanded={open}
             aria-controls={panelId}
             onClick={() => setOpen((o) => !o)}
@@ -79,15 +79,15 @@ export function FilterBar({
             onChange={(e) =>
               onChange({ sort: e.target.value === "newest" ? undefined : (e.target.value as SortKey) })
             }
-            className="h-11 rounded-lg border border-input bg-surface px-3 text-sm text-foreground"
+            className="h-11 min-w-0 flex-1 rounded-lg border border-input bg-surface px-3 text-sm text-foreground md:flex-none"
           >
             {Object.entries(SORTS).map(([k, l]) => (
               <option key={k} value={k}>
-                Sort: {l}
+                {l}
               </option>
             ))}
           </select>
-          <div className="flex items-center gap-1 rounded-lg border border-border p-1" role="group" aria-label="Layout">
+          <div className="flex shrink-0 items-center gap-1 rounded-lg border border-border p-1" role="group" aria-label="Layout">
             <ViewBtn active={view === "grid"} label="Grid view" onClick={() => onView("grid")}>
               <LayoutGrid className="h-4 w-4" />
             </ViewBtn>

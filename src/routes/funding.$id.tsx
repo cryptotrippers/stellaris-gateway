@@ -11,7 +11,7 @@ import {
   ShieldCheck,
   Vote,
 } from "lucide-react";
-import { AppShell } from "@/components/layout/AppShell";
+import { MarketingLayout } from "@/components/layout/MarketingLayout";
 import {
   getFundingRequest,
   proposeFundingForGovernance,
@@ -20,6 +20,7 @@ import { getMyRoles } from "@/lib/asset-vaults.functions";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { ProjectToolkit, useProjectToolkit } from "@/components/accelerator/ProjectToolkit";
 import { AllocationSimulator } from "@/components/accelerator/AllocationSimulator";
+import { DocumentRoom } from "@/components/documents/DocumentRoom";
 import { READINESS_WARN_BELOW } from "@/lib/accelerator.shared";
 
 import { formatFeeBps, projectApyMatrix } from "@/lib/vault-fees";
@@ -100,7 +101,8 @@ function FundingRequestDetail() {
   }
 
   return (
-    <AppShell>
+    <MarketingLayout>
+      <div className="home-container py-10 md:py-14">
       <Link
         to="/funding"
         className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
@@ -212,6 +214,19 @@ function FundingRequestDetail() {
             isAdmin={isAdmin}
           />
 
+          <section
+            id="documents"
+            aria-labelledby="documents-h"
+            className="card-institutional mt-8 scroll-mt-28 p-5 md:p-7"
+          >
+            <h2 id="documents-h" className="font-display text-lg font-semibold text-foreground">
+              Document room
+            </h2>
+            <div className="mt-4">
+              <DocumentRoom fundingRequestId={req.id} category={req.category} />
+            </div>
+          </section>
+
           {readiness !== null && readiness < READINESS_WARN_BELOW && req.status === "submitted" && (
             <p className="mt-6 flex items-start gap-2 rounded-md border border-accent/40 bg-accent/5 p-3 text-xs text-muted-foreground">
               <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
@@ -319,7 +334,8 @@ function FundingRequestDetail() {
           </section>
         </>
       )}
-    </AppShell>
+    </div>
+    </MarketingLayout>
   );
 }
 

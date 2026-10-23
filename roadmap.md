@@ -29,12 +29,21 @@
 
 - [x] Phase 1: audit and phased plan (approved).
 - [x] Phase 2: shared status/metric/demo/evidence/timeline pieces, new nav, How It Works page.
-- [ ] Signed-in, issuer and admin menus in the public navigation (role-aware, server-checked).
-- [ ] Phase 3: marketplace hero, category showcase, filters backed by stored data, richer cards, empty state.
-- [ ] Phase 4: Asset Passport sections A–G with Clarity Standard checklist.
-- [ ] Phase 5: issuer dashboard, nine-stage journey with gates, regrouped funding form, data-room preview, data contract doc.
-- [ ] Phase 6: asset-to-yield waterfall and escrow components with the illustrative Solar Farm Alpha demo.
+- [x] Signed-in, issuer and admin menus in the public navigation (role-aware, server-checked).
+- [x] Phase 3: marketplace hero, category showcase, filters backed by stored data, richer cards, empty state.
+- [x] Phase 4: Asset Passport sections A–G with Clarity Standard checklist.
+- [x] Phase 5: issuer dashboard, nine-stage journey with gates, regrouped funding form, public pipeline restyle, data contract doc.
+- [x] Fix pages stuck on loading for first-time visitors (cache guard cancelled in-flight requests).
+- [x] Phase 6: asset-to-yield waterfall and escrow components with the illustrative Solar Farm Alpha demo.
+- [x] Phase 8: Trust Centre page.
 - [ ] Phase 7: investor dashboard sections with Forecast/Approved/Funded/Paid labels and a dark mode.
 - [ ] Match the owner's reference image: dark navy/teal investor dashboard (side menu, KPI cards, area/bar charts from real data only) and a light, photo-led marketplace with overlay cards.
-- [ ] Phase 8: Trust Centre page.
 - [ ] Phase 9: tests, responsive/accessibility/regression checks, final delivery report.
+
+# Project document room
+
+- [ ] Private document storage with server-checked access (issuer owner, administrators, signed-in investors for released files only).
+- [ ] Project-type document sections (renewables, real estate, private credit, infrastructure, other).
+- [ ] Issuer upload, replace and withdraw on the funding request page; administrator release, reject (with reason) and withdraw.
+- [ ] Released documents on the Asset Passport and funding page; sign-in to open via short-lived links.
+- [ ] Tests for section mapping and access rules; browser checks signed out; signed-in check needs a chosen test account.

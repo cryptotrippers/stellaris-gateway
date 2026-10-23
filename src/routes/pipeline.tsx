@@ -1,17 +1,19 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Loader2 } from "lucide-react";
-import { AppShell } from "@/components/layout/AppShell";
+import { ArrowRight, RefreshCw } from "lucide-react";
+import { MarketingLayout } from "@/components/layout/MarketingLayout";
+import { SectionHeader } from "@/components/brand/SectionHeader";
+import { Button } from "@/components/ui/button";
 import { listPipeline } from "@/lib/accelerator.functions";
-import { PIPELINE_STAGES, type PipelineProject } from "@/lib/accelerator.shared";
+import type { PipelineProject } from "@/lib/accelerator.shared";
 import { ReadinessMeter } from "@/components/accelerator/ReadinessMeter";
 import { VerificationBadge } from "@/components/accelerator/ProjectToolkit";
-import { formatFeeBps } from "@/lib/vault-fees";
+import { PUBLIC_STAGES, publicStage, type PublicStageKey } from "@/components/marketplace/public-stage";
 
 const TITLE = "Project Pipeline — real-world assets on Stellaris";
 const DESCRIPTION =
-  "Every real-world asset proposed on Stellaris, from first submission to a live on-chain vault: verified issuers, evidence checklists, impact attestations and where the money actually is.";
+  "How proposed real-world asset projects move through review, decision and funding on Stellaris — shown in the open, with confidential details kept private.";
 
 export const Route = createFileRoute("/pipeline")({
   head: () => ({
@@ -27,124 +29,115 @@ export const Route = createFileRoute("/pipeline")({
   component: PipelinePage,
 });
 
-const ada = (lovelace: number) =>
-  (lovelace / 1_000_000).toLocaleString(undefined, { maximumFractionDigits: 0 });
+const ada = (lovelace: number) => (lovelace / 1_000_000).toLocaleString(undefined, { maximumFractionDigits: 0 });
+
+type Row = PipelineProject & { publicKey: PublicStageKey };
 
 function PipelinePage() {
   const q = useQuery({ queryKey: ["pipeline"], queryFn: () => listPipeline() });
-  const [stage, setStage] = useState<string>("all");
-  const [category, setCategory] = useState<string>("all");
+  const [stage, setStage] = useState<PublicStageKey | "all">("all");
 
-  const projects = q.data?.projects ?? [];
-  const categories = useMemo(
-    () => [...new Set(projects.map((p) => p.category))].sort(),
-    [projects],
+  const rows: Row[] = useMemo(
+    () =>
+      (q.data?.projects ?? []).flatMap((p) => {
+        const k = publicStage(p.stage);
+        return k ? [{ ...p, publicKey: k }] : [];
+      }),
+    [q.data],
   );
-  const filtered = projects.filter(
-    (p) => (stage === "all" || p.stage === stage) && (category === "all" || p.category === category),
-  );
-
-  const s = q.data?.summary;
+  const counts = useMemo(() => {
+    const c = new Map<PublicStageKey, number>();
+    for (const r of rows) c.set(r.publicKey, (c.get(r.publicKey) ?? 0) + 1);
+    return c;
+  }, [rows]);
+  const visible = rows.filter((r) => stage === "all" || r.publicKey === stage);
 
   return (
-    <AppShell>
-      <header>
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">Project pipeline</h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Everything proposed on Stellaris, in the open — including the projects that have verified
-          nothing yet. A project only reaches a live vault after governance votes it through and an
-          operator bootstraps it on chain.
-        </p>
-      </header>
-
-      <dl className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Counter label="Projects in pipeline" value={s ? String(s.projects) : "—"} />
-        <Counter label="Verified issuers" value={s ? String(s.verifiedIssuers) : "—"} />
-        <Counter label="Live vaults" value={s ? String(s.liveVaults) : "—"} />
-        <Counter
-          label="Accounted on chain"
-          value={s ? `${ada(s.accountedLovelace)} ₳` : "—"}
-          hint="Sum of the latest accounted assets recorded by on-chain accruals."
+    <MarketingLayout>
+      <div className="home-container py-12 md:py-16">
+        <SectionHeader
+          eyebrow="Project pipeline"
+          title="How projects move from proposal to funding."
+          description="Every stage a project passes through, in the open. Confidential issuer information, withdrawn and rejected applications are never shown here."
         />
-      </dl>
 
-      <div className="mt-8 flex flex-wrap gap-2">
-        <Chip active={stage === "all"} onClick={() => setStage("all")}>
-          All stages
-        </Chip>
-        {PIPELINE_STAGES.map((st) => (
-          <Chip key={st.key} active={stage === st.key} onClick={() => setStage(st.key)}>
-            {st.label}
-          </Chip>
-        ))}
-      </div>
+        <ol className="mt-10 grid grid-cols-2 gap-2 md:grid-cols-4 lg:grid-cols-7" aria-label="Pipeline stages">
+          {PUBLIC_STAGES.map((s, i) => {
+            const n = counts.get(s.key) ?? 0;
+            const active = stage === s.key;
+            return (
+              <li key={s.key} className="min-w-0">
+                <button
+                  type="button"
+                  onClick={() => setStage(active ? "all" : s.key)}
+                  aria-pressed={active}
+                  className={`flex h-full w-full flex-col rounded-xl border p-4 text-left transition-colors ${active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-card hover:border-teal/50"}`}
+                >
+                  <span className={`text-[11px] font-semibold ${active ? "text-primary-foreground/80" : "text-teal"}`}>Stage {i + 1}</span>
+                  <span className="mt-1 text-sm font-semibold">{s.label}</span>
+                  <span className={`mt-1 text-xs ${active ? "text-primary-foreground/80" : "text-muted-foreground"}`}>{s.blurb}</span>
+                  <span className="number-display mt-3 font-display text-2xl font-semibold">{q.isLoading ? "…" : n}</span>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
 
-      {categories.length > 1 && (
-        <div className="mt-2 flex flex-wrap gap-2">
-          <Chip active={category === "all"} onClick={() => setCategory("all")}>
-            All categories
-          </Chip>
-          {categories.map((c) => (
-            <Chip key={c} active={category === c} onClick={() => setCategory(c)}>
-              {c}
-            </Chip>
-          ))}
+        <div className="mt-10">
+          {q.isLoading ? (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-busy="true" aria-label="Loading pipeline">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="h-56 animate-pulse rounded-2xl bg-secondary" />
+              ))}
+            </div>
+          ) : q.isError ? (
+            <div role="alert" className="card-institutional p-8 text-center">
+              <p className="font-medium text-foreground">The pipeline didn&apos;t load.</p>
+              <Button variant="outline" className="mt-4" onClick={() => q.refetch()}>
+                <RefreshCw /> Try again
+              </Button>
+            </div>
+          ) : visible.length === 0 ? (
+            <div className="card-institutional p-8 text-center">
+              <p className="text-sm text-muted-foreground">
+                {stage === "all" ? "No projects are in the pipeline yet." : "No projects are at this stage right now."}{" "}
+                <Link to="/for-issuers" className="font-medium text-teal hover:underline">
+                  Propose a project
+                </Link>
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {visible.map((p) => (
+                <ProjectCard key={p.fundingRequestId} p={p} />
+              ))}
+            </div>
+          )}
         </div>
-      )}
 
-      {q.isLoading ? (
-        <p className="mt-8 flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading the pipeline…
+        <p className="mt-10 text-xs text-muted-foreground">
+          Source: the public project registry and on-chain vault records. Generated{" "}
+          {q.data ? new Date(q.data.summary.generatedAt).toLocaleString() : "—"}.
         </p>
-      ) : q.isError ? (
-        <p className="mt-8 text-sm text-destructive">{(q.error as Error).message}</p>
-      ) : filtered.length === 0 ? (
-        <div className="mt-8 card-institutional p-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            Nothing in this view yet.{" "}
-            <Link to="/funding/new" className="text-primary underline">
-              Submit a project
-            </Link>{" "}
-            to be the first.
-          </p>
-        </div>
-      ) : (
-        <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((p) => (
-            <ProjectCard key={p.fundingRequestId} p={p} />
-          ))}
-        </div>
-      )}
-
-      <p className="mt-10 text-[11px] text-muted-foreground">
-        Data source: the platform database for submissions and verification, and on-chain accrual
-        records for vault state. Generated {s ? new Date(s.generatedAt).toLocaleString() : "—"}.
-      </p>
-    </AppShell>
+      </div>
+    </MarketingLayout>
   );
 }
 
-function ProjectCard({ p }: { p: PipelineProject }) {
-  const stageLabel = PIPELINE_STAGES.find((s) => s.key === p.stage)?.label ?? p.stage;
+function ProjectCard({ p }: { p: Row }) {
+  const label = PUBLIC_STAGES.find((s) => s.key === p.publicKey)?.label ?? "";
   return (
-    <article className="card-institutional flex flex-col p-5">
+    <article className="card-institutional flex min-w-0 flex-col p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="truncate text-base font-medium text-foreground">
-            <Link to="/funding/$id" params={{ id: p.slug }} className="hover:text-primary">
-              {p.name}
-            </Link>
-          </h2>
+          <h2 className="truncate font-display text-base font-semibold text-foreground">{p.name}</h2>
           <p className="mt-0.5 truncate text-xs text-muted-foreground">
-            {p.category} · {p.issuerName}
+            {p.category}
             {p.location ? ` · ${p.location}` : ""}
           </p>
         </div>
-        <span className="shrink-0 rounded-full border border-border px-2.5 py-0.5 text-[11px] text-muted-foreground">
-          {stageLabel}
-        </span>
+        <span className="shrink-0 rounded-full border border-teal/30 bg-teal/10 px-2.5 py-0.5 text-[11px] font-medium text-teal">{label}</span>
       </div>
-
       {p.issuer && (
         <div className="mt-3">
           <Link to="/issuers/$id" params={{ id: p.issuer.id }} className="inline-flex">
@@ -152,87 +145,30 @@ function ProjectCard({ p }: { p: PipelineProject }) {
           </Link>
         </div>
       )}
-
       <div className="mt-4">
         <ReadinessMeter score={p.readiness} compact />
       </div>
-
-      <dl className="mt-4 grid grid-cols-3 gap-3 text-xs">
+      <dl className="mt-4 grid grid-cols-2 gap-3 text-xs">
         <div>
-          <dt className="text-muted-foreground">Target</dt>
-          <dd className="mt-0.5 tabular-nums text-foreground">{ada(p.targetLovelace)} ₳</dd>
+          <dt className="text-muted-foreground">Requested target</dt>
+          <dd className="mt-0.5 tabular-nums text-foreground">{ada(p.targetLovelace)} ₳ (test)</dd>
         </div>
         <div>
-          <dt className="text-muted-foreground">Fee</dt>
-          <dd className="mt-0.5 text-foreground">{formatFeeBps(p.proposedFeeBps)}</dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">Impact metrics</dt>
-          <dd className="mt-0.5 tabular-nums text-foreground">{p.attestedMetrics}</dd>
+          <dt className="text-muted-foreground">Evidence reviewed</dt>
+          <dd className="mt-0.5 tabular-nums text-foreground">{p.readiness}% of required</dd>
         </div>
       </dl>
-
-      <p className="mt-4 text-[11px] text-muted-foreground">
-        {p.vaultAddress
-          ? "Vault live on chain — deposits accepted."
-          : p.assetId
-            ? "Approved by governance; no vault derived yet."
-            : "No vault, no capital: this is a claim under review."}
-      </p>
-
       <div className="mt-auto pt-4">
         {p.assetId ? (
-          <Link
-            to="/marketplace/$id"
-            params={{ id: p.assetId }}
-            className="inline-flex items-center gap-1.5 text-xs text-primary"
-          >
-            Open project <ArrowRight className="h-3 w-3" />
+          <Link to="/marketplace/$id" params={{ id: p.assetId }} className="inline-flex items-center gap-1.5 text-xs font-medium text-teal">
+            Open Asset Passport <ArrowRight className="h-3 w-3" aria-hidden="true" />
           </Link>
         ) : (
-          <Link
-            to="/funding/$id"
-            params={{ id: p.slug }}
-            className="inline-flex items-center gap-1.5 text-xs text-primary"
-          >
-            Review evidence <ArrowRight className="h-3 w-3" />
+          <Link to="/funding/$id" params={{ id: p.slug }} className="inline-flex items-center gap-1.5 text-xs font-medium text-teal">
+            Review evidence <ArrowRight className="h-3 w-3" aria-hidden="true" />
           </Link>
         )}
       </div>
     </article>
-  );
-}
-
-function Counter({ label, value, hint }: { label: string; value: string; hint?: string }) {
-  return (
-    <div className="card-institutional p-4">
-      <dt className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</dt>
-      <dd className="mt-1 text-2xl font-semibold tabular-nums text-foreground">{value}</dd>
-      {hint && <p className="mt-1 text-[10px] text-muted-foreground">{hint}</p>}
-    </div>
-  );
-}
-
-function Chip({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-full border px-3 py-1 text-xs transition-colors ${
-        active
-          ? "border-primary/50 bg-primary/10 text-foreground"
-          : "border-border text-muted-foreground hover:text-foreground"
-      }`}
-    >
-      {children}
-    </button>
   );
 }
