@@ -24,14 +24,14 @@ const META: Record<DisclosureStatus, { label: string; cls: string; Icon: typeof 
   unknown: { label: "Unknown", cls: "border-border bg-muted text-muted-foreground", Icon: HelpCircle },
 };
 
-export function StatusPill({ status, className = "" }: { status: DisclosureStatus; className?: string }) {
+export function StatusPill({ status, className = "", label: customLabel }: { status: DisclosureStatus; className?: string; label?: string }) {
   const { label, cls, Icon } = META[status];
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${cls} ${className}`}
     >
       <Icon className="h-3 w-3" aria-hidden="true" />
-      {label}
+      {customLabel ?? label}
     </span>
   );
 }
