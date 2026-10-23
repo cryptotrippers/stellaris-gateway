@@ -19,6 +19,7 @@
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { blake2b } from "@noble/hashes/blake2.js";
+import { verifyTokenRegistry } from "./verify-token-registry.mjs";
 
 const PLUTUS_PATH = resolve("contracts/vault/plutus.json");
 const SUSDR_PLUTUS_PATH = resolve("contracts/susdr-vault/plutus.json");
@@ -359,4 +360,15 @@ for (const t of targets) {
   console.log(
     `[verify-vault-hash] OK — ${t.label} matches (hash=${t.hash.slice(0, 12)}…, cbor=${t.cbor.length} chars, hash recomputed from CBOR).`,
   );
+}
+
+// Phase 2.7 (D-42): the token registry bodies must match BRAND and, for submitted
+// units, what was submitted. Needs no build output, so it runs in every mode.
+{
+  const registryProblems = verifyTokenRegistry();
+  if (registryProblems.length) {
+    for (const p of registryProblems) console.error(`[verify-vault-hash] token registry: ${p}`);
+    process.exit(1);
+  }
+  console.log("[verify-vault-hash] OK — token registry bodies match BRAND and the submitted values.");
 }
