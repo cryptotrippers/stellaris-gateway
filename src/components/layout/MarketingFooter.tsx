@@ -29,7 +29,7 @@ const COLS: Col[] = [
       ["Learn", "/learn"],
       ["Ask Stellaris", "/ask"],
       ["Developers", "/developers"],
-      ["For Issuers", "/funding"],
+      ["For Issuers", "/for-issuers"],
     ],
   },
   {
