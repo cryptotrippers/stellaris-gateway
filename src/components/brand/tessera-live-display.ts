@@ -10,7 +10,13 @@ export function firstLossCapPercent(balance: string, minted: string): number | n
   return ratioPercent(BigInt(balance) * 100n, BigInt(minted) * 3n);
 }
 
-export function shardDailyUsage(day: number, paidDay: string, dailyLimit: string, shards: number, now: number) {
+export function shardDailyUsage(
+  day: number,
+  paidDay: string,
+  dailyLimit: string,
+  shards: number,
+  now: number,
+) {
   return {
     paid: day === Math.floor(now / DAY_MS) ? BigInt(paidDay) : 0n,
     cap: shards > 0 ? BigInt(dailyLimit) / BigInt(shards) : 0n,
