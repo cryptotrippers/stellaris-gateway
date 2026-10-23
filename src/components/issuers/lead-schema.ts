@@ -8,7 +8,11 @@ export const issuerLeadSchema = z.object({
   organization: z.string().trim().min(1).max(160),
   jurisdiction: z.string().trim().min(1).max(100),
   asset_category: z.enum(ASSET_CATEGORIES),
-  project_summary: z.string().trim().min(20, "Please include at least 20 characters about your project.").max(3000),
+  project_summary: z
+    .string()
+    .trim()
+    .min(20, "Please include at least 20 characters about your project.")
+    .max(3000),
   consent: z.literal(true, { error: "Please agree to be contacted about this enquiry." }),
   website_check: z.string().max(0),
 });
