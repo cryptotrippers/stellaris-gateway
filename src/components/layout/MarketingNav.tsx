@@ -13,7 +13,7 @@ const LINKS = [
   { to: "/transparency", label: "Transparency" },
   { to: "/learn", label: "Learn" },
   { to: "/ask", label: "Ask" },
-  { to: "/funding", label: "For Issuers" },
+  { to: "/for-issuers", label: "For Issuers" },
   { to: "/about", label: "About" },
 ] as const;
 
