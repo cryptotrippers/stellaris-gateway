@@ -1,0 +1,5325 @@
+{
+ "generatedBy": "scripts/tessera/stress/run.ts",
+ "seed": 28,
+ "baseParams": {
+  "tvl": 5000000,
+  "bufPct": 0.1,
+  "rwaPct": 0,
+  "flPct": 0,
+  "dailyLimit": 50000,
+  "monthlyLimit": 500000,
+  "instantMax": 10000,
+  "minRequest": 100,
+  "settleDelayDays": 2,
+  "shards": 4,
+  "raiseAfterH": 24,
+  "fundCadenceH": 24,
+  "fundOffsetH": 12,
+  "fiatLegH": 0,
+  "keeperH": 1,
+  "keeperOrder": "oldest",
+  "blockShare": 0.5,
+  "mmfLagMinDays": 2,
+  "mmfLagMaxDays": 5,
+  "mmfLowRate": 0.1,
+  "mmfHighRate": 0.3,
+  "mmfGate": null,
+  "suspendFromH": null,
+  "sizeMode": "lognormal",
+  "medianRequest": 2000,
+  "sigma": 1.2,
+  "maxRequest": 50000,
+  "startDay": 0,
+  "loss": null,
+  "composition": null,
+  "seed": 28,
+  "tailDays": 21
+ },
+ "scenarios": {
+  "a": {
+   "name": "(a) 10% a day for 5 days",
+   "profile": [
+    0.1,
+    0.1,
+    0.1,
+    0.1,
+    0.1
+   ]
+  },
+  "b": {
+   "name": "(b) 30% in one day",
+   "profile": [
+    0.3
+   ]
+  },
+  "c": {
+   "name": "(c) 50% over 7 days",
+   "profile": [
+    0.07142857142857142,
+    0.07142857142857142,
+    0.07142857142857142,
+    0.07142857142857142,
+    0.07142857142857142,
+    0.07142857142857142,
+    0.07142857142857142
+   ]
+  },
+  "d": {
+   "name": "(d) 3% a day for 30 days",
+   "profile": [
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03,
+    0.03
+   ]
+  }
+ },
+ "mainGrid": [
+  {
+   "case": "deployed",
+   "scenario": "a",
+   "tvl": 500000,
+   "requests": 72,
+   "demand": 249999.999999,
+   "paid": 181431.584403,
+   "paidInstant": 86500.902848,
+   "unpaid": 68568.415596,
+   "maxWaitDays": 25.020833333333332,
+   "peakQueue": 149958.661338,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": null,
+   "limitBoundAtH": 72,
+   "unpayableAtLimits": 21409.48592,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 10,
+   "sweepTx": 4,
+   "waitP50Days": 2.7708333333333335,
+   "waitP95Days": 24.4375,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 24,
+    "paidH": null
+   },
+   "pass": false
+  },
+  {
+   "case": "deployed",
+   "scenario": "a",
+   "tvl": 1000000,
+   "requests": 124,
+   "demand": 499999.999999,
+   "paid": 292643.205346,
+   "paidInstant": 165072.270873,
+   "unpaid": 207356.794653,
+   "maxWaitDays": 25.520833333333332,
+   "peakQueue": 297919.248018,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": null,
+   "limitBoundAtH": 19,
+   "unpayableAtLimits": 50000,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 16,
+   "sweepTx": 6,
+   "waitP50Days": 2.8125,
+   "waitP95Days": 24.4375,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 12,
+    "paidH": null
+   },
+   "pass": false
+  },
+  {
+   "case": "deployed",
+   "scenario": "a",
+   "tvl": 2500000,
+   "requests": 338,
+   "demand": 1249999.999999,
+   "paid": 288066.075423,
+   "paidInstant": 159750.602639,
+   "unpaid": 961933.924576,
+   "maxWaitDays": 25.8125,
+   "peakQueue": 1003898.550251,
+   "shortDays": 21.916666666666668,
+   "shortEntries": 1,
+   "raisedAtH": null,
+   "limitBoundAtH": 7,
+   "unpayableAtLimits": 50000,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 9,
+   "sweepTx": 7,
+   "waitP50Days": 22.145833333333332,
+   "waitP95Days": 24.645833333333332,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 5,
+    "paidH": null
+   },
+   "pass": false
+  },
+  {
+   "case": "deployed",
+   "scenario": "a",
+   "tvl": 5000000,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 399123.070471,
+   "paidInstant": 163998.715123,
+   "unpaid": 2100876.929528,
+   "maxWaitDays": 25.895833333333332,
+   "peakQueue": 2251997.062633,
+   "shortDays": 21.916666666666668,
+   "shortEntries": 1,
+   "raisedAtH": null,
+   "limitBoundAtH": 3,
+   "unpayableAtLimits": 50000,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 11,
+   "sweepTx": 10,
+   "waitP50Days": 22.4375,
+   "waitP95Days": 24.5625,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 3,
+    "paidH": null
+   },
+   "pass": false
+  },
+  {
+   "case": "deployed",
+   "scenario": "b",
+   "tvl": 500000,
+   "requests": 46,
+   "demand": 150000,
+   "paid": 107188.425232,
+   "paidInstant": 49026.329216,
+   "unpaid": 42811.574768,
+   "maxWaitDays": 21.6875,
+   "peakQueue": 100973.670784,
+   "shortDays": 17.958333333333332,
+   "shortEntries": 1,
+   "raisedAtH": null,
+   "limitBoundAtH": 12,
+   "unpayableAtLimits": 21409.48592,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 1,
+   "settleTxTotal": 1,
+   "sweepTx": 3,
+   "waitP50Days": 4.3125,
+   "waitP95Days": 21.479166666666668,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 8,
+    "paidH": null
+   },
+   "pass": false
+  },
+  {
+   "case": "deployed",
+   "scenario": "b",
+   "tvl": 1000000,
+   "requests": 87,
+   "demand": 300000,
+   "paid": 218065.237282,
+   "paidInstant": 49197.244653,
+   "unpaid": 81934.762718,
+   "maxWaitDays": 21.854166666666668,
+   "peakQueue": 250802.755347,
+   "shortDays": 17.958333333333332,
+   "shortEntries": 1,
+   "raisedAtH": null,
+   "limitBoundAtH": 6,
+   "unpayableAtLimits": 21409.48592,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 6,
+   "sweepTx": 5,
+   "waitP50Days": 4.395833333333333,
+   "waitP95Days": 21.3125,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 4,
+    "paidH": null
+   },
+   "pass": false
+  },
+  {
+   "case": "deployed",
+   "scenario": "b",
+   "tvl": 2500000,
+   "requests": 178,
+   "demand": 750000,
+   "paid": 430370.352881,
+   "paidInstant": 51359.302967,
+   "unpaid": 319629.647119,
+   "maxWaitDays": 21.9375,
+   "peakQueue": 698640.697033,
+   "shortDays": 17.916666666666668,
+   "shortEntries": 1,
+   "raisedAtH": null,
+   "limitBoundAtH": 2,
+   "unpayableAtLimits": 50000,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 14,
+   "sweepTx": 9,
+   "waitP50Days": 6.145833333333333,
+   "waitP95Days": 21.395833333333332,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 2,
+    "paidH": null
+   },
+   "pass": false
+  },
+  {
+   "case": "deployed",
+   "scenario": "b",
+   "tvl": 5000000,
+   "requests": 409,
+   "demand": 1500000,
+   "paid": 499685.486166,
+   "paidInstant": 53578.534831,
+   "unpaid": 1000314.513834,
+   "maxWaitDays": 21.979166666666668,
+   "peakQueue": 1446421.465169,
+   "shortDays": 17.916666666666668,
+   "shortEntries": 1,
+   "raisedAtH": null,
+   "limitBoundAtH": 1,
+   "unpayableAtLimits": 50000,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 16,
+   "sweepTx": 11,
+   "waitP50Days": 21.020833333333332,
+   "waitP95Days": 21.4375,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 1,
+    "paidH": null
+   },
+   "pass": false
+  },
+  {
+   "case": "deployed",
+   "scenario": "c",
+   "tvl": 500000,
+   "requests": 72,
+   "demand": 249999.999999,
+   "paid": 181431.584403,
+   "paidInstant": 121994.770839,
+   "unpaid": 68568.415596,
+   "maxWaitDays": 26.645833333333332,
+   "peakQueue": 102472.297091,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": null,
+   "limitBoundAtH": 96,
+   "unpayableAtLimits": 21409.48592,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 3,
+   "settleTxTotal": 7,
+   "sweepTx": 4,
+   "waitP50Days": 2.5208333333333335,
+   "waitP95Days": 26.645833333333332,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 33,
+    "paidH": null
+   },
+   "pass": false
+  },
+  {
+   "case": "deployed",
+   "scenario": "c",
+   "tvl": 1000000,
+   "requests": 124,
+   "demand": 499999.999999,
+   "paid": 292643.205346,
+   "paidInstant": 204173.979284,
+   "unpaid": 207356.794653,
+   "maxWaitDays": 27.3125,
+   "peakQueue": 229006.195866,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": null,
+   "limitBoundAtH": 39,
+   "unpayableAtLimits": 50000,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 3,
+   "settleTxTotal": 9,
+   "sweepTx": 6,
+   "waitP50Days": 2.4791666666666665,
+   "waitP95Days": 26.9375,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 17,
+    "paidH": null
+   },
+   "pass": false
+  },
+  {
+   "case": "deployed",
+   "scenario": "c",
+   "tvl": 2500000,
+   "requests": 338,
+   "demand": 1249999.999999,
+   "paid": 270456.781158,
+   "paidInstant": 142203.621461,
+   "unpaid": 979543.218841,
+   "maxWaitDays": 27.729166666666668,
+   "peakQueue": 979543.218841,
+   "shortDays": 22.916666666666668,
+   "shortEntries": 1,
+   "raisedAtH": null,
+   "limitBoundAtH": 10,
+   "unpayableAtLimits": 50000,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 12,
+   "sweepTx": 6,
+   "waitP50Days": 22.645833333333332,
+   "waitP95Days": 26.104166666666668,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 7,
+    "paidH": null
+   },
+   "pass": false
+  },
+  {
+   "case": "deployed",
+   "scenario": "c",
+   "tvl": 5000000,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 385129.270411,
+   "paidInstant": 172194.792048,
+   "unpaid": 2114870.729588,
+   "maxWaitDays": 27.854166666666668,
+   "peakQueue": 2114870.729588,
+   "shortDays": 23.916666666666668,
+   "shortEntries": 1,
+   "raisedAtH": null,
+   "limitBoundAtH": 5,
+   "unpayableAtLimits": 50000,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 11,
+   "sweepTx": 9,
+   "waitP50Days": 23.1875,
+   "waitP95Days": 26.145833333333332,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 4,
+    "paidH": null
+   },
+   "pass": false
+  },
+  {
+   "case": "deployed",
+   "scenario": "d",
+   "tvl": 500000,
+   "requests": 120,
+   "demand": 450000,
+   "paid": 277463.942131,
+   "paidInstant": 255152.482948,
+   "unpaid": 172536.057869,
+   "maxWaitDays": 47.770833333333336,
+   "peakQueue": 172536.057869,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": null,
+   "limitBoundAtH": 144,
+   "unpayableAtLimits": 50000,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 1,
+   "settleTxTotal": 2,
+   "sweepTx": 6,
+   "waitP50Days": 30.770833333333332,
+   "waitP95Days": 47.770833333333336,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 78,
+    "paidH": null
+   },
+   "pass": false
+  },
+  {
+   "case": "deployed",
+   "scenario": "d",
+   "tvl": 1000000,
+   "requests": 230,
+   "demand": 900000,
+   "paid": 580370.352881,
+   "paidInstant": 460398.804301,
+   "unpaid": 319629.647119,
+   "maxWaitDays": 49.395833333333336,
+   "peakQueue": 397114.053504,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": null,
+   "limitBoundAtH": 96,
+   "unpayableAtLimits": 50000,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 3,
+   "settleTxTotal": 12,
+   "sweepTx": 11,
+   "waitP50Days": 2.6041666666666665,
+   "waitP95Days": 48.4375,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 39,
+    "paidH": null
+   },
+   "pass": false
+  },
+  {
+   "case": "deployed",
+   "scenario": "d",
+   "tvl": 2500000,
+   "requests": 589,
+   "demand": 2250000,
+   "paid": 499693.044245,
+   "paidInstant": 381784.842734,
+   "unpaid": 1750306.955755,
+   "maxWaitDays": 50.354166666666664,
+   "peakQueue": 1750306.955755,
+   "shortDays": 36.958333333333336,
+   "shortEntries": 1,
+   "raisedAtH": null,
+   "limitBoundAtH": 37,
+   "unpayableAtLimits": 50000,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 3,
+   "settleTxTotal": 14,
+   "sweepTx": 11,
+   "waitP50Days": 30.979166666666668,
+   "waitP95Days": 40.104166666666664,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 16,
+    "paidH": null
+   },
+   "pass": false
+  },
+  {
+   "case": "deployed",
+   "scenario": "d",
+   "tvl": 5000000,
+   "requests": 1186,
+   "demand": 4500000,
+   "paid": 441693.339606,
+   "paidInstant": 178128.994518,
+   "unpaid": 4058306.660394,
+   "maxWaitDays": 50.6875,
+   "peakQueue": 4058306.660394,
+   "shortDays": 42.916666666666664,
+   "shortEntries": 1,
+   "raisedAtH": null,
+   "limitBoundAtH": 12,
+   "unpayableAtLimits": 50000,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 24,
+   "sweepTx": 10,
+   "waitP50Days": 32.270833333333336,
+   "waitP95Days": 45.0625,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 8,
+    "paidH": null
+   },
+   "pass": false
+  },
+  {
+   "case": "h12",
+   "scenario": "a",
+   "tvl": 500000,
+   "requests": 72,
+   "demand": 249999.999999,
+   "paid": 249999.999999,
+   "paidInstant": 86206.569792,
+   "unpaid": 0,
+   "maxWaitDays": 3.0208333333333335,
+   "peakQueue": 123484.401534,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 84,
+   "limitBoundAtH": 72,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 3,
+   "settleTxTotal": 18,
+   "sweepTx": 4,
+   "waitP50Days": 2.6458333333333335,
+   "waitP95Days": 2.9791666666666665,
+   "worstRequest": {
+    "qty": 7500.827563,
+    "createdH": 60,
+    "paidH": 132
+   },
+   "pass": true
+  },
+  {
+   "case": "h12",
+   "scenario": "a",
+   "tvl": 1000000,
+   "requests": 124,
+   "demand": 499999.999999,
+   "paid": 499999.999999,
+   "paidInstant": 169215.067802,
+   "unpaid": 0,
+   "maxWaitDays": 3.0208333333333335,
+   "peakQueue": 243277.136702,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 31,
+   "limitBoundAtH": 19,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 3,
+   "settleTxTotal": 17,
+   "sweepTx": 7,
+   "waitP50Days": 2.6458333333333335,
+   "waitP95Days": 2.9791666666666665,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 12,
+    "paidH": 84
+   },
+   "pass": true
+  },
+  {
+   "case": "h12",
+   "scenario": "a",
+   "tvl": 2500000,
+   "requests": 338,
+   "demand": 1249999.999999,
+   "paid": 1249999.999999,
+   "paidInstant": 417857.53635,
+   "unpaid": 0,
+   "maxWaitDays": 3.3125,
+   "peakQueue": 517962.662048,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 19,
+   "limitBoundAtH": 7,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 5,
+   "settleTxTotal": 27,
+   "sweepTx": 17,
+   "waitP50Days": 2.5625,
+   "waitP95Days": 2.8958333333333335,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 5,
+    "paidH": 84
+   },
+   "pass": true
+  },
+  {
+   "case": "h12",
+   "scenario": "a",
+   "tvl": 5000000,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 2499999.999999,
+   "paidInstant": 837289.879144,
+   "unpaid": 0,
+   "maxWaitDays": 3.3541666666666665,
+   "peakQueue": 1053961.805747,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 15,
+   "limitBoundAtH": 3,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 6,
+   "settleTxTotal": 29,
+   "sweepTx": 33,
+   "waitP50Days": 2.6875,
+   "waitP95Days": 3.1041666666666665,
+   "worstRequest": {
+    "qty": 21409.48592,
+    "createdH": 4,
+    "paidH": 84
+   },
+   "pass": true
+  },
+  {
+   "case": "h12",
+   "scenario": "b",
+   "tvl": 500000,
+   "requests": 46,
+   "demand": 150000,
+   "paid": 150000,
+   "paidInstant": 49026.329216,
+   "unpaid": 0,
+   "maxWaitDays": 5.145833333333333,
+   "peakQueue": 100973.670784,
+   "shortDays": 2,
+   "shortEntries": 1,
+   "raisedAtH": 24,
+   "limitBoundAtH": 12,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 5,
+   "sweepTx": 3,
+   "waitP50Days": 3.3958333333333335,
+   "waitP95Days": 5.145833333333333,
+   "worstRequest": {
+    "qty": 2745.344177,
+    "createdH": 21,
+    "paidH": 144
+   },
+   "pass": true
+  },
+  {
+   "case": "h12",
+   "scenario": "b",
+   "tvl": 1000000,
+   "requests": 87,
+   "demand": 300000,
+   "paid": 300000,
+   "paidInstant": 93537.857572,
+   "unpaid": 0,
+   "maxWaitDays": 5.270833333333333,
+   "peakQueue": 206462.142428,
+   "shortDays": 2,
+   "shortEntries": 1,
+   "raisedAtH": 18,
+   "limitBoundAtH": 6,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 8,
+   "sweepTx": 5,
+   "waitP50Days": 3.5208333333333335,
+   "waitP95Days": 5.270833333333333,
+   "worstRequest": {
+    "qty": 1386.513116,
+    "createdH": 18,
+    "paidH": 144
+   },
+   "pass": true
+  },
+  {
+   "case": "h12",
+   "scenario": "b",
+   "tvl": 2500000,
+   "requests": 178,
+   "demand": 750000,
+   "paid": 750000,
+   "paidInstant": 182027.972391,
+   "unpaid": 0,
+   "maxWaitDays": 5.270833333333333,
+   "peakQueue": 567972.027609,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 14,
+   "limitBoundAtH": 2,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 7,
+   "settleTxTotal": 13,
+   "sweepTx": 9,
+   "waitP50Days": 3.0625,
+   "waitP95Days": 5.1875,
+   "worstRequest": {
+    "qty": 31863.741069,
+    "createdH": 18,
+    "paidH": 144
+   },
+   "pass": true
+  },
+  {
+   "case": "h12",
+   "scenario": "b",
+   "tvl": 5000000,
+   "requests": 409,
+   "demand": 1500000,
+   "paid": 1500000,
+   "paidInstant": 496118.838623,
+   "unpaid": 0,
+   "maxWaitDays": 5.4375,
+   "peakQueue": 1003881.161377,
+   "shortDays": 2,
+   "shortEntries": 1,
+   "raisedAtH": 13,
+   "limitBoundAtH": 1,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 10,
+   "settleTxTotal": 15,
+   "sweepTx": 21,
+   "waitP50Days": 3.6875,
+   "waitP95Days": 5.270833333333333,
+   "worstRequest": {
+    "qty": 8071.804651,
+    "createdH": 14,
+    "paidH": 144
+   },
+   "pass": true
+  },
+  {
+   "case": "h12",
+   "scenario": "c",
+   "tvl": 500000,
+   "requests": 72,
+   "demand": 249999.999999,
+   "paid": 249999.999999,
+   "paidInstant": 120963.337934,
+   "unpaid": 0,
+   "maxWaitDays": 3.3541666666666665,
+   "peakQueue": 79883.790161,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 108,
+   "limitBoundAtH": 96,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 2,
+   "settleTxTotal": 10,
+   "sweepTx": 4,
+   "waitP50Days": 2.5208333333333335,
+   "waitP95Days": 3.3541666666666665,
+   "worstRequest": {
+    "qty": 21409.48592,
+    "createdH": 52,
+    "paidH": 132
+   },
+   "pass": true
+  },
+  {
+   "case": "h12",
+   "scenario": "c",
+   "tvl": 1000000,
+   "requests": 124,
+   "demand": 499999.999999,
+   "paid": 499999.999999,
+   "paidInstant": 226796.552755,
+   "unpaid": 0,
+   "maxWaitDays": 3.0625,
+   "peakQueue": 149257.772315,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 51,
+   "limitBoundAtH": 39,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 15,
+   "sweepTx": 7,
+   "waitP50Days": 2.6458333333333335,
+   "waitP95Days": 3.0625,
+   "worstRequest": {
+    "qty": 10247.994665,
+    "createdH": 59,
+    "paidH": 132
+   },
+   "pass": true
+  },
+  {
+   "case": "h12",
+   "scenario": "c",
+   "tvl": 2500000,
+   "requests": 338,
+   "demand": 1249999.999999,
+   "paid": 1249999.999999,
+   "paidInstant": 611759.779721,
+   "unpaid": 0,
+   "maxWaitDays": 3.1041666666666665,
+   "peakQueue": 325023.057815,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 22,
+   "limitBoundAtH": 10,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 21,
+   "sweepTx": 17,
+   "waitP50Days": 2.5208333333333335,
+   "waitP95Days": 2.9791666666666665,
+   "worstRequest": {
+    "qty": 25510.893861,
+    "createdH": 82,
+    "paidH": 156
+   },
+   "pass": true
+  },
+  {
+   "case": "h12",
+   "scenario": "c",
+   "tvl": 5000000,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 2499999.999999,
+   "paidInstant": 1188758.271602,
+   "unpaid": 0,
+   "maxWaitDays": 2.9791666666666665,
+   "peakQueue": 593035.533339,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 17,
+   "limitBoundAtH": 5,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 23,
+   "sweepTx": 33,
+   "waitP50Days": 2.5208333333333335,
+   "waitP95Days": 2.8958333333333335,
+   "worstRequest": {
+    "qty": 13695.526687,
+    "createdH": 25,
+    "paidH": 96
+   },
+   "pass": true
+  },
+  {
+   "case": "h12",
+   "scenario": "d",
+   "tvl": 500000,
+   "requests": 120,
+   "demand": 450000,
+   "paid": 450000,
+   "paidInstant": 227994.687833,
+   "unpaid": 0,
+   "maxWaitDays": 5.354166666666667,
+   "peakQueue": 73551.094135,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 156,
+   "limitBoundAtH": 144,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 1,
+   "settleTxTotal": 15,
+   "sweepTx": 6,
+   "waitP50Days": 2.8958333333333335,
+   "waitP95Days": 5.354166666666667,
+   "worstRequest": {
+    "qty": 21409.48592,
+    "createdH": 124,
+    "paidH": 252
+   },
+   "pass": true
+  },
+  {
+   "case": "h12",
+   "scenario": "d",
+   "tvl": 1000000,
+   "requests": 230,
+   "demand": 900000,
+   "paid": 900000,
+   "paidInstant": 427047.260267,
+   "unpaid": 0,
+   "maxWaitDays": 3.8541666666666665,
+   "peakQueue": 108371.830919,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 108,
+   "limitBoundAtH": 96,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 34,
+   "sweepTx": 12,
+   "waitP50Days": 2.6041666666666665,
+   "waitP95Days": 3.8125,
+   "worstRequest": {
+    "qty": 33686.782687,
+    "createdH": 388,
+    "paidH": 480
+   },
+   "pass": true
+  },
+  {
+   "case": "h12",
+   "scenario": "d",
+   "tvl": 2500000,
+   "requests": 589,
+   "demand": 2250000,
+   "paid": 2250000,
+   "paidInstant": 1228104.944834,
+   "unpaid": 0,
+   "maxWaitDays": 3.3541666666666665,
+   "peakQueue": 181229.418272,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 49,
+   "limitBoundAtH": 37,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 3,
+   "settleTxTotal": 45,
+   "sweepTx": 30,
+   "waitP50Days": 2.6041666666666665,
+   "waitP95Days": 3.0208333333333335,
+   "worstRequest": {
+    "qty": 11909.864473,
+    "createdH": 676,
+    "paidH": 756
+   },
+   "pass": true
+  },
+  {
+   "case": "h12",
+   "scenario": "d",
+   "tvl": 5000000,
+   "requests": 1186,
+   "demand": 4500000,
+   "paid": 4500000,
+   "paidInstant": 2406146.18688,
+   "unpaid": 0,
+   "maxWaitDays": 3.1875,
+   "peakQueue": 280749.94817,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 24,
+   "limitBoundAtH": 12,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 66,
+   "sweepTx": 60,
+   "waitP50Days": 2.5625,
+   "waitP95Days": 2.9791666666666665,
+   "worstRequest": {
+    "qty": 26712.504307,
+    "createdH": 596,
+    "paidH": 672
+   },
+   "pass": true
+  },
+  {
+   "case": "h24",
+   "scenario": "a",
+   "tvl": 500000,
+   "requests": 72,
+   "demand": 249999.999999,
+   "paid": 249999.999999,
+   "paidInstant": 75328.27769,
+   "unpaid": 0,
+   "maxWaitDays": 4.4375,
+   "peakQueue": 150345.02512,
+   "shortDays": 1.5416666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 96,
+   "limitBoundAtH": 72,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 3,
+   "settleTxTotal": 8,
+   "sweepTx": 4,
+   "waitP50Days": 2.9791666666666665,
+   "waitP95Days": 4.020833333333333,
+   "worstRequest": {
+    "qty": 21409.48592,
+    "createdH": 38,
+    "paidH": 144
+   },
+   "pass": true
+  },
+  {
+   "case": "h24",
+   "scenario": "a",
+   "tvl": 1000000,
+   "requests": 124,
+   "demand": 499999.999999,
+   "paid": 499999.999999,
+   "paidInstant": 150723.475941,
+   "unpaid": 0,
+   "maxWaitDays": 3.7708333333333335,
+   "peakQueue": 266648.545772,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 43,
+   "limitBoundAtH": 19,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 3,
+   "settleTxTotal": 19,
+   "sweepTx": 7,
+   "waitP50Days": 2.7708333333333335,
+   "waitP95Days": 3.3958333333333335,
+   "worstRequest": {
+    "qty": 10247.994665,
+    "createdH": 42,
+    "paidH": 132
+   },
+   "pass": true
+  },
+  {
+   "case": "h24",
+   "scenario": "a",
+   "tvl": 2500000,
+   "requests": 338,
+   "demand": 1249999.999999,
+   "paid": 1249999.999999,
+   "paidInstant": 272911.093522,
+   "unpaid": 0,
+   "maxWaitDays": 4.354166666666667,
+   "peakQueue": 864968.589576,
+   "shortDays": 1.5416666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 31,
+   "limitBoundAtH": 7,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 20,
+   "sweepTx": 17,
+   "waitP50Days": 2.7708333333333335,
+   "waitP95Days": 4.145833333333333,
+   "worstRequest": {
+    "qty": 13690.554757,
+    "createdH": 16,
+    "paidH": 120
+   },
+   "pass": true
+  },
+  {
+   "case": "h24",
+   "scenario": "a",
+   "tvl": 5000000,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 2499999.999999,
+   "paidInstant": 680574.203835,
+   "unpaid": 0,
+   "maxWaitDays": 4.729166666666667,
+   "peakQueue": 1687811.367648,
+   "shortDays": 1.5416666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 27,
+   "limitBoundAtH": 3,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 7,
+   "settleTxTotal": 28,
+   "sweepTx": 33,
+   "waitP50Days": 2.8125,
+   "waitP95Days": 4.5625,
+   "worstRequest": {
+    "qty": 8704.592345,
+    "createdH": 7,
+    "paidH": 120
+   },
+   "pass": true
+  },
+  {
+   "case": "h24",
+   "scenario": "b",
+   "tvl": 500000,
+   "requests": 46,
+   "demand": 150000,
+   "paid": 150000,
+   "paidInstant": 49026.329216,
+   "unpaid": 0,
+   "maxWaitDays": 4.6875,
+   "peakQueue": 100973.670784,
+   "shortDays": 1.0416666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 36,
+   "limitBoundAtH": 12,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 2,
+   "settleTxTotal": 1,
+   "sweepTx": 3,
+   "waitP50Days": 4.270833333333333,
+   "waitP95Days": 4.479166666666667,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 8,
+    "paidH": 120
+   },
+   "pass": true
+  },
+  {
+   "case": "h24",
+   "scenario": "b",
+   "tvl": 1000000,
+   "requests": 87,
+   "demand": 300000,
+   "paid": 300000,
+   "paidInstant": 49197.244653,
+   "unpaid": 0,
+   "maxWaitDays": 4.854166666666667,
+   "peakQueue": 250802.755347,
+   "shortDays": 1.0416666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 30,
+   "limitBoundAtH": 6,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 7,
+   "sweepTx": 5,
+   "waitP50Days": 4.145833333333333,
+   "waitP95Days": 4.479166666666667,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 4,
+    "paidH": 120
+   },
+   "pass": true
+  },
+  {
+   "case": "h24",
+   "scenario": "b",
+   "tvl": 2500000,
+   "requests": 178,
+   "demand": 750000,
+   "paid": 750000,
+   "paidInstant": 51359.302967,
+   "unpaid": 0,
+   "maxWaitDays": 4.1875,
+   "peakQueue": 698640.697033,
+   "shortDays": 1.0416666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 26,
+   "limitBoundAtH": 2,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 5,
+   "settleTxTotal": 11,
+   "sweepTx": 9,
+   "waitP50Days": 2.9791666666666665,
+   "waitP95Days": 4.145833333333333,
+   "worstRequest": {
+    "qty": 4153.876409,
+    "createdH": 20,
+    "paidH": 120
+   },
+   "pass": true
+  },
+  {
+   "case": "h24",
+   "scenario": "b",
+   "tvl": 5000000,
+   "requests": 409,
+   "demand": 1500000,
+   "paid": 1500000,
+   "paidInstant": 53578.534831,
+   "unpaid": 0,
+   "maxWaitDays": 4.645833333333333,
+   "peakQueue": 1446421.465169,
+   "shortDays": 1.0416666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 25,
+   "limitBoundAtH": 1,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 18,
+   "settleTxTotal": 24,
+   "sweepTx": 21,
+   "waitP50Days": 4.229166666666667,
+   "waitP95Days": 4.5625,
+   "worstRequest": {
+    "qty": 9523.59559,
+    "createdH": 9,
+    "paidH": 120
+   },
+   "pass": true
+  },
+  {
+   "case": "h24",
+   "scenario": "c",
+   "tvl": 500000,
+   "requests": 72,
+   "demand": 249999.999999,
+   "paid": 249999.999999,
+   "paidInstant": 118075.903873,
+   "unpaid": 0,
+   "maxWaitDays": 4.145833333333333,
+   "peakQueue": 97872.663433,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 120,
+   "limitBoundAtH": 96,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 2,
+   "settleTxTotal": 10,
+   "sweepTx": 4,
+   "waitP50Days": 2.9375,
+   "waitP95Days": 4.145833333333333,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 33,
+    "paidH": 132
+   },
+   "pass": true
+  },
+  {
+   "case": "h24",
+   "scenario": "c",
+   "tvl": 1000000,
+   "requests": 124,
+   "demand": 499999.999999,
+   "paid": 499999.999999,
+   "paidInstant": 223764.866927,
+   "unpaid": 0,
+   "maxWaitDays": 3.6458333333333335,
+   "peakQueue": 152289.458143,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 63,
+   "limitBoundAtH": 39,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 3,
+   "settleTxTotal": 17,
+   "sweepTx": 7,
+   "waitP50Days": 2.7708333333333335,
+   "waitP95Days": 3.6458333333333335,
+   "worstRequest": {
+    "qty": 18069.101209,
+    "createdH": 69,
+    "paidH": 156
+   },
+   "pass": true
+  },
+  {
+   "case": "h24",
+   "scenario": "c",
+   "tvl": 2500000,
+   "requests": 338,
+   "demand": 1249999.999999,
+   "paid": 1249999.999999,
+   "paidInstant": 570698.629137,
+   "unpaid": 0,
+   "maxWaitDays": 3.5208333333333335,
+   "peakQueue": 333889.694304,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 34,
+   "limitBoundAtH": 10,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 25,
+   "sweepTx": 17,
+   "waitP50Days": 2.5625,
+   "waitP95Days": 3.2708333333333335,
+   "worstRequest": {
+    "qty": 41739.884331,
+    "createdH": 96,
+    "paidH": 180
+   },
+   "pass": true
+  },
+  {
+   "case": "h24",
+   "scenario": "c",
+   "tvl": 5000000,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 2499999.999999,
+   "paidInstant": 940200.732581,
+   "unpaid": 0,
+   "maxWaitDays": 3.3125,
+   "peakQueue": 703269.890153,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 29,
+   "limitBoundAtH": 5,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 5,
+   "settleTxTotal": 32,
+   "sweepTx": 33,
+   "waitP50Days": 2.6041666666666665,
+   "waitP95Days": 2.8958333333333335,
+   "worstRequest": {
+    "qty": 50000,
+    "createdH": 29,
+    "paidH": 108
+   },
+   "pass": true
+  },
+  {
+   "case": "h24",
+   "scenario": "d",
+   "tvl": 500000,
+   "requests": 120,
+   "demand": 450000,
+   "paid": 450000,
+   "paidInstant": 233461.24186,
+   "unpaid": 0,
+   "maxWaitDays": 5.354166666666667,
+   "peakQueue": 73551.094135,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 168,
+   "limitBoundAtH": 144,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 2,
+   "settleTxTotal": 16,
+   "sweepTx": 6,
+   "waitP50Days": 3.0208333333333335,
+   "waitP95Days": 5.354166666666667,
+   "worstRequest": {
+    "qty": 21409.48592,
+    "createdH": 124,
+    "paidH": 252
+   },
+   "pass": true
+  },
+  {
+   "case": "h24",
+   "scenario": "d",
+   "tvl": 1000000,
+   "requests": 230,
+   "demand": 900000,
+   "paid": 900000,
+   "paidInstant": 426318.263384,
+   "unpaid": 0,
+   "maxWaitDays": 4.354166666666667,
+   "peakQueue": 114367.129293,
+   "shortDays": 2.5833333333333335,
+   "shortEntries": 2,
+   "raisedAtH": 120,
+   "limitBoundAtH": 96,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 2,
+   "settleTxTotal": 24,
+   "sweepTx": 12,
+   "waitP50Days": 3.1458333333333335,
+   "waitP95Days": 4.020833333333333,
+   "worstRequest": {
+    "qty": 33686.782687,
+    "createdH": 388,
+    "paidH": 492
+   },
+   "pass": true
+  },
+  {
+   "case": "h24",
+   "scenario": "d",
+   "tvl": 2500000,
+   "requests": 589,
+   "demand": 2250000,
+   "paid": 2250000,
+   "paidInstant": 1193471.795079,
+   "unpaid": 0,
+   "maxWaitDays": 3.5208333333333335,
+   "peakQueue": 199080.482066,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 61,
+   "limitBoundAtH": 37,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 53,
+   "sweepTx": 30,
+   "waitP50Days": 2.6875,
+   "waitP95Days": 3.3958333333333335,
+   "worstRequest": {
+    "qty": 25939.938856,
+    "createdH": 672,
+    "paidH": 756
+   },
+   "pass": true
+  },
+  {
+   "case": "h24",
+   "scenario": "d",
+   "tvl": 5000000,
+   "requests": 1186,
+   "demand": 4500000,
+   "paid": 4500000,
+   "paidInstant": 2305777.572583,
+   "unpaid": 0,
+   "maxWaitDays": 3.3958333333333335,
+   "peakQueue": 312823.491361,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 36,
+   "limitBoundAtH": 12,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 81,
+   "sweepTx": 60,
+   "waitP50Days": 2.6458333333333335,
+   "waitP95Days": 3.1875,
+   "worstRequest": {
+    "qty": 10137.156228,
+    "createdH": 579,
+    "paidH": 660
+   },
+   "pass": true
+  },
+  {
+   "case": "h48",
+   "scenario": "a",
+   "tvl": 500000,
+   "requests": 72,
+   "demand": 249999.999999,
+   "paid": 249999.999999,
+   "paidInstant": 67107.061075,
+   "unpaid": 0,
+   "maxWaitDays": 5.520833333333333,
+   "peakQueue": 182892.938924,
+   "shortDays": 3.5416666666666665,
+   "shortEntries": 1,
+   "raisedAtH": 120,
+   "limitBoundAtH": 72,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 2,
+   "settleTxTotal": 2,
+   "sweepTx": 4,
+   "waitP50Days": 4.229166666666667,
+   "waitP95Days": 5.020833333333333,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 24,
+    "paidH": 156
+   },
+   "pass": true
+  },
+  {
+   "case": "h48",
+   "scenario": "a",
+   "tvl": 1000000,
+   "requests": 124,
+   "demand": 499999.999999,
+   "paid": 499999.999999,
+   "paidInstant": 138681.142639,
+   "unpaid": 0,
+   "maxWaitDays": 6.020833333333333,
+   "peakQueue": 352391.433881,
+   "shortDays": 4.541666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 67,
+   "limitBoundAtH": 19,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 3,
+   "settleTxTotal": 6,
+   "sweepTx": 7,
+   "waitP50Days": 4.145833333333333,
+   "waitP95Days": 5.520833333333333,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 12,
+    "paidH": 156
+   },
+   "pass": true
+  },
+  {
+   "case": "h48",
+   "scenario": "a",
+   "tvl": 2500000,
+   "requests": 338,
+   "demand": 1249999.999999,
+   "paid": 1249999.999999,
+   "paidInstant": 235610.071202,
+   "unpaid": 0,
+   "maxWaitDays": 5.6875,
+   "peakQueue": 874498.471066,
+   "shortDays": 4.541666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 55,
+   "limitBoundAtH": 7,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 8,
+   "settleTxTotal": 16,
+   "sweepTx": 17,
+   "waitP50Days": 4.0625,
+   "waitP95Days": 5.229166666666667,
+   "worstRequest": {
+    "qty": 18069.101209,
+    "createdH": 20,
+    "paidH": 156
+   },
+   "pass": true
+  },
+  {
+   "case": "h48",
+   "scenario": "a",
+   "tvl": 5000000,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 2499999.999999,
+   "paidInstant": 454927.443507,
+   "unpaid": 0,
+   "maxWaitDays": 5.770833333333333,
+   "peakQueue": 1734435.179755,
+   "shortDays": 4.541666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 51,
+   "limitBoundAtH": 3,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 12,
+   "settleTxTotal": 31,
+   "sweepTx": 33,
+   "waitP50Days": 4.0625,
+   "waitP95Days": 5.145833333333333,
+   "worstRequest": {
+    "qty": 13695.526687,
+    "createdH": 18,
+    "paidH": 156
+   },
+   "pass": true
+  },
+  {
+   "case": "h48",
+   "scenario": "b",
+   "tvl": 500000,
+   "requests": 46,
+   "demand": 150000,
+   "paid": 150000,
+   "paidInstant": 49026.329216,
+   "unpaid": 0,
+   "maxWaitDays": 5.645833333333333,
+   "peakQueue": 100973.670784,
+   "shortDays": 2.5416666666666665,
+   "shortEntries": 1,
+   "raisedAtH": 60,
+   "limitBoundAtH": 12,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 1,
+   "settleTxTotal": 1,
+   "sweepTx": 3,
+   "waitP50Days": 4.395833333333333,
+   "waitP95Days": 5.645833333333333,
+   "worstRequest": {
+    "qty": 2745.344177,
+    "createdH": 21,
+    "paidH": 156
+   },
+   "pass": true
+  },
+  {
+   "case": "h48",
+   "scenario": "b",
+   "tvl": 1000000,
+   "requests": 87,
+   "demand": 300000,
+   "paid": 300000,
+   "paidInstant": 49197.244653,
+   "unpaid": 0,
+   "maxWaitDays": 5.645833333333333,
+   "peakQueue": 250802.755347,
+   "shortDays": 2.5416666666666665,
+   "shortEntries": 1,
+   "raisedAtH": 54,
+   "limitBoundAtH": 6,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 7,
+   "sweepTx": 5,
+   "waitP50Days": 4.270833333333333,
+   "waitP95Days": 5.604166666666667,
+   "worstRequest": {
+    "qty": 7198.751852,
+    "createdH": 21,
+    "paidH": 156
+   },
+   "pass": true
+  },
+  {
+   "case": "h48",
+   "scenario": "b",
+   "tvl": 2500000,
+   "requests": 178,
+   "demand": 750000,
+   "paid": 750000,
+   "paidInstant": 51359.302967,
+   "unpaid": 0,
+   "maxWaitDays": 5.6875,
+   "peakQueue": 698640.697033,
+   "shortDays": 2.5416666666666665,
+   "shortEntries": 1,
+   "raisedAtH": 50,
+   "limitBoundAtH": 2,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 5,
+   "settleTxTotal": 10,
+   "sweepTx": 9,
+   "waitP50Days": 4.479166666666667,
+   "waitP95Days": 5.645833333333333,
+   "worstRequest": {
+    "qty": 4153.876409,
+    "createdH": 20,
+    "paidH": 156
+   },
+   "pass": true
+  },
+  {
+   "case": "h48",
+   "scenario": "b",
+   "tvl": 5000000,
+   "requests": 409,
+   "demand": 1500000,
+   "paid": 1500000,
+   "paidInstant": 53578.534831,
+   "unpaid": 0,
+   "maxWaitDays": 5.645833333333333,
+   "peakQueue": 1446421.465169,
+   "shortDays": 2.5416666666666665,
+   "shortEntries": 1,
+   "raisedAtH": 49,
+   "limitBoundAtH": 1,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 15,
+   "settleTxTotal": 24,
+   "sweepTx": 21,
+   "waitP50Days": 4.3125,
+   "waitP95Days": 5.5625,
+   "worstRequest": {
+    "qty": 4055.82674,
+    "createdH": 21,
+    "paidH": 156
+   },
+   "pass": true
+  },
+  {
+   "case": "h48",
+   "scenario": "c",
+   "tvl": 500000,
+   "requests": 72,
+   "demand": 249999.999999,
+   "paid": 249999.999999,
+   "paidInstant": 64124.314856,
+   "unpaid": 0,
+   "maxWaitDays": 5.645833333333333,
+   "peakQueue": 181956.818177,
+   "shortDays": 4.541666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 144,
+   "limitBoundAtH": 96,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 1,
+   "settleTxTotal": 2,
+   "sweepTx": 4,
+   "waitP50Days": 3.8125,
+   "waitP95Days": 4.854166666666667,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 33,
+    "paidH": 168
+   },
+   "pass": true
+  },
+  {
+   "case": "h48",
+   "scenario": "c",
+   "tvl": 1000000,
+   "requests": 124,
+   "demand": 499999.999999,
+   "paid": 499999.999999,
+   "paidInstant": 129370.085613,
+   "unpaid": 0,
+   "maxWaitDays": 5.8125,
+   "peakQueue": 321763.868484,
+   "shortDays": 5.541666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 87,
+   "limitBoundAtH": 39,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 3,
+   "settleTxTotal": 4,
+   "sweepTx": 7,
+   "waitP50Days": 3.8125,
+   "waitP95Days": 4.854166666666667,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 17,
+    "paidH": 156
+   },
+   "pass": true
+  },
+  {
+   "case": "h48",
+   "scenario": "c",
+   "tvl": 2500000,
+   "requests": 338,
+   "demand": 1249999.999999,
+   "paid": 1249999.999999,
+   "paidInstant": 209931.327127,
+   "unpaid": 0,
+   "maxWaitDays": 5.354166666666667,
+   "peakQueue": 821339.693413,
+   "shortDays": 5.541666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 58,
+   "limitBoundAtH": 10,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 7,
+   "settleTxTotal": 18,
+   "sweepTx": 17,
+   "waitP50Days": 3.8958333333333335,
+   "waitP95Days": 4.770833333333333,
+   "worstRequest": {
+    "qty": 18069.101209,
+    "createdH": 28,
+    "paidH": 156
+   },
+   "pass": true
+  },
+  {
+   "case": "h48",
+   "scenario": "c",
+   "tvl": 5000000,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 2499999.999999,
+   "paidInstant": 381574.020954,
+   "unpaid": 0,
+   "maxWaitDays": 5.479166666666667,
+   "peakQueue": 1639599.127549,
+   "shortDays": 5.541666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 53,
+   "limitBoundAtH": 5,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 11,
+   "settleTxTotal": 30,
+   "sweepTx": 33,
+   "waitP50Days": 3.6458333333333335,
+   "waitP95Days": 4.645833333333333,
+   "worstRequest": {
+    "qty": 13695.526687,
+    "createdH": 25,
+    "paidH": 156
+   },
+   "pass": true
+  },
+  {
+   "case": "h48",
+   "scenario": "d",
+   "tvl": 500000,
+   "requests": 120,
+   "demand": 450000,
+   "paid": 450000,
+   "paidInstant": 205693.324656,
+   "unpaid": 0,
+   "maxWaitDays": 6.479166666666667,
+   "peakQueue": 73551.094135,
+   "shortDays": 2.5416666666666665,
+   "shortEntries": 1,
+   "raisedAtH": 192,
+   "limitBoundAtH": 144,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 3,
+   "settleTxTotal": 20,
+   "sweepTx": 6,
+   "waitP50Days": 2.9375,
+   "waitP95Days": 5.354166666666667,
+   "worstRequest": {
+    "qty": 23551.094135,
+    "createdH": 721,
+    "paidH": 876
+   },
+   "pass": true
+  },
+  {
+   "case": "h48",
+   "scenario": "d",
+   "tvl": 1000000,
+   "requests": 230,
+   "demand": 900000,
+   "paid": 900000,
+   "paidInstant": 392046.9498,
+   "unpaid": 0,
+   "maxWaitDays": 4.895833333333333,
+   "peakQueue": 140235.571988,
+   "shortDays": 1.0416666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 144,
+   "limitBoundAtH": 96,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 33,
+   "sweepTx": 12,
+   "waitP50Days": 2.8125,
+   "waitP95Days": 4.5625,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 39,
+    "paidH": 156
+   },
+   "pass": true
+  },
+  {
+   "case": "h48",
+   "scenario": "d",
+   "tvl": 2500000,
+   "requests": 589,
+   "demand": 2250000,
+   "paid": 2250000,
+   "paidInstant": 1037139.949244,
+   "unpaid": 0,
+   "maxWaitDays": 4.770833333333333,
+   "peakQueue": 222360.586919,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 85,
+   "limitBoundAtH": 37,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 62,
+   "sweepTx": 30,
+   "waitP50Days": 2.6458333333333335,
+   "waitP95Days": 3.4791666666666665,
+   "worstRequest": {
+    "qty": 50000,
+    "createdH": 570,
+    "paidH": 684
+   },
+   "pass": true
+  },
+  {
+   "case": "h48",
+   "scenario": "d",
+   "tvl": 5000000,
+   "requests": 1186,
+   "demand": 4500000,
+   "paid": 4500000,
+   "paidInstant": 1964527.223919,
+   "unpaid": 0,
+   "maxWaitDays": 4.520833333333333,
+   "peakQueue": 438644.029195,
+   "shortDays": 1.0416666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 60,
+   "limitBoundAtH": 12,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 74,
+   "sweepTx": 60,
+   "waitP50Days": 2.7291666666666665,
+   "waitP95Days": 3.3125,
+   "worstRequest": {
+    "qty": 17434.894454,
+    "createdH": 636,
+    "paidH": 744
+   },
+   "pass": true
+  }
+ ],
+ "gate5M": {
+  "case": "h24",
+  "pass": true,
+  "perScenario": {
+   "a": {
+    "requests": 656,
+    "demand": 2499999.999999,
+    "paid": 2499999.999999,
+    "paidInstant": 680574.203835,
+    "unpaid": 0,
+    "maxWaitDays": 4.729166666666667,
+    "peakQueue": 1687811.367648,
+    "shortDays": 1.5416666666666667,
+    "shortEntries": 1,
+    "raisedAtH": 27,
+    "limitBoundAtH": 3,
+    "unpayableAtLimits": 0,
+    "sleeveExhausted": false,
+    "e2eMaxDays": null,
+    "maxSettleTxPerHour": 7,
+    "settleTxTotal": 28,
+    "sweepTx": 33,
+    "waitP50Days": 2.8125,
+    "waitP95Days": 4.5625,
+    "worstRequest": {
+     "qty": 8704.592345,
+     "createdH": 7,
+     "paidH": 120
+    },
+    "pass": true
+   },
+   "b": {
+    "requests": 409,
+    "demand": 1500000,
+    "paid": 1500000,
+    "paidInstant": 53578.534831,
+    "unpaid": 0,
+    "maxWaitDays": 4.645833333333333,
+    "peakQueue": 1446421.465169,
+    "shortDays": 1.0416666666666667,
+    "shortEntries": 1,
+    "raisedAtH": 25,
+    "limitBoundAtH": 1,
+    "unpayableAtLimits": 0,
+    "sleeveExhausted": false,
+    "e2eMaxDays": null,
+    "maxSettleTxPerHour": 18,
+    "settleTxTotal": 24,
+    "sweepTx": 21,
+    "waitP50Days": 4.229166666666667,
+    "waitP95Days": 4.5625,
+    "worstRequest": {
+     "qty": 9523.59559,
+     "createdH": 9,
+     "paidH": 120
+    },
+    "pass": true
+   },
+   "c": {
+    "requests": 656,
+    "demand": 2499999.999999,
+    "paid": 2499999.999999,
+    "paidInstant": 940200.732581,
+    "unpaid": 0,
+    "maxWaitDays": 3.3125,
+    "peakQueue": 703269.890153,
+    "shortDays": 0,
+    "shortEntries": 0,
+    "raisedAtH": 29,
+    "limitBoundAtH": 5,
+    "unpayableAtLimits": 0,
+    "sleeveExhausted": false,
+    "e2eMaxDays": null,
+    "maxSettleTxPerHour": 5,
+    "settleTxTotal": 32,
+    "sweepTx": 33,
+    "waitP50Days": 2.6041666666666665,
+    "waitP95Days": 2.8958333333333335,
+    "worstRequest": {
+     "qty": 50000,
+     "createdH": 29,
+     "paidH": 108
+    },
+    "pass": true
+   },
+   "d": {
+    "requests": 1186,
+    "demand": 4500000,
+    "paid": 4500000,
+    "paidInstant": 2305777.572583,
+    "unpaid": 0,
+    "maxWaitDays": 3.3958333333333335,
+    "peakQueue": 312823.491361,
+    "shortDays": 0,
+    "shortEntries": 0,
+    "raisedAtH": 36,
+    "limitBoundAtH": 12,
+    "unpayableAtLimits": 0,
+    "sleeveExhausted": false,
+    "e2eMaxDays": null,
+    "maxSettleTxPerHour": 4,
+    "settleTxTotal": 81,
+    "sweepTx": 60,
+    "waitP50Days": 2.6458333333333335,
+    "waitP95Days": 3.1875,
+    "worstRequest": {
+     "qty": 10137.156228,
+     "createdH": 579,
+     "paidH": 660
+    },
+    "pass": true
+   }
+  }
+ },
+ "longestFreezeKeepingSevenDays": {
+  "a": 4.5,
+  "b": 6.5,
+  "c": 4,
+  "d": 4
+ },
+ "lossEvents": [
+  {
+   "tvl": 1000000,
+   "scenario": "a",
+   "lossPct": 0.02,
+   "flPct": 0,
+   "freezeDays": 3,
+   "requests": 124,
+   "demand": 499999.999999,
+   "paid": 499999.999999,
+   "paidInstant": 98539.610654,
+   "unpaid": 0,
+   "maxWaitDays": 5.020833333333333,
+   "peakQueue": 401460.389345,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 43,
+   "limitBoundAtH": 19,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 14,
+   "sweepTx": 7,
+   "waitP50Days": 2.8541666666666665,
+   "waitP95Days": 4.604166666666667,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 12,
+    "paidH": 132
+   },
+   "pass": true
+  },
+  {
+   "tvl": 1000000,
+   "scenario": "a",
+   "lossPct": 0.02,
+   "flPct": 0.03,
+   "freezeDays": 3,
+   "requests": 124,
+   "demand": 499999.999999,
+   "paid": 499999.999999,
+   "paidInstant": 98539.610654,
+   "unpaid": 0,
+   "maxWaitDays": 5.020833333333333,
+   "peakQueue": 401460.389345,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 43,
+   "limitBoundAtH": 19,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 14,
+   "sweepTx": 7,
+   "waitP50Days": 2.8541666666666665,
+   "waitP95Days": 4.604166666666667,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 12,
+    "paidH": 132
+   },
+   "pass": true
+  },
+  {
+   "tvl": 1000000,
+   "scenario": "a",
+   "lossPct": 0.05,
+   "flPct": 0,
+   "freezeDays": 3,
+   "requests": 124,
+   "demand": 499999.999999,
+   "paid": 499999.999999,
+   "paidInstant": 98539.610654,
+   "unpaid": 0,
+   "maxWaitDays": 5.020833333333333,
+   "peakQueue": 401460.389345,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 43,
+   "limitBoundAtH": 19,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 14,
+   "sweepTx": 7,
+   "waitP50Days": 2.8541666666666665,
+   "waitP95Days": 4.604166666666667,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 12,
+    "paidH": 132
+   },
+   "pass": true
+  },
+  {
+   "tvl": 1000000,
+   "scenario": "a",
+   "lossPct": 0.05,
+   "flPct": 0.03,
+   "freezeDays": 3,
+   "requests": 124,
+   "demand": 499999.999999,
+   "paid": 499999.999999,
+   "paidInstant": 98539.610654,
+   "unpaid": 0,
+   "maxWaitDays": 5.020833333333333,
+   "peakQueue": 401460.389345,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 43,
+   "limitBoundAtH": 19,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 14,
+   "sweepTx": 7,
+   "waitP50Days": 2.8541666666666665,
+   "waitP95Days": 4.604166666666667,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 12,
+    "paidH": 132
+   },
+   "pass": true
+  },
+  {
+   "tvl": 1000000,
+   "scenario": "b",
+   "lossPct": 0.02,
+   "flPct": 0,
+   "freezeDays": 3,
+   "requests": 87,
+   "demand": 300000,
+   "paid": 300000,
+   "paidInstant": 49026.329216,
+   "unpaid": 0,
+   "maxWaitDays": 4.854166666666667,
+   "peakQueue": 250973.670784,
+   "shortDays": 1.0416666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 30,
+   "limitBoundAtH": 6,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 7,
+   "sweepTx": 5,
+   "waitP50Days": 4.104166666666667,
+   "waitP95Days": 4.479166666666667,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 4,
+    "paidH": 120
+   },
+   "pass": true
+  },
+  {
+   "tvl": 1000000,
+   "scenario": "b",
+   "lossPct": 0.02,
+   "flPct": 0.03,
+   "freezeDays": 3,
+   "requests": 87,
+   "demand": 300000,
+   "paid": 300000,
+   "paidInstant": 49026.329216,
+   "unpaid": 0,
+   "maxWaitDays": 4.854166666666667,
+   "peakQueue": 250973.670784,
+   "shortDays": 1.0416666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 30,
+   "limitBoundAtH": 6,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 7,
+   "sweepTx": 5,
+   "waitP50Days": 4.104166666666667,
+   "waitP95Days": 4.479166666666667,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 4,
+    "paidH": 120
+   },
+   "pass": true
+  },
+  {
+   "tvl": 1000000,
+   "scenario": "b",
+   "lossPct": 0.05,
+   "flPct": 0,
+   "freezeDays": 3,
+   "requests": 87,
+   "demand": 300000,
+   "paid": 300000,
+   "paidInstant": 49026.329216,
+   "unpaid": 0,
+   "maxWaitDays": 4.854166666666667,
+   "peakQueue": 250973.670784,
+   "shortDays": 1.0416666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 30,
+   "limitBoundAtH": 6,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 7,
+   "sweepTx": 5,
+   "waitP50Days": 4.104166666666667,
+   "waitP95Days": 4.479166666666667,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 4,
+    "paidH": 120
+   },
+   "pass": true
+  },
+  {
+   "tvl": 1000000,
+   "scenario": "b",
+   "lossPct": 0.05,
+   "flPct": 0.03,
+   "freezeDays": 3,
+   "requests": 87,
+   "demand": 300000,
+   "paid": 300000,
+   "paidInstant": 49026.329216,
+   "unpaid": 0,
+   "maxWaitDays": 4.854166666666667,
+   "peakQueue": 250973.670784,
+   "shortDays": 1.0416666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 30,
+   "limitBoundAtH": 6,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 7,
+   "sweepTx": 5,
+   "waitP50Days": 4.104166666666667,
+   "waitP95Days": 4.479166666666667,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 4,
+    "paidH": 120
+   },
+   "pass": true
+  },
+  {
+   "tvl": 1000000,
+   "scenario": "c",
+   "lossPct": 0.02,
+   "flPct": 0,
+   "freezeDays": 3,
+   "requests": 124,
+   "demand": 499999.999999,
+   "paid": 499999.999999,
+   "paidInstant": 142359.740205,
+   "unpaid": 0,
+   "maxWaitDays": 5.8125,
+   "peakQueue": 323953.477107,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 63,
+   "limitBoundAtH": 39,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 12,
+   "sweepTx": 7,
+   "waitP50Days": 2.7291666666666665,
+   "waitP95Days": 4.854166666666667,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 17,
+    "paidH": 156
+   },
+   "pass": true
+  },
+  {
+   "tvl": 1000000,
+   "scenario": "c",
+   "lossPct": 0.02,
+   "flPct": 0.03,
+   "freezeDays": 3,
+   "requests": 124,
+   "demand": 499999.999999,
+   "paid": 499999.999999,
+   "paidInstant": 142359.740205,
+   "unpaid": 0,
+   "maxWaitDays": 5.8125,
+   "peakQueue": 323953.477107,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 63,
+   "limitBoundAtH": 39,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 12,
+   "sweepTx": 7,
+   "waitP50Days": 2.7291666666666665,
+   "waitP95Days": 4.854166666666667,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 17,
+    "paidH": 156
+   },
+   "pass": true
+  },
+  {
+   "tvl": 1000000,
+   "scenario": "c",
+   "lossPct": 0.05,
+   "flPct": 0,
+   "freezeDays": 3,
+   "requests": 124,
+   "demand": 499999.999999,
+   "paid": 499999.999999,
+   "paidInstant": 142359.740205,
+   "unpaid": 0,
+   "maxWaitDays": 5.8125,
+   "peakQueue": 323953.477107,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 63,
+   "limitBoundAtH": 39,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 12,
+   "sweepTx": 7,
+   "waitP50Days": 2.7291666666666665,
+   "waitP95Days": 4.854166666666667,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 17,
+    "paidH": 156
+   },
+   "pass": true
+  },
+  {
+   "tvl": 1000000,
+   "scenario": "c",
+   "lossPct": 0.05,
+   "flPct": 0.03,
+   "freezeDays": 3,
+   "requests": 124,
+   "demand": 499999.999999,
+   "paid": 499999.999999,
+   "paidInstant": 142359.740205,
+   "unpaid": 0,
+   "maxWaitDays": 5.8125,
+   "peakQueue": 323953.477107,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 63,
+   "limitBoundAtH": 39,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 12,
+   "sweepTx": 7,
+   "waitP50Days": 2.7291666666666665,
+   "waitP95Days": 4.854166666666667,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 17,
+    "paidH": 156
+   },
+   "pass": true
+  },
+  {
+   "tvl": 1000000,
+   "scenario": "d",
+   "lossPct": 0.02,
+   "flPct": 0,
+   "freezeDays": 3,
+   "requests": 230,
+   "demand": 900000,
+   "paid": 900000,
+   "paidInstant": 403084.381454,
+   "unpaid": 0,
+   "maxWaitDays": 5.979166666666667,
+   "peakQueue": 176742.938652,
+   "shortDays": 2.5833333333333335,
+   "shortEntries": 2,
+   "raisedAtH": 120,
+   "limitBoundAtH": 96,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 3,
+   "settleTxTotal": 26,
+   "sweepTx": 12,
+   "waitP50Days": 2.8541666666666665,
+   "waitP95Days": 4.020833333333333,
+   "worstRequest": {
+    "qty": 13695.526687,
+    "createdH": 289,
+    "paidH": 432
+   },
+   "pass": true
+  },
+  {
+   "tvl": 1000000,
+   "scenario": "d",
+   "lossPct": 0.02,
+   "flPct": 0.03,
+   "freezeDays": 3,
+   "requests": 230,
+   "demand": 900000,
+   "paid": 900000,
+   "paidInstant": 403084.381454,
+   "unpaid": 0,
+   "maxWaitDays": 5.979166666666667,
+   "peakQueue": 176742.938652,
+   "shortDays": 2.5833333333333335,
+   "shortEntries": 2,
+   "raisedAtH": 120,
+   "limitBoundAtH": 96,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 3,
+   "settleTxTotal": 26,
+   "sweepTx": 12,
+   "waitP50Days": 2.8541666666666665,
+   "waitP95Days": 4.020833333333333,
+   "worstRequest": {
+    "qty": 13695.526687,
+    "createdH": 289,
+    "paidH": 432
+   },
+   "pass": true
+  },
+  {
+   "tvl": 1000000,
+   "scenario": "d",
+   "lossPct": 0.05,
+   "flPct": 0,
+   "freezeDays": 3,
+   "requests": 230,
+   "demand": 900000,
+   "paid": 900000,
+   "paidInstant": 403084.381454,
+   "unpaid": 0,
+   "maxWaitDays": 5.979166666666667,
+   "peakQueue": 176742.938652,
+   "shortDays": 2.5833333333333335,
+   "shortEntries": 2,
+   "raisedAtH": 120,
+   "limitBoundAtH": 96,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 3,
+   "settleTxTotal": 26,
+   "sweepTx": 12,
+   "waitP50Days": 2.8541666666666665,
+   "waitP95Days": 4.020833333333333,
+   "worstRequest": {
+    "qty": 13695.526687,
+    "createdH": 289,
+    "paidH": 432
+   },
+   "pass": true
+  },
+  {
+   "tvl": 1000000,
+   "scenario": "d",
+   "lossPct": 0.05,
+   "flPct": 0.03,
+   "freezeDays": 3,
+   "requests": 230,
+   "demand": 900000,
+   "paid": 900000,
+   "paidInstant": 403084.381454,
+   "unpaid": 0,
+   "maxWaitDays": 5.979166666666667,
+   "peakQueue": 176742.938652,
+   "shortDays": 2.5833333333333335,
+   "shortEntries": 2,
+   "raisedAtH": 120,
+   "limitBoundAtH": 96,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 3,
+   "settleTxTotal": 26,
+   "sweepTx": 12,
+   "waitP50Days": 2.8541666666666665,
+   "waitP95Days": 4.020833333333333,
+   "worstRequest": {
+    "qty": 13695.526687,
+    "createdH": 289,
+    "paidH": 432
+   },
+   "pass": true
+  },
+  {
+   "tvl": 5000000,
+   "scenario": "a",
+   "lossPct": 0.02,
+   "flPct": 0,
+   "freezeDays": 3,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 2499999.999999,
+   "paidInstant": 498065.561708,
+   "unpaid": 0,
+   "maxWaitDays": 5.395833333333333,
+   "peakQueue": 2001934.438291,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 27,
+   "limitBoundAtH": 3,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 12,
+   "settleTxTotal": 32,
+   "sweepTx": 33,
+   "waitP50Days": 2.8541666666666665,
+   "waitP95Days": 5.1875,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 3,
+    "paidH": 132
+   },
+   "pass": true
+  },
+  {
+   "tvl": 5000000,
+   "scenario": "a",
+   "lossPct": 0.02,
+   "flPct": 0.03,
+   "freezeDays": 3,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 2499999.999999,
+   "paidInstant": 498065.561708,
+   "unpaid": 0,
+   "maxWaitDays": 5.395833333333333,
+   "peakQueue": 2001934.438291,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 27,
+   "limitBoundAtH": 3,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 10,
+   "settleTxTotal": 26,
+   "sweepTx": 33,
+   "waitP50Days": 2.8125,
+   "waitP95Days": 5.1875,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 3,
+    "paidH": 132
+   },
+   "pass": true
+  },
+  {
+   "tvl": 5000000,
+   "scenario": "a",
+   "lossPct": 0.05,
+   "flPct": 0,
+   "freezeDays": 3,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 2499999.999999,
+   "paidInstant": 498065.561708,
+   "unpaid": 0,
+   "maxWaitDays": 5.395833333333333,
+   "peakQueue": 2001934.438291,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 27,
+   "limitBoundAtH": 3,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 12,
+   "settleTxTotal": 32,
+   "sweepTx": 33,
+   "waitP50Days": 2.8541666666666665,
+   "waitP95Days": 5.1875,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 3,
+    "paidH": 132
+   },
+   "pass": true
+  },
+  {
+   "tvl": 5000000,
+   "scenario": "a",
+   "lossPct": 0.05,
+   "flPct": 0.03,
+   "freezeDays": 3,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 2499999.999999,
+   "paidInstant": 498065.561708,
+   "unpaid": 0,
+   "maxWaitDays": 5.395833333333333,
+   "peakQueue": 2001934.438291,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 27,
+   "limitBoundAtH": 3,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 10,
+   "settleTxTotal": 26,
+   "sweepTx": 33,
+   "waitP50Days": 2.8125,
+   "waitP95Days": 5.1875,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 3,
+    "paidH": 132
+   },
+   "pass": true
+  },
+  {
+   "tvl": 5000000,
+   "scenario": "b",
+   "lossPct": 0.02,
+   "flPct": 0,
+   "freezeDays": 3,
+   "requests": 409,
+   "demand": 1500000,
+   "paid": 1500000,
+   "paidInstant": 49528.904476,
+   "unpaid": 0,
+   "maxWaitDays": 4.645833333333333,
+   "peakQueue": 1450471.095524,
+   "shortDays": 1.0416666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 25,
+   "limitBoundAtH": 1,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 18,
+   "settleTxTotal": 25,
+   "sweepTx": 21,
+   "waitP50Days": 4.229166666666667,
+   "waitP95Days": 4.5625,
+   "worstRequest": {
+    "qty": 9523.59559,
+    "createdH": 9,
+    "paidH": 120
+   },
+   "pass": true
+  },
+  {
+   "tvl": 5000000,
+   "scenario": "b",
+   "lossPct": 0.02,
+   "flPct": 0.03,
+   "freezeDays": 3,
+   "requests": 409,
+   "demand": 1500000,
+   "paid": 1500000,
+   "paidInstant": 49528.904476,
+   "unpaid": 0,
+   "maxWaitDays": 4.645833333333333,
+   "peakQueue": 1450471.095524,
+   "shortDays": 1.0416666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 25,
+   "limitBoundAtH": 1,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 18,
+   "settleTxTotal": 25,
+   "sweepTx": 21,
+   "waitP50Days": 4.229166666666667,
+   "waitP95Days": 4.5625,
+   "worstRequest": {
+    "qty": 9523.59559,
+    "createdH": 9,
+    "paidH": 120
+   },
+   "pass": true
+  },
+  {
+   "tvl": 5000000,
+   "scenario": "b",
+   "lossPct": 0.05,
+   "flPct": 0,
+   "freezeDays": 3,
+   "requests": 409,
+   "demand": 1500000,
+   "paid": 1500000,
+   "paidInstant": 49528.904476,
+   "unpaid": 0,
+   "maxWaitDays": 4.645833333333333,
+   "peakQueue": 1450471.095524,
+   "shortDays": 1.0416666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 25,
+   "limitBoundAtH": 1,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 18,
+   "settleTxTotal": 25,
+   "sweepTx": 21,
+   "waitP50Days": 4.229166666666667,
+   "waitP95Days": 4.5625,
+   "worstRequest": {
+    "qty": 9523.59559,
+    "createdH": 9,
+    "paidH": 120
+   },
+   "pass": true
+  },
+  {
+   "tvl": 5000000,
+   "scenario": "b",
+   "lossPct": 0.05,
+   "flPct": 0.03,
+   "freezeDays": 3,
+   "requests": 409,
+   "demand": 1500000,
+   "paid": 1500000,
+   "paidInstant": 49528.904476,
+   "unpaid": 0,
+   "maxWaitDays": 4.645833333333333,
+   "peakQueue": 1450471.095524,
+   "shortDays": 1.0416666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 25,
+   "limitBoundAtH": 1,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 18,
+   "settleTxTotal": 25,
+   "sweepTx": 21,
+   "waitP50Days": 4.229166666666667,
+   "waitP95Days": 4.5625,
+   "worstRequest": {
+    "qty": 9523.59559,
+    "createdH": 9,
+    "paidH": 120
+   },
+   "pass": true
+  },
+  {
+   "tvl": 5000000,
+   "scenario": "c",
+   "lossPct": 0.02,
+   "flPct": 0,
+   "freezeDays": 3,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 2499999.999999,
+   "paidInstant": 575456.925453,
+   "unpaid": 0,
+   "maxWaitDays": 5.770833333333333,
+   "peakQueue": 1639935.618744,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 29,
+   "limitBoundAtH": 5,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 8,
+   "settleTxTotal": 29,
+   "sweepTx": 33,
+   "waitP50Days": 2.7708333333333335,
+   "waitP95Days": 5.5625,
+   "worstRequest": {
+    "qty": 4709.716955,
+    "createdH": 18,
+    "paidH": 156
+   },
+   "pass": true
+  },
+  {
+   "tvl": 5000000,
+   "scenario": "c",
+   "lossPct": 0.02,
+   "flPct": 0.03,
+   "freezeDays": 3,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 2499999.999999,
+   "paidInstant": 575456.925453,
+   "unpaid": 0,
+   "maxWaitDays": 5.770833333333333,
+   "peakQueue": 1639935.618744,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 29,
+   "limitBoundAtH": 5,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 8,
+   "settleTxTotal": 29,
+   "sweepTx": 33,
+   "waitP50Days": 2.7708333333333335,
+   "waitP95Days": 5.5625,
+   "worstRequest": {
+    "qty": 4709.716955,
+    "createdH": 18,
+    "paidH": 156
+   },
+   "pass": true
+  },
+  {
+   "tvl": 5000000,
+   "scenario": "c",
+   "lossPct": 0.05,
+   "flPct": 0,
+   "freezeDays": 3,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 2499999.999999,
+   "paidInstant": 575456.925453,
+   "unpaid": 0,
+   "maxWaitDays": 5.770833333333333,
+   "peakQueue": 1639935.618744,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 29,
+   "limitBoundAtH": 5,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 8,
+   "settleTxTotal": 29,
+   "sweepTx": 33,
+   "waitP50Days": 2.7708333333333335,
+   "waitP95Days": 5.5625,
+   "worstRequest": {
+    "qty": 4709.716955,
+    "createdH": 18,
+    "paidH": 156
+   },
+   "pass": true
+  },
+  {
+   "tvl": 5000000,
+   "scenario": "c",
+   "lossPct": 0.05,
+   "flPct": 0.03,
+   "freezeDays": 3,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 2499999.999999,
+   "paidInstant": 575456.925453,
+   "unpaid": 0,
+   "maxWaitDays": 5.770833333333333,
+   "peakQueue": 1639935.618744,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 29,
+   "limitBoundAtH": 5,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 8,
+   "settleTxTotal": 29,
+   "sweepTx": 33,
+   "waitP50Days": 2.7708333333333335,
+   "waitP95Days": 5.5625,
+   "worstRequest": {
+    "qty": 4709.716955,
+    "createdH": 18,
+    "paidH": 156
+   },
+   "pass": true
+  },
+  {
+   "tvl": 5000000,
+   "scenario": "d",
+   "lossPct": 0.02,
+   "flPct": 0,
+   "freezeDays": 3,
+   "requests": 1186,
+   "demand": 4500000,
+   "paid": 4500000,
+   "paidInstant": 2122955.306285,
+   "unpaid": 0,
+   "maxWaitDays": 5.8125,
+   "peakQueue": 684795.018115,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 36,
+   "limitBoundAtH": 12,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 75,
+   "sweepTx": 60,
+   "waitP50Days": 2.6458333333333335,
+   "waitP95Days": 3.2708333333333335,
+   "worstRequest": {
+    "qty": 18721.412574,
+    "createdH": 293,
+    "paidH": 432
+   },
+   "pass": true
+  },
+  {
+   "tvl": 5000000,
+   "scenario": "d",
+   "lossPct": 0.02,
+   "flPct": 0.03,
+   "freezeDays": 3,
+   "requests": 1186,
+   "demand": 4500000,
+   "paid": 4500000,
+   "paidInstant": 2122955.306285,
+   "unpaid": 0,
+   "maxWaitDays": 5.8125,
+   "peakQueue": 684795.018115,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 36,
+   "limitBoundAtH": 12,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 75,
+   "sweepTx": 60,
+   "waitP50Days": 2.6458333333333335,
+   "waitP95Days": 3.2708333333333335,
+   "worstRequest": {
+    "qty": 18721.412574,
+    "createdH": 293,
+    "paidH": 432
+   },
+   "pass": true
+  },
+  {
+   "tvl": 5000000,
+   "scenario": "d",
+   "lossPct": 0.05,
+   "flPct": 0,
+   "freezeDays": 3,
+   "requests": 1186,
+   "demand": 4500000,
+   "paid": 4500000,
+   "paidInstant": 2122955.306285,
+   "unpaid": 0,
+   "maxWaitDays": 5.8125,
+   "peakQueue": 684795.018115,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 36,
+   "limitBoundAtH": 12,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 75,
+   "sweepTx": 60,
+   "waitP50Days": 2.6458333333333335,
+   "waitP95Days": 3.2708333333333335,
+   "worstRequest": {
+    "qty": 18721.412574,
+    "createdH": 293,
+    "paidH": 432
+   },
+   "pass": true
+  },
+  {
+   "tvl": 5000000,
+   "scenario": "d",
+   "lossPct": 0.05,
+   "flPct": 0.03,
+   "freezeDays": 3,
+   "requests": 1186,
+   "demand": 4500000,
+   "paid": 4500000,
+   "paidInstant": 2122955.306285,
+   "unpaid": 0,
+   "maxWaitDays": 5.8125,
+   "peakQueue": 684795.018115,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 36,
+   "limitBoundAtH": 12,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 75,
+   "sweepTx": 60,
+   "waitP50Days": 2.6458333333333335,
+   "waitP95Days": 3.2708333333333335,
+   "worstRequest": {
+    "qty": 18721.412574,
+    "createdH": 293,
+    "paidH": 432
+   },
+   "pass": true
+  }
+ ],
+ "freezeSensitivity": [
+  {
+   "scenario": "a",
+   "lossPct": 0.02,
+   "freezeDays": 1,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 2499999.999999,
+   "paidInstant": 498278.767462,
+   "unpaid": 0,
+   "maxWaitDays": 4.354166666666667,
+   "peakQueue": 1687875.068238,
+   "shortDays": 1.5416666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 27,
+   "limitBoundAtH": 3,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 9,
+   "settleTxTotal": 32,
+   "sweepTx": 33,
+   "waitP50Days": 2.8125,
+   "waitP95Days": 4.229166666666667,
+   "worstRequest": {
+    "qty": 3227.394373,
+    "createdH": 16,
+    "paidH": 120
+   },
+   "pass": true
+  },
+  {
+   "scenario": "a",
+   "lossPct": 0.02,
+   "freezeDays": 3,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 2499999.999999,
+   "paidInstant": 498065.561708,
+   "unpaid": 0,
+   "maxWaitDays": 5.395833333333333,
+   "peakQueue": 2001934.438291,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 27,
+   "limitBoundAtH": 3,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 10,
+   "settleTxTotal": 26,
+   "sweepTx": 33,
+   "waitP50Days": 2.8125,
+   "waitP95Days": 5.1875,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 3,
+    "paidH": 132
+   },
+   "pass": true
+  },
+  {
+   "scenario": "a",
+   "lossPct": 0.02,
+   "freezeDays": 7,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 2499999.999999,
+   "paidInstant": 498065.561708,
+   "unpaid": 0,
+   "maxWaitDays": 9.395833333333334,
+   "peakQueue": 2001934.438291,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 27,
+   "limitBoundAtH": 3,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 24,
+   "settleTxTotal": 24,
+   "sweepTx": 33,
+   "waitP50Days": 6.229166666666667,
+   "waitP95Days": 9.1875,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 3,
+    "paidH": 228
+   },
+   "pass": false
+  },
+  {
+   "scenario": "a",
+   "lossPct": 0.05,
+   "freezeDays": 1,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 2499999.999999,
+   "paidInstant": 498278.767462,
+   "unpaid": 0,
+   "maxWaitDays": 4.354166666666667,
+   "peakQueue": 1687875.068238,
+   "shortDays": 1.5416666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 27,
+   "limitBoundAtH": 3,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 9,
+   "settleTxTotal": 32,
+   "sweepTx": 33,
+   "waitP50Days": 2.8125,
+   "waitP95Days": 4.229166666666667,
+   "worstRequest": {
+    "qty": 3227.394373,
+    "createdH": 16,
+    "paidH": 120
+   },
+   "pass": true
+  },
+  {
+   "scenario": "a",
+   "lossPct": 0.05,
+   "freezeDays": 3,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 2499999.999999,
+   "paidInstant": 498065.561708,
+   "unpaid": 0,
+   "maxWaitDays": 5.395833333333333,
+   "peakQueue": 2001934.438291,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 27,
+   "limitBoundAtH": 3,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 10,
+   "settleTxTotal": 26,
+   "sweepTx": 33,
+   "waitP50Days": 2.8125,
+   "waitP95Days": 5.1875,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 3,
+    "paidH": 132
+   },
+   "pass": true
+  },
+  {
+   "scenario": "a",
+   "lossPct": 0.05,
+   "freezeDays": 7,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 2499999.999999,
+   "paidInstant": 498065.561708,
+   "unpaid": 0,
+   "maxWaitDays": 9.395833333333334,
+   "peakQueue": 2001934.438291,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 27,
+   "limitBoundAtH": 3,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 24,
+   "settleTxTotal": 24,
+   "sweepTx": 33,
+   "waitP50Days": 6.229166666666667,
+   "waitP95Days": 9.1875,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 3,
+    "paidH": 228
+   },
+   "pass": false
+  },
+  {
+   "scenario": "b",
+   "lossPct": 0.02,
+   "freezeDays": 1,
+   "requests": 409,
+   "demand": 1500000,
+   "paid": 1500000,
+   "paidInstant": 49528.904476,
+   "unpaid": 0,
+   "maxWaitDays": 4.645833333333333,
+   "peakQueue": 1450471.095524,
+   "shortDays": 1.0416666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 25,
+   "limitBoundAtH": 1,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 18,
+   "settleTxTotal": 25,
+   "sweepTx": 21,
+   "waitP50Days": 4.229166666666667,
+   "waitP95Days": 4.5625,
+   "worstRequest": {
+    "qty": 9523.59559,
+    "createdH": 9,
+    "paidH": 120
+   },
+   "pass": true
+  },
+  {
+   "scenario": "b",
+   "lossPct": 0.02,
+   "freezeDays": 3,
+   "requests": 409,
+   "demand": 1500000,
+   "paid": 1500000,
+   "paidInstant": 49528.904476,
+   "unpaid": 0,
+   "maxWaitDays": 4.645833333333333,
+   "peakQueue": 1450471.095524,
+   "shortDays": 1.0416666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 25,
+   "limitBoundAtH": 1,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 18,
+   "settleTxTotal": 25,
+   "sweepTx": 21,
+   "waitP50Days": 4.229166666666667,
+   "waitP95Days": 4.5625,
+   "worstRequest": {
+    "qty": 9523.59559,
+    "createdH": 9,
+    "paidH": 120
+   },
+   "pass": true
+  },
+  {
+   "scenario": "b",
+   "lossPct": 0.02,
+   "freezeDays": 7,
+   "requests": 409,
+   "demand": 1500000,
+   "paid": 1500000,
+   "paidInstant": 49528.904476,
+   "unpaid": 0,
+   "maxWaitDays": 7.479166666666667,
+   "peakQueue": 1450471.095524,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 25,
+   "limitBoundAtH": 1,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 21,
+   "settleTxTotal": 21,
+   "sweepTx": 21,
+   "waitP50Days": 6.9375,
+   "waitP95Days": 7.395833333333333,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 1,
+    "paidH": 180
+   },
+   "pass": false
+  },
+  {
+   "scenario": "b",
+   "lossPct": 0.05,
+   "freezeDays": 1,
+   "requests": 409,
+   "demand": 1500000,
+   "paid": 1500000,
+   "paidInstant": 49528.904476,
+   "unpaid": 0,
+   "maxWaitDays": 4.645833333333333,
+   "peakQueue": 1450471.095524,
+   "shortDays": 1.0416666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 25,
+   "limitBoundAtH": 1,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 18,
+   "settleTxTotal": 25,
+   "sweepTx": 21,
+   "waitP50Days": 4.229166666666667,
+   "waitP95Days": 4.5625,
+   "worstRequest": {
+    "qty": 9523.59559,
+    "createdH": 9,
+    "paidH": 120
+   },
+   "pass": true
+  },
+  {
+   "scenario": "b",
+   "lossPct": 0.05,
+   "freezeDays": 3,
+   "requests": 409,
+   "demand": 1500000,
+   "paid": 1500000,
+   "paidInstant": 49528.904476,
+   "unpaid": 0,
+   "maxWaitDays": 4.645833333333333,
+   "peakQueue": 1450471.095524,
+   "shortDays": 1.0416666666666667,
+   "shortEntries": 1,
+   "raisedAtH": 25,
+   "limitBoundAtH": 1,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 18,
+   "settleTxTotal": 25,
+   "sweepTx": 21,
+   "waitP50Days": 4.229166666666667,
+   "waitP95Days": 4.5625,
+   "worstRequest": {
+    "qty": 9523.59559,
+    "createdH": 9,
+    "paidH": 120
+   },
+   "pass": true
+  },
+  {
+   "scenario": "b",
+   "lossPct": 0.05,
+   "freezeDays": 7,
+   "requests": 409,
+   "demand": 1500000,
+   "paid": 1500000,
+   "paidInstant": 49528.904476,
+   "unpaid": 0,
+   "maxWaitDays": 7.479166666666667,
+   "peakQueue": 1450471.095524,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 25,
+   "limitBoundAtH": 1,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 21,
+   "settleTxTotal": 21,
+   "sweepTx": 21,
+   "waitP50Days": 6.9375,
+   "waitP95Days": 7.395833333333333,
+   "worstRequest": {
+    "qty": 15399.27371,
+    "createdH": 1,
+    "paidH": 180
+   },
+   "pass": false
+  },
+  {
+   "scenario": "c",
+   "lossPct": 0.02,
+   "freezeDays": 1,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 2499999.999999,
+   "paidInstant": 820899.483571,
+   "unpaid": 0,
+   "maxWaitDays": 3.7708333333333335,
+   "peakQueue": 921705.790969,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 29,
+   "limitBoundAtH": 5,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 7,
+   "settleTxTotal": 31,
+   "sweepTx": 33,
+   "waitP50Days": 2.6458333333333335,
+   "waitP95Days": 3.6041666666666665,
+   "worstRequest": {
+    "qty": 4709.716955,
+    "createdH": 18,
+    "paidH": 108
+   },
+   "pass": true
+  },
+  {
+   "scenario": "c",
+   "lossPct": 0.02,
+   "freezeDays": 3,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 2499999.999999,
+   "paidInstant": 575456.925453,
+   "unpaid": 0,
+   "maxWaitDays": 5.770833333333333,
+   "peakQueue": 1639935.618744,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 29,
+   "limitBoundAtH": 5,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 8,
+   "settleTxTotal": 29,
+   "sweepTx": 33,
+   "waitP50Days": 2.7708333333333335,
+   "waitP95Days": 5.5625,
+   "worstRequest": {
+    "qty": 4709.716955,
+    "createdH": 18,
+    "paidH": 156
+   },
+   "pass": true
+  },
+  {
+   "scenario": "c",
+   "lossPct": 0.02,
+   "freezeDays": 7,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 2499999.999999,
+   "paidInstant": 465472.810103,
+   "unpaid": 0,
+   "maxWaitDays": 9.770833333333334,
+   "peakQueue": 1820538.55483,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 29,
+   "limitBoundAtH": 5,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 22,
+   "settleTxTotal": 26,
+   "sweepTx": 33,
+   "waitP50Days": 5.395833333333333,
+   "waitP95Days": 9.5625,
+   "worstRequest": {
+    "qty": 4709.716955,
+    "createdH": 18,
+    "paidH": 252
+   },
+   "pass": false
+  },
+  {
+   "scenario": "c",
+   "lossPct": 0.05,
+   "freezeDays": 1,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 2499999.999999,
+   "paidInstant": 820899.483571,
+   "unpaid": 0,
+   "maxWaitDays": 3.7708333333333335,
+   "peakQueue": 921705.790969,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 29,
+   "limitBoundAtH": 5,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 7,
+   "settleTxTotal": 31,
+   "sweepTx": 33,
+   "waitP50Days": 2.6458333333333335,
+   "waitP95Days": 3.6041666666666665,
+   "worstRequest": {
+    "qty": 4709.716955,
+    "createdH": 18,
+    "paidH": 108
+   },
+   "pass": true
+  },
+  {
+   "scenario": "c",
+   "lossPct": 0.05,
+   "freezeDays": 3,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 2499999.999999,
+   "paidInstant": 575456.925453,
+   "unpaid": 0,
+   "maxWaitDays": 5.770833333333333,
+   "peakQueue": 1639935.618744,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 29,
+   "limitBoundAtH": 5,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 8,
+   "settleTxTotal": 29,
+   "sweepTx": 33,
+   "waitP50Days": 2.7708333333333335,
+   "waitP95Days": 5.5625,
+   "worstRequest": {
+    "qty": 4709.716955,
+    "createdH": 18,
+    "paidH": 156
+   },
+   "pass": true
+  },
+  {
+   "scenario": "c",
+   "lossPct": 0.05,
+   "freezeDays": 7,
+   "requests": 656,
+   "demand": 2499999.999999,
+   "paid": 2499999.999999,
+   "paidInstant": 465472.810103,
+   "unpaid": 0,
+   "maxWaitDays": 9.770833333333334,
+   "peakQueue": 1820538.55483,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 29,
+   "limitBoundAtH": 5,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 22,
+   "settleTxTotal": 26,
+   "sweepTx": 33,
+   "waitP50Days": 5.395833333333333,
+   "waitP95Days": 9.5625,
+   "worstRequest": {
+    "qty": 4709.716955,
+    "createdH": 18,
+    "paidH": 252
+   },
+   "pass": false
+  },
+  {
+   "scenario": "d",
+   "lossPct": 0.02,
+   "freezeDays": 1,
+   "requests": 1186,
+   "demand": 4500000,
+   "paid": 4500000,
+   "paidInstant": 2233439.223435,
+   "unpaid": 0,
+   "maxWaitDays": 3.8125,
+   "peakQueue": 376851.650402,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 36,
+   "limitBoundAtH": 12,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 80,
+   "sweepTx": 60,
+   "waitP50Days": 2.5625,
+   "waitP95Days": 3.1875,
+   "worstRequest": {
+    "qty": 18721.412574,
+    "createdH": 293,
+    "paidH": 384
+   },
+   "pass": true
+  },
+  {
+   "scenario": "d",
+   "lossPct": 0.02,
+   "freezeDays": 3,
+   "requests": 1186,
+   "demand": 4500000,
+   "paid": 4500000,
+   "paidInstant": 2122955.306285,
+   "unpaid": 0,
+   "maxWaitDays": 5.8125,
+   "peakQueue": 684795.018115,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 36,
+   "limitBoundAtH": 12,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 75,
+   "sweepTx": 60,
+   "waitP50Days": 2.6458333333333335,
+   "waitP95Days": 3.2708333333333335,
+   "worstRequest": {
+    "qty": 18721.412574,
+    "createdH": 293,
+    "paidH": 432
+   },
+   "pass": true
+  },
+  {
+   "scenario": "d",
+   "lossPct": 0.02,
+   "freezeDays": 7,
+   "requests": 1186,
+   "demand": 4500000,
+   "paid": 4500000,
+   "paidInstant": 1791294.851294,
+   "unpaid": 0,
+   "maxWaitDays": 9.8125,
+   "peakQueue": 1287141.853308,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 36,
+   "limitBoundAtH": 12,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 12,
+   "settleTxTotal": 66,
+   "sweepTx": 60,
+   "waitP50Days": 2.8958333333333335,
+   "waitP95Days": 6.5625,
+   "worstRequest": {
+    "qty": 18721.412574,
+    "createdH": 293,
+    "paidH": 528
+   },
+   "pass": false
+  },
+  {
+   "scenario": "d",
+   "lossPct": 0.05,
+   "freezeDays": 1,
+   "requests": 1186,
+   "demand": 4500000,
+   "paid": 4500000,
+   "paidInstant": 2233439.223435,
+   "unpaid": 0,
+   "maxWaitDays": 3.8125,
+   "peakQueue": 376851.650402,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 36,
+   "limitBoundAtH": 12,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 80,
+   "sweepTx": 60,
+   "waitP50Days": 2.5625,
+   "waitP95Days": 3.1875,
+   "worstRequest": {
+    "qty": 18721.412574,
+    "createdH": 293,
+    "paidH": 384
+   },
+   "pass": true
+  },
+  {
+   "scenario": "d",
+   "lossPct": 0.05,
+   "freezeDays": 3,
+   "requests": 1186,
+   "demand": 4500000,
+   "paid": 4500000,
+   "paidInstant": 2122955.306285,
+   "unpaid": 0,
+   "maxWaitDays": 5.8125,
+   "peakQueue": 684795.018115,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 36,
+   "limitBoundAtH": 12,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 75,
+   "sweepTx": 60,
+   "waitP50Days": 2.6458333333333335,
+   "waitP95Days": 3.2708333333333335,
+   "worstRequest": {
+    "qty": 18721.412574,
+    "createdH": 293,
+    "paidH": 432
+   },
+   "pass": true
+  },
+  {
+   "scenario": "d",
+   "lossPct": 0.05,
+   "freezeDays": 7,
+   "requests": 1186,
+   "demand": 4500000,
+   "paid": 4500000,
+   "paidInstant": 1791294.851294,
+   "unpaid": 0,
+   "maxWaitDays": 9.8125,
+   "peakQueue": 1287141.853308,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 36,
+   "limitBoundAtH": 12,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": null,
+   "maxSettleTxPerHour": 12,
+   "settleTxTotal": 66,
+   "sweepTx": 60,
+   "waitP50Days": 2.8958333333333335,
+   "waitP95Days": 6.5625,
+   "worstRequest": {
+    "qty": 18721.412574,
+    "createdH": 293,
+    "paidH": 528
+   },
+   "pass": false
+  }
+ ],
+ "minimumParameters": [
+  {
+   "tvl": 5000000,
+   "mode": "static",
+   "floor": 50000,
+   "minDaily": 336585.19120724907,
+   "minMonthly": 4569908.4973274525,
+   "jointDaily": 337000,
+   "jointMonthly": 4570000,
+   "marginDaily": 422000,
+   "marginMonthly": 5720000,
+   "minBufPctLimitsOpen": 0.01,
+   "minBufPctAtJoint": 0.01,
+   "instantMax": [
+    {
+     "v": 1000,
+     "pass": false,
+     "worst": 7.145833333333333
+    },
+    {
+     "v": 5000,
+     "pass": true,
+     "worst": 6.104166666666667
+    },
+    {
+     "v": 10000,
+     "pass": true,
+     "worst": 6.104166666666667
+    },
+    {
+     "v": 25000,
+     "pass": true,
+     "worst": 6.104166666666667
+    },
+    {
+     "v": 50000,
+     "pass": true,
+     "worst": 6.104166666666667
+    }
+   ],
+   "maxRequestPayable": 84250
+  },
+  {
+   "tvl": 5000000,
+   "mode": "raise24",
+   "floor": 50000,
+   "minDaily": 50000,
+   "minMonthly": 50000,
+   "jointDaily": 50000,
+   "jointMonthly": 50000,
+   "marginDaily": 62500,
+   "marginMonthly": 62500,
+   "minBufPctLimitsOpen": 0.01,
+   "minBufPctAtJoint": 0.01,
+   "instantMax": [
+    {
+     "v": 1000,
+     "pass": true,
+     "worst": 4.6875
+    },
+    {
+     "v": 5000,
+     "pass": true,
+     "worst": 4.645833333333333
+    },
+    {
+     "v": 10000,
+     "pass": true,
+     "worst": 4.729166666666667
+    },
+    {
+     "v": 25000,
+     "pass": true,
+     "worst": 4.895833333333333
+    },
+    {
+     "v": 50000,
+     "pass": true,
+     "worst": 4.895833333333333
+    }
+   ],
+   "maxRequestPayable": 12500
+  },
+  {
+   "tvl": 2500000,
+   "mode": "static",
+   "floor": 25000,
+   "minDaily": 201460.54694037046,
+   "minMonthly": 2145525.8858133536,
+   "jointDaily": 224000,
+   "jointMonthly": 2380000,
+   "marginDaily": 280000,
+   "marginMonthly": 2980000,
+   "minBufPctLimitsOpen": 0.010746240725940166,
+   "minBufPctAtJoint": 0.01,
+   "instantMax": [
+    {
+     "v": 1000,
+     "pass": false,
+     "worst": 8.520833333333334
+    },
+    {
+     "v": 5000,
+     "pass": true,
+     "worst": 5.604166666666667
+    },
+    {
+     "v": 10000,
+     "pass": true,
+     "worst": 4.3125
+    },
+    {
+     "v": 25000,
+     "pass": true,
+     "worst": 4.3125
+    },
+    {
+     "v": 50000,
+     "pass": true,
+     "worst": 4.604166666666667
+    }
+   ],
+   "maxRequestPayable": 56000
+  },
+  {
+   "tvl": 2500000,
+   "mode": "raise24",
+   "floor": 25000,
+   "minDaily": 25000,
+   "minMonthly": 25000,
+   "jointDaily": 25000,
+   "jointMonthly": 25000,
+   "marginDaily": 31300,
+   "marginMonthly": 31300,
+   "minBufPctLimitsOpen": 0.010746240725940166,
+   "minBufPctAtJoint": 0.01,
+   "instantMax": [
+    {
+     "v": 1000,
+     "pass": true,
+     "worst": 3.9791666666666665
+    },
+    {
+     "v": 5000,
+     "pass": true,
+     "worst": 4.1875
+    },
+    {
+     "v": 10000,
+     "pass": true,
+     "worst": 4.4375
+    },
+    {
+     "v": 25000,
+     "pass": true,
+     "worst": 4.8125
+    },
+    {
+     "v": 50000,
+     "pass": true,
+     "worst": 4.8125
+    }
+   ],
+   "maxRequestPayable": 6250
+  }
+ ],
+ "tvlSweep": [
+  {
+   "case": "deployed",
+   "points": [
+    {
+     "tvl": 250000,
+     "w": 44.5625,
+     "pass": false
+    },
+    {
+     "tvl": 500000,
+     "w": 47.770833333333336,
+     "pass": false
+    },
+    {
+     "tvl": 1000000,
+     "w": 49.395833333333336,
+     "pass": false
+    },
+    {
+     "tvl": 2000000,
+     "w": 50.1875,
+     "pass": false
+    },
+    {
+     "tvl": 2500000,
+     "w": 50.354166666666664,
+     "pass": false
+    },
+    {
+     "tvl": 3000000,
+     "w": 50.479166666666664,
+     "pass": false
+    },
+    {
+     "tvl": 4000000,
+     "w": 50.604166666666664,
+     "pass": false
+    },
+    {
+     "tvl": 5000000,
+     "w": 50.6875,
+     "pass": false
+    },
+    {
+     "tvl": 7500000,
+     "w": 50.770833333333336,
+     "pass": false
+    },
+    {
+     "tvl": 10000000,
+     "w": 50.854166666666664,
+     "pass": false
+    }
+   ]
+  },
+  {
+   "case": "h12",
+   "points": [
+    {
+     "tvl": 250000,
+     "w": 7.479166666666667,
+     "pass": false
+    },
+    {
+     "tvl": 500000,
+     "w": 5.354166666666667,
+     "pass": true
+    },
+    {
+     "tvl": 1000000,
+     "w": 5.270833333333333,
+     "pass": true
+    },
+    {
+     "tvl": 2000000,
+     "w": 5.1875,
+     "pass": true
+    },
+    {
+     "tvl": 2500000,
+     "w": 5.270833333333333,
+     "pass": true
+    },
+    {
+     "tvl": 3000000,
+     "w": 5.395833333333333,
+     "pass": true
+    },
+    {
+     "tvl": 4000000,
+     "w": 5.395833333333333,
+     "pass": true
+    },
+    {
+     "tvl": 5000000,
+     "w": 5.4375,
+     "pass": true
+    },
+    {
+     "tvl": 7500000,
+     "w": 5.229166666666667,
+     "pass": true
+    },
+    {
+     "tvl": 10000000,
+     "w": 5.3125,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "case": "h24",
+   "points": [
+    {
+     "tvl": 250000,
+     "w": 7.479166666666667,
+     "pass": false
+    },
+    {
+     "tvl": 500000,
+     "w": 5.354166666666667,
+     "pass": true
+    },
+    {
+     "tvl": 1000000,
+     "w": 4.854166666666667,
+     "pass": true
+    },
+    {
+     "tvl": 2000000,
+     "w": 4.645833333333333,
+     "pass": true
+    },
+    {
+     "tvl": 2500000,
+     "w": 4.354166666666667,
+     "pass": true
+    },
+    {
+     "tvl": 3000000,
+     "w": 4.729166666666667,
+     "pass": true
+    },
+    {
+     "tvl": 4000000,
+     "w": 4.8125,
+     "pass": true
+    },
+    {
+     "tvl": 5000000,
+     "w": 4.729166666666667,
+     "pass": true
+    },
+    {
+     "tvl": 7500000,
+     "w": 4.6875,
+     "pass": true
+    },
+    {
+     "tvl": 10000000,
+     "w": 4.645833333333333,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "case": "h48",
+   "points": [
+    {
+     "tvl": 250000,
+     "w": 9.479166666666666,
+     "pass": false
+    },
+    {
+     "tvl": 500000,
+     "w": 6.479166666666667,
+     "pass": true
+    },
+    {
+     "tvl": 1000000,
+     "w": 6.020833333333333,
+     "pass": true
+    },
+    {
+     "tvl": 2000000,
+     "w": 5.604166666666667,
+     "pass": true
+    },
+    {
+     "tvl": 2500000,
+     "w": 5.6875,
+     "pass": true
+    },
+    {
+     "tvl": 3000000,
+     "w": 5.9375,
+     "pass": true
+    },
+    {
+     "tvl": 4000000,
+     "w": 5.770833333333333,
+     "pass": true
+    },
+    {
+     "tvl": 5000000,
+     "w": 5.770833333333333,
+     "pass": true
+    },
+    {
+     "tvl": 7500000,
+     "w": 5.604166666666667,
+     "pass": true
+    },
+    {
+     "tvl": 10000000,
+     "w": 5.645833333333333,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "case": "h24-scaled-sizes",
+   "points": [
+    {
+     "tvl": 250000,
+     "w": 5.020833333333333,
+     "pass": true
+    },
+    {
+     "tvl": 500000,
+     "w": 4.6875,
+     "pass": true
+    },
+    {
+     "tvl": 1000000,
+     "w": 4.645833333333333,
+     "pass": true
+    },
+    {
+     "tvl": 2000000,
+     "w": 4.854166666666667,
+     "pass": true
+    },
+    {
+     "tvl": 2500000,
+     "w": 4.854166666666667,
+     "pass": true
+    },
+    {
+     "tvl": 3000000,
+     "w": 4.854166666666667,
+     "pass": true
+    },
+    {
+     "tvl": 4000000,
+     "w": 4.729166666666667,
+     "pass": true
+    },
+    {
+     "tvl": 5000000,
+     "w": 4.729166666666667,
+     "pass": true
+    },
+    {
+     "tvl": 7500000,
+     "w": 4.645833333333333,
+     "pass": true
+    },
+    {
+     "tvl": 10000000,
+     "w": 4.645833333333333,
+     "pass": true
+    }
+   ]
+  }
+ ],
+ "rwaSweep": [
+  {
+   "rwaPct": 0,
+   "points": [
+    {
+     "tvl": 250000,
+     "w": 7.479166666666667,
+     "pass": false
+    },
+    {
+     "tvl": 500000,
+     "w": 5.354166666666667,
+     "pass": true
+    },
+    {
+     "tvl": 1000000,
+     "w": 4.854166666666667,
+     "pass": true
+    },
+    {
+     "tvl": 2000000,
+     "w": 4.645833333333333,
+     "pass": true
+    },
+    {
+     "tvl": 2500000,
+     "w": 4.354166666666667,
+     "pass": true
+    },
+    {
+     "tvl": 3000000,
+     "w": 4.729166666666667,
+     "pass": true
+    },
+    {
+     "tvl": 4000000,
+     "w": 4.8125,
+     "pass": true
+    },
+    {
+     "tvl": 5000000,
+     "w": 4.729166666666667,
+     "pass": true
+    },
+    {
+     "tvl": 7500000,
+     "w": 4.6875,
+     "pass": true
+    },
+    {
+     "tvl": 10000000,
+     "w": 4.645833333333333,
+     "pass": true
+    }
+   ],
+   "failingAt5M": "-"
+  },
+  {
+   "rwaPct": 0.1,
+   "points": [
+    {
+     "tvl": 250000,
+     "w": 22.770833333333332,
+     "pass": false
+    },
+    {
+     "tvl": 500000,
+     "w": 20.979166666666668,
+     "pass": false
+    },
+    {
+     "tvl": 1000000,
+     "w": 21.604166666666668,
+     "pass": false
+    },
+    {
+     "tvl": 2000000,
+     "w": 21.3125,
+     "pass": false
+    },
+    {
+     "tvl": 2500000,
+     "w": 21.604166666666668,
+     "pass": false
+    },
+    {
+     "tvl": 3000000,
+     "w": 21.229166666666668,
+     "pass": false
+    },
+    {
+     "tvl": 4000000,
+     "w": 21.5625,
+     "pass": false
+    },
+    {
+     "tvl": 5000000,
+     "w": 20.979166666666668,
+     "pass": false
+    },
+    {
+     "tvl": 7500000,
+     "w": 21.104166666666668,
+     "pass": false
+    },
+    {
+     "tvl": 10000000,
+     "w": 21.145833333333332,
+     "pass": false
+    }
+   ],
+   "failingAt5M": "d"
+  },
+  {
+   "rwaPct": 0.2,
+   "points": [
+    {
+     "tvl": 250000,
+     "w": 23.9375,
+     "pass": false
+    },
+    {
+     "tvl": 500000,
+     "w": 22.5625,
+     "pass": false
+    },
+    {
+     "tvl": 1000000,
+     "w": 24.979166666666668,
+     "pass": false
+    },
+    {
+     "tvl": 2000000,
+     "w": 25.145833333333332,
+     "pass": false
+    },
+    {
+     "tvl": 2500000,
+     "w": 25.4375,
+     "pass": false
+    },
+    {
+     "tvl": 3000000,
+     "w": 25.270833333333332,
+     "pass": false
+    },
+    {
+     "tvl": 4000000,
+     "w": 25.5625,
+     "pass": false
+    },
+    {
+     "tvl": 5000000,
+     "w": 25.520833333333332,
+     "pass": false
+    },
+    {
+     "tvl": 7500000,
+     "w": 25.520833333333332,
+     "pass": false
+    },
+    {
+     "tvl": 10000000,
+     "w": 24.9375,
+     "pass": false
+    }
+   ],
+   "failingAt5M": "d"
+  },
+  {
+   "rwaPct": 0.3,
+   "points": [
+    {
+     "tvl": 250000,
+     "w": 27.895833333333332,
+     "pass": false
+    },
+    {
+     "tvl": 500000,
+     "w": 28.770833333333332,
+     "pass": false
+    },
+    {
+     "tvl": 1000000,
+     "w": 27.3125,
+     "pass": false
+    },
+    {
+     "tvl": 2000000,
+     "w": 29.479166666666668,
+     "pass": false
+    },
+    {
+     "tvl": 2500000,
+     "w": 28.6875,
+     "pass": false
+    },
+    {
+     "tvl": 3000000,
+     "w": 28.9375,
+     "pass": false
+    },
+    {
+     "tvl": 4000000,
+     "w": 28.645833333333332,
+     "pass": false
+    },
+    {
+     "tvl": 5000000,
+     "w": 28.770833333333332,
+     "pass": false
+    },
+    {
+     "tvl": 7500000,
+     "w": 28.645833333333332,
+     "pass": false
+    },
+    {
+     "tvl": 10000000,
+     "w": 28.9375,
+     "pass": false
+    }
+   ],
+   "failingAt5M": "d"
+  },
+  {
+   "rwaPct": 0.4,
+   "points": [
+    {
+     "tvl": 250000,
+     "w": 32.395833333333336,
+     "pass": false
+    },
+    {
+     "tvl": 500000,
+     "w": 30.770833333333332,
+     "pass": false
+    },
+    {
+     "tvl": 1000000,
+     "w": 33.145833333333336,
+     "pass": false
+    },
+    {
+     "tvl": 2000000,
+     "w": 32.8125,
+     "pass": false
+    },
+    {
+     "tvl": 2500000,
+     "w": 32.8125,
+     "pass": false
+    },
+    {
+     "tvl": 3000000,
+     "w": 32.395833333333336,
+     "pass": false
+    },
+    {
+     "tvl": 4000000,
+     "w": 32.604166666666664,
+     "pass": false
+    },
+    {
+     "tvl": 5000000,
+     "w": 32.770833333333336,
+     "pass": false
+    },
+    {
+     "tvl": 7500000,
+     "w": 32.4375,
+     "pass": false
+    },
+    {
+     "tvl": 10000000,
+     "w": 32.145833333333336,
+     "pass": false
+    }
+   ],
+   "failingAt5M": "d"
+  }
+ ],
+ "bufferSweep": [
+  {
+   "bufPct": 0.02,
+   "points": [
+    {
+     "tvl": 2500000,
+     "w": 4.854166666666667,
+     "pass": true
+    },
+    {
+     "tvl": 5000000,
+     "w": 5.479166666666667,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "bufPct": 0.05,
+   "points": [
+    {
+     "tvl": 2500000,
+     "w": 4.8125,
+     "pass": true
+    },
+    {
+     "tvl": 5000000,
+     "w": 4.854166666666667,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "bufPct": 0.1,
+   "points": [
+    {
+     "tvl": 2500000,
+     "w": 4.354166666666667,
+     "pass": true
+    },
+    {
+     "tvl": 5000000,
+     "w": 4.729166666666667,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "bufPct": 0.15,
+   "points": [
+    {
+     "tvl": 2500000,
+     "w": 4.520833333333333,
+     "pass": true
+    },
+    {
+     "tvl": 5000000,
+     "w": 4.520833333333333,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "bufPct": 0.2,
+   "points": [
+    {
+     "tvl": 2500000,
+     "w": 4.3125,
+     "pass": true
+    },
+    {
+     "tvl": 5000000,
+     "w": 4.354166666666667,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "bufPct": 0.3,
+   "points": [
+    {
+     "tvl": 2500000,
+     "w": 4.020833333333333,
+     "pass": true
+    },
+    {
+     "tvl": 5000000,
+     "w": 4.020833333333333,
+     "pass": true
+    }
+   ]
+  },
+  {
+   "bufPct": 0.4,
+   "points": [
+    {
+     "tvl": 2500000,
+     "w": 2.9791666666666665,
+     "pass": true
+    },
+    {
+     "tvl": 5000000,
+     "w": 2.9791666666666665,
+     "pass": true
+    }
+   ]
+  }
+ ],
+ "sensitivities": [
+  {
+   "id": "base",
+   "worst": 4.729166666666667,
+   "pass": true,
+   "perScenario": {
+    "a": 4.729166666666667,
+    "b": 4.645833333333333,
+    "c": 3.3125,
+    "d": 3.3958333333333335
+   }
+  },
+  {
+   "id": "keeper-smallest",
+   "worst": 5.1875,
+   "pass": true,
+   "perScenario": {
+    "a": 4.895833333333333,
+    "b": 4.979166666666667,
+    "c": 3.3541666666666665,
+    "d": 5.1875
+   }
+  },
+  {
+   "id": "keeper-6h",
+   "worst": 4.729166666666667,
+   "pass": true,
+   "perScenario": {
+    "a": 4.729166666666667,
+    "b": 4.645833333333333,
+    "c": 3.3125,
+    "d": 3.3958333333333335
+   }
+  },
+  {
+   "id": "keeper-24h",
+   "worst": 14.3125,
+   "pass": false,
+   "perScenario": {
+    "a": 4.729166666666667,
+    "b": 4.645833333333333,
+    "c": 3.6458333333333335,
+    "d": 14.3125
+   }
+  },
+  {
+   "id": "cadence-12h",
+   "worst": 5.145833333333333,
+   "pass": true,
+   "perScenario": {
+    "a": 3.3541666666666665,
+    "b": 5.145833333333333,
+    "c": 2.9791666666666665,
+    "d": 3.1875
+   }
+  },
+  {
+   "id": "cadence-48h",
+   "worst": 6.229166666666667,
+   "pass": true,
+   "perScenario": {
+    "a": 6.229166666666667,
+    "b": 5.645833333333333,
+    "c": 5.770833333333333,
+    "d": 4.020833333333333
+   }
+  },
+  {
+   "id": "fiat-24h",
+   "worst": 5.145833333333333,
+   "pass": true,
+   "perScenario": {
+    "a": 4.854166666666667,
+    "b": 5.145833333333333,
+    "c": 4.270833333333333,
+    "d": 4.1875
+   }
+  },
+  {
+   "id": "raise-12h",
+   "worst": 4.979166666666667,
+   "pass": true,
+   "perScenario": {
+    "a": 4.729166666666667,
+    "b": 4.979166666666667,
+    "c": 3.3125,
+    "d": 3.3958333333333335
+   }
+  },
+  {
+   "id": "raise-48h",
+   "worst": 4.645833333333333,
+   "pass": true,
+   "perScenario": {
+    "a": 4.270833333333333,
+    "b": 4.645833333333333,
+    "c": 2.9791666666666665,
+    "d": 3.3958333333333335
+   }
+  },
+  {
+   "id": "tiny",
+   "worst": 4.854166666666667,
+   "pass": true,
+   "perScenario": {
+    "a": 4.854166666666667,
+    "b": 4.645833333333333,
+    "c": 3.4375,
+    "d": 3.4375
+   }
+  },
+  {
+   "id": "median-500",
+   "worst": 4.854166666666667,
+   "pass": true,
+   "perScenario": {
+    "a": 4.854166666666667,
+    "b": 4.645833333333333,
+    "c": 3.3958333333333335,
+    "d": 3.4375
+   }
+  },
+  {
+   "id": "median-10k",
+   "worst": 4.6875,
+   "pass": true,
+   "perScenario": {
+    "a": 3.4791666666666665,
+    "b": 4.6875,
+    "c": 2.9791666666666665,
+    "d": 3.6041666666666665
+   }
+  },
+  {
+   "id": "blocks-10",
+   "worst": 4.729166666666667,
+   "pass": true,
+   "perScenario": {
+    "a": 4.729166666666667,
+    "b": 4.645833333333333,
+    "c": 3.3125,
+    "d": 3.3958333333333335
+   }
+  },
+  {
+   "id": "mmf-gated",
+   "worst": 5.4375,
+   "pass": true,
+   "perScenario": {
+    "a": 5.0625,
+    "b": 4.645833333333333,
+    "c": 5.4375,
+    "d": 4.6875
+   }
+  },
+  {
+   "id": "mmf-lag-7",
+   "worst": 4.729166666666667,
+   "pass": true,
+   "perScenario": {
+    "a": 4.729166666666667,
+    "b": 4.645833333333333,
+    "c": 3.3125,
+    "d": 3.3958333333333335
+   }
+  },
+  {
+   "id": "mmf-lag-3",
+   "worst": 4.854166666666667,
+   "pass": true,
+   "perScenario": {
+    "a": 4.854166666666667,
+    "b": 4.645833333333333,
+    "c": 4.270833333333333,
+    "d": 4.1875
+   }
+  },
+  {
+   "id": "mmf-lag-4",
+   "worst": 6.145833333333333,
+   "pass": true,
+   "perScenario": {
+    "a": 5.854166666666667,
+    "b": 6.145833333333333,
+    "c": 4.854166666666667,
+    "d": 4.645833333333333
+   }
+  },
+  {
+   "id": "rwa-30",
+   "worst": 28.770833333333332,
+   "pass": false,
+   "perScenario": {
+    "a": 4.729166666666667,
+    "b": 5.145833333333333,
+    "c": 4.270833333333333,
+    "d": 28.770833333333332
+   }
+  },
+  {
+   "id": "rwa-40",
+   "worst": 32.770833333333336,
+   "pass": false,
+   "perScenario": {
+    "a": 4.854166666666667,
+    "b": 5.645833333333333,
+    "c": 4.270833333333333,
+    "d": 32.770833333333336
+   }
+  },
+  {
+   "id": "buf-5",
+   "worst": 4.854166666666667,
+   "pass": true,
+   "perScenario": {
+    "a": 4.729166666666667,
+    "b": 4.854166666666667,
+    "c": 3.4791666666666665,
+    "d": 3.6875
+   }
+  },
+  {
+   "id": "delay-0",
+   "worst": 4.1875,
+   "pass": true,
+   "perScenario": {
+    "a": 3.1875,
+    "b": 4.1875,
+    "c": 2.1458333333333335,
+    "d": 2.4791666666666665
+   }
+  },
+  {
+   "id": "delay-5",
+   "worst": 6.1875,
+   "pass": true,
+   "perScenario": {
+    "a": 5.979166666666667,
+    "b": 5.979166666666667,
+    "c": 5.979166666666667,
+    "d": 6.1875
+   }
+  },
+  {
+   "id": "suspend-24h",
+   "worst": 4.6875,
+   "pass": true,
+   "perScenario": {
+    "a": 3.8958333333333335,
+    "b": 4.6875,
+    "c": 3.8541666666666665,
+    "d": 3.6875
+   }
+  },
+  {
+   "id": "instant-1k",
+   "worst": 4.6875,
+   "pass": true,
+   "perScenario": {
+    "a": 3.8958333333333335,
+    "b": 4.6875,
+    "c": 3.8541666666666665,
+    "d": 3.6875
+   }
+  },
+  {
+   "id": "instant-50k",
+   "worst": 4.895833333333333,
+   "pass": true,
+   "perScenario": {
+    "a": 4.895833333333333,
+    "b": 4.645833333333333,
+    "c": 3.4791666666666665,
+    "d": 4.145833333333333
+   }
+  },
+  {
+   "id": "shards-8",
+   "worst": 5.479166666666667,
+   "pass": true,
+   "perScenario": {
+    "a": 4.854166666666667,
+    "b": 4.6875,
+    "c": 3.5208333333333335,
+    "d": 5.479166666666667
+   }
+  },
+  {
+   "id": "shards-1",
+   "worst": 4.729166666666667,
+   "pass": true,
+   "perScenario": {
+    "a": 4.729166666666667,
+    "b": 4.645833333333333,
+    "c": 3.0208333333333335,
+    "d": 3.3958333333333335
+   }
+  },
+  {
+   "id": "whales-250k",
+   "worst": 4.729166666666667,
+   "pass": true,
+   "perScenario": {
+    "a": 4.729166666666667,
+    "b": 4.645833333333333,
+    "c": 3.3125,
+    "d": 3.4791666666666665
+   }
+  }
+ ],
+ "alignment": [
+  {
+   "startDay": 0,
+   "raise24": {
+    "a": 4.729166666666667,
+    "b": 4.645833333333333,
+    "c": 3.3125,
+    "d": 3.3958333333333335
+   },
+   "staticJoint": {
+    "a": 4.354166666666667,
+    "b": 6.229166666666667,
+    "c": 3.3125,
+    "d": 4.520833333333333
+   },
+   "deployedPaidPct": {
+    "a": 15.964922818846384,
+    "b": 33.3123657444,
+    "c": 15.405170816446162,
+    "d": 9.8154075468
+   }
+  },
+  {
+   "startDay": 5,
+   "raise24": {
+    "a": 4.729166666666667,
+    "b": 4.645833333333333,
+    "c": 3.3125,
+    "d": 3.3958333333333335
+   },
+   "staticJoint": {
+    "a": 4.354166666666667,
+    "b": 6.229166666666667,
+    "c": 3.3125,
+    "d": 3.3958333333333335
+   },
+   "deployedPaidPct": {
+    "a": 15.964922818846384,
+    "b": 33.3123657444,
+    "c": 15.405170816446162,
+    "d": 9.8154075468
+   }
+  },
+  {
+   "startDay": 10,
+   "raise24": {
+    "a": 4.729166666666667,
+    "b": 4.645833333333333,
+    "c": 3.3125,
+    "d": 3.3958333333333335
+   },
+   "staticJoint": {
+    "a": 4.354166666666667,
+    "b": 6.229166666666667,
+    "c": 3.3125,
+    "d": 3.3958333333333335
+   },
+   "deployedPaidPct": {
+    "a": 15.964922818846384,
+    "b": 39.937808135000004,
+    "c": 15.405170816446162,
+    "d": 9.8154075468
+   }
+  },
+  {
+   "startDay": 15,
+   "raise24": {
+    "a": 4.729166666666667,
+    "b": 4.645833333333333,
+    "c": 3.3125,
+    "d": 3.3958333333333335
+   },
+   "staticJoint": {
+    "a": 4.354166666666667,
+    "b": 6.229166666666667,
+    "c": 3.3125,
+    "d": 3.3958333333333335
+   },
+   "deployedPaidPct": {
+    "a": 15.964922818846384,
+    "b": 56.4373961312,
+    "c": 15.405170816446162,
+    "d": 9.8154075468
+   }
+  },
+  {
+   "startDay": 20,
+   "raise24": {
+    "a": 4.729166666666667,
+    "b": 4.645833333333333,
+    "c": 3.3125,
+    "d": 3.3958333333333335
+   },
+   "staticJoint": {
+    "a": 4.354166666666667,
+    "b": 6.229166666666667,
+    "c": 3.3125,
+    "d": 3.3958333333333335
+   },
+   "deployedPaidPct": {
+    "a": 15.964922818846384,
+    "b": 60.03522332360001,
+    "c": 15.405170816446162,
+    "d": 9.8154075468
+   }
+  },
+  {
+   "startDay": 25,
+   "raise24": {
+    "a": 4.729166666666667,
+    "b": 4.645833333333333,
+    "c": 3.3125,
+    "d": 3.3958333333333335
+   },
+   "staticJoint": {
+    "a": 4.354166666666667,
+    "b": 6.229166666666667,
+    "c": 3.3125,
+    "d": 3.3958333333333335
+   },
+   "deployedPaidPct": {
+    "a": 15.964922818846384,
+    "b": 43.5065179432,
+    "c": 15.405170816446162,
+    "d": 9.8154075468
+   }
+  },
+  {
+   "startDay": 29,
+   "raise24": {
+    "a": 4.729166666666667,
+    "b": 4.645833333333333,
+    "c": 3.3125,
+    "d": 3.3958333333333335
+   },
+   "staticJoint": {
+    "a": 4.354166666666667,
+    "b": 6.229166666666667,
+    "c": 3.3125,
+    "d": 5.520833333333333
+   },
+   "deployedPaidPct": {
+    "a": 15.964922818846384,
+    "b": 36.62486046793334,
+    "c": 15.405170816446162,
+    "d": 9.8154075468
+   }
+  }
+ ],
+ "stakerEndToEnd": [
+  {
+   "scenario": "a",
+   "requests": 768,
+   "demand": 2249867.681121,
+   "paid": 2249867.681121,
+   "paidInstant": 1150603.993682,
+   "unpaid": 0,
+   "maxWaitDays": 2.9791666666666665,
+   "peakQueue": 613416.957697,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 29,
+   "limitBoundAtH": 5,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": 7.020833333333333,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 23,
+   "sweepTx": 39,
+   "waitP50Days": 2.6041666666666665,
+   "waitP95Days": 2.9375,
+   "worstRequest": {
+    "qty": 13695.526687,
+    "createdH": 25,
+    "paidH": 96
+   },
+   "pass": true
+  },
+  {
+   "scenario": "b",
+   "requests": 389,
+   "demand": 1349946.388349,
+   "paid": 1349946.388349,
+   "paidInstant": 312244.609928,
+   "unpaid": 0,
+   "maxWaitDays": 3.0208333333333335,
+   "peakQueue": 1000201.778421,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 25,
+   "limitBoundAtH": 1,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": 9.916666666666666,
+   "maxSettleTxPerHour": 9,
+   "settleTxTotal": 17,
+   "sweepTx": 20,
+   "waitP50Days": 2.7291666666666665,
+   "waitP95Days": 2.8958333333333335,
+   "worstRequest": {
+    "qty": 9523.59559,
+    "createdH": 12,
+    "paidH": 84
+   },
+   "pass": true
+  },
+  {
+   "scenario": "c",
+   "requests": 822,
+   "demand": 2249852.560714,
+   "paid": 2249852.560714,
+   "paidInstant": 1358001.214069,
+   "unpaid": 0,
+   "maxWaitDays": 2.9791666666666665,
+   "peakQueue": 487694.438796,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 31,
+   "limitBoundAtH": 7,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": 7.020833333333333,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 24,
+   "sweepTx": 42,
+   "waitP50Days": 2.5208333333333335,
+   "waitP95Days": 2.8541666666666665,
+   "worstRequest": {
+    "qty": 11995.375082,
+    "createdH": 121,
+    "paidH": 192
+   },
+   "pass": true
+  },
+  {
+   "scenario": "d",
+   "requests": 1812,
+   "demand": 4048480.211347,
+   "paid": 4048480.211347,
+   "paidInstant": 2581549.330809,
+   "unpaid": 0,
+   "maxWaitDays": 3.3541666666666665,
+   "peakQueue": 240820.366397,
+   "shortDays": 0,
+   "shortEntries": 0,
+   "raisedAtH": 42,
+   "limitBoundAtH": 18,
+   "unpayableAtLimits": 0,
+   "sleeveExhausted": false,
+   "e2eMaxDays": 10,
+   "maxSettleTxPerHour": 4,
+   "settleTxTotal": 64,
+   "sweepTx": 91,
+   "waitP50Days": 2.6041666666666665,
+   "waitP95Days": 3.0625,
+   "worstRequest": {
+    "qty": 25442.206916,
+    "createdH": 532,
+    "paidH": 612
+   },
+   "pass": true
+  }
+ ],
+ "mostSensitive": [
+  {
+   "id": "rwa-40",
+   "worst": 32.770833333333336,
+   "delta": 28.041666666666668
+  },
+  {
+   "id": "rwa-30",
+   "worst": 28.770833333333332,
+   "delta": 24.041666666666664
+  },
+  {
+   "id": "keeper-24h",
+   "worst": 14.3125,
+   "delta": 9.583333333333332
+  },
+  {
+   "id": "cadence-48h",
+   "worst": 6.229166666666667,
+   "delta": 1.5
+  },
+  {
+   "id": "delay-5",
+   "worst": 6.1875,
+   "delta": 1.458333333333333
+  }
+ ]
+}
