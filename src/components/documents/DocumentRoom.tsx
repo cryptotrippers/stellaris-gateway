@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -306,6 +306,12 @@ function SectionBlock({
   );
   // Empty sections start folded for the issuer and administrators so files stand out.
   const [open, setOpen] = useState(!insider || docs.length > 0);
+  // A newly uploaded file unfolds its section so the issuer sees where it went.
+  const seen = useRef(docs.length);
+  useEffect(() => {
+    if (docs.length > seen.current) setOpen(true);
+    seen.current = docs.length;
+  }, [docs.length]);
   const panelId = `doc-section-${section.key}`;
   return (
     <div className="rounded-xl border border-border p-4">
