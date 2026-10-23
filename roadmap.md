@@ -29,4 +29,12 @@
 
 - [x] Phase 1: audit and phased plan (approved).
 - [x] Phase 2: shared status/metric/demo/evidence/timeline pieces, new nav, How It Works page.
-- [ ] Phases 3–9: marketplace, Asset Passport, issuer journey, financial visuals, investor dashboard, Trust Centre, testing — waiting for the owner's review of Phase 2.
+- [ ] Signed-in, issuer and admin menus in the public navigation (role-aware, server-checked).
+- [ ] Phase 3: marketplace hero, category showcase, filters backed by stored data, richer cards, empty state.
+- [ ] Phase 4: Asset Passport sections A–G with Clarity Standard checklist.
+- [ ] Phase 5: issuer dashboard, nine-stage journey with gates, regrouped funding form, data-room preview, data contract doc.
+- [ ] Phase 6: asset-to-yield waterfall and escrow components with the illustrative Solar Farm Alpha demo.
+- [ ] Phase 7: investor dashboard sections with Forecast/Approved/Funded/Paid labels and a dark mode.
+- [ ] Match the owner's reference image: dark navy/teal investor dashboard (side menu, KPI cards, area/bar charts from real data only) and a light, photo-led marketplace with overlay cards.
+- [ ] Phase 8: Trust Centre page.
+- [ ] Phase 9: tests, responsive/accessibility/regression checks, final delivery report.
