@@ -2,9 +2,11 @@
 
 # For Issuers
 
-- [ ] Create dedicated B2B page and eligibility process; update issuer navigation.
-- [ ] Store issuer enquiries privately and add admin lead status/notes management.
-- [ ] Verify enquiry submission and lead management; report email setup status.
+- [x] Create dedicated B2B page and eligibility process; update issuer navigation.
+- [x] Store issuer enquiries privately and add admin lead status/notes management.
+- [x] Verify public enquiry submission, database delivery, anonymous access restrictions and mobile layout; remove the test enquiry.
+- [ ] Verify administrator status/notes changes end to end — requires the owner to sign in with an administrator account.
+- [ ] Enable owner email notifications — requires a paid plan, a verified sending domain and the owner's notification address.
 
 - [x] Update the home page to reflect fractional assets, the reserve-backed token model, staking previews and planned property.
 - [x] Improve the home page layout, navigation, imagery and demo visibility without publishing or changing financial logic.
