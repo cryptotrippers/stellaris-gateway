@@ -43,7 +43,7 @@ export function MarketingNav() {
           <div className="flex items-center gap-2">
             <Button asChild className="hidden h-10 px-5 md:inline-flex">
               <Link to="/app" onClick={() => trackEvent("explore_demo", { from: "nav" })}>
-                Open Demo <ArrowUpRight />
+                Explore the Demo <ArrowUpRight />
               </Link>
             </Button>
             <Button
@@ -79,7 +79,7 @@ export function MarketingNav() {
       <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-surface/95 p-3 backdrop-blur-md md:hidden">
         <Button asChild className="h-11 w-full">
           <Link to="/app" onClick={() => trackEvent("explore_demo", { from: "mobile_bar" })}>
-            Open Demo <ArrowUpRight />
+            Explore the Demo <ArrowUpRight />
           </Link>
         </Button>
       </div>

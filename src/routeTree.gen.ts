@@ -19,6 +19,7 @@ import { Route as BlockfrostHealthRouteImport } from './routes/blockfrost-health
 import { Route as DevelopersRouteImport } from './routes/developers'
 import { Route as ForIssuersRouteImport } from './routes/for-issuers'
 import { Route as GovernanceRouteImport } from './routes/governance'
+import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as InviteRouteImport } from './routes/invite'
 import { Route as IssuerLeadsRouteImport } from './routes/issuer-leads'
 import { Route as MarketplaceRouteImport } from './routes/marketplace'
@@ -108,6 +109,11 @@ const ForIssuersRoute = ForIssuersRouteImport.update({
 const GovernanceRoute = GovernanceRouteImport.update({
   id: '/governance',
   path: '/governance',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HowItWorksRoute = HowItWorksRouteImport.update({
+  id: '/how-it-works',
+  path: '/how-it-works',
   getParentRoute: () => rootRouteImport,
 } as any)
 const InviteRoute = InviteRouteImport.update({
@@ -329,6 +335,7 @@ export interface FileRoutesByFullPath {
   '/developers': typeof DevelopersRoute
   '/for-issuers': typeof ForIssuersRoute
   '/governance': typeof GovernanceRouteWithChildren
+  '/how-it-works': typeof HowItWorksRoute
   '/invite': typeof InviteRoute
   '/issuer-leads': typeof IssuerLeadsRoute
   '/marketplace': typeof MarketplaceRouteWithChildren
@@ -380,6 +387,7 @@ export interface FileRoutesByTo {
   '/blockfrost-health': typeof BlockfrostHealthRoute
   '/developers': typeof DevelopersRoute
   '/for-issuers': typeof ForIssuersRoute
+  '/how-it-works': typeof HowItWorksRoute
   '/invite': typeof InviteRoute
   '/issuer-leads': typeof IssuerLeadsRoute
   '/marketplace': typeof MarketplaceRouteWithChildren
@@ -432,6 +440,7 @@ export interface FileRoutesById {
   '/developers': typeof DevelopersRoute
   '/for-issuers': typeof ForIssuersRoute
   '/governance': typeof GovernanceRouteWithChildren
+  '/how-it-works': typeof HowItWorksRoute
   '/invite': typeof InviteRoute
   '/issuer-leads': typeof IssuerLeadsRoute
   '/marketplace': typeof MarketplaceRouteWithChildren
@@ -486,6 +495,7 @@ export interface FileRouteTypes {
     | '/developers'
     | '/for-issuers'
     | '/governance'
+    | '/how-it-works'
     | '/invite'
     | '/issuer-leads'
     | '/marketplace'
@@ -537,6 +547,7 @@ export interface FileRouteTypes {
     | '/blockfrost-health'
     | '/developers'
     | '/for-issuers'
+    | '/how-it-works'
     | '/invite'
     | '/issuer-leads'
     | '/marketplace'
@@ -588,6 +599,7 @@ export interface FileRouteTypes {
     | '/developers'
     | '/for-issuers'
     | '/governance'
+    | '/how-it-works'
     | '/invite'
     | '/issuer-leads'
     | '/marketplace'
@@ -641,6 +653,7 @@ export interface RootRouteChildren {
   DevelopersRoute: typeof DevelopersRoute
   ForIssuersRoute: typeof ForIssuersRoute
   GovernanceRoute: typeof GovernanceRouteWithChildren
+  HowItWorksRoute: typeof HowItWorksRoute
   InviteRoute: typeof InviteRoute
   IssuerLeadsRoute: typeof IssuerLeadsRoute
   MarketplaceRoute: typeof MarketplaceRouteWithChildren
@@ -746,6 +759,13 @@ declare module '@tanstack/react-router' {
       path: '/governance'
       fullPath: '/governance'
       preLoaderRoute: typeof GovernanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/how-it-works': {
+      id: '/how-it-works'
+      path: '/how-it-works'
+      fullPath: '/how-it-works'
+      preLoaderRoute: typeof HowItWorksRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/invite': {
@@ -1095,6 +1115,7 @@ const rootRouteChildren: RootRouteChildren = {
   DevelopersRoute: DevelopersRoute,
   ForIssuersRoute: ForIssuersRoute,
   GovernanceRoute: GovernanceRouteWithChildren,
+  HowItWorksRoute: HowItWorksRoute,
   InviteRoute: InviteRoute,
   IssuerLeadsRoute: IssuerLeadsRoute,
   MarketplaceRoute: MarketplaceRouteWithChildren,

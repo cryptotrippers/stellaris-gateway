@@ -24,3 +24,9 @@
 - [x] Retry pending registration without another wallet transaction, and retain seed details.
 - [x] Run regression checks and resolve the monitoring finding.
 - [ ] Verify a fresh signed Preprod bootstrap end to end — requires the operator's connected signing wallet.
+
+# Marketplace 2.0 and Asset Passport
+
+- [x] Phase 1: audit and phased plan (approved).
+- [x] Phase 2: shared status/metric/demo/evidence/timeline pieces, new nav, How It Works page.
+- [ ] Phases 3–9: marketplace, Asset Passport, issuer journey, financial visuals, investor dashboard, Trust Centre, testing — waiting for the owner's review of Phase 2.
