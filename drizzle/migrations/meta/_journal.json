@@ -36,6 +36,13 @@
       "when": 1792713675574,
       "tag": "0004_issuer_leads",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792713947545,
+      "tag": "0005_issuer_lead_privileges",
+      "breakpoints": true
     }
   ]
 }
