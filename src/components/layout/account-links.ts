@@ -35,6 +35,7 @@ export const ADMIN_LINKS: AccountGroup = {
   links: [
     { label: "Issuer Applications", to: "/issuer-leads" },
     { label: "Due Diligence", to: "/funding" },
+    { label: "Document Review", to: "/document-review" },
     { label: "Review Queue", to: "/governance" },
     { label: "Funding Pipeline", to: "/pipeline" },
     { label: "Approved Offerings", to: "/offerings" },

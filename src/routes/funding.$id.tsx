@@ -11,15 +11,13 @@ import {
   ShieldCheck,
   Vote,
 } from "lucide-react";
-import { AppShell } from "@/components/layout/AppShell";
-import {
-  getFundingRequest,
-  proposeFundingForGovernance,
-} from "@/lib/funding-requests.functions";
+import { MarketingLayout } from "@/components/layout/MarketingLayout";
+import { getFundingRequest, proposeFundingForGovernance } from "@/lib/funding-requests.functions";
 import { getMyRoles } from "@/lib/asset-vaults.functions";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { ProjectToolkit, useProjectToolkit } from "@/components/accelerator/ProjectToolkit";
 import { AllocationSimulator } from "@/components/accelerator/AllocationSimulator";
+import { DocumentRoom } from "@/components/documents/DocumentRoom";
 import { READINESS_WARN_BELOW } from "@/lib/accelerator.shared";
 
 import { formatFeeBps, projectApyMatrix } from "@/lib/vault-fees";
@@ -100,226 +98,244 @@ function FundingRequestDetail() {
   }
 
   return (
-    <AppShell>
-      <Link
-        to="/funding"
-        className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" /> All funding requests
-      </Link>
+    <MarketingLayout>
+      <div className="home-container py-10 md:py-14">
+        <Link
+          to="/funding"
+          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> All funding requests
+        </Link>
 
-      {q.isLoading ? (
-        <p className="mt-8 flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading request…
-        </p>
-      ) : q.isError ? (
-        <p className="mt-8 text-sm text-destructive">{(q.error as Error).message}</p>
-      ) : !req ? (
-        <p className="mt-8 text-sm text-muted-foreground">No request found for “{id}”.</p>
-      ) : (
-        <>
-          <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-foreground">{req.name}</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {req.category} · {req.issuer}
-                {req.location ? ` · ${req.location}` : ""}
-              </p>
-            </div>
-            <span className="rounded-full border border-border px-2.5 py-0.5 text-[11px] capitalize text-muted-foreground">
-              {req.status}
-            </span>
-          </div>
-
-          {req.description && (
-            <p className="mt-6 max-w-3xl whitespace-pre-wrap text-sm text-muted-foreground">
-              {req.description}
-            </p>
-          )}
-
-          <dl className="mt-6 grid gap-4 sm:grid-cols-4">
-            <Stat label="Target raise" value={`${ada(req.target_lovelace)} ₳`} />
-            <Stat label="Min deposit" value={`${ada(req.min_deposit_lovelace)} ₳`} />
-            <Stat label="Proposed fee" value={formatFeeBps(req.proposed_fee_bps)} />
-            <Stat label="Identifier" value={req.asset_slug} />
-          </dl>
-
-          {req.evidence_urls.length > 0 && (
-            <div className="mt-6">
-              <h2 className="text-sm font-medium text-foreground">Evidence</h2>
-              <ul className="mt-2 space-y-1">
-                {req.evidence_urls.map((u) => (
-                  <li key={u}>
-                    <a
-                      href={u}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-xs text-primary underline break-all"
-                    >
-                      {u}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <section className="mt-8">
-            <h2 className="text-sm font-medium text-foreground">Projected net APY</h2>
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              Illustrative only, computed with the same fee formula the validator enforces on chain
-              at the proposed {formatFeeBps(req.proposed_fee_bps)} management fee.
-            </p>
-            <div className="mt-3 overflow-x-auto rounded-md border border-border">
-              <table className="w-full min-w-[420px] text-xs tabular-nums">
-                <thead>
-                  <tr className="bg-secondary/20 text-left text-muted-foreground">
-                    <th className="px-3 py-2 font-normal">Assumed gross APY</th>
-                    <th className="px-3 py-2 font-normal">Management fee</th>
-                    <th className="px-3 py-2 font-normal">Net APY to depositors</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {apyMatrix.map((row) => (
-                    <tr key={row.grossApyBps} className="border-t border-border">
-                      <td className="px-3 py-1.5 text-foreground">
-                        {formatFeeBps(row.grossApyBps)}
-                      </td>
-                      <td className="px-3 py-1.5 text-muted-foreground">
-                        {formatFeeBps(req.proposed_fee_bps)}
-                      </td>
-                      <td className="px-3 py-1.5 font-medium text-foreground">
-                        {formatFeeBps(row.netApyBps)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-
-          <div className="mt-8">
-            <AllocationSimulator
-              feeBps={req.proposed_fee_bps}
-              minDepositLovelace={req.min_deposit_lovelace}
-            />
-          </div>
-
-          <ProjectToolkit
-            slug={req.asset_slug}
-            fundingRequestId={req.id}
-            canEdit={Boolean(user)}
-            isAdmin={isAdmin}
-          />
-
-          {readiness !== null && readiness < READINESS_WARN_BELOW && req.status === "submitted" && (
-            <p className="mt-6 flex items-start gap-2 rounded-md border border-accent/40 bg-accent/5 p-3 text-xs text-muted-foreground">
-              <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
-              Only {readiness}% of the required evidence has been verified. Governance can still
-              vote on this project — voters simply see how little has been checked.
-            </p>
-          )}
-
-          {req.terms_accepted_at && (
-
-            <p className="mt-4 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <ShieldCheck className="h-3 w-3" /> Submitter accepted{" "}
-              <Link to="/terms" className="text-primary underline">
-                platform terms {req.terms_version}
-              </Link>{" "}
-              on {new Date(req.terms_accepted_at).toLocaleDateString()}.
-            </p>
-          )}
-
-          <section className="card-institutional mt-8 p-5">
-            <h2 className="text-sm font-medium text-foreground">Governance</h2>
-
-            {newSip ? (
-              <p className="mt-2 text-sm text-foreground">
-                Proposed as <span className="font-semibold">{newSip}</span>.{" "}
-                <Link
-                  to="/governance/$sip"
-                  params={{ sip: newSip }}
-                  className="inline-flex items-center gap-1 text-primary"
-                >
-                  Open the proposal <ArrowRight className="h-3 w-3" />
-                </Link>
-              </p>
-            ) : req.status === "asset_created" ? (
-              <p className="mt-2 text-sm text-muted-foreground">
-                Governance passed and an asset row now exists. See “Smart contract” below for what
-                happens next.
-              </p>
-            ) : req.proposal_id ? (
-              <p className="mt-2 text-sm text-muted-foreground">
-                This request is already linked to a governance proposal.{" "}
-                <Link to="/governance" className="text-primary">
-                  View governance
-                </Link>
-              </p>
-            ) : req.status !== "submitted" ? (
-              <p className="mt-2 text-sm text-muted-foreground">
-                This request is “{req.status}” and can no longer be proposed automatically.
-              </p>
-            ) : !user ? (
-              <p className="mt-2 text-sm text-muted-foreground">
-                Sign in as the submitter or an admin to propose this for a vote.
-              </p>
-            ) : (
-              <>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Promoting this request creates a <code>fund_asset</code> proposal with the exact
-                  terms above, read fresh from this record.
-                  {isAdmin ? " You hold the admin role." : ""}
+        {q.isLoading ? (
+          <p className="mt-8 flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> Loading request…
+          </p>
+        ) : q.isError ? (
+          <p className="mt-8 text-sm text-destructive">{(q.error as Error).message}</p>
+        ) : !req ? (
+          <p className="mt-8 text-sm text-muted-foreground">No request found for “{id}”.</p>
+        ) : (
+          <>
+            <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+                  {req.name}
+                </h1>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {req.category} · {req.issuer}
+                  {req.location ? ` · ${req.location}` : ""}
                 </p>
-                <button
-                  type="button"
-                  onClick={onPropose}
-                  disabled={busy || !canPropose}
-                  className="mt-4 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
-                >
-                  {busy ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Vote className="h-4 w-4" />
-                  )}
-                  Propose for governance vote
-                </button>
-              </>
+              </div>
+              <span className="rounded-full border border-border px-2.5 py-0.5 text-[11px] capitalize text-muted-foreground">
+                {req.status}
+              </span>
+            </div>
+
+            {req.description && (
+              <p className="mt-6 max-w-3xl whitespace-pre-wrap text-sm text-muted-foreground">
+                {req.description}
+              </p>
             )}
 
-            {err && <p className="mt-3 text-sm text-destructive">{err}</p>}
-          </section>
+            <dl className="mt-6 grid gap-4 sm:grid-cols-4">
+              <Stat label="Target raise" value={`${ada(req.target_lovelace)} ₳`} />
+              <Stat label="Min deposit" value={`${ada(req.min_deposit_lovelace)} ₳`} />
+              <Stat label="Proposed fee" value={formatFeeBps(req.proposed_fee_bps)} />
+              <Stat label="Identifier" value={req.asset_slug} />
+            </dl>
 
-          <section className="card-institutional mt-6 p-5">
-            <h2 className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-              <Hammer className="h-3.5 w-3.5" /> Smart contract
-            </h2>
-            {req.status === "asset_created" ? (
-              <p className="mt-2 text-sm text-muted-foreground">
-                The <code>{req.asset_slug}</code> asset row exists, but no vault has been derived
-                for it yet. An operator bootstraps the on-chain vault next, writing this request's
-                approved fee terms into its state datum.{" "}
-                <Link to="/operators" className="inline-flex items-center gap-1 text-primary">
-                  Open the operator console <ArrowRight className="h-3 w-3" />
-                </Link>
+            {req.evidence_urls.length > 0 && (
+              <div className="mt-6">
+                <h2 className="text-sm font-medium text-foreground">Evidence</h2>
+                <ul className="mt-2 space-y-1">
+                  {req.evidence_urls.map((u) => (
+                    <li key={u}>
+                      <a
+                        href={u}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-xs text-primary underline break-all"
+                      >
+                        {u}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <section className="mt-8">
+              <h2 className="text-sm font-medium text-foreground">Projected net APY</h2>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Illustrative only, computed with the same fee formula the validator enforces on
+                chain at the proposed {formatFeeBps(req.proposed_fee_bps)} management fee.
               </p>
-            ) : req.proposal_id ? (
-              <p className="mt-2 text-sm text-muted-foreground">
-                No vault exists yet. If the linked proposal passes, an asset row is created and
-                bootstrap becomes available in the operator console — nothing on chain happens
-                automatically.
-              </p>
-            ) : (
-              <p className="mt-2 text-sm text-muted-foreground">
-                No vault can exist until this request becomes a governance proposal and that
-                proposal passes.
+              <div className="mt-3 overflow-x-auto rounded-md border border-border">
+                <table className="w-full min-w-[420px] text-xs tabular-nums">
+                  <thead>
+                    <tr className="bg-secondary/20 text-left text-muted-foreground">
+                      <th className="px-3 py-2 font-normal">Assumed gross APY</th>
+                      <th className="px-3 py-2 font-normal">Management fee</th>
+                      <th className="px-3 py-2 font-normal">Net APY to depositors</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {apyMatrix.map((row) => (
+                      <tr key={row.grossApyBps} className="border-t border-border">
+                        <td className="px-3 py-1.5 text-foreground">
+                          {formatFeeBps(row.grossApyBps)}
+                        </td>
+                        <td className="px-3 py-1.5 text-muted-foreground">
+                          {formatFeeBps(req.proposed_fee_bps)}
+                        </td>
+                        <td className="px-3 py-1.5 font-medium text-foreground">
+                          {formatFeeBps(row.netApyBps)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <div className="mt-8">
+              <AllocationSimulator
+                feeBps={req.proposed_fee_bps}
+                minDepositLovelace={req.min_deposit_lovelace}
+              />
+            </div>
+
+            <ProjectToolkit
+              slug={req.asset_slug}
+              fundingRequestId={req.id}
+              canEdit={Boolean(user)}
+              isAdmin={isAdmin}
+            />
+
+            <section
+              id="documents"
+              aria-labelledby="documents-h"
+              className="card-institutional mt-8 scroll-mt-28 p-5 md:p-7"
+            >
+              <h2 id="documents-h" className="font-display text-lg font-semibold text-foreground">
+                Document room
+              </h2>
+              <div className="mt-4">
+                <DocumentRoom fundingRequestId={req.id} category={req.category} />
+              </div>
+            </section>
+
+            {readiness !== null &&
+              readiness < READINESS_WARN_BELOW &&
+              req.status === "submitted" && (
+                <p className="mt-6 flex items-start gap-2 rounded-md border border-accent/40 bg-accent/5 p-3 text-xs text-muted-foreground">
+                  <ShieldAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />
+                  Only {readiness}% of the required evidence has been verified. Governance can still
+                  vote on this project — voters simply see how little has been checked.
+                </p>
+              )}
+
+            {req.terms_accepted_at && (
+              <p className="mt-4 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <ShieldCheck className="h-3 w-3" /> Submitter accepted{" "}
+                <Link to="/terms" className="text-primary underline">
+                  platform terms {req.terms_version}
+                </Link>{" "}
+                on {new Date(req.terms_accepted_at).toLocaleDateString()}.
               </p>
             )}
-          </section>
-        </>
-      )}
-    </AppShell>
+
+            <section className="card-institutional mt-8 p-5">
+              <h2 className="text-sm font-medium text-foreground">Governance</h2>
+
+              {newSip ? (
+                <p className="mt-2 text-sm text-foreground">
+                  Proposed as <span className="font-semibold">{newSip}</span>.{" "}
+                  <Link
+                    to="/governance/$sip"
+                    params={{ sip: newSip }}
+                    className="inline-flex items-center gap-1 text-primary"
+                  >
+                    Open the proposal <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </p>
+              ) : req.status === "asset_created" ? (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Governance passed and an asset row now exists. See “Smart contract” below for what
+                  happens next.
+                </p>
+              ) : req.proposal_id ? (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  This request is already linked to a governance proposal.{" "}
+                  <Link to="/governance" className="text-primary">
+                    View governance
+                  </Link>
+                </p>
+              ) : req.status !== "submitted" ? (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  This request is “{req.status}” and can no longer be proposed automatically.
+                </p>
+              ) : !user ? (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Sign in as the submitter or an admin to propose this for a vote.
+                </p>
+              ) : (
+                <>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Promoting this request creates a <code>fund_asset</code> proposal with the exact
+                    terms above, read fresh from this record.
+                    {isAdmin ? " You hold the admin role." : ""}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={onPropose}
+                    disabled={busy || !canPropose}
+                    className="mt-4 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+                  >
+                    {busy ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Vote className="h-4 w-4" />
+                    )}
+                    Propose for governance vote
+                  </button>
+                </>
+              )}
+
+              {err && <p className="mt-3 text-sm text-destructive">{err}</p>}
+            </section>
+
+            <section className="card-institutional mt-6 p-5">
+              <h2 className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+                <Hammer className="h-3.5 w-3.5" /> Smart contract
+              </h2>
+              {req.status === "asset_created" ? (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  The <code>{req.asset_slug}</code> asset row exists, but no vault has been derived
+                  for it yet. An operator bootstraps the on-chain vault next, writing this request's
+                  approved fee terms into its state datum.{" "}
+                  <Link to="/operators" className="inline-flex items-center gap-1 text-primary">
+                    Open the operator console <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </p>
+              ) : req.proposal_id ? (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  No vault exists yet. If the linked proposal passes, an asset row is created and
+                  bootstrap becomes available in the operator console — nothing on chain happens
+                  automatically.
+                </p>
+              ) : (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  No vault can exist until this request becomes a governance proposal and that
+                  proposal passes.
+                </p>
+              )}
+            </section>
+          </>
+        )}
+      </div>
+    </MarketingLayout>
   );
 }
 

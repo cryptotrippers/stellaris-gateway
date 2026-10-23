@@ -13,14 +13,17 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AskRouteImport } from './routes/ask'
+import { Route as AssetToYieldRouteImport } from './routes/asset-to-yield'
 import { Route as AssetsRouteImport } from './routes/assets'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as BlockfrostHealthRouteImport } from './routes/blockfrost-health'
 import { Route as DevelopersRouteImport } from './routes/developers'
+import { Route as DocumentReviewRouteImport } from './routes/document-review'
 import { Route as ForIssuersRouteImport } from './routes/for-issuers'
 import { Route as GovernanceRouteImport } from './routes/governance'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as InviteRouteImport } from './routes/invite'
+import { Route as IssuerRouteImport } from './routes/issuer'
 import { Route as IssuerLeadsRouteImport } from './routes/issuer-leads'
 import { Route as MarketplaceRouteImport } from './routes/marketplace'
 import { Route as McpRouteImport } from './routes/mcp'
@@ -35,6 +38,7 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as TesseraRouteImport } from './routes/tessera'
 import { Route as TestnetRouteImport } from './routes/testnet'
 import { Route as TransparencyRouteImport } from './routes/transparency'
+import { Route as TrustRouteImport } from './routes/trust'
 import { Route as UpgradeRouteImport } from './routes/upgrade'
 import { Route as YieldRouteImport } from './routes/yield'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
@@ -81,6 +85,11 @@ const AskRoute = AskRouteImport.update({
   path: '/ask',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AssetToYieldRoute = AssetToYieldRouteImport.update({
+  id: '/asset-to-yield',
+  path: '/asset-to-yield',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AssetsRoute = AssetsRouteImport.update({
   id: '/assets',
   path: '/assets',
@@ -101,6 +110,11 @@ const DevelopersRoute = DevelopersRouteImport.update({
   path: '/developers',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DocumentReviewRoute = DocumentReviewRouteImport.update({
+  id: '/document-review',
+  path: '/document-review',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ForIssuersRoute = ForIssuersRouteImport.update({
   id: '/for-issuers',
   path: '/for-issuers',
@@ -119,6 +133,11 @@ const HowItWorksRoute = HowItWorksRouteImport.update({
 const InviteRoute = InviteRouteImport.update({
   id: '/invite',
   path: '/invite',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IssuerRoute = IssuerRouteImport.update({
+  id: '/issuer',
+  path: '/issuer',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IssuerLeadsRoute = IssuerLeadsRouteImport.update({
@@ -189,6 +208,11 @@ const TestnetRoute = TestnetRouteImport.update({
 const TransparencyRoute = TransparencyRouteImport.update({
   id: '/transparency',
   path: '/transparency',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TrustRoute = TrustRouteImport.update({
+  id: '/trust',
+  path: '/trust',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UpgradeRoute = UpgradeRouteImport.update({
@@ -329,14 +353,17 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/app': typeof AppRoute
   '/ask': typeof AskRoute
+  '/asset-to-yield': typeof AssetToYieldRoute
   '/assets': typeof AssetsRoute
   '/auth': typeof AuthRoute
   '/blockfrost-health': typeof BlockfrostHealthRoute
   '/developers': typeof DevelopersRoute
+  '/document-review': typeof DocumentReviewRoute
   '/for-issuers': typeof ForIssuersRoute
   '/governance': typeof GovernanceRouteWithChildren
   '/how-it-works': typeof HowItWorksRoute
   '/invite': typeof InviteRoute
+  '/issuer': typeof IssuerRoute
   '/issuer-leads': typeof IssuerLeadsRoute
   '/marketplace': typeof MarketplaceRouteWithChildren
   '/mcp': typeof McpRoute
@@ -351,6 +378,7 @@ export interface FileRoutesByFullPath {
   '/tessera': typeof TesseraRoute
   '/testnet': typeof TestnetRoute
   '/transparency': typeof TransparencyRoute
+  '/trust': typeof TrustRoute
   '/upgrade': typeof UpgradeRouteWithChildren
   '/yield': typeof YieldRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
@@ -382,13 +410,16 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/app': typeof AppRoute
   '/ask': typeof AskRoute
+  '/asset-to-yield': typeof AssetToYieldRoute
   '/assets': typeof AssetsRoute
   '/auth': typeof AuthRoute
   '/blockfrost-health': typeof BlockfrostHealthRoute
   '/developers': typeof DevelopersRoute
+  '/document-review': typeof DocumentReviewRoute
   '/for-issuers': typeof ForIssuersRoute
   '/how-it-works': typeof HowItWorksRoute
   '/invite': typeof InviteRoute
+  '/issuer': typeof IssuerRoute
   '/issuer-leads': typeof IssuerLeadsRoute
   '/marketplace': typeof MarketplaceRouteWithChildren
   '/mcp': typeof McpRoute
@@ -403,6 +434,7 @@ export interface FileRoutesByTo {
   '/tessera': typeof TesseraRoute
   '/testnet': typeof TestnetRoute
   '/transparency': typeof TransparencyRoute
+  '/trust': typeof TrustRoute
   '/yield': typeof YieldRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -434,14 +466,17 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/app': typeof AppRoute
   '/ask': typeof AskRoute
+  '/asset-to-yield': typeof AssetToYieldRoute
   '/assets': typeof AssetsRoute
   '/auth': typeof AuthRoute
   '/blockfrost-health': typeof BlockfrostHealthRoute
   '/developers': typeof DevelopersRoute
+  '/document-review': typeof DocumentReviewRoute
   '/for-issuers': typeof ForIssuersRoute
   '/governance': typeof GovernanceRouteWithChildren
   '/how-it-works': typeof HowItWorksRoute
   '/invite': typeof InviteRoute
+  '/issuer': typeof IssuerRoute
   '/issuer-leads': typeof IssuerLeadsRoute
   '/marketplace': typeof MarketplaceRouteWithChildren
   '/mcp': typeof McpRoute
@@ -456,6 +491,7 @@ export interface FileRoutesById {
   '/tessera': typeof TesseraRoute
   '/testnet': typeof TestnetRoute
   '/transparency': typeof TransparencyRoute
+  '/trust': typeof TrustRoute
   '/upgrade': typeof UpgradeRouteWithChildren
   '/yield': typeof YieldRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
@@ -489,14 +525,17 @@ export interface FileRouteTypes {
     | '/about'
     | '/app'
     | '/ask'
+    | '/asset-to-yield'
     | '/assets'
     | '/auth'
     | '/blockfrost-health'
     | '/developers'
+    | '/document-review'
     | '/for-issuers'
     | '/governance'
     | '/how-it-works'
     | '/invite'
+    | '/issuer'
     | '/issuer-leads'
     | '/marketplace'
     | '/mcp'
@@ -511,6 +550,7 @@ export interface FileRouteTypes {
     | '/tessera'
     | '/testnet'
     | '/transparency'
+    | '/trust'
     | '/upgrade'
     | '/yield'
     | '/.mcp/list-tools'
@@ -542,13 +582,16 @@ export interface FileRouteTypes {
     | '/about'
     | '/app'
     | '/ask'
+    | '/asset-to-yield'
     | '/assets'
     | '/auth'
     | '/blockfrost-health'
     | '/developers'
+    | '/document-review'
     | '/for-issuers'
     | '/how-it-works'
     | '/invite'
+    | '/issuer'
     | '/issuer-leads'
     | '/marketplace'
     | '/mcp'
@@ -563,6 +606,7 @@ export interface FileRouteTypes {
     | '/tessera'
     | '/testnet'
     | '/transparency'
+    | '/trust'
     | '/yield'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -593,14 +637,17 @@ export interface FileRouteTypes {
     | '/about'
     | '/app'
     | '/ask'
+    | '/asset-to-yield'
     | '/assets'
     | '/auth'
     | '/blockfrost-health'
     | '/developers'
+    | '/document-review'
     | '/for-issuers'
     | '/governance'
     | '/how-it-works'
     | '/invite'
+    | '/issuer'
     | '/issuer-leads'
     | '/marketplace'
     | '/mcp'
@@ -615,6 +662,7 @@ export interface FileRouteTypes {
     | '/tessera'
     | '/testnet'
     | '/transparency'
+    | '/trust'
     | '/upgrade'
     | '/yield'
     | '/.mcp/list-tools'
@@ -647,14 +695,17 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   AppRoute: typeof AppRoute
   AskRoute: typeof AskRoute
+  AssetToYieldRoute: typeof AssetToYieldRoute
   AssetsRoute: typeof AssetsRoute
   AuthRoute: typeof AuthRoute
   BlockfrostHealthRoute: typeof BlockfrostHealthRoute
   DevelopersRoute: typeof DevelopersRoute
+  DocumentReviewRoute: typeof DocumentReviewRoute
   ForIssuersRoute: typeof ForIssuersRoute
   GovernanceRoute: typeof GovernanceRouteWithChildren
   HowItWorksRoute: typeof HowItWorksRoute
   InviteRoute: typeof InviteRoute
+  IssuerRoute: typeof IssuerRoute
   IssuerLeadsRoute: typeof IssuerLeadsRoute
   MarketplaceRoute: typeof MarketplaceRouteWithChildren
   McpRoute: typeof McpRoute
@@ -669,6 +720,7 @@ export interface RootRouteChildren {
   TesseraRoute: typeof TesseraRoute
   TestnetRoute: typeof TestnetRoute
   TransparencyRoute: typeof TransparencyRoute
+  TrustRoute: typeof TrustRoute
   UpgradeRoute: typeof UpgradeRouteWithChildren
   YieldRoute: typeof YieldRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
@@ -719,6 +771,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AskRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/asset-to-yield': {
+      id: '/asset-to-yield'
+      path: '/asset-to-yield'
+      fullPath: '/asset-to-yield'
+      preLoaderRoute: typeof AssetToYieldRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/assets': {
       id: '/assets'
       path: '/assets'
@@ -747,6 +806,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DevelopersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/document-review': {
+      id: '/document-review'
+      path: '/document-review'
+      fullPath: '/document-review'
+      preLoaderRoute: typeof DocumentReviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/for-issuers': {
       id: '/for-issuers'
       path: '/for-issuers'
@@ -773,6 +839,13 @@ declare module '@tanstack/react-router' {
       path: '/invite'
       fullPath: '/invite'
       preLoaderRoute: typeof InviteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/issuer': {
+      id: '/issuer'
+      path: '/issuer'
+      fullPath: '/issuer'
+      preLoaderRoute: typeof IssuerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/issuer-leads': {
@@ -871,6 +944,13 @@ declare module '@tanstack/react-router' {
       path: '/transparency'
       fullPath: '/transparency'
       preLoaderRoute: typeof TransparencyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/trust': {
+      id: '/trust'
+      path: '/trust'
+      fullPath: '/trust'
+      preLoaderRoute: typeof TrustRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/upgrade': {
@@ -1109,14 +1189,17 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   AppRoute: AppRoute,
   AskRoute: AskRoute,
+  AssetToYieldRoute: AssetToYieldRoute,
   AssetsRoute: AssetsRoute,
   AuthRoute: AuthRoute,
   BlockfrostHealthRoute: BlockfrostHealthRoute,
   DevelopersRoute: DevelopersRoute,
+  DocumentReviewRoute: DocumentReviewRoute,
   ForIssuersRoute: ForIssuersRoute,
   GovernanceRoute: GovernanceRouteWithChildren,
   HowItWorksRoute: HowItWorksRoute,
   InviteRoute: InviteRoute,
+  IssuerRoute: IssuerRoute,
   IssuerLeadsRoute: IssuerLeadsRoute,
   MarketplaceRoute: MarketplaceRouteWithChildren,
   McpRoute: McpRoute,
@@ -1131,6 +1214,7 @@ const rootRouteChildren: RootRouteChildren = {
   TesseraRoute: TesseraRoute,
   TestnetRoute: TestnetRoute,
   TransparencyRoute: TransparencyRoute,
+  TrustRoute: TrustRoute,
   UpgradeRoute: UpgradeRouteWithChildren,
   YieldRoute: YieldRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,

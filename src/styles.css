@@ -488,3 +488,25 @@
   background-color: var(--background);
   color: var(--foreground);
 }
+
+/* Shared text field for app forms (funding requests, governance proposals). */
+@utility input {
+  display: block;
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-input);
+  background-color: var(--color-surface);
+  padding: 0.55rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--color-foreground);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  &::placeholder {
+    color: var(--color-muted-foreground);
+  }
+  &:focus {
+    outline: none;
+    border-color: var(--color-ring);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-ring) 25%, transparent);
+  }
+}
