@@ -42,8 +42,10 @@
 
 # Project document room
 
-- [ ] Private document storage with server-checked access (issuer owner, administrators, signed-in investors for released files only).
-- [ ] Project-type document sections (renewables, real estate, private credit, infrastructure, other).
-- [ ] Issuer upload, replace and withdraw on the funding request page; administrator release, reject (with reason) and withdraw.
-- [ ] Released documents on the Asset Passport and funding page; sign-in to open via short-lived links.
-- [ ] Tests for section mapping and access rules; browser checks signed out; signed-in check needs a chosen test account.
+- [x] Private document storage with server-checked access (issuer owner, administrators, signed-in investors for released files only).
+- [x] Project-type document sections (renewables, real estate, private credit, infrastructure, other).
+- [x] Issuer upload, new versions and removal on the funding request page; administrator release, reject (with reason), withdraw and return to review.
+- [x] Released documents on the Asset Passport and funding page; sign-in to open via five-minute links; administrator review queue page.
+- [x] Tests for section mapping, access rules and file checks; storage round-trip; signed-in owner, administrator and investor browser checks with a temporary account (removed).
+- [ ] Email issuers when a document is rejected or released — requires email sending to be set up.
+- [ ] Investor dashboard "Documents" tab listing released files for projects the investor holds — needs holdings linked to accounts.

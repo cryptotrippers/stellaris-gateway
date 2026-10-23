@@ -19,3 +19,5 @@
 - Yield bootstrap screens share the bounded confirmation retry helper in components/deploy and retain submitted results before registration; indexing delays must never cause a second bootstrap transaction or hide seed details.
 - Issuer enquiries use colocated validated server functions in components/issuers and a private issuer_leads table with admin-only RLS; this separates B2B contact details from public funding requests and avoids the parallel src/lib workstream.
 - The Tessera live dashboard consumes the existing public snapshot without transaction controls; display ratios use bigint arithmetic and browser-only clocks to preserve precision and hydration.
+- Project document rooms keep files in the private `project-documents` bucket with no storage policies; every read and write goes through `components/documents` server functions that check issuer ownership or the admin role, with status kept in sidecar JSON beside each file so the database schema and RLS stay unchanged.
+- The root ScriptCacheGuard resets queries rather than clearing them; clearing orphans in-flight requests and leaves first-visit pages loading forever.

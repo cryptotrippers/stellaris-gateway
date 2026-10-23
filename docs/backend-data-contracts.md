@@ -43,12 +43,15 @@ Valuation, Operating Agreements, Impact Reports)`, title, version, issued_at,
 visibility` (public | private)`, sha256, verification_status, verified_by,
 verified_at`. Public passports list only `visibility = public`.
 
-## 4. Issuer data room (private)
+## 4. Issuer data room (private) — built
 
-Storage bucket with per-issuer access rules; upload records with `version`,
-`uploaded_at`, `sha256`, `review_status`, `reviewer_note`,
-`request_for_information` notices and `rejection_reason`. Only the owning
-issuer and administrators may read.
+Implemented without schema changes: files live in the private
+`project-documents` bucket (no storage policies), each with a sidecar
+`meta.json` holding category, version, SHA-256, status (pending, released,
+rejected, withdrawn, superseded), reviewer note and history. Server functions
+in `src/components/documents` enforce access. A future database table could
+replace the sidecar files for reporting and cross-project queries;
+request-for-information notices are still to come.
 
 ## 5. Issuer journey gates
 
