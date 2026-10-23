@@ -621,6 +621,51 @@ export type Database = {
           },
         ]
       }
+      issuer_leads: {
+        Row: {
+          asset_category: string
+          consent_at: string
+          contact_name: string
+          created_at: string
+          email: string
+          id: string
+          internal_notes: string
+          jurisdiction: string
+          organization: string
+          project_summary: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          asset_category: string
+          consent_at?: string
+          contact_name: string
+          created_at?: string
+          email: string
+          id?: string
+          internal_notes?: string
+          jurisdiction: string
+          organization: string
+          project_summary: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          asset_category?: string
+          consent_at?: string
+          contact_name?: string
+          created_at?: string
+          email?: string
+          id?: string
+          internal_notes?: string
+          jurisdiction?: string
+          organization?: string
+          project_summary?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       issuer_verifications: {
         Row: {
           created_at: string
