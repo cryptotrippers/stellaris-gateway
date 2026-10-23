@@ -2,9 +2,9 @@
 
 # Tessera live Preprod dashboard
 
-- [ ] Add the read-only live snapshot, countdowns, contracts and clear test-data disclosures.
-- [ ] Label illustrative explainer figures separately.
-- [ ] Test amount/time calculations and verify live data, retry and mobile layout.
+- [x] Add the read-only live snapshot, countdowns, contracts and clear test-data disclosures.
+- [x] Label illustrative explainer figures separately.
+- [x] Test amount/time calculations and verify live data, retry and mobile layout.
 
 # For Issuers
 

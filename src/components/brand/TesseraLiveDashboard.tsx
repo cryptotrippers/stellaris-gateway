@@ -165,7 +165,7 @@ function DataTable({
   if (!rows.length) return <p className="py-4 text-sm text-muted-foreground">{empty}</p>;
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-left text-sm">
+      <table className="w-full min-w-[640px] text-left text-sm">
         <thead>
           <tr>
             {headers.map((h) => (
@@ -465,7 +465,7 @@ export function TesseraLiveDashboard() {
       <p className="mt-3 text-xs text-muted-foreground">
         Source: Blockfrost ·{" "}
         {query.data && now !== null
-          ? `Last updated ${new Date(query.data.fetchedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`
+          ? `Last updated ${new Date(query.data.fetchedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}`
           : "Last updated —"}
         {query.isFetching && query.data ? " · Refreshing…" : ""}
       </p>
