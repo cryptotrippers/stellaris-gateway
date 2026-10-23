@@ -8,12 +8,12 @@ import { BRAND } from "@/config/brand";
 import { trackEvent } from "@/lib/analytics";
 
 const LINKS = [
-  { to: "/marketplace", label: "Explore" },
+  { to: "/marketplace", label: "Explore Assets" },
+  { to: "/how-it-works", label: "How It Works" },
   { to: "/tessera", label: BRAND.productName },
   { to: "/transparency", label: "Transparency" },
-  { to: "/learn", label: "Learn" },
-  { to: "/ask", label: "Ask" },
   { to: "/for-issuers", label: "For Issuers" },
+  { to: "/learn", label: "Learn" },
   { to: "/about", label: "About" },
 ] as const;
 
