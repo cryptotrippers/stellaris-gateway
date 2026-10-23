@@ -226,5 +226,79 @@
       "submittedAt": "2026-10-22T23:12:08.243Z",
       "confirmedAt": "2026-10-22T23:12:29.700Z"
     }
+  },
+  "stage5b": {
+    "refVault": {
+      "scriptHash": "b52a0afbc9be3fd2e587bbe7925caaaaebac982d392e8bbbe58454ac",
+      "refUtxo": "a83ef041b8f2a9650ec48921b698a89c2224c183b91d3934bf89717a622617c0#0",
+      "status": "confirmed",
+      "submittedAt": "2026-10-23T00:50:50.344Z",
+      "confirmedAt": "2026-10-23T00:52:02.182Z"
+    },
+    "refOps": {
+      "scriptHash": "32e3297312809c82cce6df5eabe55a4e9ea4b4e19e549df0c3a2972f",
+      "refUtxo": "31190d572179db77765ea835347013aaa851f294eef19c302f3ffca35969c6e1#0",
+      "status": "confirmed",
+      "submittedAt": "2026-10-23T00:52:02.614Z",
+      "confirmedAt": "2026-10-23T00:52:09.343Z"
+    },
+    "refFirstLoss": {
+      "scriptHash": "ccfb81fa54e33ebc3b3239a1a1f15ea11eb175005f66cba9ab028fbe",
+      "refUtxo": "2d1ebbc16e0f4abdf83d7770ea37581c4f3622fee39a1db8f11fb40a817001a5#0",
+      "status": "confirmed",
+      "submittedAt": "2026-10-23T00:52:09.755Z",
+      "confirmedAt": "2026-10-23T00:52:16.184Z"
+    },
+    "refReserve": {
+      "scriptHash": "938b32e0f660dc06d3b58a20103cbe5ae1cc00531b53c7ba191d7400",
+      "refUtxo": "9515cc7ac77351150cb9090a259dc0c4d011079fa645cd3267f4ed6f29dc50cb#0",
+      "status": "confirmed",
+      "submittedAt": "2026-10-23T00:52:16.619Z",
+      "confirmedAt": "2026-10-23T00:52:53.473Z"
+    },
+    "reportYield": {
+      "gross": "100000000",
+      "toFirstLoss": "6250000",
+      "toTreasury": "6250000",
+      "vestShort": "87500000",
+      "vestLong": "0",
+      "vestUntil": 1793321318000,
+      "tx": "d31afac5cbd08b5344278d11c0e80579406d34dacbff5b7e15ebabb3f23fadbb",
+      "status": "confirmed",
+      "submittedAt": "2026-10-23T00:52:53.911Z",
+      "confirmedAt": "2026-10-23T00:53:40.429Z"
+    },
+    "unstake": {
+      "shares": "400000000",
+      "ticketValue": "400000000",
+      "claimAfter": 1793324918000,
+      "claimAfterIso": "2026-10-30T01:48:38.000Z",
+      "ticket": "ab627dfed29accd9c60f2039d904ee31be53b3750257a0407ed77c4da900a62d#1",
+      "tx": "ab627dfed29accd9c60f2039d904ee31be53b3750257a0407ed77c4da900a62d",
+      "status": "confirmed",
+      "submittedAt": "2026-10-23T00:53:40.836Z",
+      "confirmedAt": "2026-10-23T00:54:22.311Z"
+    },
+    "request": {
+      "qty": "500000000",
+      "payoutTo": "addr_test1vpf6yc96tace29j6nj504pvj8z0rm2vvyhjaff0md8s5lrsv0c0f5",
+      "bucket": 20749,
+      "payableAfter": 1792972800000,
+      "payableAfterIso": "2026-10-26T00:00:00.000Z",
+      "request": "c8022e9259ac9683c68cee87af5f51dac6c6787e88277d781d08f3fbddbfb96c#0",
+      "tx": "c8022e9259ac9683c68cee87af5f51dac6c6787e88277d781d08f3fbddbfb96c",
+      "status": "confirmed",
+      "submittedAt": "2026-10-23T00:54:22.730Z",
+      "confirmedAt": "2026-10-23T00:54:29.184Z"
+    },
+    "instant": {
+      "qty": "250000000",
+      "shard": "4a7f9eab619c1abf56f5f6ac32e112ea93bb28aa780dd31063ca73a1ba6fe7a5#0",
+      "paidTo": "addr_test1vpf6yc96tace29j6nj504pvj8z0rm2vvyhjaff0md8s5lrsv0c0f5",
+      "tx": "50aa721db12bcdcf69674631caf52901aeee58c9fb5c5ff2d6293fed4a7d3da1",
+      "status": "confirmed",
+      "submittedAt": "2026-10-23T00:54:29.588Z",
+      "confirmedAt": "2026-10-23T00:55:01.106Z"
+    }
   }
 }
