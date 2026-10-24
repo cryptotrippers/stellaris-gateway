@@ -537,9 +537,11 @@ test the_config_thread_needs_the_seed() {
   !mint_as(m) && mint_as(seeded)
 }
 
-test burning_markers_needs_the_gate_but_not_the_seed() {
+test burning_markers_needs_neither_the_gate_nor_the_seed() {
+  // C-1 (security review 23 Oct): a plain Cancel burns its marker with no
+  // queue script running; each Request's spend rule guards the burn.
   let b = Transaction { ..tx0(), mint: qtok(request_name, -1) }
-  !mint_as(b) && mint_as(b |> with_gate(t_flow, 0, flow_rd(q)))
+  mint_as(b) && mint_as(b |> with_gate(t_flow, 0, flow_rd(q)))
 }
 
 // -- execution budget (SPEC §4.13): the per-input gate of a 20-input batch.
