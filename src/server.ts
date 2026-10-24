@@ -150,13 +150,22 @@ function applySecurityHeaders(request: Request, response: Response): Response {
 // Exemptions — endpoints designed for external callers that authenticate
 // themselves and legitimately arrive cross-origin:
 //   - /api/public/*   webhooks/cron (must verify signatures inside handler)
-//   - /[.mcp]/*       MCP tool endpoints (OAuth-bearer authenticated)
+//   - /mcp, /.mcp/*   MCP endpoints (API-key / OAuth-bearer authenticated, no
+//                     cookies). The route directory is named `[.mcp]`, but the
+//                     brackets only escape the dot: the URL is `/.mcp/...`, so
+//                     the old `/[.mcp]/` prefix never matched and every MCP
+//                     client was refused (security review 23 Oct).
 // -----------------------------------------------------------------------------
 
 const CSRF_SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 function isCsrfExempt(pathname: string): boolean {
-  return pathname.startsWith("/api/public/") || pathname.startsWith("/[.mcp]/");
+  return (
+    pathname.startsWith("/api/public/") ||
+    pathname === "/mcp" ||
+    pathname.startsWith("/mcp/") ||
+    pathname.startsWith("/.mcp/")
+  );
 }
 
 function csrfGuard(request: Request): Response | null {
@@ -215,4 +224,3 @@ export default {
     }
   },
 };
-
