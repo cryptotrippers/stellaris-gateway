@@ -174,7 +174,7 @@ browser after a CIP-30 wallet is connected on Preprod.
 baseline hardening headers (nosniff, frame-deny, HSTS, COOP, Permissions-Policy), a
 report-only CSP (`Content-Security-Policy-Report-Only` — tighten allow-lists here
 rather than switching to enforcing mode ad hoc), a same-origin CSRF guard for
-non-safe HTTP methods (exempting `/api/public/*` webhooks and `/[.mcp]/*`, which
+non-safe HTTP methods (exempting `/api/public/*` webhooks and the MCP endpoints `/mcp` and `/.mcp/*`, which
 authenticate themselves), and normalization of h3-swallowed 500s into a rendered
 error page. `src/start.ts` wires `attachSupabaseAuth` as function middleware and a
 catch-all error middleware as request middleware via `createStart`.

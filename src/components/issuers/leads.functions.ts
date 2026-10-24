@@ -2,14 +2,47 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { issuerLeadSchema, leadUpdateSchema } from "./lead-schema";
 
+/** Rate-limit window for the public enquiry form: one hour. */
+const LEAD_WINDOW_MS = 60 * 60 * 1000;
+/** At most this many enquiries from one email address per window. */
+const LEADS_PER_EMAIL_PER_WINDOW = 3;
+/** At most this many enquiries in total per window (a flood brake). */
+const LEADS_PER_WINDOW = 30;
+
 export const submitIssuerLead = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => issuerLeadSchema.parse(input))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { consent, website_check, ...fields } = data;
+    const email = fields.email.toLowerCase();
+
+    // Rate limit (security review 23 Oct, A-8): counted from the enquiries
+    // already stored, so no extra table or client access is needed.
+    const since = new Date(Date.now() - LEAD_WINDOW_MS).toISOString();
+    const [byEmail, overall] = await Promise.all([
+      supabaseAdmin
+        .from("issuer_leads")
+        .select("id", { count: "exact", head: true })
+        .eq("email", email)
+        .gte("created_at", since),
+      supabaseAdmin
+        .from("issuer_leads")
+        .select("id", { count: "exact", head: true })
+        .gte("created_at", since),
+    ]);
+    if (byEmail.error || overall.error) {
+      throw new Error("Your enquiry could not be saved. Please try again.");
+    }
+    if (
+      (byEmail.count ?? 0) >= LEADS_PER_EMAIL_PER_WINDOW ||
+      (overall.count ?? 0) >= LEADS_PER_WINDOW
+    ) {
+      throw new Error("We have received several enquiries recently. Please try again later.");
+    }
+
     const { data: lead, error } = await supabaseAdmin
       .from("issuer_leads")
-      .insert(fields)
+      .insert({ ...fields, email })
       .select("id")
       .single();
     if (error || !lead) throw new Error("Your enquiry could not be saved. Please try again.");
