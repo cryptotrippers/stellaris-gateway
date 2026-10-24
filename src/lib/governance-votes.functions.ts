@@ -60,25 +60,47 @@ export const getMyVotes = createServerFn({ method: "GET" })
     },
   );
 
-/** The voting weight the caller would carry on a given asset's proposal. */
+/**
+ * The caller's live weight per asset: unspent on-chain Positions owned by
+ * wallets the caller has proven with a signed link.
+ */
+export const getMyWeights = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(
+    async ({ context }): Promise<{ byAsset: Record<string, number>; total: number; linkedWallets: number }> => {
+      const w = await import("./governance-weight.server");
+      const owners = await w.linkedOwners(context.userId);
+      if (owners.size === 0) return { byAsset: {}, total: 0, linkedWallets: 0 };
+      const perAsset = await w.liveOwnerWeightsByAsset();
+      const byAsset: Record<string, number> = {};
+      let total = 0n;
+      for (const [assetId, weights] of perAsset) {
+        const mine = w.weightsPerUser(weights, owners).get(context.userId) ?? 0n;
+        byAsset[assetId] = w.toAda(mine);
+        total += mine;
+      }
+      return { byAsset, total: w.toAda(total), linkedWallets: owners.size };
+    },
+  );
+
+/** The voting weight the caller would carry on a given asset's proposal, live from chain. */
 export const getMyVotingWeight = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data?: { assetId?: string | null }) => ({ assetId: data?.assetId ?? null }))
   .handler(async ({ data, context }): Promise<{ weightAda: number; positions: number }> => {
-    let query = context.supabase
-      .from("vault_positions")
-      .select("amount_ada, vault_id")
-      .eq("user_id", context.userId);
-    if (data.assetId) query = query.eq("vault_id", data.assetId);
-    const { data: rows, error } = await query;
-    if (error) throw new Error(error.message);
-    const weightAda = (rows ?? []).reduce((sum, r) => sum + (Number(r.amount_ada) || 0), 0);
-    return { weightAda, positions: (rows ?? []).length };
+    const w = await import("./governance-weight.server");
+    const owners = await w.linkedOwners(context.userId);
+    if (owners.size === 0) return { weightAda: 0, positions: 0 };
+    const weights = await w.liveOwnerWeights(data.assetId);
+    const mine = w.weightsPerUser(weights, owners).get(context.userId) ?? 0n;
+    const positions = [...weights.keys()].filter((k) => owners.has(k)).length;
+    return { weightAda: w.toAda(mine), positions };
   });
 
 /**
- * Cast or change a ballot. Rejected outside the voting window; the weight is
- * derived server-side from the caller's verified vault positions.
+ * Cast or change a ballot. Rejected outside the voting window. The weight is
+ * read live from unspent on-chain Positions of the caller's proven wallets;
+ * the stored figure is history only — finalisation recomputes every vote.
  */
 export const castVote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -101,15 +123,14 @@ export const castVote = createServerFn({ method: "POST" })
     }
 
     const assetId = (proposal.asset_id as string | null) ?? null;
-    let posQuery = context.supabase
-      .from("vault_positions")
-      .select("amount_ada, vault_id")
-      .eq("user_id", context.userId);
-    if (assetId) posQuery = posQuery.eq("vault_id", assetId);
-    const { data: positions, error: posErr } = await posQuery;
-    if (posErr) throw new Error(posErr.message);
-
-    const weightAda = (positions ?? []).reduce((sum, r) => sum + (Number(r.amount_ada) || 0), 0);
+    const w = await import("./governance-weight.server");
+    const owners = await w.linkedOwners(context.userId);
+    const weightAda =
+      owners.size === 0
+        ? 0
+        : w.toAda(
+            w.weightsPerUser(await w.liveOwnerWeights(assetId), owners).get(context.userId) ?? 0n,
+          );
 
     const { error } = await context.supabase.from("proposal_votes").upsert(
       {
@@ -129,7 +150,9 @@ export const castVote = createServerFn({ method: "POST" })
       reason:
         weightAda > 0
           ? "Vote recorded."
-          : "Vote recorded as a non-binding signal — you hold no vault position on this proposal.",
+          : owners.size === 0
+            ? "Vote recorded as a non-binding signal — link your wallet first so your vault positions count."
+            : "Vote recorded as a non-binding signal — your linked wallets hold no unspent vault position on this proposal.",
       weightAda,
     };
   });
