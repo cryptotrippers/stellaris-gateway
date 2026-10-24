@@ -11,7 +11,7 @@ import { MORE_LINKS } from "@/components/layout/MoreMenu";
 type Item = { to: string; label: string; icon: LucideIcon; exact?: boolean };
 const items: Item[] = [
   { to: "/", label: "Home", icon: Home, exact: true },
-  { to: "/marketplace", label: "Invest", icon: Store },
+  { to: "/marketplace", label: "Explore assets", icon: Store },
   { to: "/app", label: "My Portfolio", icon: LayoutDashboard, exact: true },
   { to: "/governance", label: "Vote", icon: Vote },
 ];

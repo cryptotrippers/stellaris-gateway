@@ -84,7 +84,7 @@ function TesseraPage() {
         <SectionHeader
           eyebrow="Reserve composition"
           title="Four sleeves, each with a target band"
-          description={`Reserves are split across four sleeves. Liquid assets come first so redemptions can be met without selling credit or marketplace assets. Figures as of ${new Date(T.asOf).toLocaleDateString()}, illustrative.`}
+          description={`Reserves are split across four sleeves. Liquid assets come first so redemptions can be met without selling credit or marketplace assets. Figures as of ${new Date(T.asOf).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })} (UTC), illustrative.`}
         />
         <div className="mt-10 grid gap-4 md:grid-cols-2">
           {T.sleeves.map((s) => {

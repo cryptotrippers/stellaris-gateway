@@ -21,8 +21,6 @@ export const MORE_LINKS: { to: string; label: string; hint: string }[] = [
 
   { to: "/security", label: "Security", hint: "Account & protections" },
   { to: "/invite", label: "Invite friends", hint: "Share your link" },
-  { to: "/developers", label: "Developers", hint: "API & docs" },
-  { to: "/operators", label: "Operators", hint: "Admin tools" },
 ];
 
 export function MoreMenu({ triggerClassName }: { triggerClassName?: string }) {
