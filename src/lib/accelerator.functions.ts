@@ -20,7 +20,7 @@ import {
 } from "./accelerator.shared";
 
 const ISSUER_COLS =
-  "id, legal_name, jurisdiction, registration_number, contact_email, website, wrapper_type, verification_status, verified_at, created_at";
+  "id, legal_name, jurisdiction, website, wrapper_type, verification_status, verified_at, created_at";
 const CHECK_COLS =
   "id, funding_request_id, item_key, status, evidence_url, note, verified_at";
 
@@ -457,3 +457,43 @@ export const saveImpactAttestation = createServerFn({ method: "POST" })
     if (mErr) throw new Error(mErr.message);
     return { id: att.id };
   });
+
+/**
+ * Private issuer contact details. Only the profile owner or an admin may read
+ * them; the browser roles can no longer select these two columns at all.
+ */
+export const getIssuerPrivate = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: { issuerId: string }) => {
+    if (!data?.issuerId) throw new Error("issuerId is required");
+    return { issuerId: data.issuerId };
+  })
+  .handler(
+    async ({
+      data,
+      context,
+    }): Promise<{ contact_email: string | null; registration_number: string | null } | null> => {
+      const { data: pub, error } = await context.supabase
+        .from("issuers")
+        .select("owner_user_id")
+        .eq("id", data.issuerId)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!pub) return null;
+      if ((pub as { owner_user_id: string }).owner_user_id !== context.userId) {
+        const { data: isAdmin } = await context.supabase.rpc("has_role", {
+          _user_id: context.userId,
+          _role: "admin",
+        } as never);
+        if (!isAdmin) return null;
+      }
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { data: row, error: e2 } = await supabaseAdmin
+        .from("issuers")
+        .select("contact_email, registration_number")
+        .eq("id", data.issuerId)
+        .maybeSingle();
+      if (e2) throw new Error(e2.message);
+      return (row as { contact_email: string | null; registration_number: string | null }) ?? null;
+    },
+  );
