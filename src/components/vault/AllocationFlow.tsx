@@ -24,6 +24,7 @@ import { createStellarisYieldAdapter } from "@/lib/adapters/stellaris-yield.adap
 import { MintReceipt } from "@/components/vault/MintReceipt";
 import { recordVaultTx } from "@/lib/vault-tx-history";
 import { recordVaultTransaction } from "@/lib/vault-transactions.functions";
+import { recordVaultPosition } from "@/lib/vault-positions.functions";
 import { supabase } from "@/integrations/supabase/client";
 import type { RwaVaultAccounting, RwaVaultDescriptor } from "@/lib/rwa-adapter";
 
@@ -141,6 +142,7 @@ export function AllocationFlow({ assetId }: { assetId: string }) {
       await recordVaultTransaction({
         data: { vaultId: assetId, type: "deposit", amountAda, txHash: hash },
       });
+      await recordVaultPosition({ data: { vaultId: assetId, txHash: hash } });
     } catch {
       /* ledger mirroring must never surface as a failed allocation */
     }

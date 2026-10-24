@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { PROPOSAL_COLUMNS, type ProposalRow } from "@/lib/governance-vault.shared";
-import { castVote, getMyVotes, getProposalTallies } from "@/lib/governance-votes.functions";
+import { castVote, getMyVotes, getMyWeights, getProposalTallies } from "@/lib/governance-votes.functions";
 import { getTxChainTimes, type TxChainTime } from "@/lib/governance-chain.functions";
 import type { VoteChoice } from "@/lib/governance-votes.shared";
 
@@ -42,18 +42,8 @@ export function useGovernanceData() {
 
   const myWeightsQ = useQuery({
     queryKey: ["governance", "my-weights", user?.id ?? null],
-    queryFn: async (): Promise<{ byAsset: Record<string, number>; total: number }> => {
-      const { data, error } = await supabase.from("vault_positions").select("vault_id, amount_ada");
-      if (error) throw new Error(error.message);
-      const byAsset: Record<string, number> = {};
-      let total = 0;
-      for (const row of data ?? []) {
-        const amount = Number(row.amount_ada) || 0;
-        byAsset[row.vault_id] = (byAsset[row.vault_id] ?? 0) + amount;
-        total += amount;
-      }
-      return { byAsset, total };
-    },
+    // Live from chain: unspent Positions of the caller's proven wallets.
+    queryFn: () => getMyWeights(),
     enabled: Boolean(user),
     staleTime: 30_000,
   });
@@ -93,6 +83,7 @@ export function useGovernanceData() {
       if (!res.ok) setVoteError(res.reason);
       queryClient.invalidateQueries({ queryKey: ["governance", "tallies"] });
       queryClient.invalidateQueries({ queryKey: ["governance", "my-votes"] });
+      queryClient.invalidateQueries({ queryKey: ["governance", "my-weights"] });
     },
     onError: (e: Error) => setVoteError(e.message),
     onSettled: () => setVotingId(null),
@@ -109,6 +100,7 @@ export function useGovernanceData() {
     myVotes: myVotesQ.data ?? {},
     chainTimes,
     weightFor,
+    linkedWallets: myWeightsQ.data?.linkedWallets ?? null,
     votingId,
     voteError,
     vote: (proposalId: string, choice: VoteChoice) => voteMutation.mutate({ proposalId, choice }),
