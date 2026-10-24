@@ -139,9 +139,15 @@ export function AllocationFlow({ assetId }: { assetId: string }) {
     try {
       const { data } = await supabase.auth.getSession();
       if (!data.session) return;
-      await recordVaultTransaction({
-        data: { vaultId: assetId, type: "deposit", amountAda, txHash: hash },
-      });
+      // The server records only what Blockfrost shows, so wait (bounded) for
+      // the transaction to land before giving up quietly.
+      for (let attempt = 0; attempt < 8; attempt++) {
+        const r = await recordVaultTransaction({
+          data: { vaultId: assetId, type: "deposit", amountAda, txHash: hash },
+        });
+        if (r.reason !== "not_on_chain_yet") break;
+        await new Promise((res) => setTimeout(res, 20_000));
+      }
       await recordVaultPosition({ data: { vaultId: assetId, txHash: hash } });
     } catch {
       /* ledger mirroring must never surface as a failed allocation */
