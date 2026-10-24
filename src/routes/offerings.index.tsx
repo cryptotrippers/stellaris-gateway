@@ -43,6 +43,14 @@ function OfferingsPage() {
           promises a return — what you can check is how many fractions exist, who holds them, and
           what has actually been paid in.
         </p>
+        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+          This is the on-chain buying step. To read about each project first (who runs it, its
+          risks and documents), start from the{" "}
+          <Link to="/marketplace" className="text-primary hover:underline">
+            marketplace
+          </Link>
+          .
+        </p>
       </header>
 
       {offeringsQ.isLoading ? (

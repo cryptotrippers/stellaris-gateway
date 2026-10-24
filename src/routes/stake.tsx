@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { Clock, Lock, AlertTriangle, CheckCircle2, Info } from "lucide-react";
+import { useEffect, useState } from "react";
+import { formatLocalAndUtc, addDaysMs } from "@/lib/format-time";
+import { DataSourceStamp } from "@/components/brand/DataSourceStamp";
+import { Clock, Lock, AlertTriangle, Info } from "lucide-react";
 import { BRAND } from "@/config/brand";
 import { MarketingLayout } from "@/components/layout/MarketingLayout";
 import { STAKE_TIERS, MOCK_BASE_BALANCE, type StakeTierId } from "@/data/staking.mock";
@@ -19,10 +21,11 @@ export const Route = createFileRoute("/stake")({
   component: StakePage,
 });
 
-function addDays(d: number) {
-  const t = new Date();
-  t.setDate(t.getDate() + d);
-  return t.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+/** Browser-only clock so local times never mismatch the server render. */
+function useNow() {
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => setNow(Date.now()), []);
+  return now;
 }
 
 function StakePage() {
@@ -30,6 +33,8 @@ function StakePage() {
   const [amount, setAmount] = useState("");
   const [reviewing, setReviewing] = useState(false);
   const [done, setDone] = useState(false);
+  const now = useNow();
+  const addDays = (d: number) => (now === null ? "…" : formatLocalAndUtc(addDaysMs(now, d)));
   const tier = STAKE_TIERS.find(t => t.id === tierId)!;
   const n = Number(amount);
   const valid = Number.isFinite(n) && n > 0 && n <= MOCK_BASE_BALANCE;
@@ -44,13 +49,15 @@ function StakePage() {
       <h1 className="text-3xl font-semibold tracking-tight">Stake {BRAND.base.ticker}, earn as {BRAND.staked.ticker}</h1>
       <p className="mt-2 text-sm text-muted-foreground">{BRAND.staked.description}</p>
 
-      <div className="mt-8 grid gap-3 sm:grid-cols-2">
+      <div className="mt-8 grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Staking option">
         {STAKE_TIERS.map(t => {
           const active = t.id === tierId;
           const Icon = t.id === "locked" ? Lock : Clock;
           return (
             <button
               key={t.id}
+              role="radio"
+              aria-checked={active}
               onClick={() => { setTierId(t.id); setReviewing(false); setDone(false); }}
               className={`card-institutional p-5 text-left transition-colors ${active ? "border-primary ring-1 ring-primary" : "hover:border-primary/50"}`}
             >
@@ -58,11 +65,11 @@ function StakePage() {
                 <span className="inline-flex items-center gap-2 text-sm font-semibold"><Icon className="h-4 w-4 text-primary" />{t.label}</span>
                 <span className="text-right">
                   <span className="number-display block text-xl font-semibold text-accent">{t.aprPct.toFixed(1)}%</span>
-                  <span className="block text-[10px] uppercase tracking-widest text-muted-foreground">target, variable</span>
+                  <span className="block text-xs uppercase tracking-widest text-muted-foreground">target, variable</span>
                 </span>
               </div>
               <p className="mt-2 text-xs text-muted-foreground">{t.summary}</p>
-              <div className="mt-3 text-[11px] uppercase tracking-widest text-muted-foreground">
+              <div className="mt-3 text-xs uppercase tracking-widest text-muted-foreground">
                 {t.id === "locked" ? `Lock: ${t.cooldownDays} days` : `Cooldown: ${t.cooldownDays} days`}
                 {t.multiplier > 1 && ` · ${t.multiplier}× yield`}
               </div>
@@ -70,6 +77,7 @@ function StakePage() {
           );
         })}
       </div>
+      <div className="mt-2"><DataSourceStamp source="example rates, not live contract data" illustrative /></div>
 
       <ul className="mt-6 space-y-2">
         {[
@@ -94,9 +102,9 @@ function StakePage() {
             placeholder="0.00"
             className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm"
           />
-          <button onClick={() => setAmount(String(MOCK_BASE_BALANCE))} className="rounded-lg border border-border px-3 text-xs">Max</button>
+          <button onClick={() => setAmount(String(MOCK_BASE_BALANCE))} className="min-h-11 min-w-11 rounded-lg border border-border px-3 text-xs">Max</button>
         </div>
-        <div className="mt-1 text-xs text-muted-foreground">Preview balance: {MOCK_BASE_BALANCE.toLocaleString()} {BRAND.base.ticker}</div>
+        <div className="mt-1 text-xs text-muted-foreground">Example balance (not your wallet): {MOCK_BASE_BALANCE.toLocaleString()} {BRAND.base.ticker}</div>
 
         {!reviewing && (
           <button
@@ -123,21 +131,22 @@ function StakePage() {
               <dt className="text-muted-foreground">Target rate (variable)</dt><dd className="text-right">{tier.aprPct.toFixed(1)}% / yr</dd>
               <dt className="text-muted-foreground">Yearly earnings at the target rate</dt><dd className="text-right">{yearly.toFixed(2)} {BRAND.base.ticker}</dd>
             </dl>
+            <div className="mt-2"><DataSourceStamp source="example rates" illustrative /></div>
             <p className="mt-2 text-xs text-muted-foreground">
               Rates are targets, not promises. They vary with the reserve portfolio&apos;s yield and can be lower.
             </p>
             <div className="mt-4 flex gap-2">
               <button onClick={() => setReviewing(false)} className="flex-1 rounded-xl border border-border px-4 py-2.5 text-sm">Back</button>
               <button onClick={() => setDone(true)} className="flex-1 rounded-xl bg-gradient-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground">
-                I understand — confirm
+                Simulate (no transaction)
               </button>
             </div>
           </div>
         )}
 
         {done && (
-          <div className="mt-4 flex items-start gap-2 rounded-xl border border-success/40 bg-success/5 p-4 text-sm">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 text-success" />
+          <div className="mt-4 flex items-start gap-2 rounded-xl border border-border bg-secondary/50 p-4 text-sm" role="status">
+            <Info className="mt-0.5 h-4 w-4 text-primary" />
             Preview only — no transaction was sent. Staking goes live once the {BRAND.staked.ticker} contract is deployed.
           </div>
         )}
