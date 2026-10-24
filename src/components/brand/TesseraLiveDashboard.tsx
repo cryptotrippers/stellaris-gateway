@@ -1,3 +1,4 @@
+import { formatLocalAndUtc } from "@/lib/format-time";
 import { useEffect, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Check, Copy, ExternalLink, RefreshCw, Radio } from "lucide-react";
@@ -26,7 +27,7 @@ const amount = (value: string | bigint) =>
   units6(value).toLocaleString(undefined, { maximumFractionDigits: 6 });
 const short = (value: string) =>
   value.length > 24 ? `${value.slice(0, 12)}…${value.slice(-8)}` : value;
-const localDate = (time: number) => new Date(time).toLocaleString();
+const localDate = (time: number) => formatLocalAndUtc(time);
 
 function OutLink({ href, children, title }: { href: string; children: ReactNode; title?: string }) {
   return (
@@ -465,7 +466,7 @@ export function TesseraLiveDashboard() {
       <p className="mt-3 text-xs text-muted-foreground">
         Source: Blockfrost ·{" "}
         {query.data && now !== null
-          ? `Last updated ${new Date(query.data.fetchedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}`
+          ? `Last updated ${formatLocalAndUtc(query.data.fetchedAt)}`
           : "Last updated —"}
         {query.isFetching && query.data ? " · Refreshing…" : ""}
       </p>
