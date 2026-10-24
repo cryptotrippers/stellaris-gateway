@@ -4,6 +4,7 @@ import { Shield, KeyRound, Clock, MapPin, Fingerprint, ShieldCheck, ShieldAlert,
 import { AppShell } from "@/components/layout/AppShell";
 import { Badge } from "@/components/ui/StatusBadge";
 import { supabase } from "@/integrations/supabase/client";
+import { WalletLinkCard } from "@/components/wallet/WalletLinkCard";
 
 export const Route = createFileRoute("/security")({
   head: () => ({
@@ -90,6 +91,7 @@ function SecurityPage() {
 
   return (
     <AppShell>
+      <div className="mb-6"><WalletLinkCard /></div>
       <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
         <div>
           <div className="text-[11px] uppercase tracking-[0.22em] text-primary">Security</div>

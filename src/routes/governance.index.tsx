@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { WalletLinkCard } from "@/components/wallet/WalletLinkCard";
 import { useQuery } from "@tanstack/react-query";
 import { LayoutDashboard, FileText, Vault, Users, Activity, PlusCircle, ChevronRight, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -264,6 +265,9 @@ function ProposalsTab() {
 
   return (
     <>
+      {gov.signedIn && gov.linkedWallets === 0 && (
+        <div className="mb-4"><WalletLinkCard compact /></div>
+      )}
       <div className="card-institutional p-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
