@@ -4,6 +4,7 @@ import { ArrowRight, Building2, Loader2 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
 import { getIssuer } from "@/lib/accelerator.functions";
 import { VerificationBadge } from "@/components/accelerator/ProjectToolkit";
+import { useIssuerPrivate } from "@/components/issuers/IssuerPrivateDetails";
 
 export const Route = createFileRoute("/issuers/$id")({
   head: () => {
@@ -27,6 +28,7 @@ export const Route = createFileRoute("/issuers/$id")({
 function IssuerPage() {
   const { id } = Route.useParams();
   const q = useQuery({ queryKey: ["issuer", id], queryFn: () => getIssuer({ data: { id } }) });
+  const priv = useIssuerPrivate(id);
 
   return (
     <AppShell>
@@ -55,7 +57,10 @@ function IssuerPage() {
           <dl className="mt-6 grid gap-4 sm:grid-cols-4">
             <Stat label="Jurisdiction" value={q.data.issuer.jurisdiction} />
             <Stat label="Legal wrapper" value={q.data.issuer.wrapper_type} />
-            <Stat label="Registration" value={q.data.issuer.registration_number ?? "—"} />
+            <Stat
+              label="Registration"
+              value={priv.data ? (priv.data.registration_number ?? "—") : "Private"}
+            />
             <Stat
               label="Verified"
               value={

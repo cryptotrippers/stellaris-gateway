@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useIssuerPrivate } from "@/components/issuers/IssuerPrivateDetails";
 import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -114,7 +115,7 @@ export function ProjectToolkit({
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
               {data.issuer.jurisdiction} · {data.issuer.wrapper_type}
-              {data.issuer.registration_number ? ` · reg ${data.issuer.registration_number}` : ""}
+              <IssuerRegistration issuerId={data.issuer.id} />
             </p>
             {isAdmin && (
               <div className="mt-3 flex gap-2">
@@ -562,4 +563,10 @@ function Field({
       />
     </label>
   );
+}
+
+function IssuerRegistration({ issuerId }: { issuerId: string }) {
+  const priv = useIssuerPrivate(issuerId);
+  const reg = priv.data?.registration_number;
+  return reg ? <>{` · reg ${reg}`}</> : null;
 }
