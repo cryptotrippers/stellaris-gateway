@@ -41,7 +41,10 @@ const CTAS = [
 ];
 
 function HowItWorks() {
-  const { journey = "asset" } = Route.useSearch();
+  // Guard again here: an unknown or repeated ?journey= value must fall back to
+  // the first journey rather than leave every tab unselected and the page blank.
+  const search = Route.useSearch() as { journey?: unknown };
+  const journey: JourneyKey = isJourneyKey(search.journey) ? search.journey : "asset";
   const navigate = Route.useNavigate();
 
   return (
