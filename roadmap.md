@@ -49,3 +49,10 @@
 - [x] Tests for section mapping, access rules and file checks; storage round-trip; signed-in owner, administrator and investor browser checks with a temporary account (removed).
 - [ ] Email issuers when a document is rejected or released — requires email sending to be set up.
 - [ ] Investor dashboard "Documents" tab listing released files for projects the investor holds — needs holdings linked to accounts.
+
+# Security fixes (23 Oct review)
+
+- [x] Migration: vault_positions read-only for users, draft funding requests hidden, issuer private columns hidden, admin-only attestation publishing, server-only audit/transaction writes, one record per transaction.
+- [x] Wallet linking by signed message (account, wallet, nonce, preprod, expiry), Preprod key addresses only.
+- [x] Voting weight live from unspent on-chain positions; finalisation recomputes every vote.
+- [ ] Live test with a real Preprod wallet and vault position — needs the owner's wallet.
