@@ -27,8 +27,10 @@ pub const max_attestation_age: Int = 604_800_000
 /// recorded `attested_at` is within a day of real time.
 pub const max_attest_window: Int = 86_400_000
 
-/// One "loss pending" freeze lasts at most 7 days (Phase 2.5b, SPEC.md §3a.4).
-pub const max_loss_pending_ms: Int = 604_800_000
+/// One "loss pending" freeze lasts at most 4 days (Phase 2.5b, SPEC.md §3a.4;
+/// lowered from 7 days after the 2.8 stress test: a longer freeze breaks the
+/// 7-day redemption promise).
+pub const max_loss_pending_ms: Int = 345_600_000
 
 /// After a freeze ends a new one may open only 7 days later, so users always
 /// get at least a week to exit.
@@ -128,9 +130,9 @@ test the_mint_cap_ceiling_is_one_billion_tsra() {
 
 // -- Phase 2.5b freeze rules
 
-test the_freeze_constants_are_seven_days_and_a_millionth() {
+test the_freeze_constants_are_four_and_seven_days_and_a_millionth() {
   and {
-    max_loss_pending_ms == 7 * 86_400_000,
+    max_loss_pending_ms == 4 * 86_400_000,
     loss_reopen_gap_ms == 7 * 86_400_000,
     min_loss_index == 1_000_000,
     dead_price_den == 1_000,
@@ -150,7 +152,7 @@ test a_freeze_cannot_reopen_inside_the_gap() {
   }
 }
 
-test a_freeze_must_outlast_the_window_and_not_exceed_seven_days() {
+test a_freeze_must_outlast_the_window_and_not_exceed_four_days() {
   let lo = 10_000_000_000
   and {
     !can_open_freeze(lo, lo + 100, lo + 100, 0),

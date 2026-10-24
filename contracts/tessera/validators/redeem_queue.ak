@@ -97,6 +97,15 @@ fn gate_bound(
   )
 }
 
+/// The only thing this transaction mints or burns under the queue policy is a
+/// burn of `request` markers.
+fn markers_burned_only(minted: dict.Dict<ByteArray, Int>) -> Bool {
+  when dict.to_pairs(minted) is {
+    [Pair(name, qty)] -> name == request_name && qty < 0
+    _ -> False
+  }
+}
+
 /// The output of the input `r` (a plain loop: it runs once per queue input, so
 /// the closure-free form matters in a large batch).
 fn output_of(ins: List<Input>, r: OutputReference) -> Output {
@@ -132,7 +141,12 @@ validator redeem_queue(
   short: PolicyId,
 ) {
   mint(_redeemer: Data, policy_id: PolicyId, tx: Transaction) {
-    and {
+    // A plain owner `Cancel` burns its Request markers with no queue script
+    // running, so a burn of `request` markers and nothing else is always
+    // allowed here: a marker only ever sits in a Request, and every Request
+    // input's own spend rule (Cancel, or Run under a bound script) decides
+    // whether it may be spent (security review 23 Oct, C-1).
+    markers_burned_only(assets.tokens(tx.mint, policy_id)) || and {
       gate_bound(tx, policy_id, flow, admin, short),
       // the Config thread (and with it the whole set minted at Genesis) needs
       // the seed, so it exists once, ever
@@ -591,4 +605,41 @@ test a_run_beside_a_cancel_first_still_needs_a_script_to_run() {
       extra_signatories: [alice],
     }
   !spend_as(Shard(shard0()), Run, 2, no_script)
+}
+
+// -- C-1 (security review 23 Oct): a plain Cancel works end to end
+
+test a_plain_cancel_passes_both_the_spend_and_the_marker_burn() {
+  spend_as(rdatum(), Cancel, 1, cancel_tx()) && mint_as(cancel_tx())
+}
+
+test cancelling_two_requests_passes_the_marker_burn() {
+  mint_as(
+    Transaction {
+      ..cancel_tx(),
+      inputs: [request_in(), inp(2, req_out(req(alice, 2_000_000_000, 20)))],
+      mint: qtok(request_name, -2),
+    },
+  )
+}
+
+test a_marker_mint_without_a_script_is_refused() {
+  !mint_as(Transaction { ..cancel_tx(), mint: qtok(request_name, 1) })
+}
+
+test a_marker_burn_mixed_with_another_token_needs_a_script() {
+  !mint_as(
+    Transaction {
+      ..cancel_tx(),
+      mint: assets.merge(qtok(request_name, -1), qtok(config_name, -1)),
+    },
+  )
+}
+
+test a_burn_of_another_queue_token_without_a_script_is_refused() {
+  !mint_as(Transaction { ..cancel_tx(), mint: qtok(config_name, -1) })
+}
+
+test a_run_spend_without_a_script_still_fails_even_with_a_marker_burn() {
+  !spend_as(rdatum(), Run, 1, cancel_tx())
 }
