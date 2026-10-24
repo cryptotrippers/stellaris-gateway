@@ -36,6 +36,7 @@
 - [x] Fix pages stuck on loading for first-time visitors (cache guard cancelled in-flight requests).
 - [x] Phase 6: asset-to-yield waterfall and escrow components with the illustrative Solar Farm Alpha demo.
 - [x] Phase 8: Trust Centre page.
+- [x] How It Works rebuild: three deep-linkable journeys, four gates, Tessera mechanism, conceptual cash waterfall (frontend only).
 - [ ] Phase 7: investor dashboard sections with Forecast/Approved/Funded/Paid labels and a dark mode.
 - [ ] Match the owner's reference image: dark navy/teal investor dashboard (side menu, KPI cards, area/bar charts from real data only) and a light, photo-led marketplace with overlay cards.
 - [ ] Phase 9: tests, responsive/accessibility/regression checks, final delivery report.
