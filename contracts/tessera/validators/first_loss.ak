@@ -14,9 +14,10 @@
 ////   and `deposit >= 0` TSRA may arrive in the same step (a sweep).
 //// * There is no other exit: first-loss TSRA is never paid to an address.
 ////
-//// The committee is read live from the reserve Config: the Config that is
-//// being SPENT in this transaction if there is one (`ReportLoss` spends it),
-//// otherwise the one referenced.
+//// The committee is read live from the reserve Config that is being SPENT in
+//// this transaction: a `Draw` happens only inside `ReportLoss`, which spends
+//// it (security review 23 Oct, C-2: a merely referenced Config let a Draw ride
+//// on any other burn).
 
 use aiken/collection/list
 use cardano/address.{Address, Script, VerificationKey}
@@ -28,7 +29,7 @@ use stellaris/outputs.{continuing_ok, genesis_out_ok, keeps_lovelace}
 use stellaris/thread.{one_shot_mint, thread_name, thread_value}
 use tessera/first_loss_state.{FirstLossState, first_loss_among}
 use tessera/loss_fixture
-use tessera/reserve_ref.{config_among, genuine_config}
+use tessera/reserve_ref.{config_among}
 use tessera/reserve_state.{ConfigDatum, ConfigState, threshold_met}
 use tessera/reserve_threads.{config_value}
 use tessera/rules
@@ -45,14 +46,6 @@ fn value_ok(out: Output, policy: PolicyId, reserve: PolicyId, balance: Int) -> B
     thread_value(policy),
     assets.from_asset(reserve, rules.tsra_name, balance),
   )
-}
-
-/// The committee's Config: the one being spent, else the one referenced.
-fn committee_config(tx: Transaction, reserve: PolicyId) -> Option<ConfigState> {
-  when config_among(list.map(tx.inputs, fn(i) { i.output }), reserve) is {
-    Some(c) -> Some(c)
-    None -> genuine_config(tx, reserve)
-  }
 }
 
 /// TSRA minted (positive) or burned (negative) under the reserve policy.
@@ -132,8 +125,14 @@ validator first_loss(seed: OutputReference, reserve: PolicyId) {
           qty > 0,
           s1.balance == s0.balance + qty,
         }
+      // Only inside `ReportLoss`: the one transaction that spends the reserve
+      // Config while burning (`LossBurn`), whose burn `vault_ops` pins exactly.
+      // A Config that is only referenced is not enough, or a committee Draw
+      // could ride on any other TSRA burn, such as a queue Sweep, and take
+      // the first-loss TSRA (security review 23 Oct, C-2).
       Draw { qty, deposit } -> {
-        expect Some(cfg) = committee_config(tx, reserve)
+        expect Some(cfg) =
+          config_among(list.map(tx.inputs, fn(i) { i.output }), reserve)
         and {
           structural,
           qty > 0,
@@ -270,8 +269,8 @@ fn run(balance: Int, rd: FirstLossRedeemer, tx: Transaction) -> Bool {
 fn move_tx(b0: Int, b1: Int, mint_delta: Int, signers: List<ByteArray>) -> Transaction {
   Transaction {
     ..placeholder,
-    inputs: [fl_in(b0)],
-    reference_inputs: [cfg_ref()],
+    // a Draw runs inside ReportLoss, which spends the reserve Config
+    inputs: [fl_in(b0), cfg_ref()],
     outputs: [fl_out(b1, 5)],
     mint: tsra(mint_delta),
     extra_signatories: signers,
@@ -484,7 +483,7 @@ test a_draw_follows_the_reserve_committee() {
   let tx =
     Transaction {
       ..move_tx(100, 60, -40, [t_op1, t_op2]),
-      reference_inputs: [Input { output_reference: ref(9), output: cfg_utxo(rotated, True) }],
+      inputs: [fl_in(100), Input { output_reference: ref(9), output: cfg_utxo(rotated, True) }],
     }
   !run(100, Draw { qty: 40, deposit: 0 }, tx) && run(
     100,
@@ -521,12 +520,13 @@ test a_draw_prefers_the_spent_config_over_a_referenced_one() {
 }
 
 test a_draw_with_a_planted_config_is_rejected() fail {
+  // a Config lookalike without the thread token, spent instead of the genuine one
   let evil = ConfigState { ..t_cfg(), operators: [t_op3, t_op3] }
   let planted = Input { output_reference: ref(9), output: cfg_utxo(evil, False) }
   run(
     100,
     Draw { qty: 40, deposit: 0 },
-    Transaction { ..move_tx(100, 60, -40, [t_op3]), reference_inputs: [planted] },
+    Transaction { ..move_tx(100, 60, -40, [t_op3]), inputs: [fl_in(100), planted] },
   )
 }
 
@@ -534,7 +534,57 @@ test a_draw_without_any_config_is_rejected() fail {
   run(
     100,
     Draw { qty: 40, deposit: 0 },
-    Transaction { ..move_tx(100, 60, -40, [t_op1, t_op2]), reference_inputs: [] },
+    Transaction { ..move_tx(100, 60, -40, [t_op1, t_op2]), inputs: [fl_in(100)] },
+  )
+}
+
+test a_draw_with_only_a_referenced_config_is_rejected() fail {
+  // C-2: the Config only referenced, as in any non-ReportLoss transaction
+  run(
+    100,
+    Draw { qty: 40, deposit: 0 },
+    Transaction {
+      ..move_tx(100, 60, -40, [t_op1, t_op2]),
+      inputs: [fl_in(100)],
+      reference_inputs: [cfg_ref()],
+    },
+  )
+}
+
+const t_sink_script: PolicyId =
+  #"5151515151515151515151515151515151515151515151515151515151"
+
+test a_draw_cannot_ride_on_a_queue_sweep_burn() fail {
+  // C-2 exploit: the only burn is 40 TSRA from queue Sinks (a permissionless
+  // Sweep), the Config is only referenced, and the drawn 40 TSRA go to a
+  // committee member's wallet.
+  let sink =
+    Input {
+      output_reference: ref(5),
+      output: Output {
+        address: Address { payment_credential: Script(t_sink_script), stake_credential: None },
+        value: ada() |> assets.merge(tsra(40)),
+        datum: NoDatum,
+        reference_script: None,
+      },
+    }
+  run(
+    100,
+    Draw { qty: 40, deposit: 0 },
+    Transaction {
+      ..move_tx(100, 60, -40, [t_op1, t_op2]),
+      inputs: [fl_in(100), sink],
+      reference_inputs: [cfg_ref()],
+      outputs: [
+        fl_out(60, 5),
+        Output {
+          address: wallet(t_op1),
+          value: ada() |> assets.merge(tsra(40)),
+          datum: NoDatum,
+          reference_script: None,
+        },
+      ],
+    },
   )
 }
 

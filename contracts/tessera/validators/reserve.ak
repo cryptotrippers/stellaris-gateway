@@ -3483,15 +3483,15 @@ test open_loss_needs_the_committee() {
   !run(s0, OpenLoss { until: big_lo + 100_000 }, ref0(), tx)
 }
 
-test open_loss_for_exactly_seven_days_is_accepted() {
+test open_loss_for_exactly_four_days_is_accepted() {
   let s0 = t_state(0, 100, 1_000)
-  let until = big_lo + 604_800_000
+  let until = big_lo + 345_600_000
   open_loss(s0, opened(s0, until), until, big_lo, big_lo + 50_000)
 }
 
-test open_loss_beyond_seven_days_is_rejected() {
+test open_loss_beyond_four_days_is_rejected() {
   let s0 = t_state(0, 100, 1_000)
-  let until = big_lo + 604_800_001
+  let until = big_lo + 345_600_001
   !open_loss(s0, opened(s0, until), until, big_lo, big_lo + 50_000)
 }
 

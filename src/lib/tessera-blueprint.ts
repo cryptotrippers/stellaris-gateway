@@ -37,11 +37,18 @@
  * scripts parameterised by the reserve only, whose stake credentials must be
  * registered (they accept no other certificate). The reserve, eligibility, vault,
  * `vault_ops` and `first_loss` hashes are unchanged.
+ *
+ * Security fixes (review of 23 Oct 2026, branch phase2-9-security-fixes): the
+ * reserve moved (loss freeze capped at 4 days instead of 7), `first_loss` moved
+ * (`Draw` needs the reserve Config spent, C-2) and `redeem_queue` moved (a
+ * marker-only burn needs no queue script, so a plain Cancel works, C-1). Every
+ * script parameterised by the reserve moves when applied, so preprod-v1 cannot
+ * use these pins: this needs a fresh Preprod deployment.
  */
 
 /** `reserve.reserve` — Reserve Config + Supply spend, TSRA and thread-token policy. */
 export const TESSERA_RESERVE_BLUEPRINT_HASH =
-  "3f400bf99c0a201244ae3eac4de984e887c71aed810efbe0beb0e04f";
+  "b566b5974f15f60362b2edc7c8c5293b1aacea051f31ddb02c2620d2";
 
 /** `eligibility.eligibility` — eligibility-token policy and registry address. */
 export const TESSERA_ELIGIBILITY_BLUEPRINT_HASH =
@@ -62,14 +69,14 @@ export const TESSERA_VAULT_OPS_BLUEPRINT_HASH =
 
 /** `first_loss.first_loss` — first-loss reserve State spend + its thread-token policy. */
 export const TESSERA_FIRST_LOSS_BLUEPRINT_HASH =
-  "24f5bb9314790130530291ba6e04f9f1084c921bcd614034a1b7c4bf";
+  "eac93d750a6d89c0678f89294aa62492a4b3b1fe34ffbd432e54fe70";
 
 /**
  * `redeem_queue.redeem_queue` — the queue address (Requests, Sinks, Buffer shards,
  * QueueConfig, ShortState, Grace) and the policy of its markers and thread tokens.
  */
 export const TESSERA_REDEEM_QUEUE_BLUEPRINT_HASH =
-  "37ab0d6532a5e4d1dbabf74917c4edd22f37d8fc2fede758bf323554";
+  "8c4efd04548d66ae90367c72d8b2bb9c6072f288face531447872589";
 
 /**
  * `queue_flow.queue_flow` — withdraw-zero script for `Request`, `Instant`, `Settle`,

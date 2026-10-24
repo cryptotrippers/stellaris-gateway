@@ -866,7 +866,7 @@ supply, overflow to the treasury); **D-11 and D-12 changed (Change 1,
   genesis must be empty, otherwise 28 bytes). They go in the Config, not the
   Supply, because the vault reads them on every exit and stake and must not be
   invalidated by supply traffic (§1). Hard constants in `rules.ak`:
-  `max_loss_pending_ms = 7 days`, `loss_reopen_gap_ms = 7 days`.
+  `max_loss_pending_ms = 4 days` (7 days until the 23 Oct security fixes, §8), `loss_reopen_gap_ms = 7 days`.
 * **[D-17a] `vault_policy` is a Reserve Config field, not a script
   parameter.** A parameter is impossible: the vault is parameterised by the
   reserve's policy, so the reserve cannot also be parameterised by the vault's
@@ -960,7 +960,7 @@ supply, overflow to the treasury); **D-11 and D-12 changed (Change 1,
   `ReportLoss` does not reference the Config for this: it **spends** it
   (`LossBurn`) and reads `loss_pending_until` from the spent input.
 * **Time limit (cannot freeze forever).**
-  1. One freeze lasts at most `max_loss_pending_ms` (7 days) from `lo` of its
+  1. One freeze lasts at most `max_loss_pending_ms` (4 days; 7 before §8) from `lo` of its
      opening transaction, enforced on-chain; there is **no extension**.
   2. After a freeze ends (expiry, `CancelLoss`, or `LossBurn`, all of which
      leave `loss_pending_until <= the closing time`), a new one needs
@@ -2731,3 +2731,32 @@ tokens as shown in wallets; custody is the control.
   Signatures are made offline and are not in the repository.
 * **No existing script changed:** `nav.ak` is imported by no validator, `plutus.json` is byte-identical, and
   the pinned hashes and sizes are unchanged (§7.0).
+
+
+## 8. Security fixes (review of 23 Oct 2026, branch `phase2-9-security-fixes`)
+
+Found in the security review (Claude Doc "Stellaris Security Review — 23 Oct 2026"), each reproduced by an
+exploit test before the fix. Not merged before the preprod-v1 Stage 5c claim (30 Oct): the reserve,
+`first_loss` and `redeem_queue` hashes move, and with the reserve every applied script, so this needs a fresh
+Preprod deployment.
+
+* **C-1 (High): a plain `Cancel` was impossible.** The spend handler accepted it, but burning the Request
+  marker runs the queue policy, which required one of the three withdraw-zero scripts to run, and none of
+  their actions accepts a cancel. The tests only ran the spend handler. Fix: `redeem_queue.mint` accepts a
+  mint whose only entry under the policy is a burn of `request` markers, with no script present. A marker
+  lives only inside a Request, and each Request input's own spend rule (Cancel, or Run under a bound script)
+  decides whether it may be spent. New tests run the spend AND the mint on one Cancel; a marker mint, a mixed
+  burn or a burn of another queue token without a script is still refused; a `Run` spend without a script
+  still fails.
+* **C-2 (Medium): a committee `Draw` could ride on any burn.** `Draw` accepted a referenced Config and any TSRA
+  burn in the transaction, so a committee transaction beside a permissionless `Sweep` could take first-loss
+  TSRA to a wallet without a loss. Fix: `Draw` reads the committee from the reserve Config being SPENT,
+  which only `LossBurn` does while burning, and whose burn `vault_ops` pins. The Draw unit tests now spend the
+  Config; new tests refuse a Draw with only a referenced Config and the exact Sweep exploit.
+* **Freeze cap:** `max_loss_pending_ms` 7 days to 4 days (decided 23 Oct from the 2.8 stress test: a 7-day
+  freeze breaks the 7-day redemption promise in every run; 4 days is the longest that keeps it).
+* Sizes: reserve 12,308 to 12,316 B, `first_loss` 4,466 to 4,396 B, `redeem_queue` 3,128 to 3,218 B; every other
+  script unchanged.
+* **Open, not in this branch:** C-3 (Grace UTxOs can never be spent; an `ExpireGrace` action needs a decision on
+  who may run it and where the ADA goes), C-4 (script-owned Positions: documentation), C-5 (re-attest after a
+  loss with a residual: runbook).
