@@ -43,6 +43,13 @@
       "when": 1792713947545,
       "tag": "0005_issuer_lead_privileges",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792809441628,
+      "tag": "0006_security_fixes_23_oct",
+      "breakpoints": true
     }
   ]
 }

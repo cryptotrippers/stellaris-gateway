@@ -83,8 +83,10 @@ export interface IssuerRow {
   id: string;
   legal_name: string;
   jurisdiction: string;
-  registration_number: string | null;
-  contact_email: string | null;
+  /** Private: only present when fetched through getIssuerPrivate. */
+  registration_number?: string | null;
+  /** Private: only present when fetched through getIssuerPrivate. */
+  contact_email?: string | null;
   website: string | null;
   wrapper_type: string;
   verification_status: "unverified" | "pending" | "verified" | "rejected";

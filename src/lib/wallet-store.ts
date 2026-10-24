@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { enableWallet, classifyCIP30Error, hasExtension, isWalletEnabled, type CardanoWalletId, type CIP30Error } from "./cip30";
+import { enableWallet, signDataWithWallet, classifyCIP30Error, hasExtension, isWalletEnabled, type CardanoWalletId, type CIP30Error } from "./cip30";
 import {
   startPairing,
   disconnectSession,
@@ -281,3 +281,20 @@ export function shortAddr(addr: string | null) {
   return `${addr.slice(0, 10)}…${addr.slice(-6)}`;
 }
 
+
+/**
+ * Ask the connected browser wallet to sign a message for its own change
+ * address. Used only to prove wallet ownership; never builds a transaction.
+ */
+export async function signMessageWithConnectedWallet(
+  payloadHex: string,
+): Promise<{ addressHex: string; signature: string; key: string }> {
+  if (!state.connected || !state.provider || !state.addressHex) {
+    throw new Error("Connect a browser wallet first.");
+  }
+  if (state.provider === "WalletConnect") {
+    throw new Error("Linking works with a browser wallet extension for now.");
+  }
+  const r = await signDataWithWallet(ID_MAP[state.provider], state.addressHex, payloadHex);
+  return { addressHex: state.addressHex, ...r };
+}

@@ -21,3 +21,5 @@
 - The Tessera live dashboard consumes the existing public snapshot without transaction controls; display ratios use bigint arithmetic and browser-only clocks to preserve precision and hydration.
 - Project document rooms keep files in the private `project-documents` bucket with no storage policies; every read and write goes through `components/documents` server functions that check issuer ownership or the admin role, with status kept in sidecar JSON beside each file so the database schema and RLS stay unchanged.
 - The root ScriptCacheGuard resets queries rather than clearing them; clearing orphans in-flight requests and leaves first-visit pages loading forever.
+- Governance weight is read live from unspent on-chain Position UTxOs owned by wallets proven via CIP-30 signData (`linked_wallets`); recorded `vault_positions`/vote weights are history only, so withdrawn or moved funds can never be counted twice.
+- `vault_positions`, `transactions`, `security_audit_log`, `linked_wallets` and issuer private columns are written/read only by server functions after verification; browser roles have no insert rights, keeping forged rows out.

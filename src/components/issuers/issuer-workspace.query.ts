@@ -5,7 +5,6 @@ export type WorkspaceIssuer = {
   id: string;
   legal_name: string;
   jurisdiction: string;
-  registration_number: string | null;
   website: string | null;
   wrapper_type: string;
   verification_status: "unverified" | "pending" | "verified" | "rejected";
@@ -38,7 +37,7 @@ export const issuerWorkspaceQuery = (userId: string) =>
       const [issuers, requests] = await Promise.all([
         supabase
           .from("issuers")
-          .select("id, legal_name, jurisdiction, registration_number, website, wrapper_type, verification_status, verified_at, created_at")
+          .select("id, legal_name, jurisdiction, website, wrapper_type, verification_status, verified_at, created_at")
           .eq("owner_user_id", userId)
           .order("created_at", { ascending: false }),
         supabase

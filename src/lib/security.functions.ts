@@ -23,8 +23,11 @@ export const logSecurityEvent = createServerFn({ method: "POST" })
     };
   })
   .handler(async ({ data, context }) => {
-    const { supabase, userId } = context;
-    const { error } = await supabase.from("security_audit_log").insert({
+    const { userId } = context;
+    // Browser roles can no longer insert audit rows; the server writes them
+    // with the user id taken from the verified session.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("security_audit_log").insert({
       user_id: userId,
       action: data.action,
       detail: data.detail as never,

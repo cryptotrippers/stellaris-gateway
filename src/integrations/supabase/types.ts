@@ -782,6 +782,39 @@ export type Database = {
         }
         Relationships: []
       }
+      linked_wallets: {
+        Row: {
+          address: string
+          created_at: string
+          id: string
+          network: string
+          payment_key_hash: string
+          signature: string
+          user_id: string
+          verified_at: string
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          id?: string
+          network?: string
+          payment_key_hash: string
+          signature: string
+          user_id: string
+          verified_at?: string
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          id?: string
+          network?: string
+          payment_key_hash?: string
+          signature?: string
+          user_id?: string
+          verified_at?: string
+        }
+        Relationships: []
+      }
       offerings: {
         Row: {
           asset_id: string
@@ -1270,6 +1303,36 @@ export type Database = {
           tx_hash?: string
           user_id?: string
           vault_id?: string
+        }
+        Relationships: []
+      }
+      wallet_link_nonces: {
+        Row: {
+          address: string
+          created_at: string
+          expires_at: string
+          id: string
+          nonce: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          nonce: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          nonce?: string
+          used_at?: string | null
+          user_id?: string
         }
         Relationships: []
       }

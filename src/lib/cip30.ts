@@ -26,6 +26,7 @@ export interface CIP30Api {
   getChangeAddress: () => Promise<string>;
   getRewardAddresses: () => Promise<string[]>;
   getBalance: () => Promise<string>; // hex CBOR
+  signData?: (address: string, payload: string) => Promise<{ signature: string; key: string }>;
 }
 
 interface WindowCardano {
@@ -153,4 +154,17 @@ export async function isWalletEnabled(id: CardanoWalletId): Promise<boolean> {
   const w = win()?.[id];
   if (!w) return false;
   try { return await w.isEnabled(); } catch { return false; }
+}
+
+/** CIP-30 signData with an already-enabled browser wallet (no transaction). */
+export async function signDataWithWallet(
+  id: CardanoWalletId,
+  addressHex: string,
+  payloadHex: string,
+): Promise<{ signature: string; key: string }> {
+  const w = win()?.[id];
+  if (!w) throw new Error("Wallet extension not found.");
+  const api = await w.enable();
+  if (!api.signData) throw new Error("This wallet does not support message signing.");
+  return api.signData(addressHex, payloadHex);
 }
