@@ -52,8 +52,8 @@ export function TesseraMechanism() {
           <text x="435" y="70" textAnchor="middle" fill="currentColor" fontSize="11">stake</text>
           <path d="M465 110 H405" stroke="var(--gold)" strokeWidth="2" strokeDasharray="5 5" markerEnd="url(#hiw-arrow)" />
           <text x="435" y="128" textAnchor="middle" fill="currentColor" fontSize="11">unstake · 7d</text>
-          <path d="M90 50 C 90 10, 550 10, 550 46" fill="none" stroke="var(--gold)" strokeWidth="2" markerEnd="url(#hiw-arrow)" />
-          <text x="320" y="22" textAnchor="middle" fill="currentColor" fontSize="11">reserve yield, vested over 7 days</text>
+          <path d="M90 50 C 90 28, 550 28, 550 46" fill="none" stroke="var(--gold)" strokeWidth="2" markerEnd="url(#hiw-arrow)" />
+          <text x="320" y="20" textAnchor="middle" fill="currentColor" fontSize="11">reserve yield, vested over 7 days</text>
           <path d="M320 130 V175" stroke="var(--gold)" strokeWidth="2" strokeDasharray="5 5" markerEnd="url(#hiw-arrow)" />
           <text x="330" y="192" fill="currentColor" fontSize="11">redeem via queue Request · capped instant option</text>
         </svg>
