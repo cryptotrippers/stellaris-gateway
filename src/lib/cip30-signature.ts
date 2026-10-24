@@ -179,12 +179,12 @@ export async function verifyCip30Signature(
   if (!(x instanceof Uint8Array) || x.length !== 32) throw new Error("Malformed public key.");
   if (signature.length !== 64) throw new Error("Malformed signature bytes.");
 
-  const key = await crypto.subtle.importKey("raw", x, { name: "Ed25519" }, false, ["verify"]);
+  const key = await crypto.subtle.importKey("raw", new Uint8Array(x), { name: "Ed25519" }, false, ["verify"]);
   const ok = await crypto.subtle.verify(
     { name: "Ed25519" },
     key,
-    signature,
-    sigStructure(prot, payload),
+    new Uint8Array(signature),
+    new Uint8Array(sigStructure(prot, payload)),
   );
   if (!ok) throw new Error("The wallet signature is not valid.");
 
