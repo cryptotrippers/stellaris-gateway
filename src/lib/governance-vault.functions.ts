@@ -180,25 +180,28 @@ export const finalizeProposal = createServerFn({ method: "POST" })
       };
     }
 
-    const votesRes = await publicSupabase()
+    // Every counted vote is re-weighted NOW from positions that are still
+    // unspent on chain. The weight stored at vote time is history only, so
+    // vote → withdraw → move funds → vote again cannot double count.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const votesRes = await supabaseAdmin
       .from("proposal_votes")
       .select("proposal_id, voter_user_id, choice, weight_ada, created_at, updated_at")
       .eq("proposal_id", proposal.id);
     if (votesRes.error) throw new Error(votesRes.error.message);
-    const tally = tallyVotes((votesRes.data ?? []) as unknown as VoteRow[])[proposal.id];
 
-    // vault_positions is RLS-scoped per user, so the eligible-weight
-    // denominator behind quorum must be aggregated with the service role —
-    // same as getEligibleWeights().
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    let posQuery = supabaseAdmin.from("vault_positions").select("amount_ada, vault_id");
-    if (proposal.asset_id) posQuery = posQuery.eq("vault_id", proposal.asset_id);
-    const posRes = await posQuery;
-    if (posRes.error) throw new Error(posRes.error.message);
-    const eligibleAda = (posRes.data ?? []).reduce(
-      (sum, r) => sum + (Number(r.amount_ada) || 0),
-      0,
-    );
+    const w = await import("./governance-weight.server");
+    const owners = await w.linkedOwners();
+    const live = w.weightsPerUser(await w.liveOwnerWeights(proposal.asset_id ?? null), owners);
+    const recomputed = ((votesRes.data ?? []) as unknown as VoteRow[]).map((v) => ({
+      ...v,
+      weight_ada: w.toAda(live.get(v.voter_user_id) ?? 0n),
+    }));
+    const tally = tallyVotes(recomputed)[proposal.id];
+
+    let eligible = 0n;
+    for (const v of live.values()) eligible += v;
+    const eligibleAda = w.toAda(eligible);
 
     const outcome = computeOutcome(proposal, tally ?? emptyTally(proposal.id), eligibleAda);
 
