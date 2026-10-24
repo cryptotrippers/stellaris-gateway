@@ -510,3 +510,65 @@
     box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-ring) 25%, transparent);
   }
 }
+
+/* How It Works page (home-hiw-*) */
+.home-hiw-hero {
+  background:
+    radial-gradient(60% 80% at 85% 10%, color-mix(in oklab, var(--teal) 45%, transparent), transparent 70%),
+    radial-gradient(40% 60% at 10% 100%, color-mix(in oklab, var(--gold) 18%, transparent), transparent 70%),
+    var(--deep);
+}
+.home-hiw-gate {
+  border: 1px solid color-mix(in oklab, var(--gold) 50%, var(--border));
+  background: linear-gradient(160deg, color-mix(in oklab, var(--gold) 10%, var(--surface)), var(--surface));
+}
+.home-hiw-num {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1px solid var(--gold);
+  color: var(--foreground);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 13px;
+  background: var(--surface);
+  position: relative;
+  z-index: 1;
+}
+.home-hiw-path {
+  position: relative;
+}
+.home-hiw-path::before {
+  content: "";
+  position: absolute;
+  left: 36px;
+  top: 24px;
+  bottom: 24px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--teal), var(--aqua), var(--gold));
+  opacity: 0.35;
+}
+.home-hiw-tile {
+  transition: box-shadow 200ms ease, border-color 200ms ease;
+}
+.home-hiw-tile:hover {
+  border-color: color-mix(in oklab, var(--teal) 40%, var(--border));
+  box-shadow: var(--shadow-md);
+}
+.home-hiw-hatch {
+  background-image: repeating-linear-gradient(45deg, transparent 0 4px, color-mix(in oklab, var(--foreground) 18%, transparent) 4px 6px);
+}
+.home-hiw-dash {
+  stroke-dasharray: 6 6;
+  animation: home-hiw-flow 1.6s linear infinite;
+}
+@keyframes home-hiw-flow {
+  to { stroke-dashoffset: -24; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-hiw-dash { animation: none; }
+  .home-hiw-tile { transition: none; }
+}
