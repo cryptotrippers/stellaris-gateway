@@ -15,8 +15,12 @@ export function DataSourceStamp({
     <p className="inline-flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
       <Database className="h-3 w-3" aria-hidden="true" />
       <span>Source: {source}</span>
-      <span aria-hidden="true">·</span>
-      <span>{when}</span>
+      {!(illustrative && !at) && (
+        <>
+          <span aria-hidden="true">·</span>
+          <span>{when}</span>
+        </>
+      )}
       {illustrative && (
         <>
           <span aria-hidden="true">·</span>
