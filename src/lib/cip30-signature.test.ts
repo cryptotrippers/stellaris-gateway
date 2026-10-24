@@ -1,4 +1,5 @@
-import { describe, expect, test } from "bun:test";
+import { test } from "node:test";
+import assert from "node:assert/strict";
 import { blake2b } from "@noble/hashes/blake2.js";
 import { bech32 } from "bech32";
 import {
@@ -38,7 +39,6 @@ async function sign(w: Awaited<ReturnType<typeof wallet>>, message: string, addr
   return { signature: bytesToHex(sign1), key: bytesToHex(key) };
 }
 
-describe("wallet link signature", () => {
   test("a genuine signature returns the signed address, message and key hash", async () => {
     const w = await wallet();
     const msg = buildWalletLinkMessage({
@@ -49,15 +49,15 @@ describe("wallet link signature", () => {
     });
     const s = await sign(w, msg);
     const r = await verifyCip30Signature(s.signature, s.key);
-    expect(r.addressHex).toBe(bytesToHex(w.addr));
-    expect(new TextDecoder().decode(r.payload)).toBe(msg);
-    expect(r.publicKeyHash).toBe(w.pkh);
+    assert.equal(r.addressHex, bytesToHex(w.addr));
+    assert.equal(new TextDecoder().decode(r.payload), msg);
+    assert.equal(r.publicKeyHash, w.pkh);
   });
 
   test("the message contains app, account, wallet, nonce, preprod and expiry", () => {
     const msg = buildWalletLinkMessage({ userId: "acc-9", address: "addr_test1xyz", nonce: "n0", expiresAt: "T" });
     for (const part of ["Stellaris Gateway", "Account: acc-9", "Wallet: addr_test1xyz", "Nonce: n0", "Network: preprod", "Expires: T"]) {
-      expect(msg).toContain(part);
+      assert.ok(msg.includes(part), part);
     }
   });
 
@@ -66,14 +66,14 @@ describe("wallet link signature", () => {
     const b = await wallet();
     const s = await sign(a, "hello");
     const forged = { signature: s.signature, key: (await sign(b, "hello")).key };
-    await expect(verifyCip30Signature(forged.signature, forged.key)).rejects.toThrow();
+    await assert.rejects(verifyCip30Signature(forged.signature, forged.key));
   });
 
   test("a tampered payload is rejected", async () => {
     const w = await wallet();
     const s = await sign(w, "Nonce: aaaa");
     const tampered = s.signature.replace(bytesToHex(new TextEncoder().encode("aaaa")), bytesToHex(new TextEncoder().encode("bbbb")));
-    await expect(verifyCip30Signature(tampered, s.key)).rejects.toThrow();
+    await assert.rejects(verifyCip30Signature(tampered, s.key));
   });
 
   test("a key signing for an address it does not control is caught by key hash", async () => {
@@ -81,16 +81,15 @@ describe("wallet link signature", () => {
     const victim = await wallet();
     const s = await sign(a, "m", victim.addr);
     const r = await verifyCip30Signature(s.signature, s.key);
-    expect(r.publicKeyHash).not.toBe(inspectAddressBytes(victim.addr).paymentKeyHash);
+    assert.notEqual(r.publicKeyHash, inspectAddressBytes(victim.addr).paymentKeyHash);
   });
 
   test("mainnet and script addresses are identified for rejection", async () => {
     const pkh = new Uint8Array(28).fill(7);
-    expect(inspectAddressBytes(new Uint8Array([0x60, ...pkh])).networkId).toBe(0);
-    expect(inspectAddressBytes(new Uint8Array([0x61, ...pkh])).networkId).toBe(1);
-    expect(inspectAddressBytes(new Uint8Array([0x70, ...pkh])).scriptPayment).toBe(true);
-    expect(inspectAddressBytes(new Uint8Array([0x10, ...pkh, ...pkh])).scriptPayment).toBe(true);
-    expect(inspectAddressBytes(new Uint8Array([0x00, ...pkh, ...pkh])).scriptPayment).toBe(false);
-    expect(() => inspectAddressBytes(new Uint8Array([0xe0, ...pkh]))).toThrow();
+    assert.equal(inspectAddressBytes(new Uint8Array([0x60, ...pkh])).networkId, 0);
+    assert.equal(inspectAddressBytes(new Uint8Array([0x61, ...pkh])).networkId, 1);
+    assert.equal(inspectAddressBytes(new Uint8Array([0x70, ...pkh])).scriptPayment, true);
+    assert.equal(inspectAddressBytes(new Uint8Array([0x10, ...pkh, ...pkh])).scriptPayment, true);
+    assert.equal(inspectAddressBytes(new Uint8Array([0x00, ...pkh, ...pkh])).scriptPayment, false);
+    assert.throws(() => inspectAddressBytes(new Uint8Array([0xe0, ...pkh])));
   });
-});
