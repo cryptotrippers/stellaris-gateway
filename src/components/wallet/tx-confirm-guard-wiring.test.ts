@@ -27,7 +27,10 @@ let wallet: Awaited<ReturnType<typeof walletViewOf>>;
 let vault: { address: string; hash: string };
 
 const depositTx = () =>
-  lucid.newTx().pay.ToAddress(vault.address, { lovelace: 10n * ADA }).complete();
+  lucid
+    .newTx()
+    .pay.ToAddress(vault.address, { lovelace: 10n * ADA })
+    .complete();
 const depositIntent = () => ({
   action: "vault.deposit",
   pay: [vault.address],
@@ -66,7 +69,10 @@ describe("the confirmation step in front of the wallet", () => {
       asked[0].lines.some((l) => l.includes("10.000000 ADA") && l.includes("vault:test")),
       asked[0].lines.join(" | "),
     );
-    assert.ok(asked[0].lines.some((l) => l.startsWith("Network fee ")), asked[0].lines.join(" | "));
+    assert.ok(
+      asked[0].lines.some((l) => l.startsWith("Network fee ")),
+      asked[0].lines.join(" | "),
+    );
   });
 
   test("answering no stops the transaction before the wallet signs", async () => {

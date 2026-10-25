@@ -70,9 +70,7 @@ export function TxConfirmDialog({ queue: providedQueue }: { queue?: TxConfirmQue
           ))}
         </ul>
 
-        <AlertDialogDescription>
-          Your wallet will ask you to sign next.
-        </AlertDialogDescription>
+        <AlertDialogDescription>Your wallet will ask you to sign next.</AlertDialogDescription>
 
         <AlertDialogFooter>
           <AlertDialogCancel onClick={() => queue.settle(false)}>Cancel</AlertDialogCancel>
