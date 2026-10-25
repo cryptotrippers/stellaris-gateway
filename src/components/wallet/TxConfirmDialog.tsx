@@ -22,12 +22,15 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { setTxConfirmHandler } from "@/lib/tx-sign-guarded";
-import { createTxConfirmQueue } from "./tx-confirm-queue";
+import { createTxConfirmQueue, type TxConfirmQueue } from "./tx-confirm-queue";
 
 const noRequest = () => null;
 
-export function TxConfirmDialog() {
-  const queue = useMemo(() => createTxConfirmQueue(), []);
+/**
+ * The dialog makes its own queue; a test can pass one in to drive it directly.
+ */
+export function TxConfirmDialog({ queue: providedQueue }: { queue?: TxConfirmQueue } = {}) {
+  const queue = useMemo(() => providedQueue ?? createTxConfirmQueue(), [providedQueue]);
   const request = useSyncExternalStore(queue.subscribe, queue.snapshot, noRequest);
   const continueRef = useRef<HTMLButtonElement>(null);
 
