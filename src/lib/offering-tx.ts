@@ -31,6 +31,7 @@ import {
 } from "./offering-chain";
 import type { VaultSeed } from "./vault-instances";
 import { sameScriptCredential, scriptCredentialOf } from "./yield-chain-decode";
+import { signGuarded } from "./tx-sign-guarded";
 
 /** FractionRedeemer constructor indices — mirrors fraction_vault.ak. */
 const R_BUY = 0;
@@ -180,6 +181,12 @@ function dataMod(lucidMod: Session["lucidMod"]) {
  * Value map for the offering output: the rider in lovelace plus the unit,
  * and always the offering's state-thread token (F-1).
  */
+/** What a payment of `amount` in the offering's unit takes from the wallet. */
+function unitSpend(unit: DepositUnit, amount: bigint) {
+  const u = lucidUnitOf(unit);
+  return u === "lovelace" ? { lovelace: amount } : { assets: { [u]: amount } };
+}
+
 function scriptValue(scripts: AppliedOffering, lovelace: bigint, unitAmount: bigint) {
   const thread = { [scripts.threadUnit]: 1n };
   if (scripts.unit.policyId === "") return { lovelace: unitAmount, ...thread };
@@ -304,7 +311,13 @@ export async function openOffering(params: OpenOfferingParams): Promise<OpenOffe
       scriptValue(session.scripts, rider, params.unit.policyId === "" ? rider : 0n),
     )
     .complete();
-  const txHash = await (await completed.sign.withWallet().complete()).submit();
+  const signed = await signGuarded(session.lucid, completed, {
+    action: "offering.open",
+    pay: [session.scripts.address],
+    mint: { [session.scripts.threadUnit]: 1n },
+    spend: { lovelace: rider },
+  });
+  const txHash = await signed.submit();
 
   return {
     txHash,
@@ -378,7 +391,13 @@ export async function buyFractions(params: {
     )
     .complete();
 
-  const txHash = await (await completed.sign.withWallet().complete()).submit();
+  const signed = await signGuarded(session.lucid, completed, {
+    action: "offering.buy",
+    pay: [utxo.address],
+    mint: { [session.scripts.fractionUnit]: params.qty },
+    spend: unitSpend(params.unit, quote.cost),
+  });
+  const txHash = await signed.submit();
   return {
     txHash,
     address: session.scripts.address,
@@ -451,7 +470,12 @@ export async function redeemFractions(params: {
     )
     .complete();
 
-  const txHash = await (await completed.sign.withWallet().complete()).submit();
+  const signed = await signGuarded(session.lucid, completed, {
+    action: "offering.redeem",
+    pay: [utxo.address],
+    mint: { [session.scripts.fractionUnit]: -params.qty },
+  });
+  const txHash = await signed.submit();
   return {
     txHash,
     burned: params.qty.toString(),
@@ -496,7 +520,12 @@ export async function distributeIncome(params: {
       scriptValue(session.scripts, lovelace, held + params.amount),
     )
     .complete();
-  const txHash = await (await completed.sign.withWallet().complete()).submit();
+  const signed = await signGuarded(session.lucid, completed, {
+    action: "offering.distribute",
+    pay: [utxo.address],
+    spend: unitSpend(params.unit, params.amount),
+  });
+  const txHash = await signed.submit();
   return { txHash, amount: params.amount.toString() };
 }
 
@@ -512,6 +541,7 @@ async function committeeTx(
   next: OfferingDatum,
   value: Record<string, bigint>,
   extraOutputs?: (b: unknown) => unknown,
+  extraPayees: readonly string[] = [],
 ): Promise<string> {
   let builder = session.lucid
     .newTx()
@@ -525,7 +555,12 @@ async function committeeTx(
   if (extraOutputs) builder = extraOutputs(builder) as typeof builder;
   for (const op of datum.operators) builder = builder.addSignerKey(op);
   const completed = await builder.complete();
-  return (await completed.sign.withWallet().complete()).submit();
+  const signed = await signGuarded(session.lucid, completed, {
+    action: "offering.committee",
+    pay: [utxo.address, ...extraPayees],
+    extraSigners: datum.operators,
+  });
+  return signed.submit();
 }
 
 /** Move the offering's lifecycle: open -> closed -> redeeming. */
@@ -629,6 +664,7 @@ export async function claimOfferingFees(params: {
       params.treasuryAddress,
       payout,
     ),
+    [params.treasuryAddress],
   );
   return { txHash, amount: amount.toString() };
 }

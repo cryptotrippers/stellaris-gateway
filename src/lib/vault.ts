@@ -48,6 +48,9 @@ async function getBlockfrostConfig() {
  */
 export { VAULT_VERSION, DEFAULT_VAULT_ASSET_ID } from "./vault-params";
 import { VAULT_VERSION, DEFAULT_VAULT_ASSET_ID } from "./vault-params";
+import { trustDerivedScript } from "./tx-trust.shared";
+import { signGuarded } from "./tx-sign-guarded";
+import { TxIntentRejected } from "./tx-intent-guard.shared";
 
 /** Hash of the *unapplied* Stage 3 validator from plutus.json. */
 export const VAULT_BLUEPRINT_HASH =
@@ -177,7 +180,7 @@ export async function getVaultScript(
     fromText(assetId),
   ]);
   const validator = { type: "PlutusV3" as const, script: appliedCbor };
-  const scriptHash = validatorToScriptHash(validator);
+  const scriptHash = trustDerivedScript(validatorToScriptHash(validator), `vault:${assetId}`);
   const address = validatorToAddress(LUCID_NETWORK, validator);
 
   const applied: AppliedVault = { cbor: appliedCbor, scriptHash, address, assetId, type: "PlutusV3" };
@@ -232,7 +235,11 @@ export async function depositAdaToVault(
       { lovelace },
     )
     .complete();
-  const signed = await tx.sign.withWallet().complete();
+  const signed = await signGuarded(lucid, tx, {
+    action: "vault.deposit",
+    pay: [script.address],
+    spend: { lovelace },
+  });
   const txHash = await signed.submit();
 
   return { txHash, amountAda, scriptAddress: script.address };
@@ -372,10 +379,11 @@ export async function withdrawAdaFromVault(
       .attach.SpendingValidator({ type: "PlutusV3", script: script.cbor })
       .addSignerKey(ownerHash)
       .complete();
-    const signed = await tx.sign.withWallet().complete();
+    const signed = await signGuarded(lucid, tx, { action: "vault.withdraw" });
     const txHash = await signed.submit();
     return { txHash, amountAda: Number(totalLovelace) / 1_000_000, utxoCount: matched };
   } catch (e) {
+    if (e instanceof TxIntentRejected) throw e;
     throw new Error(decodeVaultError(e, { ownerHash }));
   }
 }
