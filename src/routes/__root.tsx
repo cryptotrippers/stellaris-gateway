@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
   Link,
+  ClientOnly,
   createRootRouteWithContext,
   useRouter,
   HeadContent,
@@ -14,6 +15,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { ScriptCacheGuard } from "@/components/chain/ScriptCacheGuard";
+import { TxConfirmDialog } from "@/components/wallet/TxConfirmDialog";
 
 function NotFoundComponent() {
   return (
@@ -157,6 +159,10 @@ function RootComponent() {
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Outlet />
       <Toaster />
+      {/* Asks for confirmation before any page lets the wallet sign. */}
+      <ClientOnly fallback={null}>
+        <TxConfirmDialog />
+      </ClientOnly>
     </QueryClientProvider>
   );
 }
