@@ -52,6 +52,7 @@ export const FRACTION_POLICY_BLUEPRINT_HASH =
   "a0c413e215548d0c1470e1c07680a4a4d3a7207572e5a12681a3e9e0";
 
 import fractionBlueprintSource from "../../contracts/fraction-vault/plutus.json?raw";
+import { trustDerivedScript } from "./tx-trust.shared";
 
 const blueprint = JSON.parse(fractionBlueprintSource) as {
   validators?: Array<{ title?: string; compiledCode?: string }>;
@@ -175,14 +176,14 @@ export function getOfferingScripts(
     seedToData(lucidMod, seed),
   ]);
   const validator = { type: "PlutusV3" as const, script: cbor };
-  const scriptHash = mod.validatorToScriptHash(validator);
+  const scriptHash = trustDerivedScript(mod.validatorToScriptHash(validator), `fraction_vault:${assetId}`);
 
   const policyCbor = mod.applyParamsToScript(FRACTION_POLICY_BLUEPRINT_CBOR, [
     scriptHash,
     assetNameHex,
   ]);
   const policyValidator = { type: "PlutusV3" as const, script: policyCbor };
-  const policyId = mod.mintingPolicyToId(policyValidator);
+  const policyId = trustDerivedScript(mod.mintingPolicyToId(policyValidator), `fraction:${assetId}`);
 
   const applied: AppliedOffering = {
     cbor,

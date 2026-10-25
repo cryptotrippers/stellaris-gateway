@@ -35,6 +35,7 @@ import {
   type VaultStateDatum,
 } from "./yield-chain-decode";
 import { bpsOf, feeSharesFor } from "./vault-fees";
+import { signGuarded } from "./tx-sign-guarded";
 
 /** YieldRedeemer constructor indices — mirrors yield_vault.ak. */
 const REDEEMER_DEPOSIT = 0;
@@ -333,7 +334,13 @@ export async function depositToYieldVault(params: {
     )
     .complete();
 
-  const txHash = await (await completed.sign.withWallet().complete()).submit();
+  const signed = await signGuarded(lucid, completed, {
+    action: "yield.deposit",
+    pay: [stateAddress],
+    mint: { [receipt.unit]: minted, [script.markerUnit]: 1n },
+    spend: { lovelace: deposit },
+  });
+  const txHash = await signed.submit();
   return {
     txHash,
     address: script.address,
@@ -493,7 +500,15 @@ export async function withdrawFromYieldVault(params: {
   }
 
   const completed = await builder.complete();
-  const txHash = await (await completed.sign.withWallet().complete()).submit();
+  const signed = await signGuarded(lucid, completed, {
+    action: "yield.withdraw",
+    pay: [stateAddress],
+    mint:
+      remainingShares === 0n
+        ? { [receipt.unit]: -shares, [script.markerUnit]: -1n }
+        : { [receipt.unit]: -shares },
+  });
+  const txHash = await signed.submit();
 
   return {
     txHash,

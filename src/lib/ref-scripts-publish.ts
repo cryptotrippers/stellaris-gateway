@@ -11,6 +11,7 @@ import { checkVaultPreconditions, getVaultScript, initLucidWithWallet } from "./
 import { getReceiptPolicy, getYieldVaultScript } from "./yield-vault";
 import { buildPublishReferenceScriptTx } from "./ref-scripts";
 import type { ValidatorKey } from "./ref-scripts.shared";
+import { signGuarded } from "./tx-sign-guarded";
 
 /** Applied CBOR for one validator of one asset, derived in the browser. */
 export async function deriveAppliedCbor(
@@ -52,8 +53,13 @@ export async function publishReferenceScript(
     lucid as unknown as Parameters<typeof buildPublishReferenceScriptTx>[0],
     appliedCbor,
   );
-  const tx = built.tx as { sign: { withWallet: () => { complete: () => Promise<{ submit: () => Promise<string> }> } } };
-  const signed = await tx.sign.withWallet().complete();
+  const tx = built.tx as Parameters<typeof signGuarded<{ submit: () => Promise<string> }>>[1];
+  const signed = await signGuarded(lucid, tx, {
+    action: "ref_script.publish",
+    pay: [built.address],
+    allowScriptRefs: true,
+    spend: { lovelace: built.lovelace },
+  });
   const txHash = await signed.submit();
   return { txHash, lovelace: built.lovelace, address: built.address };
 }

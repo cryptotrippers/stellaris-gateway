@@ -20,6 +20,7 @@ import { getReceiptPolicy, getYieldVaultScript, YIELD_VAULT_VERSION } from "./yi
 import { feeBpsOk, MAX_FEE_BPS } from "./vault-fees";
 import { encodeStateDatum } from "./yield-chain-decode";
 import type { VaultSeed } from "./vault-instances";
+import { signGuarded } from "./tx-sign-guarded";
 
 export interface BootstrapParams {
   assetId: string;
@@ -203,7 +204,12 @@ export async function bootstrapYieldVault(params: BootstrapParams): Promise<Boot
       { lovelace, [script.threadUnit]: 1n },
     )
     .complete();
-  const signed = await tx.sign.withWallet().complete();
+  const signed = await signGuarded(lucid, tx, {
+    action: "yield.bootstrap",
+    pay: [script.address],
+    mint: { [script.threadUnit]: 1n },
+    spend: { lovelace },
+  });
   const txHash = await signed.submit();
 
   return {

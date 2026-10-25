@@ -22,6 +22,7 @@ import {
   type VaultStateDatum,
 } from "./yield-chain-decode";
 import { redeemValue } from "./yield-position";
+import { partialSignGuarded } from "./tx-sign-guarded";
 
 /** YieldRedeemer constructor index — mirrors yield_vault.ak. */
 const REDEEMER_CLAIM_FEE = 6;
@@ -174,7 +175,11 @@ export async function buildTreasuryClaim(params: {
   for (const s of signers) builder = builder.addSignerKey(s);
 
   const completed = await builder.complete();
-  const witness = await completed.partialSign.withWallet();
+  const witness = await partialSignGuarded(lucid, completed, {
+    action: "vault.treasury_claim",
+    pay: [stateUtxo.address, treasuryAddress],
+    extraSigners: signers,
+  });
 
   return {
     txCbor: completed.toCBOR(),
@@ -214,7 +219,18 @@ export async function coSignTreasuryClaim(
     throw new Error("This wallet has already signed.");
   }
 
-  const witness = await lucid.fromTx(draft.txCbor).partialSign.withWallet();
+  // S1: re-derive the vault from the pinned blueprint and check the draft
+  // against it before signing; a draft from another operator is untrusted.
+  const script = getYieldVaultScript(lucidMod, draft.assetId);
+  if (draft.address !== script.address) {
+    throw new Error("This draft targets a different vault address than this build derives.");
+  }
+  const witness = await partialSignGuarded(lucid, lucid.fromTx(draft.txCbor), {
+    action: "vault.treasury_claim.cosign",
+    pay: [script.address, draft.treasuryAddress],
+    extraSigners: draft.requiredSigners,
+    coSign: true,
+  });
   return { ...draft, witnesses: [...draft.witnesses, { keyHash, witness }] };
 }
 

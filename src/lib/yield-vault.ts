@@ -43,6 +43,7 @@ export const YIELD_BLUEPRINT_HASH =
 
 /** Compiled CBOR of the *unapplied* yield_vault validator (PlutusV3). */
 import yieldBlueprintSource from "../../contracts/vault/plutus.json?raw";
+import { trustDerivedScript } from "./tx-trust.shared";
 
 const yieldBlueprint = JSON.parse(yieldBlueprintSource) as {
   validators?: Array<{ title?: string; compiledCode?: string }>;
@@ -148,7 +149,7 @@ export function getYieldVaultScript(
     seedToData(lucidMod, seed),
   ]);
   const validator = { type: "PlutusV3" as const, script: cbor };
-  const scriptHash = validatorToScriptHash(validator);
+  const scriptHash = trustDerivedScript(validatorToScriptHash(validator), `yield_vault:${assetId}`);
   const address = validatorToAddress(LUCID_NETWORK, validator);
 
   const applied: AppliedYieldVault = {
@@ -212,7 +213,10 @@ export function getReceiptPolicy(
   const vault = getYieldVaultScript(lucidMod, assetId, seed);
   const assetNameHex = fromText(assetId);
   const cbor = applyParamsToScript(RECEIPT_BLUEPRINT_CBOR, [vault.scriptHash, assetNameHex]);
-  const policyId = validatorToScriptHash({ type: "PlutusV3", script: cbor });
+  const policyId = trustDerivedScript(
+    validatorToScriptHash({ type: "PlutusV3", script: cbor }),
+    `receipt:${assetId}`,
+  );
 
   const applied: AppliedReceiptPolicy = {
     cbor,

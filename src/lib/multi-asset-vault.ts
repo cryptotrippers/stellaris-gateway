@@ -40,6 +40,7 @@ export const MULTI_VAULT_VERSION = 2n;
 export const MULTI_BLUEPRINT_HASH = "770577be4ab87d5c569a94f3c4ff516bab41e8d9404eb4e3da09fc87";
 
 import multiBlueprintSource from "../../contracts/multi-asset-vault/plutus.json?raw";
+import { trustDerivedScript } from "./tx-trust.shared";
 
 const multiBlueprint = JSON.parse(multiBlueprintSource) as {
   validators?: Array<{ title?: string; compiledCode?: string }>;
@@ -165,7 +166,7 @@ export function getMultiVaultScript(
     seedToData(lucidMod, seed),
   ]);
   const validator = { type: "PlutusV3" as const, script: cbor };
-  const scriptHash = mod.validatorToScriptHash(validator);
+  const scriptHash = trustDerivedScript(mod.validatorToScriptHash(validator), `multi_asset_vault:${assetId}`);
   const applied: AppliedMultiVault = {
     cbor,
     scriptHash,
