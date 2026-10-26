@@ -35,3 +35,7 @@ dist-ssr
 # aiken.lock pins the stdlib version. Tracking it made every `aiken check`
 # dirty the tree.
 contracts/*/build/
+
+# Security Suite S2.4: bun.lock is the only lockfile. A second, unused
+# package-lock.json went stale and carried advisories bun.lock had fixed.
+package-lock.json

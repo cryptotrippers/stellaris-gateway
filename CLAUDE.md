@@ -16,8 +16,8 @@ path to mainnet. `src/lib/network.ts` refuses to resolve to mainnet config
 
 ## Commands
 
-Package manager is **bun** (`bunfig.toml`, CI uses `oven-sh/setup-bun`); both `bun.lock` and
-`package-lock.json` are committed, but prefer `bun` for local installs.
+Package manager is **bun** (`bunfig.toml`, CI uses `oven-sh/setup-bun`); `bun.lock` is the only
+lockfile (`package-lock.json` was removed in Security S2.4 and is git-ignored). Use `bun` for installs.
 
 ```bash
 bun install                              # install deps

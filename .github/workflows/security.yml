@@ -1,0 +1,40 @@
+name: Security
+
+# Security Suite S2.4 and S1: on every push to main, every pull request and
+# weekly, fail if a dependency has a high or critical advisory, if the
+# transaction allow-list drifts from the deployment record, or if the
+# security and ledger tests fail.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 20 * * 0" # Mondays 07:17 Sydney (AEDT)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  security:
+    name: dependency audit + security tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies from bun.lock
+        run: bun install --frozen-lockfile
+
+      - name: No high or critical dependency advisories
+        run: bun audit --audit-level=high
+
+      - name: Transaction allow-list matches deployments/preprod-v1.json
+        run: node scripts/security/gen-tx-allowlist.mjs --check
+
+      - name: Security and ledger tests (node:test)
+        run: npx tsx --test src/lib/*.test.ts src/components/wallet/*.test.ts
