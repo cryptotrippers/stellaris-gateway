@@ -6,18 +6,21 @@
 
 export const WALLET_LINK_APP = "Stellaris Gateway";
 export const WALLET_LINK_NETWORK = "preprod";
-export const WALLET_LINK_TTL_MS = 10 * 60_000;
+export const WALLET_LINK_TTL_MS = 5 * 60_000;
 
 export interface WalletLinkFields {
   userId: string;
   address: string;
   nonce: string;
   expiresAt: string;
+  /** Host the request came to (e.g. stellarischain.com); shown in the wallet so a look-alike site is obvious. */
+  domain: string;
 }
 
 export function buildWalletLinkMessage(f: WalletLinkFields): string {
   return [
     `${WALLET_LINK_APP} — link this wallet to my account`,
+    `Domain: ${f.domain}`,
     `Account: ${f.userId}`,
     `Wallet: ${f.address}`,
     `Nonce: ${f.nonce}`,

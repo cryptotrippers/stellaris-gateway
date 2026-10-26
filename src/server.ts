@@ -2,6 +2,7 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { CSP_REPORT_PATH } from "./lib/csp-report.shared";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -90,6 +91,11 @@ const CSP_DIRECTIVES: Record<string, string[]> = {
   "object-src": ["'none'"],
   "worker-src": ["'self'", "blob:"],
   "upgrade-insecure-requests": [],
+  // Security Suite S2.1: browsers post violations here so the policy can be
+  // tightened before it is switched to enforcing. report-uri for older
+  // browsers, report-to (Reporting API) for current ones.
+  "report-uri": [CSP_REPORT_PATH],
+  "report-to": ["csp-endpoint"],
 };
 
 const CSP_HEADER = Object.entries(CSP_DIRECTIVES)
@@ -127,6 +133,7 @@ function applySecurityHeaders(request: Request, response: Response): Response {
     set("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
   }
   set("Content-Security-Policy-Report-Only", CSP_HEADER);
+  set("Reporting-Endpoints", `csp-endpoint="${CSP_REPORT_PATH}"`);
 
   return new Response(response.body, {
     status: response.status,
@@ -196,6 +203,13 @@ function csrfGuard(request: Request): Response | null {
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    // CSP violation reports (S2.1): handled here, before routing. The path is
+    // under /api/public/, so the CSRF guard already exempts it; the handler
+    // sanitises, rate-limits and always answers 204.
+    if (request.method === "POST" && new URL(request.url).pathname === CSP_REPORT_PATH) {
+      const { handleCspReport } = await import("./lib/csp-report.server");
+      return applySecurityHeaders(request, await handleCspReport(request));
+    }
     const csrfDenied = csrfGuard(request);
     if (csrfDenied) return applySecurityHeaders(request, csrfDenied);
     try {

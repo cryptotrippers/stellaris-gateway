@@ -50,6 +50,20 @@
       "when": 1792809441628,
       "tag": "0006_security_fixes_23_oct",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1793001600000,
+      "tag": "0007_csp_reports",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793005200000,
+      "tag": "0008_rate_limits",
+      "breakpoints": true
     }
   ]
 }

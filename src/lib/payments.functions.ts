@@ -45,11 +45,33 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     returnUrl: string;
     environment: StripeEnv;
   }) => {
-    if (!/^[a-zA-Z0-9_-]+$/.test(data.priceId)) throw new Error("Invalid priceId");
-    return data;
+    if (!/^[a-zA-Z0-9_-]{1,100}$/.test(data.priceId)) throw new Error("Invalid priceId");
+    const quantity = data.quantity ?? 1;
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 10) {
+      throw new Error("Invalid quantity");
+    }
+    if (typeof data.returnUrl !== "string" || data.returnUrl.length > 500) {
+      throw new Error("Invalid return URL");
+    }
+    // S3: this endpoint is public, so a caller-supplied userId or email is not
+    // trusted (it could re-label someone else's Stripe customer). Neither is
+    // sent by the app today; both are dropped here.
+    return { ...data, quantity, userId: undefined, customerEmail: undefined };
   })
   .handler(async ({ data }): Promise<CheckoutSessionResult> => {
+    const { enforceRateLimit, RATE_RULES, clientIp, requestDomain } = await import(
+      "./rate-limit.server"
+    );
     try {
+      await enforceRateLimit(RATE_RULES.checkout, await clientIp());
+      // The return URL must come back to this site (no open redirect via Stripe).
+      const back = new URL(data.returnUrl);
+      if (back.protocol !== "https:" && back.hostname !== "localhost") {
+        throw new Error("Invalid return URL");
+      }
+      if (back.hostname.toLowerCase() !== (await requestDomain())) {
+        throw new Error("Invalid return URL");
+      }
       const stripe = createStripeClient(data.environment);
       const prices = await stripe.prices.list({ lookup_keys: [data.priceId] });
       if (!prices.data.length) throw new Error("Price not found");
@@ -69,10 +91,6 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         ui_mode: "embedded_page",
         return_url: data.returnUrl,
         ...(customerId && { customer: customerId }),
-        ...(data.userId && {
-          metadata: { userId: data.userId },
-          ...(isRecurring && { subscription_data: { metadata: { userId: data.userId } } }),
-        }),
         managed_payments: { enabled: true },
       } as any);
 

@@ -17,13 +17,16 @@ import {
   normaliseVaultTxRecord,
   type VaultTxInput,
 } from "@/lib/vault-transactions.shared";
+import { parseInput, vaultTxInputSchema } from "./input-guards.shared";
 
 /** Record one submitted vault transaction against the signed-in user. */
 export const recordVaultTransaction = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: VaultTxInput) => input)
+  .inputValidator((input: VaultTxInput): VaultTxInput => parseInput(vaultTxInputSchema, input))
   .handler(
     async ({ data, context }): Promise<{ recorded: boolean; txHash: string; reason?: string }> => {
+      const { enforceRateLimit, RATE_RULES } = await import("./rate-limit.server");
+      await enforceRateLimit(RATE_RULES.vaultTx, context.userId);
       const row = normaliseVaultTxRecord(data);
       const { verifyVaultTx, TxNotYetOnChain } = await import("./vault-tx-verify.server");
       let chain;

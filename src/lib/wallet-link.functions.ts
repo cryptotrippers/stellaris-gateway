@@ -60,6 +60,9 @@ export const requestWalletNonce = createServerFn({ method: "POST" })
   })
   .handler(
     async ({ data, context }): Promise<{ nonce: string; message: string; messageHex: string; addressHex: string }> => {
+      const { enforceRateLimit, RATE_RULES, requestDomain } = await import("./rate-limit.server");
+      await enforceRateLimit(RATE_RULES.walletNonce, context.userId);
+      const domain = await requestDomain();
       const bytes = hexToBytes(data.addressHex);
       const address = bech32.encode("addr_test", bech32.toWords(bytes), 200);
       const rnd = new Uint8Array(24);
@@ -76,7 +79,7 @@ export const requestWalletNonce = createServerFn({ method: "POST" })
       });
       if (error) throw new Error(error.message);
 
-      const message = buildWalletLinkMessage({ userId: context.userId, address, nonce, expiresAt });
+      const message = buildWalletLinkMessage({ userId: context.userId, address, nonce, expiresAt, domain });
       return { nonce, message, messageHex: utf8Hex(message), addressHex: data.addressHex };
     },
   );
@@ -91,6 +94,9 @@ export const confirmWalletLink = createServerFn({ method: "POST" })
     return { nonce: data.nonce, signature: data.signature, key: data.key };
   })
   .handler(async ({ data, context }): Promise<LinkedWallet> => {
+    const { enforceRateLimit, RATE_RULES, requestDomain } = await import("./rate-limit.server");
+    await enforceRateLimit(RATE_RULES.walletConfirm, context.userId);
+    const domain = await requestDomain();
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: row, error } = await supabaseAdmin
       .from("wallet_link_nonces")
@@ -124,6 +130,8 @@ export const confirmWalletLink = createServerFn({ method: "POST" })
       address: row.address,
       nonce: row.nonce,
       expiresAt: new Date(row.expires_at).toISOString(),
+      // The confirm must reach the same site the nonce was issued for.
+      domain,
     });
     if (new TextDecoder().decode(signed.payload) !== expected) {
       throw new Error("The signed message does not match this link request.");
