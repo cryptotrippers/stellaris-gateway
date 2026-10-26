@@ -64,6 +64,13 @@
       "when": 1793005200000,
       "tag": "0008_rate_limits",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1793044814057,
+      "tag": "0009_csp_reports",
+      "breakpoints": true
     }
   ]
 }

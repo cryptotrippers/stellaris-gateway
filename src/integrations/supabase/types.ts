@@ -204,6 +204,42 @@ export type Database = {
         }
         Relationships: []
       }
+      csp_reports: {
+        Row: {
+          blocked: string
+          day: string
+          directive: string
+          disposition: string
+          document_path: string
+          first_seen: string
+          hits: number
+          id: number
+          last_seen: string
+        }
+        Insert: {
+          blocked: string
+          day?: string
+          directive: string
+          disposition: string
+          document_path: string
+          first_seen?: string
+          hits?: number
+          id?: number
+          last_seen?: string
+        }
+        Update: {
+          blocked?: string
+          day?: string
+          directive?: string
+          disposition?: string
+          document_path?: string
+          first_seen?: string
+          hits?: number
+          id?: number
+          last_seen?: string
+        }
+        Relationships: []
+      }
       deposit_assets: {
         Row: {
           asset_name_hex: string
@@ -985,6 +1021,24 @@ export type Database = {
           },
         ]
       }
+      rate_limit_hits: {
+        Row: {
+          hits: number
+          key: string
+          window_start: string
+        }
+        Insert: {
+          hits?: number
+          key: string
+          window_start: string
+        }
+        Update: {
+          hits?: number
+          key?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       security_audit_log: {
         Row: {
           action: string
@@ -1421,8 +1475,21 @@ export type Database = {
         }
         Returns: boolean
       }
+      hit_rate_limit: {
+        Args: { p_key: string; p_max: number; p_window_seconds: number }
+        Returns: boolean
+      }
       mark_proposal_executed_offchain: {
         Args: { _proposal_id: string; _user_id: string }
+        Returns: undefined
+      }
+      record_csp_report: {
+        Args: {
+          p_blocked: string
+          p_directive: string
+          p_disposition: string
+          p_document_path: string
+        }
         Returns: undefined
       }
     }
