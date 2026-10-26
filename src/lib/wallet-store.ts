@@ -8,6 +8,8 @@ import {
   type PairingHandle,
 } from "./walletconnect";
 import { confirmReferral } from "./referral";
+import { EXPECTED_WALLET_NETWORK_ID } from "./network";
+import { checkWalletNetworkAtConnect } from "./wallet-network-gate";
 
 export type WalletProvider =
   | "Lace"
@@ -92,6 +94,12 @@ export async function connectWallet(
   }
   try {
     const info = await enableWallet(id);
+    // E21: a wallet on the wrong network (above all mainnet) never connects.
+    const refusal = checkWalletNetworkAtConnect(info.networkId, EXPECTED_WALLET_NETWORK_ID);
+    if (refusal) {
+      persist(null);
+      return { ok: false, error: refusal };
+    }
     state = {
       ...state,
       connected: true,
@@ -130,6 +138,11 @@ export async function restoreWallet(): Promise<void> {
   if (!enabled) return;
   try {
     const info = await enableWallet(id);
+    // E21: never silently restore a wallet that has moved to another network.
+    if (checkWalletNetworkAtConnect(info.networkId, EXPECTED_WALLET_NETWORK_ID)) {
+      persist(null);
+      return;
+    }
     state = {
       ...state,
       connected: true,
@@ -151,10 +164,26 @@ export async function restoreWallet(): Promise<void> {
  * as QR) and a promise that resolves once the mobile wallet approves.
  */
 export async function connectWithWalletConnect(chain: Cip34Chain = "preprod"): Promise<PairingHandle> {
-  const handle = await startPairing(chain);
+  const started = await startPairing(chain);
+  // E21: a mobile wallet that approves on the wrong network is disconnected
+  // and the caller's `approval` rejects with the refusal message.
+  const approval = started.approval.then(async (acct) => {
+    const refusal = checkWalletNetworkAtConnect(acct.networkId, EXPECTED_WALLET_NETWORK_ID);
+    if (refusal) {
+      try {
+        await disconnectSession(acct.topic);
+      } catch {
+        /* best effort — the session is never promoted either way */
+      }
+      throw new Error(refusal.message);
+    }
+    return acct;
+  });
+  const handle: PairingHandle = { ...started, approval };
   // Fire-and-forget: when approval lands, promote it into wallet state.
   handle.approval
     .then((acct) => {
+      if (checkWalletNetworkAtConnect(acct.networkId, EXPECTED_WALLET_NETWORK_ID)) return;
       state = {
         ...state,
         connected: true,
