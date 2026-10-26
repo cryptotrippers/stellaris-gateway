@@ -29,8 +29,10 @@ bun run lint                             # eslint .
 bun run format                           # prettier --write .
 ```
 
-There is no JS/TS unit test suite (no vitest/jest config, no `test` script) — the only
-automated tests in the repo are the Aiken validator tests under `contracts/vault/`.
+TypeScript unit tests use `node:test` via tsx (no vitest/jest). `npm test` runs every
+`*.test.ts` under `src/` and `tests/` (`scripts/test/run-tests.mjs`, which stubs image and
+CSS imports); `npm test -- <files>` runs a subset. CI (`security.yml`) runs the full set on
+every PR. The Aiken validator tests run under each `contracts/<project>/` with `aiken check`.
 
 ### Smart contract commands
 
