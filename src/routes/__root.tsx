@@ -16,6 +16,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { ScriptCacheGuard } from "@/components/chain/ScriptCacheGuard";
 import { TxConfirmDialog } from "@/components/wallet/TxConfirmDialog";
+import { installStaleChunkReload, recoverFromStaleChunkBrowser } from "@/lib/stale-chunk-reload";
 
 function NotFoundComponent() {
   return (
@@ -44,6 +45,8 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
+    // A redeploy invalidates hashed chunks; only a full reload fetches the new bundle.
+    recoverFromStaleChunkBrowser(error);
   }, [error]);
 
   return (
@@ -151,6 +154,8 @@ function RootComponent() {
       } catch { /* ignore */ }
     })();
   }, []);
+
+  useEffect(() => installStaleChunkReload(), []);
 
   return (
     <QueryClientProvider client={queryClient}>
