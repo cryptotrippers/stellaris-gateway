@@ -124,8 +124,11 @@ bypasses RLS — server-only, never import from client code). `auth-middleware.t
 (`requireSupabaseAuth`) validates a Bearer JWT and injects `{ supabase, userId, claims }`
 into server-function context; `auth-attacher.ts` wires this into `startInstance` in
 `src/start.ts`. These three files plus `types.ts` are marked "automatically generated" —
-regenerate rather than hand-edit when the schema changes. Migrations live under
-`supabase/migrations/` as timestamped SQL files.
+regenerate rather than hand-edit when the schema changes. New migrations go on the
+**Drizzle track**: `drizzle/migrations/NNNN_name.sql` plus a `meta/_journal.json` entry
+and a `meta/NNNN_snapshot.json` chained by `prevId` (`drizzle.config.ts`). The live
+database has applied this track since September 2026; `supabase/migrations/` holds the
+24 earlier migrations and takes no new files.
 
 ### On-chain vault logic
 
