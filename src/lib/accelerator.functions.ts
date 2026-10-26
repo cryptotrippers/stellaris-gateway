@@ -307,10 +307,36 @@ export const saveIssuer = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
 
     if (data.fundingRequestId) {
-      const { error: linkErr } = await context.supabase
+      // E01: linking is a platform write. The submitter's own session can't
+      // update a submitted request (RLS allows drafts only), so this used to
+      // do nothing for non-admins; and the request id comes from the client,
+      // so ownership and stage are checked here before the service write.
+      const { data: fr, error: frErr } = await context.supabase
+        .from("funding_requests")
+        .select("id, submitted_by, status")
+        .eq("id", data.fundingRequestId)
+        .maybeSingle();
+      if (frErr) throw new Error(frErr.message);
+      if (!fr) throw new Error("That funding request does not exist.");
+      if (fr.submitted_by !== context.userId) {
+        const { data: isAdmin, error: roleErr } = await context.supabase.rpc("has_role", {
+          _user_id: context.userId,
+          _role: "admin",
+        } as never);
+        if (roleErr) throw new Error(roleErr.message);
+        if (!isAdmin) {
+          throw new Error("Only the submitter can attach an issuer profile to this request.");
+        }
+      }
+      if (fr.status !== "draft" && fr.status !== "submitted") {
+        throw new Error("The issuer can only be changed before the request goes to a vote.");
+      }
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      const { error: linkErr } = await supabaseAdmin
         .from("funding_requests")
         .update({ issuer_id: (row as IssuerRow).id })
-        .eq("id", data.fundingRequestId);
+        .eq("id", fr.id)
+        .in("status", ["draft", "submitted"]);
       if (linkErr) throw new Error(linkErr.message);
     }
     return row as IssuerRow;

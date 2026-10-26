@@ -30,3 +30,13 @@ test("E01: moving a request to 'proposed' is a platform write", () => {
   const before = src.slice(Math.max(0, i - 400), i);
   assert.match(before, /supabaseAdmin\s*\.from\("funding_requests"\)/);
 });
+
+test("E01: linking an issuer to a request checks ownership and stage, then writes as the platform", () => {
+  const src = read("./accelerator.functions.ts");
+  const i = src.indexOf("update({ issuer_id:");
+  assert.ok(i > 0);
+  const before = src.slice(Math.max(0, i - 1600), i);
+  assert.match(before, /fr\.submitted_by !== context\.userId/);
+  assert.match(before, /fr\.status !== "draft" && fr\.status !== "submitted"/);
+  assert.match(before, /await supabaseAdmin\s*\.from\("funding_requests"\)\s*\.$/);
+});
