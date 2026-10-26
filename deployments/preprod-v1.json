@@ -300,5 +300,27 @@
       "submittedAt": "2026-10-23T00:54:29.588Z",
       "confirmedAt": "2026-10-23T00:55:01.106Z"
     }
+  },
+  "stage5c": {
+    "settle": {
+      "requests": "c8022e9259ac9683c68cee87af5f51dac6c6787e88277d781d08f3fbddbfb96c#0",
+      "totalTsra": "500000000",
+      "paidTusd": "500000000",
+      "paidTo": "addr_test1vpf6yc96tace29j6nj504pvj8z0rm2vvyhjaff0md8s5lrsv0c0f5",
+      "shard": "50aa721db12bcdcf69674631caf52901aeee58c9fb5c5ff2d6293fed4a7d3da1#0",
+      "tx": "d5fa7f511a10fa5429d9d6f381b81178f0b44c6ca0d79eb127c527476d96bd91",
+      "status": "confirmed",
+      "submittedAt": "2026-10-26T01:48:05.316Z",
+      "confirmedAt": "2026-10-26T01:48:42.754Z"
+    },
+    "sweep": {
+      "sinks": "50aa721db12bcdcf69674631caf52901aeee58c9fb5c5ff2d6293fed4a7d3da1#1, d5fa7f511a10fa5429d9d6f381b81178f0b44c6ca0d79eb127c527476d96bd91#1",
+      "burnedTsra": "750000000",
+      "mintedSupplyAfter": "9250000000",
+      "tx": "6a0856c421fcfd95a0e77d48cfe5000cab7ec52329db186a7bb716a9dd966bd3",
+      "status": "confirmed",
+      "submittedAt": "2026-10-26T01:48:43.203Z",
+      "confirmedAt": "2026-10-26T01:49:10.585Z"
+    }
   }
 }
