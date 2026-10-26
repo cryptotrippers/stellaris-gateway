@@ -18,6 +18,14 @@ import {
   type OfferingChainState,
   type OfferingRow,
 } from "./offerings.shared";
+import { z } from "zod";
+import {
+  assetIdSchema,
+  parseInput,
+  preprodAddressSchema,
+  tokenUnitSchema,
+  valueUnitSchema,
+} from "./input-guards.shared";
 
 export type { OfferingRow, OfferingChainState, FractionHolder } from "./offerings.shared";
 
@@ -36,7 +44,9 @@ export const listOfferings = createServerFn({ method: "GET" }).handler(
 
 /** One offering by the asset it fractionalises. Public. */
 export const getOffering = createServerFn({ method: "GET" })
-  .inputValidator((input: { assetId: string }) => input)
+  .inputValidator((input: { assetId: string }) =>
+    parseInput(z.object({ assetId: assetIdSchema }), input),
+  )
   .handler(async ({ data }): Promise<OfferingRow | null> => {
     const supabase = publicSupabase();
     const { data: rows, error } = await supabase
@@ -61,7 +71,12 @@ interface BfUtxo {
  * show counters that anyone can re-derive from the same address.
  */
 export const readOfferingChainState = createServerFn({ method: "GET" })
-  .inputValidator((input: { address: string; unit?: string }) => input)
+  .inputValidator((input: { address: string; unit?: string }) =>
+    parseInput(
+      z.object({ address: preprodAddressSchema, unit: valueUnitSchema.optional() }),
+      input,
+    ),
+  )
   .handler(async ({ data }): Promise<OfferingChainState> => {
     const { bfGet } = await import("./blockfrost-fetch.server");
     const unit = data.unit && data.unit !== "lovelace" ? data.unit : "lovelace";
@@ -94,7 +109,9 @@ export const readOfferingChainState = createServerFn({ method: "GET" })
  * rather than a number we assert.
  */
 export const readFractionHolders = createServerFn({ method: "GET" })
-  .inputValidator((input: { fractionUnit: string }) => input)
+  .inputValidator((input: { fractionUnit: string }) =>
+    parseInput(z.object({ fractionUnit: tokenUnitSchema }), input),
+  )
   .handler(
     async ({ data }): Promise<{ holders: FractionHolder[]; total: string; readAt: number }> => {
       const { bfGet } = await import("./blockfrost-fetch.server");

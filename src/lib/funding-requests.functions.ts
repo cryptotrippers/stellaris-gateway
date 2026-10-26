@@ -11,6 +11,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { publicSupabase } from "./asset-vaults.shared";
 import { FUNDING_TERMS_VERSION } from "./onboarding-terms";
+import { fundingRequestInputSchema, parseInput } from "./input-guards.shared";
 
 export interface FundingRequestRow {
   id: string;
@@ -150,8 +151,13 @@ function validate(input: FundingRequestInput) {
 /** Submit a funding request. Signed-in users only; stored against their account. */
 export const submitFundingRequest = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: FundingRequestInput) => data)
+  .inputValidator(
+    (data: FundingRequestInput): FundingRequestInput =>
+      parseInput(fundingRequestInputSchema, data) as FundingRequestInput,
+  )
   .handler(async ({ data, context }): Promise<FundingRequestRow> => {
+    const { enforceRateLimit, RATE_RULES } = await import("./rate-limit.server");
+    await enforceRateLimit(RATE_RULES.fundingSubmit, context.userId);
     const v = validate(data);
     const { data: row, error } = await context.supabase
       .from("funding_requests")

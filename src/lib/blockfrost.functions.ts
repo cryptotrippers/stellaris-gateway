@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { isSafeBlockfrostPath } from "./input-guards.shared";
 
 /**
  * Server-side proxy to Blockfrost Preprod for the RealFi testnet.
@@ -10,6 +11,7 @@ const BASE = "https://cardano-preprod.blockfrost.io/api/v0";
 async function bf<T>(path: string): Promise<T> {
   const key = process.env.BLOCKFROST_PREPROD_PROJECT_ID;
   if (!key) throw new Error("BLOCKFROST_PREPROD_PROJECT_ID not configured");
+  if (!isSafeBlockfrostPath(path)) throw new Error("Refused an unsafe Blockfrost path.");
   const res = await fetch(`${BASE}${path}`, { headers: { project_id: key } });
   const body = await res.text();
   if (!res.ok) throw new Error(`Blockfrost ${res.status}: ${body || res.statusText}`);

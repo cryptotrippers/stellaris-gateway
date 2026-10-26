@@ -11,6 +11,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { genuineOfferingAt, type OfferingDatum } from "./offering-chain";
 import { publicSupabase } from "./asset-vaults.shared";
 import { OFFERING_COLS, type OfferingRow } from "./offerings.shared";
+import { z } from "zod";
+import { assetIdSchema, parseInput, txHashSchema } from "./input-guards.shared";
 
 export interface RecordedFractionEvent {
   eventType: "buy" | "redeem" | "distribute" | "set_status" | "set_fees" | "claim_fee";
@@ -72,8 +74,12 @@ function classify(
  * appear in the public activity list, and only chain-confirmed facts are kept.
  */
 export const recordFractionEvent = createServerFn({ method: "POST" })
-  .inputValidator((input: { assetId: string; txHash: string }) => input)
+  .inputValidator((input: { assetId: string; txHash: string }) =>
+    parseInput(z.object({ assetId: assetIdSchema, txHash: txHashSchema }), input),
+  )
   .handler(async ({ data }): Promise<RecordedFractionEvent | null> => {
+    const { enforceRateLimit, RATE_RULES, clientIp } = await import("./rate-limit.server");
+    await enforceRateLimit(RATE_RULES.fractionEvent, await clientIp());
     if (!/^[0-9a-f]{64}$/.test(data.txHash)) throw new Error("That is not a transaction hash.");
 
     const supabase = publicSupabase();
@@ -165,7 +171,9 @@ async function insert(
 
 /** Public activity for one offering, newest first. */
 export const listFractionEvents = createServerFn({ method: "GET" })
-  .inputValidator((input: { assetId: string }) => input)
+  .inputValidator((input: { assetId: string }) =>
+    parseInput(z.object({ assetId: assetIdSchema }), input),
+  )
   .handler(async ({ data }) => {
     const supabase = publicSupabase();
     const { data: rows, error } = await supabase

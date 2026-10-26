@@ -46,6 +46,7 @@ async function sign(w: Awaited<ReturnType<typeof wallet>>, message: string, addr
       address: bech32.encode("addr_test", bech32.toWords(w.addr), 200),
       nonce: "ab".repeat(24),
       expiresAt: "2026-10-24T03:00:00.000Z",
+      domain: "stellarischain.com",
     });
     const s = await sign(w, msg);
     const r = await verifyCip30Signature(s.signature, s.key);
@@ -55,8 +56,14 @@ async function sign(w: Awaited<ReturnType<typeof wallet>>, message: string, addr
   });
 
   test("the message contains app, account, wallet, nonce, preprod and expiry", () => {
-    const msg = buildWalletLinkMessage({ userId: "acc-9", address: "addr_test1xyz", nonce: "n0", expiresAt: "T" });
-    for (const part of ["Stellaris Gateway", "Account: acc-9", "Wallet: addr_test1xyz", "Nonce: n0", "Network: preprod", "Expires: T"]) {
+    const msg = buildWalletLinkMessage({
+      userId: "acc-9",
+      address: "addr_test1xyz",
+      nonce: "n0",
+      expiresAt: "T",
+      domain: "stellarischain.com",
+    });
+    for (const part of ["Stellaris Gateway", "Account: acc-9", "Wallet: addr_test1xyz", "Nonce: n0", "Network: preprod", "Expires: T", "Domain: stellarischain.com"]) {
       assert.ok(msg.includes(part), part);
     }
   });
