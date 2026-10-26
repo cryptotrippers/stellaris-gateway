@@ -1,0 +1,38 @@
+{
+  "status": "not_minted",
+  "network": "preprod",
+  "project": "Stellaris",
+  "website": "https://stellarischain.com",
+  "assets": [
+    {
+      "displayName": "TESSRA Preprod Test Token",
+      "ticker": "TSRA",
+      "assetNameUtf8": "TSRA",
+      "assetNameHex": "54535241",
+      "policyId": null,
+      "fingerprint": null,
+      "mintTxHash": null,
+      "decimals": null,
+      "supply": null,
+      "confirmedAt": null,
+      "explorerUrls": []
+    },
+    {
+      "displayName": "Staked TESSRA Preprod Test Token",
+      "ticker": "sTSRA",
+      "assetNameUtf8": "sTSRA",
+      "assetNameHex": "7354535241",
+      "policyId": null,
+      "fingerprint": null,
+      "mintTxHash": null,
+      "decimals": null,
+      "supply": null,
+      "confirmedAt": null,
+      "explorerUrls": []
+    }
+  ],
+  "metadataRegistry": {
+    "status": "not_submitted",
+    "pullRequestUrl": null
+  }
+}
