@@ -102,7 +102,9 @@ export type LedgerErrorCode =
   | "wrong_status"
   | "cross_rail_reference"
   | "invalid_snapshot"
-  | "version_conflict";
+  | "version_conflict"
+  /** Stored ledger failed its hash-chain or period-root check (E03). */
+  | "integrity_failure";
 
 /** True when the provenance names a recorder, a time and at least one piece of evidence. */
 export function hasEvidence(p: Provenance | null | undefined): p is Provenance {

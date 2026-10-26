@@ -10,6 +10,8 @@ database.
   (`auth.uid()`, `auth.users`, the API roles, storage tables).
 - `harness.ts` — replay, actors, `run()` (always rolls back) and `refused()`.
 - `funding-integrity.test.ts` — Sprint 1 E01: the audit's attack table.
+- `ledger-store.test.ts` + `ledger-sql-repo.ts` — Sprint 1 E03: the Meridian ledger
+  persisted, reloaded to the cent, tamper-checked and append-only.
 
 They need the dev dependency `@electric-sql/pglite`. Without it they skip with
 a message, so `npm test` still passes.

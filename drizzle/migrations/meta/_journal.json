@@ -71,6 +71,13 @@
       "when": 1793046697445,
       "tag": "0009_funding_integrity",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1793055620740,
+      "tag": "0010_meridian_ledger",
+      "breakpoints": true
     }
   ]
 }
