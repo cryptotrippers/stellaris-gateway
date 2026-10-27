@@ -818,6 +818,141 @@ export type Database = {
         }
         Relationships: []
       }
+      ledger_entries: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          entry: Json
+          entry_hash: string
+          kind: string
+          period_id: string
+          prev_hash: string
+          project_id: string
+          ref: string
+          seq: number
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency: string
+          entry: Json
+          entry_hash: string
+          kind: string
+          period_id: string
+          prev_hash: string
+          project_id: string
+          ref: string
+          seq: number
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          entry?: Json
+          entry_hash?: string
+          kind?: string
+          period_id?: string
+          prev_hash?: string
+          project_id?: string
+          ref?: string
+          seq?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ledger_entries_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "ledger_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ledger_entries_project_id_period_id_fkey"
+            columns: ["project_id", "period_id"]
+            isOneToOne: false
+            referencedRelation: "ledger_periods"
+            referencedColumns: ["project_id", "id"]
+          },
+        ]
+      }
+      ledger_periods: {
+        Row: {
+          adjusts_period_id: string | null
+          approved_at: string | null
+          approved_by: string | null
+          closed_by: string | null
+          created_at: string
+          ends_on: string
+          id: string
+          kind: string
+          period_root: string | null
+          project_id: string
+          starts_on: string
+          status: string
+        }
+        Insert: {
+          adjusts_period_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          closed_by?: string | null
+          created_at?: string
+          ends_on: string
+          id: string
+          kind: string
+          period_root?: string | null
+          project_id: string
+          starts_on: string
+          status?: string
+        }
+        Update: {
+          adjusts_period_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          closed_by?: string | null
+          created_at?: string
+          ends_on?: string
+          id?: string
+          kind?: string
+          period_root?: string | null
+          project_id?: string
+          starts_on?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ledger_periods_project_id_adjusts_period_id_fkey"
+            columns: ["project_id", "adjusts_period_id"]
+            isOneToOne: false
+            referencedRelation: "ledger_periods"
+            referencedColumns: ["project_id", "id"]
+          },
+          {
+            foreignKeyName: "ledger_periods_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "ledger_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ledger_projects: {
+        Row: {
+          created_at: string
+          currency: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          currency: string
+          id: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          id?: string
+        }
+        Relationships: []
+      }
       linked_wallets: {
         Row: {
           address: string
@@ -1479,6 +1614,7 @@ export type Database = {
         Args: { p_key: string; p_max: number; p_window_seconds: number }
         Returns: boolean
       }
+      is_privileged_writer: { Args: never; Returns: boolean }
       mark_proposal_executed_offchain: {
         Args: { _proposal_id: string; _user_id: string }
         Returns: undefined
