@@ -10,6 +10,7 @@
  */
 import { TESSERA_PREPROD as D } from "./tessera-preprod";
 import type { TesseraLive } from "./tessera-live.shared";
+import { decodeTesseraDatum, tesseraAddressToBech32 } from "./tessera-datum.shared";
 
 /** The deployment constants `summarize` reads (the live one by default). */
 export type Deployment = {
@@ -214,32 +215,21 @@ async function utxosAt(address: string): Promise<RawUtxo[]> {
 }
 
 export async function fetchTesseraLive(): Promise<TesseraLive> {
-  const { Data, CML } = await import("@lucid-evolution/lucid");
   const [reserve, vault, firstLoss, queue] = await Promise.all([
     utxosAt(D.reserve.address),
     utxosAt(D.vault.address),
     utxosAt(D.firstLoss.address),
     utxosAt(D.queue.address),
   ]);
-  const addr: AddrEncoder = (a) => plutusAddressToBech32(a, CML);
-  return summarize({ reserve, vault, firstLoss, queue }, (c) => Data.from(c), addr, Date.now());
+  return summarize(
+    { reserve, vault, firstLoss, queue },
+    decodeTesseraDatum,
+    tesseraAddressToBech32,
+    Date.now(),
+  );
 }
 
 /** Plutus `Address` data → Preprod bech32 (key or script payment, optional inline stake key/script). */
-export function plutusAddressToBech32(a: unknown, CML: any): string {
-  const f = asConstr(a).fields;
-  const cred = (x: unknown) => {
-    const c = asConstr(x);
-    const h = c.fields[0] as string;
-    return c.index === 0
-      ? CML.Credential.new_pub_key(CML.Ed25519KeyHash.from_hex(h))
-      : CML.Credential.new_script(CML.ScriptHash.from_hex(h));
-  };
-  const pay = cred(f[0]);
-  const st = asConstr(f[1]);
-  const networkId = 0;
-  if (st.index === 1) return CML.EnterpriseAddress.new(networkId, pay).to_address().to_bech32();
-  const inline = asConstr(st.fields[0]);
-  if (inline.index !== 0) throw new Error("pointer stake credentials are not supported");
-  return CML.BaseAddress.new(networkId, pay, cred(inline.fields[0])).to_address().to_bech32();
+export function plutusAddressToBech32(a: unknown, _legacyEncoder?: unknown): string {
+  return tesseraAddressToBech32(a);
 }
