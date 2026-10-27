@@ -730,6 +730,39 @@ test cancel_raise_needs_the_committee() fail {
   act(step(d, refunding_from(d), [], assets.zero, [c1]), CancelRaise)
 }
 
+test close_after_a_cancelled_raise_is_rejected() fail {
+  // cancelled with the soft cap met: the escrow is owed back to holders and
+  // must never become releasable
+  let d = refunding_from(raised(500))
+  act(step(d, closed_from(d), [], assets.zero, board), CloseRaise)
+}
+
+test close_cannot_reopen_a_winding_down_offering() fail {
+  let d0 = closed_from(raised(500))
+  let d = with_status(d0, WindingDown)
+  act(step(d, closed_from(d), [], assets.zero, board), CloseRaise)
+}
+
+test fail_raise_cannot_reopen_a_closed_offering() fail {
+  let d = with_status(refunding_from(raised(10)), Closed)
+  act(after_window(step(d, refunding_from(d), [], assets.zero, [])), FailRaise)
+}
+
+test cancel_raise_cannot_go_straight_to_operating() fail {
+  let d = raised(500)
+  act(step(d, closed_from(d), [], assets.zero, board), CancelRaise)
+}
+
+test cancel_raise_must_cancel_the_fees() fail {
+  let d = raised(500)
+  act(step(d, with_status(d, Refunding), [], assets.zero, board), CancelRaise)
+}
+
+test cancel_raise_once_operating_is_rejected() fail {
+  let d = closed_from(raised(500))
+  act(step(d, refunding_from(d), [], assets.zero, board), CancelRaise)
+}
+
 // ==================================================================
 // Refunds: fractions (Refunding) and pledges (anyone, no committee)
 // ==================================================================
