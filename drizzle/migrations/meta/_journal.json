@@ -92,6 +92,13 @@
       "when": 1793083947882,
       "tag": "0012_governance_integrity",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793137591481,
+      "tag": "0013_apply_pending_governance_integrity",
+      "breakpoints": true
     }
   ]
 }
