@@ -78,6 +78,13 @@
       "when": 1793055620740,
       "tag": "0010_meridian_ledger",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1793080131930,
+      "tag": "0011_sprint1_apply_pending",
+      "breakpoints": true
     }
   ]
 }

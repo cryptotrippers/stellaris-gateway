@@ -1,0 +1,2 @@
+-- Sprint 1: no-op migration whose only purpose is to run the Drizzle migrator so it applies the pending journal entries 0009_funding_integrity and 0010_meridian_ledger, in order, exactly as committed.
+SELECT 1;
