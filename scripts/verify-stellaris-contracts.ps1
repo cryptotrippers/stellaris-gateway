@@ -249,6 +249,15 @@ $rules = @(
     @{ File = 'contracts/multi-asset-vault/validators/multi_asset_vault.ak'; Pattern = 'genuine && markers_conserved'; Label = 'multi_asset_vault position markers conserved (F-4)' }
     @{ File = 'contracts/multi-asset-vault/validators/multi_asset_vault.ak'; Pattern = 'marked && owner_signed'; Label = 'multi_asset_vault spends only marked Positions (F-4)' }
     @{ File = 'contracts/fraction-vault/validators/fraction_vault.ak'; Pattern = 'one_shot_mint(tx, policy_id, seed)'; Label = 'fraction_vault state-thread mint (F-1)' }
+    @{ File = 'contracts/fraction-vault/lib/stellaris/fv2.ak'; Pattern = 'pub const max_fee_bps: Int = 500'; Label = 'fraction v2 settlement fee cap 5%' }
+    @{ File = 'contracts/fraction-vault/validators/offering_v2.ak'; Pattern = 'one_shot_mint(tx, own, seed),'; Label = 'offering_v2 state-thread mint (F-1)' }
+    @{ File = 'contracts/fraction-vault/validators/offering_v2.ak'; Pattern = 'holds_thread(me.output.value, own),'; Label = 'offering_v2 spends only the genuine State (F-1)' }
+    @{ File = 'contracts/fraction-vault/validators/offering_v2.ak'; Pattern = 'continuing_ok(out, me.output),'; Label = 'offering_v2 State pinned (F-6)' }
+    @{ File = 'contracts/fraction-vault/validators/offering_v2.ak'; Pattern = 'units_in(out.value, t.unit_policy, t.unit_name) == accounted(n.book),'; Label = 'offering_v2 State holds exactly escrowed - released + pool (invariant 4)' }
+    @{ File = 'contracts/fraction-vault/validators/offering_v2.ak'; Pattern = 'amount <= release_room(b, t),'; Label = 'offering_v2 releases capped at net proceeds - retained (invariant 5)' }
+    @{ File = 'contracts/fraction-vault/validators/offering_v2.ak'; Pattern = '_ -> pledges == []'; Label = 'offering_v2 pledges move only with Settle' }
+    @{ File = 'contracts/fraction-vault/validators/pledge.ak'; Pattern = 'moved == [Pair(pledge_marker, -marked)],'; Label = 'pledge markers burned one per spent pledge (F-4)' }
+    @{ File = 'contracts/fraction-vault/validators/pledge.ak'; Pattern = 'o.address == owner && o.datum == InlineDatum(own_ref)'; Label = 'pledge refunds pay the owner, tagged per pledge (double satisfaction)' }
     @{ File = 'contracts/susdr-vault/README.md'; Pattern = 'DO NOT BOOTSTRAP'; Label = 'susdr_vault frozen notice (F-1)' }
     @{ File = 'contracts/tessera/lib/tessera/rules.ak'; Pattern = 'qty > 0 && minted_supply + qty <= attested_reserve && minted_supply + qty <= mint_cap'; Label = 'tessera mint within reserve and cap' }
     @{ File = 'contracts/tessera/lib/tessera/rules.ak'; Pattern = 'max_attestation_age: Int = 604_800_000'; Label = 'tessera 7-day attestation freshness' }

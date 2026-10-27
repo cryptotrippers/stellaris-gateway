@@ -207,6 +207,9 @@ jobs:
       - name: Execution-budget gate (E16, max +10% per test vs baseline)
         run: node scripts/contracts/check-budgets.mjs contracts/fraction-vault "$RUNNER_TEMP/aiken-check-fraction-vault.json"
 
+      - name: v2 Settle batch gate (E06, keeper batch keeps 20% headroom)
+        run: node scripts/contracts/fv2-budget-report.mjs "$RUNNER_TEMP/aiken-check-fraction-vault.json"
+
   verify-tessera-blueprint:
     name: aiken check + blueprint drift guard (tessera)
     runs-on: ubuntu-latest

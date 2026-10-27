@@ -1,8 +1,10 @@
 # `fraction_vault` v2 — specification (E05)
 
-Status: **draft for approval**, 27 Oct 2026. Nothing in this document is built
-yet. Approving it unblocks E06 (Aiken scripts), E07 (builders and tracker) and
-E09 (snapshot, manifest and payouts).
+Status: **approved** (PR #29, 28 Oct 2026). **E06 built** on branch
+`sprint3/fraction-v2-contracts`: `validators/offering_v2.ak`, `validators/pledge.ak`,
+`validators/fraction_v2.ak`, shared types in `lib/stellaris/fv2.ak`, whole-transaction
+tests in `validators/fv2_scenarios.ak`. Section 11 records where the scripts refine
+this text. E07 (builders and tracker) and E09 (snapshot, manifest and payouts) are next.
 
 v1 (`validators/fraction_vault.ak`, `validators/fraction.ak`) stays in the repo
 unchanged. No v1 offering has been bootstrapped (`OFFERING_SEEDS` is empty), so
@@ -207,3 +209,118 @@ handling per holder; and whether holders may elect their payout asset.
 - Transfer-restricted fraction policy (CIP-113 style), only if counsel requires.
 - Debt-like offerings (Build Guide 15.5).
 - Any change to Tessera scripts.
+
+## 11. E06 implementation notes (28 Oct 2026)
+
+What the scripts do where this spec left a choice open, or where review of the
+draft found a gap. Each item is covered by named tests in
+`validators/fv2_scenarios.ak`.
+
+### 11.1 Script wiring
+
+| Script | Parameters as built | Why |
+| --- | --- | --- |
+| `offering_v2` | `version, asset_id, unit_policy, unit_name, pledge_hash, seed` | Needs the pledge script's hash to find pledge inputs in `Settle` and to refuse them in every other action. |
+| `pledge` | `version` only (one script for every offering) | Taking `offering_hash` as section 3 proposed would make the two hashes depend on each other. The pledge datum names its offering instead (the State's thread-token policy), and one reference script serves all offerings. |
+| `fraction_v2` | `offering_hash, asset_id` | As specified. It also requires the State's `fraction_policy` to be itself. |
+
+The fraction policy named in the datum cannot be checked on-chain at `Open`
+(a script cannot hash another script). As in v1, the reader that pins an offering
+(`genuineOfferingAt`, E07) must check `fraction_policy == fraction_v2(offering_hash,
+asset_id)` before the app lists it.
+
+### 11.2 Pledges carry a marker (AUDIT.md F-4 pattern)
+
+Paying to a script runs no code, so a pledge's `created` field and its deposit
+cannot be trusted on their own. The pledge script is therefore also a minting
+policy: `MintPledge` mints one `pledge` marker into one new pledge, only while the
+offering (read as a reference input carrying its thread token) is `Raising`, only
+if the transaction ends by the deadline, only for exactly `qty × price` units plus
+a rider, to a key-address owner, and with `created` equal to the transaction's
+lower bound. Every marked pledge that is spent burns its marker (`BurnPledges`
+checks the count). Consequences:
+
+* "Created after the deadline" and "wrong amount" can no longer occur for a
+  marked pledge; they are refused at mint.
+* A UTxO at the pledge address without a marker is not a pledge. `Settle` refuses
+  it; anyone may return it to the owner its datum names, at any time
+  (section 4.2's "malformed pledge" rule).
+
+### 11.3 Refund and cancel payouts
+
+`CancelPledge` and `RefundPledge` carry `out_ix`: that output must pay the owner
+everything the pledge held (less the marker) and carry this pledge's own output
+reference as its inline datum. The tag makes each payout belong to one pledge, so
+two pledges of one owner cannot be refunded with a single payment
+(double satisfaction). Many pledges can still be refunded in one transaction.
+
+`RefundPledge` is allowed once the State is in **any** status other than
+`Raising` (section 5.1 said `Refunding` or `Closed`). This also covers a pledge
+left unsettled when the raise closed: its owner gets it back at once instead of
+waiting for the settle window to end. The after-the-window rule still applies
+while `Raising`.
+
+### 11.4 Settle
+
+* Who: the `keeper` key (in the terms) or the committee M-of-N.
+* Layout: the new State is output 0; outputs 1..N pay each pledge's owner, in the
+  order the pledges appear among the transaction's inputs (ledger order). Each
+  owner output must go to the owner's exact address with exactly that pledge's
+  fractions and at least the pledge's lovelace rider.
+* Eligibility (when `eligibility_policy` is set): a reference input holds exactly
+  one eligibility token named by the owner's key hash. No owner signature is
+  needed, because the fractions can only go to the owner.
+* Batch size: **20 pledges per Settle** (77.6% of the per-transaction memory
+  limit, 39.6% of CPU; 25 pledges would use 96.8% of memory). These figures come
+  from the Aiken evaluator, with the cost of building the transaction subtracted
+  (`scripts/contracts/fv2-budget-report.mjs`, run in CI). E07 re-measures them on
+  real serialised transactions in the emulator before the keeper ships. About 50
+  investors settle in three batches.
+
+### 11.5 State datum layout
+
+`OfferingV2 { status, terms, book, fee_bps, period, manifest_root, committee,
+threshold }`:
+
+* `Terms` holds every immutable field of section 4.1, plus `issuer` (signs `Open`),
+  `keeper`, and the deposit unit (`unit_policy`, `unit_name`, equal to the script
+  parameters, so a pledge can read them). Invariant 6 is one equality: `terms`
+  unchanged.
+* `Book` holds `settled, outstanding, escrowed, released, fees, pool,
+  net_proceeds`. `net_proceeds` is recorded by `CloseRaise`
+  (`escrowed − fees`), so the release cap is `net_proceeds − retained`.
+* Each redeemer states the one next datum it allows as an update of the old one.
+  A field it does not name cannot change.
+
+### 11.6 Rules every State spend checks
+
+* The State is output 0, alone at the script, at the spent State's exact address
+  with no reference script (F-6), carrying the thread token, lovelace and the
+  deposit unit only, with a rider.
+* The State holds **exactly** `escrowed − released + pool` deposit units after
+  every transaction (invariant 4 as an equality, so units cannot be added or
+  taken outside the bookkeeping).
+* Under `fraction_policy` exactly `Δoutstanding` of the asset id is minted or
+  burned, and nothing else (invariant 3). `fraction_v2` checks the same from
+  its side.
+* `escrowed − released − fees ≥ 0` and `outstanding ≤ settled ≤ total_fractions`.
+* No pledge input unless the action is `Settle`.
+
+`BeginWindDown` leaves `escrowed = released + fees`, so unclaimed fees stay
+claimable by the treasury and everything else (unreleased escrow, the retained
+amount and the sale proceeds) joins the holders' pool.
+
+### 11.7 Test evidence
+
+* Whole-transaction harness: `run` executes every script a transaction would
+  trigger (State spend, each pledge spend, each minting policy present) and
+  accepts only if all accept. Every attack in section 8 is a small change to an
+  accepted base transaction, and the base is tested too.
+* Harness check: with all three scripts replaced by `True`, 107 of the 108 attack
+  transactions are accepted. So each rejection comes from a script, not from a
+  malformed fixture. The 108th calls `fraction_v2` directly.
+* Script sizes: `offering_v2` 8,117 B, `pledge` 4,423 B, `fraction_v2` 1,470 B
+  (all under 13,000).
+* Mutation pass: see 11.8.
+* Not yet: Lucid emulator runs on serialised transactions (E07, with the
+  builders).
