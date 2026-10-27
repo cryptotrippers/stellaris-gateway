@@ -103,4 +103,7 @@ export const RATE_RULES = {
   vaultTx: { bucket: "vault-tx", max: 60, windowSeconds: 600 },
   /** E13: one wallet transaction makes ~10–30 Blockfrost calls through the proxy. */
   blockfrostProxy: { bucket: "bf-proxy", max: 600, windowSeconds: 600 },
+  /** E04: Meridian ledger reads and writes, per signed-in user. */
+  ledgerRead: { bucket: "ledger-read", max: 120, windowSeconds: 600 },
+  ledgerWrite: { bucket: "ledger-write", max: 30, windowSeconds: 600, failClosed: true },
 } as const satisfies Record<string, RateRule>;
