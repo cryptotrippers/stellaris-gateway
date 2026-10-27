@@ -5,7 +5,8 @@
 
 export type CardanoWalletId = "lace" | "eternl" | "nami" | "typhon" | "flint" | "yoroi" | "gerowallet" | "vespr";
 
-export type CIP30ErrorKind = "no_extension" | "rejected" | "locked" | "unknown";
+/** `wrong_network` is set by the connect-time network gate (E21), not by the wallet. */
+export type CIP30ErrorKind = "no_extension" | "rejected" | "locked" | "wrong_network" | "unknown";
 
 export interface CIP30Error {
   kind: CIP30ErrorKind;

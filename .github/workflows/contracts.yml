@@ -2,7 +2,9 @@ name: Contracts
 
 # Compiles the Aiken validators from source on every push/PR and fails the build
 # if either compiled blueprint drifts from the hash + CBOR pinned in the app
-# (src/lib/vault.ts and src/lib/yield-vault.ts).
+# (src/lib/vault.ts and src/lib/yield-vault.ts), if any validator grows past
+# 13,000 bytes, or if any test's execution budget rises more than 10% above
+# contracts/<project>/budget-baseline.json (Sprint 1 E16).
 
 on:
   push:
@@ -32,9 +34,10 @@ jobs:
           # release/API requests being throttled by GitHub.
           github-token: ${{ github.token }}
 
-      - name: Run validator tests
+      - name: Run validator tests (JSON report kept for the budget gate)
         working-directory: contracts/vault
-        run: aiken check
+        shell: bash
+        run: aiken check | tee "$RUNNER_TEMP/aiken-check-vault.json"
 
       - name: Build blueprint
         working-directory: contracts/vault
@@ -48,6 +51,12 @@ jobs:
             echo "Run 'aiken build' in contracts/vault and commit the regenerated plutus.json."
             exit 1
           fi
+
+      - name: Script-size gate (E16, max 13,000 bytes per validator)
+        run: node scripts/contracts/check-script-sizes.mjs contracts/vault
+
+      - name: Execution-budget gate (E16, max +10% per test vs baseline)
+        run: node scripts/contracts/check-budgets.mjs contracts/vault "$RUNNER_TEMP/aiken-check-vault.json"
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -88,9 +97,10 @@ jobs:
           version: ${{ steps.aiken.outputs.version }}
           github-token: ${{ github.token }}
 
-      - name: Run validator tests
+      - name: Run validator tests (JSON report kept for the budget gate)
         working-directory: contracts/susdr-vault
-        run: aiken check
+        shell: bash
+        run: aiken check | tee "$RUNNER_TEMP/aiken-check-susdr-vault.json"
 
       - name: Build blueprint
         working-directory: contracts/susdr-vault
@@ -104,6 +114,12 @@ jobs:
             echo "Run 'aiken build' in contracts/susdr-vault and commit the regenerated plutus.json."
             exit 1
           fi
+
+      - name: Script-size gate (E16, max 13,000 bytes per validator)
+        run: node scripts/contracts/check-script-sizes.mjs contracts/susdr-vault
+
+      - name: Execution-budget gate (E16, max +10% per test vs baseline)
+        run: node scripts/contracts/check-budgets.mjs contracts/susdr-vault "$RUNNER_TEMP/aiken-check-susdr-vault.json"
 
   verify-multi-asset-blueprint:
     name: aiken check + blueprint drift guard (multi-asset-vault)
@@ -124,9 +140,10 @@ jobs:
           version: ${{ steps.aiken.outputs.version }}
           github-token: ${{ github.token }}
 
-      - name: Run validator tests
+      - name: Run validator tests (JSON report kept for the budget gate)
         working-directory: contracts/multi-asset-vault
-        run: aiken check
+        shell: bash
+        run: aiken check | tee "$RUNNER_TEMP/aiken-check-multi-asset-vault.json"
 
       - name: Build blueprint
         working-directory: contracts/multi-asset-vault
@@ -140,6 +157,12 @@ jobs:
             echo "Run 'aiken build' in contracts/multi-asset-vault and commit the regenerated plutus.json."
             exit 1
           fi
+
+      - name: Script-size gate (E16, max 13,000 bytes per validator)
+        run: node scripts/contracts/check-script-sizes.mjs contracts/multi-asset-vault
+
+      - name: Execution-budget gate (E16, max +10% per test vs baseline)
+        run: node scripts/contracts/check-budgets.mjs contracts/multi-asset-vault "$RUNNER_TEMP/aiken-check-multi-asset-vault.json"
 
   verify-fraction-blueprint:
     name: aiken check + blueprint drift guard (fraction-vault)
@@ -160,9 +183,10 @@ jobs:
           version: ${{ steps.aiken.outputs.version }}
           github-token: ${{ github.token }}
 
-      - name: Run validator tests
+      - name: Run validator tests (JSON report kept for the budget gate)
         working-directory: contracts/fraction-vault
-        run: aiken check
+        shell: bash
+        run: aiken check | tee "$RUNNER_TEMP/aiken-check-fraction-vault.json"
 
       - name: Build blueprint
         working-directory: contracts/fraction-vault
@@ -176,6 +200,12 @@ jobs:
             echo "Run 'aiken build' in contracts/fraction-vault and commit the regenerated plutus.json."
             exit 1
           fi
+
+      - name: Script-size gate (E16, max 13,000 bytes per validator)
+        run: node scripts/contracts/check-script-sizes.mjs contracts/fraction-vault
+
+      - name: Execution-budget gate (E16, max +10% per test vs baseline)
+        run: node scripts/contracts/check-budgets.mjs contracts/fraction-vault "$RUNNER_TEMP/aiken-check-fraction-vault.json"
 
   verify-tessera-blueprint:
     name: aiken check + blueprint drift guard (tessera)
@@ -196,9 +226,10 @@ jobs:
           version: ${{ steps.aiken.outputs.version }}
           github-token: ${{ github.token }}
 
-      - name: Run validator tests
+      - name: Run validator tests (JSON report kept for the budget gate)
         working-directory: contracts/tessera
-        run: aiken check
+        shell: bash
+        run: aiken check | tee "$RUNNER_TEMP/aiken-check-tessera.json"
 
       - name: Build blueprint
         working-directory: contracts/tessera
@@ -212,3 +243,9 @@ jobs:
             echo "Run 'aiken build' in contracts/tessera and commit the regenerated plutus.json."
             exit 1
           fi
+
+      - name: Script-size gate (E16, max 13,000 bytes per validator)
+        run: node scripts/contracts/check-script-sizes.mjs contracts/tessera
+
+      - name: Execution-budget gate (E16, max +10% per test vs baseline)
+        run: node scripts/contracts/check-budgets.mjs contracts/tessera "$RUNNER_TEMP/aiken-check-tessera.json"

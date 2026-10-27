@@ -9,10 +9,12 @@
     "build:dev": "NODE_OPTIONS=--max-old-space-size=8192 vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
+    "test": "node scripts/test/run-tests.mjs",
     "format": "prettier --write .",
     "verify:contracts": "node scripts/verify-vault-hash.mjs",
     "verify:contracts:strict": "node scripts/verify-vault-hash.mjs --strict",
     "verify:contracts:live": "node scripts/verify-live-scripts.mjs",
+    "verify:contracts:size": "node scripts/contracts/check-script-sizes.mjs",
     "verify:state-datum": "bun run scripts/verify-state-datum-roundtrip.ts"
   },
   "dependencies": {

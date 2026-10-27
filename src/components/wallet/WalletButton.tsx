@@ -34,6 +34,7 @@ const ERROR_ICON: Record<CIP30ErrorKind, typeof AlertTriangle> = {
   no_extension: DownloadCloud,
   locked: Lock,
   rejected: Ban,
+  wrong_network: Ban,
   unknown: AlertTriangle,
 };
 
@@ -41,6 +42,7 @@ const ERROR_TITLE: Record<CIP30ErrorKind, string> = {
   no_extension: "Wallet not installed",
   locked: "Wallet is locked",
   rejected: "Connection rejected",
+  wrong_network: "Wrong network",
   unknown: "Connection failed",
 };
 

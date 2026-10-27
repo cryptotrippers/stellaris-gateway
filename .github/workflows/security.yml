@@ -3,7 +3,7 @@ name: Security
 # Security Suite S2.4 and S1: on every push to main, every pull request and
 # weekly, fail if a dependency has a high or critical advisory, if the
 # transaction allow-list drifts from the deployment record, or if the
-# security and ledger tests fail.
+# TypeScript unit tests fail (every *.test.ts under src/ and tests/).
 
 on:
   push:
@@ -36,5 +36,5 @@ jobs:
       - name: Transaction allow-list matches deployments/preprod-v1.json
         run: node scripts/security/gen-tx-allowlist.mjs --check
 
-      - name: Security and ledger tests (node:test)
-        run: npx tsx --test src/lib/*.test.ts src/components/wallet/*.test.ts
+      - name: All TypeScript unit tests (node:test, E11)
+        run: node scripts/test/run-tests.mjs
