@@ -1117,6 +1117,86 @@ test rotate_to_a_malformed_committee_is_rejected() fail {
   act(step(d, OfferingV2 { ..d, committee: [c2], threshold: 2 }, [], assets.zero, board), Rotate { committee: [c2], threshold: 2 })
 }
 
+// --- each committee action needs the committee and changes only its field
+
+test commit_period_needs_the_committee() fail {
+  let d = operating()
+  act(step(d, OfferingV2 { ..d, period: 1, manifest_root: root1 }, [], assets.zero, [c3]), CommitPeriod { period: 1, manifest_root: root1 })
+}
+
+test commit_period_cannot_change_the_status() fail {
+  let d = operating()
+  act(step(d, OfferingV2 { ..d, period: 1, manifest_root: root1, status: WindingDown }, [], assets.zero, board), CommitPeriod { period: 1, manifest_root: root1 })
+}
+
+test set_fees_needs_the_committee() fail {
+  let d = raised(10)
+  act(step(d, OfferingV2 { ..d, fee_bps: 250 }, [], assets.zero, [c3, keeper]), SetFees { fee_bps: 250 })
+}
+
+test set_fees_cannot_set_another_rate_than_named() fail {
+  let d = raised(10)
+  act(step(d, OfferingV2 { ..d, fee_bps: 300 }, [], assets.zero, board), SetFees { fee_bps: 250 })
+}
+
+test set_fees_cannot_change_the_status() fail {
+  let d = raised(10)
+  act(step(d, OfferingV2 { ..d, fee_bps: 250, status: Refunding }, [], assets.zero, board), SetFees { fee_bps: 250 })
+}
+
+test claim_fee_needs_the_committee() fail {
+  let d = operating()
+  let tx = claim_tx(d, d.book.fees, treas)
+  act(Transaction { ..tx, extra_signatories: [treas, c3] }, ClaimFee { amount: d.book.fees })
+}
+
+test claim_fee_cannot_change_the_status() fail {
+  let d = operating()
+  let tx = claim_tx(d, d.book.fees, treas)
+  expect [s, ..rest] = tx.outputs
+  let n = with_status(state_of(s), WindingDown)
+  act(Transaction { ..tx, outputs: [state_out(n), ..rest] }, ClaimFee { amount: d.book.fees })
+}
+
+test claim_fee_of_a_negative_amount_is_rejected() fail {
+  let d = operating()
+  act(claim_tx(d, -5_000_000, treas), ClaimFee { amount: -5_000_000 })
+}
+
+test claim_fee_of_more_than_named_is_rejected() fail {
+  // the redeemer names 1 TSRA, the book and the payout take 2
+  let d = operating()
+  act(claim_tx(d, 2_000_000, treas), ClaimFee { amount: 1_000_000 })
+}
+
+test release_cannot_change_the_status() fail {
+  let d = operating()
+  let tx = release_tx(d, 1_000_000, spv)
+  expect [s, ..rest] = tx.outputs
+  let n = with_status(state_of(s), WindingDown)
+  act(Transaction { ..tx, outputs: [state_out(n), ..rest] }, Release { amount: 1_000_000, evidence_hash: evidence })
+}
+
+test release_of_a_negative_amount_is_rejected() fail {
+  let d = with_book(operating(), Book { ..operating().book, released: 10_000_000 })
+  act(release_tx(d, -5_000_000, spv), Release { amount: -5_000_000, evidence_hash: evidence })
+}
+
+test rotate_cannot_install_another_committee_than_named() fail {
+  let d = operating()
+  act(step(d, OfferingV2 { ..d, committee: [mallory], threshold: 1 }, [], assets.zero, board), Rotate { committee: [c2, c3, mallory], threshold: 2 })
+}
+
+test rotate_cannot_change_the_status() fail {
+  let d = operating()
+  act(step(d, OfferingV2 { ..d, committee: [c2, c3, mallory], threshold: 2, status: WindingDown }, [], assets.zero, board), Rotate { committee: [c2, c3, mallory], threshold: 2 })
+}
+
+test refund_fraction_of_a_negative_quantity_is_rejected() fail {
+  // would mint new fractions during a refund
+  act(refund_fraction_tx(refunding_from(raised(10)), -3), RefundFraction { qty: -3 })
+}
+
 // ==================================================================
 // Winding down
 // ==================================================================
@@ -1157,6 +1237,21 @@ test begin_wind_down_needs_the_committee() fail {
 test begin_wind_down_while_raising_is_rejected() fail {
   let d = with_status(running(), Raising)
   act(step(d, wind_down(d, 0), [], assets.zero, board), BeginWindDown { final_pool: 0 })
+}
+
+test begin_wind_down_cannot_take_units_out() fail {
+  // a negative final pool would move escrow out of the State
+  let d = running()
+  act(step(d, wind_down(d, -1_000_000_000), [key_out(c1, tsra(1_000_000_000))], assets.zero, board), BeginWindDown { final_pool: -1_000_000_000 })
+}
+
+test begin_wind_down_cannot_change_the_committee() fail {
+  let d = running()
+  act(step(d, OfferingV2 { ..wind_down(d, 0), committee: [mallory], threshold: 1 }, [], assets.zero, board), BeginWindDown { final_pool: 0 })
+}
+
+test redeem_of_a_negative_quantity_is_rejected() fail {
+  act(redeem_tx(winding(), -7), Redeem { qty: -7 })
 }
 
 fn redeem_tx(d: OfferingV2, qty: Int) -> Transaction {
