@@ -10,6 +10,7 @@
 //// tested too, so a rejection can only come from the change.
 
 use aiken/collection/list
+use aiken/interval
 use cardano/address.{Address, Script, VerificationKey}
 use cardano/assets
 use cardano/transaction.{InlineDatum, Input, Output, Transaction, placeholder}
@@ -720,6 +721,28 @@ test fail_raise_must_cancel_the_fees() fail {
   act(after_window(step(d, with_status(d, Refunding), [], assets.zero, [])), FailRaise)
 }
 
+test fail_raise_exactly_at_the_end_of_the_window_is_rejected() fail {
+  let d = raised(10)
+  let tx = step(d, refunding_from(d), [], assets.zero, [])
+  act(Transaction { ..tx, validity_range: between(dl + win, dl + win + 1000) }, FailRaise)
+}
+
+test fail_raise_without_a_start_time_is_rejected() fail {
+  let d = raised(10)
+  let tx = step(d, refunding_from(d), [], assets.zero, [])
+  act(Transaction { ..tx, validity_range: interval.before(dl + win + 1000) }, FailRaise)
+}
+
+test settle_without_an_end_time_is_rejected() fail {
+  let tx = settle_tx(raised(0), [(alice, 5)])
+  settle(Transaction { ..tx, validity_range: interval.after(t0) })
+}
+
+test settle_exactly_at_the_end_of_the_window() {
+  let tx = settle_tx(raised(0), [(alice, 5)])
+  settle(Transaction { ..tx, validity_range: between(dl, dl + win) })
+}
+
 test cancel_raise_by_the_committee() {
   let d = raised(500)
   act(step(d, refunding_from(d), [], assets.zero, board), CancelRaise)
@@ -1252,6 +1275,21 @@ test begin_wind_down_cannot_change_the_committee() fail {
 
 test redeem_of_a_negative_quantity_is_rejected() fail {
   act(redeem_tx(winding(), -7), Redeem { qty: -7 })
+}
+
+test redeem_of_a_negative_quantity_after_redemptions_is_rejected() fail {
+  // after holders redeemed, outstanding < settled: a negative redeem would
+  // mint fractions back for nothing and dilute everyone else
+  let d0 = winding()
+  let d = with_book(d0, Book { ..d0.book, outstanding: 490 })
+  let n = with_book(d, Book { ..d.book, outstanding: 497 })
+  act(
+    Transaction {
+      ..step(d, n, [key_out(mallory, fractions(7))], assets.from_asset(fp, asset, 7), []),
+      inputs: [state_in(d), wallet_in(mallory)],
+    },
+    Redeem { qty: -7 },
+  )
 }
 
 fn redeem_tx(d: OfferingV2, qty: Int) -> Transaction {
