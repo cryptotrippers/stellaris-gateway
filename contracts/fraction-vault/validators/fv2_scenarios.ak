@@ -1658,3 +1658,17 @@ test alone_fraction_policy_refuses_a_planted_state() fail {
     },
   )
 }
+
+test alone_state_accepts_a_pledge_dated_exactly_at_the_deadline() {
+  let o = pledge_out(alice, 5)
+  offering_alone(
+    with_pledge(
+      settle_tx(raised(0), [(alice, 5)]),
+      Output {
+        ..o,
+        datum: InlineDatum(PledgeDatum { ..pledge_datum(alice, 5), created: dl }),
+      },
+    ),
+    Settle,
+  )
+}
