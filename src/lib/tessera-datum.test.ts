@@ -29,16 +29,18 @@ for (const paymentScript of [false, true]) {
           ? new Constr(1, [])
           : new Constr(0, [new Constr(0, [new Constr(stakeScript ? 1 : 0, [stakeHash])])]),
       ]);
-      const expected = stakeScript === null
-        ? CML.EnterpriseAddress.new(0, pay).to_address().to_bech32()
-        : CML.BaseAddress.new(0, pay, stake).to_address().to_bech32();
+      const expected =
+        stakeScript === null
+          ? CML.EnterpriseAddress.new(0, pay).to_address().to_bech32()
+          : CML.BaseAddress.new(0, pay, stake).to_address().to_bech32();
       assert.equal(tesseraAddressToBech32(value), expected);
     });
   }
 }
 
 test("Malformed address credentials fail rather than fabricating an address", () => {
-  assert.throws(() => tesseraAddressToBech32(new Constr(0, [
-    new Constr(0, ["bad"]), new Constr(1, []),
-  ])), /Invalid address credential/);
+  assert.throws(
+    () => tesseraAddressToBech32(new Constr(0, [new Constr(0, ["bad"]), new Constr(1, [])])),
+    /Invalid address credential/,
+  );
 });

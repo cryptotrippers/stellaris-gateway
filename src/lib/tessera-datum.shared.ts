@@ -22,20 +22,31 @@ export function decodeTesseraDatum(hex: string): unknown {
 
 function constr(value: unknown): { index: number; fields: unknown[] } {
   if (
-    !value || typeof value !== "object" || !("index" in value) ||
-    !("fields" in value) || typeof value.index !== "number" || !Array.isArray(value.fields)
-  ) throw new Error("Expected address constructor");
+    !value ||
+    typeof value !== "object" ||
+    !("index" in value) ||
+    !("fields" in value) ||
+    typeof value.index !== "number" ||
+    !Array.isArray(value.fields)
+  )
+    throw new Error("Expected address constructor");
   return { index: value.index, fields: value.fields };
 }
 
 function credential(value: unknown) {
   const c = constr(value);
   const hash = c.fields[0];
-  if ((c.index !== 0 && c.index !== 1) || typeof hash !== "string" || !/^[a-f0-9]{56}$/i.test(hash)) {
+  if (
+    (c.index !== 0 && c.index !== 1) ||
+    typeof hash !== "string" ||
+    !/^[a-f0-9]{56}$/i.test(hash)
+  ) {
     throw new Error("Invalid address credential");
   }
-  return { script: c.index === 1, bytes: Array.from({ length: 28 }, (_, i) =>
-    Number.parseInt(hash.slice(i * 2, i * 2 + 2), 16)) };
+  return {
+    script: c.index === 1,
+    bytes: Array.from({ length: 28 }, (_, i) => Number.parseInt(hash.slice(i * 2, i * 2 + 2), 16)),
+  };
 }
 
 /** Shelley Preprod address encoding, including key/script inline stake credentials. */
