@@ -63,6 +63,7 @@ import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[
 import { Route as ApiBfSplatRouteImport } from './routes/api/bf/$'
 import { Route as ApiV1YieldRouteImport } from './routes/api/v1/yield'
 import { Route as ApiPublicBlockfrostWebhookRouteImport } from './routes/api/public/blockfrost/webhook'
+import { Route as ApiPublicJobsIntegrityRouteImport } from './routes/api/public/jobs/integrity'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
 import { Route as ApiV1YieldUserAddressQueueRouteImport } from './routes/api/v1/yield/user/$address/queue'
 
@@ -341,6 +342,11 @@ const ApiPublicBlockfrostWebhookRoute =
     path: '/api/public/blockfrost/webhook',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicJobsIntegrityRoute = ApiPublicJobsIntegrityRouteImport.update({
+  id: '/api/public/jobs/integrity',
+  path: '/api/public/jobs/integrity',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicPaymentsWebhookRoute =
   ApiPublicPaymentsWebhookRouteImport.update({
     id: '/api/public/payments/webhook',
@@ -409,6 +415,7 @@ export interface FileRoutesByFullPath {
   '/api/bf/$': typeof ApiBfSplatRoute
   '/api/v1/yield': typeof ApiV1YieldRouteWithChildren
   '/api/public/blockfrost/webhook': typeof ApiPublicBlockfrostWebhookRoute
+  '/api/public/jobs/integrity': typeof ApiPublicJobsIntegrityRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/v1/yield/user/$address/queue': typeof ApiV1YieldUserAddressQueueRoute
 }
@@ -465,6 +472,7 @@ export interface FileRoutesByTo {
   '/api/bf/$': typeof ApiBfSplatRoute
   '/api/v1/yield': typeof ApiV1YieldRouteWithChildren
   '/api/public/blockfrost/webhook': typeof ApiPublicBlockfrostWebhookRoute
+  '/api/public/jobs/integrity': typeof ApiPublicJobsIntegrityRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/v1/yield/user/$address/queue': typeof ApiV1YieldUserAddressQueueRoute
 }
@@ -524,6 +532,7 @@ export interface FileRoutesById {
   '/api/bf/$': typeof ApiBfSplatRoute
   '/api/v1/yield': typeof ApiV1YieldRouteWithChildren
   '/api/public/blockfrost/webhook': typeof ApiPublicBlockfrostWebhookRoute
+  '/api/public/jobs/integrity': typeof ApiPublicJobsIntegrityRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
   '/api/v1/yield/user/$address/queue': typeof ApiV1YieldUserAddressQueueRoute
 }
@@ -584,6 +593,7 @@ export interface FileRouteTypes {
     | '/api/bf/$'
     | '/api/v1/yield'
     | '/api/public/blockfrost/webhook'
+    | '/api/public/jobs/integrity'
     | '/api/public/payments/webhook'
     | '/api/v1/yield/user/$address/queue'
   fileRoutesByTo: FileRoutesByTo
@@ -640,6 +650,7 @@ export interface FileRouteTypes {
     | '/api/bf/$'
     | '/api/v1/yield'
     | '/api/public/blockfrost/webhook'
+    | '/api/public/jobs/integrity'
     | '/api/public/payments/webhook'
     | '/api/v1/yield/user/$address/queue'
   id:
@@ -698,6 +709,7 @@ export interface FileRouteTypes {
     | '/api/bf/$'
     | '/api/v1/yield'
     | '/api/public/blockfrost/webhook'
+    | '/api/public/jobs/integrity'
     | '/api/public/payments/webhook'
     | '/api/v1/yield/user/$address/queue'
   fileRoutesById: FileRoutesById
@@ -751,6 +763,7 @@ export interface RootRouteChildren {
   ApiBfSplatRoute: typeof ApiBfSplatRoute
   ApiV1YieldRoute: typeof ApiV1YieldRouteWithChildren
   ApiPublicBlockfrostWebhookRoute: typeof ApiPublicBlockfrostWebhookRoute
+  ApiPublicJobsIntegrityRoute: typeof ApiPublicJobsIntegrityRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
 }
 
@@ -1134,6 +1147,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicBlockfrostWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/jobs/integrity': {
+      id: '/api/public/jobs/integrity'
+      path: '/api/public/jobs/integrity'
+      fullPath: '/api/public/jobs/integrity'
+      preLoaderRoute: typeof ApiPublicJobsIntegrityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/payments/webhook': {
       id: '/api/public/payments/webhook'
       path: '/api/public/payments/webhook'
@@ -1255,6 +1275,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBfSplatRoute: ApiBfSplatRoute,
   ApiV1YieldRoute: ApiV1YieldRouteWithChildren,
   ApiPublicBlockfrostWebhookRoute: ApiPublicBlockfrostWebhookRoute,
+  ApiPublicJobsIntegrityRoute: ApiPublicJobsIntegrityRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
 }
 export const routeTree = rootRouteImport
