@@ -189,7 +189,13 @@ catch-all error middleware as request middleware via `createStart`.
 Stripe checkout lives in `src/lib/payments.functions.ts` / `stripe.server.ts`.
 Public webhook endpoints (`src/routes/api/public/payments/webhook.ts`,
 `.../blockfrost/webhook.ts`) are CSRF-exempt by path and must verify their own
-signatures inside the handler (see `src/lib/webhook-verify.ts`).
+signatures inside the handler (see `src/lib/webhook-verify.ts`). The nightly integrity job
+(`src/routes/api/public/jobs/integrity.ts`, called by `.github/workflows/nightly-integrity.yml`)
+uses the same HMAC scheme with `INTEGRITY_JOB_SECRET`.
+
+The browser's Lucid reaches Blockfrost only through the same-origin proxy
+`src/routes/api/bf/$.ts` (allow-list in `src/lib/blockfrost-proxy.shared.ts`); the Blockfrost
+key is server-only and must never be returned to the client.
 
 ## Conventions
 

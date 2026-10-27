@@ -78,6 +78,8 @@ export type RepoWrite = { ok: true; count: number } | { ok: false; message: stri
 
 /** The few storage operations the ledger needs. */
 export interface LedgerRepo {
+  /** Every project id (for the nightly integrity check). */
+  listProjectIds(): Promise<string[]>;
   getProject(projectId: string): Promise<LedgerProjectRow | null>;
   listPeriods(projectId: string): Promise<LedgerPeriodRow[]>;
   listEntries(projectId: string): Promise<LedgerEntryRow[]>;
@@ -104,6 +106,11 @@ export function supabaseLedgerRepo(client: SupabaseClient): LedgerRepo {
   const write = (error: { message: string } | null, count: number): RepoWrite =>
     error ? { ok: false, message: error.message } : { ok: true, count };
   return {
+    async listProjectIds() {
+      const { data, error } = await from("ledger_projects").select("id").order("id");
+      if (error) throw new Error(error.message);
+      return ((data ?? []) as Array<{ id: string }>).map((r) => r.id);
+    },
     async getProject(projectId) {
       const { data, error } = await from("ledger_projects")
         .select("id, currency")

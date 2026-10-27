@@ -37,6 +37,10 @@ function writer(db: Db) {
 export function sqlLedgerRepo(db: Db): LedgerRepo {
   const write = writer(db);
   return {
+    async listProjectIds() {
+      const r = await db.query<{ id: string }>("SELECT id FROM public.ledger_projects ORDER BY id");
+      return r.rows.map((x) => x.id);
+    },
     async getProject(id) {
       const r = await db.query<LedgerProjectRow>(
         "SELECT id, currency FROM public.ledger_projects WHERE id = $1",

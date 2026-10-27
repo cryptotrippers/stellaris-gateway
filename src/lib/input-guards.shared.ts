@@ -93,3 +93,33 @@ export function isSafeBlockfrostPath(path: string): boolean {
   if (!/^\/[A-Za-z0-9_\-/]+(\?[A-Za-z0-9_\-=&.]*)?$/.test(path)) return false;
   return !path.includes("..") && !path.includes("//");
 }
+
+// --- Sprint 2 E04: Meridian ledger server functions ------------------------------
+
+export const ledgerProjectIdSchema = z
+  .string()
+  .regex(/^[a-z0-9][a-z0-9-]{1,62}$/, "invalid project id");
+export const ledgerPeriodIdSchema = z.string().regex(/^[A-Za-z0-9_-]{1,40}$/, "invalid period id");
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "dates are YYYY-MM-DD");
+
+export const ledgerPeriodRefSchema = z.object({
+  projectId: ledgerProjectIdSchema,
+  periodId: ledgerPeriodIdSchema,
+});
+export const ledgerProjectRefSchema = z.object({ projectId: ledgerProjectIdSchema });
+export const ledgerCreateProjectSchema = z.object({
+  projectId: ledgerProjectIdSchema,
+  currency: z.string().regex(/^[A-Z]{3}$/, "currency is a 3-letter ISO code"),
+});
+export const ledgerOpenPeriodSchema = z.object({
+  projectId: ledgerProjectIdSchema,
+  periodId: ledgerPeriodIdSchema,
+  startsOn: isoDate,
+  endsOn: isoDate,
+  adjustsPeriodId: ledgerPeriodIdSchema.nullable().optional(),
+});
+/** Entries travel as JSON with amounts as integer strings; the store re-checks every field. */
+export const ledgerEntriesSchema = z.object({
+  projectId: ledgerProjectIdSchema,
+  entries: z.array(z.record(z.string(), z.unknown())).min(1).max(200),
+});

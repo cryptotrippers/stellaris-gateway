@@ -1,0 +1,50 @@
+name: Nightly integrity
+
+# Sprint 2 E10: once a night, ask the deployed site to re-verify every
+# Meridian ledger hash chain and approved-period root (and any later checks
+# in src/lib/integrity-jobs.server.ts). The request is signed with
+# INTEGRITY_JOB_SECRET; the endpoint answers 200 when clean and 409 with the
+# failures when it finds drift, which fails this run (GitHub emails the repo
+# owner). Alerts move to the S4 channel once that is chosen.
+#
+# Needs two repository secrets: INTEGRITY_JOB_URL (the full
+# https://…/api/public/jobs/integrity address) and INTEGRITY_JOB_SECRET (the
+# same value as the server's INTEGRITY_JOB_SECRET). Until both exist the job
+# only prints a notice.
+
+on:
+  schedule:
+    - cron: "7 16 * * *" # 03:07 Sydney (AEDT)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  integrity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Run signed integrity checks
+        env:
+          URL: ${{ secrets.INTEGRITY_JOB_URL }}
+          SECRET: ${{ secrets.INTEGRITY_JOB_SECRET }}
+        shell: bash
+        run: |
+          if [ -z "$URL" ] || [ -z "$SECRET" ]; then
+            echo "::notice::INTEGRITY_JOB_URL / INTEGRITY_JOB_SECRET not set — nightly integrity check skipped."
+            exit 0
+          fi
+          case "$URL" in https://*) ;; *) echo "::error::INTEGRITY_JOB_URL must be https"; exit 1;; esac
+          t=$(date +%s)
+          body="{\"job\":\"all\",\"run\":\"${GITHUB_RUN_ID}\"}"
+          sig=$(printf '%s' "${t}.${body}" | openssl dgst -sha256 -hmac "$SECRET" -hex | sed 's/^.* //')
+          code=$(curl -sS -o report.json -w '%{http_code}' -X POST \
+            -H "content-type: application/json" \
+            -H "x-stellaris-signature: t=${t},v1=${sig}" \
+            --data "$body" "$URL")
+          cat report.json; echo
+          if [ "$code" != "200" ]; then
+            echo "::error::Integrity check returned HTTP $code — see the report above."
+            exit 1
+          fi

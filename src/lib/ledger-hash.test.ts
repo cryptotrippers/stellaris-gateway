@@ -153,7 +153,12 @@ test("period root changes if any entry in the period changes, and only then", ()
 });
 
 test("money hygiene: no floating point in the hash or store modules", () => {
-  for (const f of ["./ledger-hash.shared.ts", "./ledger-store.server.ts"]) {
+  for (const f of [
+    "./ledger-hash.shared.ts",
+    "./ledger-store.server.ts",
+    "./ledger-read.shared.ts",
+    "./ledger-service.server.ts",
+  ]) {
     const src = readFileSync(new URL(f, import.meta.url), "utf8")
       .replace(/\/\*[\s\S]*?\*\//g, "")
       .replace(/\/\/.*$/gm, "");
