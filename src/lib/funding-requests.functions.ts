@@ -241,8 +241,7 @@ export const proposeFundingForGovernance = createServerFn({ method: "POST" })
     const { createVaultProposal } = await import("./governance-vault.functions");
 
     const body =
-      (req.description ?? "").trim() ||
-      `${req.name} — funding request submitted by ${req.issuer}.`;
+      (req.description ?? "").trim() || `${req.name} — funding request submitted by ${req.issuer}.`;
 
     const proposal = await createVaultProposal({
       data: {
@@ -254,7 +253,11 @@ export const proposeFundingForGovernance = createServerFn({ method: "POST" })
       },
     });
 
-    const { error: updErr } = await context.supabase
+    // E01: stage moves are made by the platform, not the submitter's session —
+    // the database refuses a user-set "proposed". The checks above (submitter
+    // or admin, still "submitted", no proposal yet) gate this service write.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error: updErr } = await supabaseAdmin
       .from("funding_requests")
       .update({ proposal_id: proposal.id, status: "proposed" })
       .eq("id", req.id)

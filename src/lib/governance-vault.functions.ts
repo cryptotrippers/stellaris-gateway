@@ -354,8 +354,11 @@ export const recordProposalExecution = createServerFn({ method: "POST" })
         ? new Date(feeCheck.blockTime * 1000).toISOString()
         : new Date().toISOString();
 
+      // E01: the fee schedule mirror is written by the service role only after
+      // the operator check and verifySetFeeTx above.
       const { insertFeeSchedule } = await import("./asset-vaults.shared");
-      await insertFeeSchedule(context.supabase, {
+      const { supabaseAdmin: feeWriter } = await import("@/integrations/supabase/client.server");
+      await insertFeeSchedule(feeWriter, {
         assetId: row.asset_id,
         vaultVersion: feeVault.vault_version as number,
         network: (feeVault.network as string) ?? "preprod",
@@ -420,7 +423,10 @@ export const recordProposalExecution = createServerFn({ method: "POST" })
       ? new Date(check.blockTime * 1000).toISOString()
       : new Date().toISOString();
 
-    const { error: aErr } = await context.supabase.from("yield_accruals").insert({
+    // E01: written by the service role only after the operator check and
+    // verifyAccrualTx above; operators can't insert accruals directly.
+    const { supabaseAdmin: accrualWriter } = await import("@/integrations/supabase/client.server");
+    const { error: aErr } = await accrualWriter.from("yield_accruals").insert({
       asset_id: row.asset_id,
       vault_version: vault.vault_version as number,
       network: (vault.network as string) ?? "preprod",

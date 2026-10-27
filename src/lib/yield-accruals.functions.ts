@@ -103,7 +103,8 @@ export const recordYieldAccrual = createServerFn({ method: "POST" })
       throw new Error("This transaction does not spend and recreate the vault state.");
     }
     const amount = BigInt(after.totalAssets) - BigInt(before.totalAssets);
-    if (after.epoch !== before.epoch + 1) throw new Error("The vault epoch did not advance by one.");
+    if (after.epoch !== before.epoch + 1)
+      throw new Error("The vault epoch did not advance by one.");
     // The only share supply movement an accrual may cause is the management
     // fee minted to the treasury.
     const sharesDelta = BigInt(after.totalShares) - BigInt(before.totalShares);
@@ -116,7 +117,10 @@ export const recordYieldAccrual = createServerFn({ method: "POST" })
 
     const tx = await bfGet<{ block_time: number; block_height: number }>(`/txs/${data.txHash}`);
 
-    const { error } = await supabase.from("yield_accruals").insert({
+    // E01: operators no longer insert accruals directly; the row is written by
+    // the service role only after the role check and chain verification above.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("yield_accruals").insert({
       asset_id: data.assetId,
       vault_version: data.vaultVersion,
       tx_hash: data.txHash,
