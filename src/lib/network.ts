@@ -1,7 +1,8 @@
 /**
  * Central network configuration.
  *
- * Reads `VITE_BLOCKFROST_NETWORK` and the matching `VITE_BLOCKFROST_PROJECT_ID`.
+ * Reads `VITE_BLOCKFROST_NETWORK`. The Blockfrost key is server-only (E13): the
+ * browser reaches Blockfrost through the /api/bf proxy.
  * Every transaction-signing action MUST call `assertWalletMatchesAppNetwork()`
  * before building/submitting a tx.
  *
@@ -40,9 +41,6 @@ if (IS_UNEXPECTED_MAINNET) {
       'Set VITE_BLOCKFROST_NETWORK="preprod".',
   );
 }
-
-export const BLOCKFROST_PROJECT_ID: string | undefined =
-  import.meta.env.VITE_BLOCKFROST_PROJECT_ID as string | undefined;
 
 export const BLOCKFROST_URL =
   APP_NETWORK === "mainnet"

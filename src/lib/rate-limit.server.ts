@@ -101,4 +101,6 @@ export const RATE_RULES = {
   fractionEvent: { bucket: "fraction-event", max: 30, windowSeconds: 600 },
   checkout: { bucket: "checkout", max: 10, windowSeconds: 600 },
   vaultTx: { bucket: "vault-tx", max: 60, windowSeconds: 600 },
+  /** E13: one wallet transaction makes ~10–30 Blockfrost calls through the proxy. */
+  blockfrostProxy: { bucket: "bf-proxy", max: 600, windowSeconds: 600 },
 } as const satisfies Record<string, RateRule>;
