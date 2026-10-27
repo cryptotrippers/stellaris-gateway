@@ -1,0 +1,938 @@
+{
+  "admin_wallets": {
+    "anon": {
+      "select": "denied:grant",
+      "insert": "denied:rls",
+      "update": "denied:grant",
+      "delete": 0
+    },
+    "member": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "operator": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 2,
+      "insert": "ok",
+      "update": 2,
+      "delete": 2
+    }
+  },
+  "asset_vaults": {
+    "anon": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "operator": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 2,
+      "insert": "ok",
+      "update": 2,
+      "delete": 2
+    }
+  },
+  "assets": {
+    "anon": {
+      "select": 4,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 4,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "operator": {
+      "select": 4,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 4,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    }
+  },
+  "contract_audits": {
+    "anon": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "operator": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    }
+  },
+  "csp_reports": {
+    "anon": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "operator": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    }
+  },
+  "deposit_assets": {
+    "anon": {
+      "select": 7,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 7,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "operator": {
+      "select": 7,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 7,
+      "insert": "ok",
+      "update": 7,
+      "delete": 7
+    }
+  },
+  "fraction_events": {
+    "anon": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "operator": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 2,
+      "insert": "ok",
+      "update": 0,
+      "delete": 0
+    }
+  },
+  "funding_request_checklist": {
+    "anon": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 2,
+      "insert": "ok",
+      "update": 2,
+      "delete": 0
+    },
+    "operator": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 2,
+      "insert": "error:duplicate key value violates unique constraint \"funding_request_checklist_fundin",
+      "update": 2,
+      "delete": 0
+    }
+  },
+  "funding_requests": {
+    "anon": {
+      "select": 3,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 3,
+      "insert": "ok",
+      "update": 0,
+      "delete": 0
+    },
+    "operator": {
+      "select": 3,
+      "insert": "ok",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 3,
+      "insert": "ok",
+      "update": 3,
+      "delete": 3
+    }
+  },
+  "governance_proposals": {
+    "anon": {
+      "select": 3,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 3,
+      "insert": "denied:trigger",
+      "update": 0,
+      "delete": 0
+    },
+    "operator": {
+      "select": 3,
+      "insert": "denied:trigger",
+      "update": "denied:trigger",
+      "delete": 0
+    },
+    "admin": {
+      "select": 3,
+      "insert": "ok",
+      "update": 3,
+      "delete": 3
+    }
+  },
+  "impact_attestations": {
+    "anon": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 2,
+      "insert": "ok",
+      "update": 2,
+      "delete": 2
+    },
+    "operator": {
+      "select": 0,
+      "insert": "ok",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 3,
+      "insert": "ok",
+      "update": 3,
+      "delete": 0
+    }
+  },
+  "impact_metrics": {
+    "anon": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 2,
+      "insert": "ok",
+      "update": 2,
+      "delete": 2
+    },
+    "operator": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    }
+  },
+  "issuer_leads": {
+    "anon": {
+      "select": "denied:grant",
+      "insert": "denied:grant",
+      "update": "denied:grant",
+      "delete": "denied:grant"
+    },
+    "member": {
+      "select": 0,
+      "insert": "denied:grant",
+      "update": 0,
+      "delete": "denied:grant"
+    },
+    "operator": {
+      "select": 0,
+      "insert": "denied:grant",
+      "update": 0,
+      "delete": "denied:grant"
+    },
+    "admin": {
+      "select": 2,
+      "insert": "denied:grant",
+      "update": 2,
+      "delete": "denied:grant"
+    }
+  },
+  "issuer_verifications": {
+    "anon": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "operator": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    }
+  },
+  "issuers": {
+    "anon": {
+      "select": 3,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 3,
+      "insert": "ok",
+      "update": 2,
+      "delete": 0
+    },
+    "operator": {
+      "select": 3,
+      "insert": "ok",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 3,
+      "insert": "ok",
+      "update": 3,
+      "delete": 0
+    }
+  },
+  "kyc_attestations": {
+    "anon": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 1,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "operator": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    }
+  },
+  "ledger_entries": {
+    "anon": {
+      "select": "denied:grant",
+      "insert": "denied:grant",
+      "update": "denied:grant",
+      "delete": "denied:grant"
+    },
+    "member": {
+      "select": 0,
+      "insert": "denied:grant",
+      "update": "denied:grant",
+      "delete": "denied:grant"
+    },
+    "operator": {
+      "select": 0,
+      "insert": "denied:grant",
+      "update": "denied:grant",
+      "delete": "denied:grant"
+    },
+    "admin": {
+      "select": 0,
+      "insert": "denied:grant",
+      "update": "denied:grant",
+      "delete": "denied:grant"
+    }
+  },
+  "ledger_periods": {
+    "anon": {
+      "select": "denied:grant",
+      "insert": "denied:grant",
+      "update": "denied:grant",
+      "delete": "denied:grant"
+    },
+    "member": {
+      "select": 0,
+      "insert": "denied:grant",
+      "update": "denied:grant",
+      "delete": "denied:grant"
+    },
+    "operator": {
+      "select": 0,
+      "insert": "denied:grant",
+      "update": "denied:grant",
+      "delete": "denied:grant"
+    },
+    "admin": {
+      "select": 3,
+      "insert": "denied:grant",
+      "update": "denied:grant",
+      "delete": "denied:grant"
+    }
+  },
+  "ledger_projects": {
+    "anon": {
+      "select": "denied:grant",
+      "insert": "denied:grant",
+      "update": "denied:grant",
+      "delete": "denied:grant"
+    },
+    "member": {
+      "select": 0,
+      "insert": "denied:grant",
+      "update": "denied:grant",
+      "delete": "denied:grant"
+    },
+    "operator": {
+      "select": 0,
+      "insert": "denied:grant",
+      "update": "denied:grant",
+      "delete": "denied:grant"
+    },
+    "admin": {
+      "select": 3,
+      "insert": "denied:grant",
+      "update": "denied:grant",
+      "delete": "denied:grant"
+    }
+  },
+  "linked_wallets": {
+    "anon": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 1,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "operator": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    }
+  },
+  "offerings": {
+    "anon": {
+      "select": 3,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 3,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "operator": {
+      "select": 3,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 3,
+      "insert": "ok",
+      "update": 3,
+      "delete": 3
+    }
+  },
+  "oracle_feeds": {
+    "anon": {
+      "select": 3,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 3,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "operator": {
+      "select": 3,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 3,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    }
+  },
+  "proposal_votes": {
+    "anon": {
+      "select": "denied:grant",
+      "insert": "denied:rls",
+      "update": "denied:grant",
+      "delete": 0
+    },
+    "member": {
+      "select": 1,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "operator": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    }
+  },
+  "rate_limit_hits": {
+    "anon": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "operator": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    }
+  },
+  "security_audit_log": {
+    "anon": {
+      "select": 0,
+      "insert": "denied:grant",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 1,
+      "insert": "denied:grant",
+      "update": 0,
+      "delete": 0
+    },
+    "operator": {
+      "select": 0,
+      "insert": "denied:grant",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 1,
+      "insert": "denied:grant",
+      "update": 0,
+      "delete": 0
+    }
+  },
+  "security_sessions": {
+    "anon": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 1,
+      "insert": "ok",
+      "update": 1,
+      "delete": 1
+    },
+    "operator": {
+      "select": 0,
+      "insert": "ok",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 0,
+      "insert": "ok",
+      "update": 0,
+      "delete": 0
+    }
+  },
+  "transactions": {
+    "anon": {
+      "select": 0,
+      "insert": "denied:grant",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 1,
+      "insert": "denied:grant",
+      "update": 0,
+      "delete": 0
+    },
+    "operator": {
+      "select": 0,
+      "insert": "denied:grant",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 0,
+      "insert": "denied:grant",
+      "update": 0,
+      "delete": 0
+    }
+  },
+  "treasury_config": {
+    "anon": {
+      "select": 1,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 1,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "operator": {
+      "select": 1,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 1,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    }
+  },
+  "treasury_events": {
+    "anon": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "operator": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    }
+  },
+  "user_profiles": {
+    "anon": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 1,
+      "insert": "error:duplicate key value violates unique constraint \"user_profiles_user_id_key\"",
+      "update": 1,
+      "delete": 0
+    },
+    "operator": {
+      "select": 1,
+      "insert": "error:duplicate key value violates unique constraint \"user_profiles_user_id_key\"",
+      "update": 1,
+      "delete": 0
+    },
+    "admin": {
+      "select": 1,
+      "insert": "error:duplicate key value violates unique constraint \"user_profiles_user_id_key\"",
+      "update": 1,
+      "delete": 0
+    }
+  },
+  "user_roles": {
+    "anon": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "operator": {
+      "select": 1,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 3,
+      "insert": "error:duplicate key value violates unique constraint \"user_roles_user_id_role_key\"",
+      "update": 3,
+      "delete": 3
+    }
+  },
+  "user_security_settings": {
+    "anon": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 1,
+      "insert": "error:duplicate key value violates unique constraint \"user_security_settings_user_id_k",
+      "update": 1,
+      "delete": 0
+    },
+    "operator": {
+      "select": 1,
+      "insert": "error:duplicate key value violates unique constraint \"user_security_settings_user_id_k",
+      "update": 1,
+      "delete": 0
+    },
+    "admin": {
+      "select": 1,
+      "insert": "error:duplicate key value violates unique constraint \"user_security_settings_user_id_k",
+      "update": 1,
+      "delete": 0
+    }
+  },
+  "vault_fee_schedules": {
+    "anon": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "operator": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 2,
+      "insert": "ok",
+      "update": 2,
+      "delete": 2
+    }
+  },
+  "vault_positions": {
+    "anon": {
+      "select": 0,
+      "insert": "denied:grant",
+      "update": "denied:grant",
+      "delete": "denied:grant"
+    },
+    "member": {
+      "select": 1,
+      "insert": "denied:grant",
+      "update": "denied:grant",
+      "delete": "denied:grant"
+    },
+    "operator": {
+      "select": 0,
+      "insert": "denied:grant",
+      "update": "denied:grant",
+      "delete": "denied:grant"
+    },
+    "admin": {
+      "select": 0,
+      "insert": "denied:grant",
+      "update": "denied:grant",
+      "delete": "denied:grant"
+    }
+  },
+  "wallet_link_nonces": {
+    "anon": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "operator": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 0,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    }
+  },
+  "yield_accruals": {
+    "anon": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "member": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "operator": {
+      "select": 2,
+      "insert": "denied:rls",
+      "update": 0,
+      "delete": 0
+    },
+    "admin": {
+      "select": 2,
+      "insert": "ok",
+      "update": 0,
+      "delete": 0
+    }
+  }
+}

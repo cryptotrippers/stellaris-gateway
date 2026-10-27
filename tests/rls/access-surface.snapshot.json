@@ -1,0 +1,1205 @@
+{
+  "rls": [
+    {
+      "t": "admin_wallets",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "asset_vaults",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "assets",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "contract_audits",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "csp_reports",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "deposit_assets",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "fraction_events",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "funding_request_checklist",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "funding_requests",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "governance_proposals",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "impact_attestations",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "impact_metrics",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "issuer_leads",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "issuer_verifications",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "issuers",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "kyc_attestations",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "ledger_entries",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "ledger_periods",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "ledger_projects",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "linked_wallets",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "offerings",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "oracle_feeds",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "proposal_votes",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "rate_limit_hits",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "security_audit_log",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "security_sessions",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "transactions",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "treasury_config",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "treasury_events",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "user_profiles",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "user_roles",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "user_security_settings",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "vault_fee_schedules",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "vault_positions",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "wallet_link_nonces",
+      "rls": true,
+      "force": false
+    },
+    {
+      "t": "yield_accruals",
+      "rls": true,
+      "force": false
+    }
+  ],
+  "grants": [
+    {
+      "t": "admin_wallets",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "admin_wallets",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "asset_vaults",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "asset_vaults",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "assets",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "assets",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "contract_audits",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "contract_audits",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "csp_reports",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "csp_reports",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "deposit_assets",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "deposit_assets",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "fraction_events",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "fraction_events",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "funding_request_checklist",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "funding_request_checklist",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "funding_requests",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "funding_requests",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "governance_proposals",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "governance_proposals",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "impact_attestations",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "impact_attestations",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "impact_metrics",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "impact_metrics",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "issuer_leads",
+      "g": "authenticated",
+      "p": "SELECT,UPDATE"
+    },
+    {
+      "t": "issuer_verifications",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "issuer_verifications",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "issuers",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "issuers",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "kyc_attestations",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "kyc_attestations",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "ledger_entries",
+      "g": "authenticated",
+      "p": "SELECT"
+    },
+    {
+      "t": "ledger_periods",
+      "g": "authenticated",
+      "p": "SELECT"
+    },
+    {
+      "t": "ledger_projects",
+      "g": "authenticated",
+      "p": "SELECT"
+    },
+    {
+      "t": "linked_wallets",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "linked_wallets",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "offerings",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "offerings",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "oracle_feeds",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "oracle_feeds",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "proposal_votes",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "proposal_votes",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "rate_limit_hits",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "rate_limit_hits",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "security_audit_log",
+      "g": "anon",
+      "p": "DELETE,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "security_audit_log",
+      "g": "authenticated",
+      "p": "DELETE,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "security_sessions",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "security_sessions",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "transactions",
+      "g": "anon",
+      "p": "DELETE,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "transactions",
+      "g": "authenticated",
+      "p": "DELETE,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "treasury_config",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "treasury_config",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "treasury_events",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "treasury_events",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "user_profiles",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "user_profiles",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "user_roles",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "user_roles",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "user_security_settings",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "user_security_settings",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "vault_fee_schedules",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "vault_fee_schedules",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "vault_positions",
+      "g": "anon",
+      "p": "REFERENCES,SELECT,TRIGGER,TRUNCATE"
+    },
+    {
+      "t": "vault_positions",
+      "g": "authenticated",
+      "p": "REFERENCES,SELECT,TRIGGER,TRUNCATE"
+    },
+    {
+      "t": "wallet_link_nonces",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "wallet_link_nonces",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "yield_accruals",
+      "g": "anon",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    },
+    {
+      "t": "yield_accruals",
+      "g": "authenticated",
+      "p": "DELETE,INSERT,REFERENCES,SELECT,TRIGGER,TRUNCATE,UPDATE"
+    }
+  ],
+  "columnGrants": [
+    {
+      "t": "issuers",
+      "g": "anon",
+      "p": "SELECT",
+      "cols": "created_at,id,jurisdiction,legal_name,owner_user_id,verification_status,verified_at,website,wrapper_type"
+    },
+    {
+      "t": "issuers",
+      "g": "authenticated",
+      "p": "SELECT",
+      "cols": "created_at,id,jurisdiction,legal_name,owner_user_id,verification_status,verified_at,website,wrapper_type"
+    }
+  ],
+  "policies": [
+    {
+      "t": "admin_wallets",
+      "name": "Admins can read admin wallets",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{authenticated}",
+      "qual": "has_role(auth.uid(), 'admin'::app_role)",
+      "with_check": null
+    },
+    {
+      "t": "admin_wallets",
+      "name": "Admins manage admin wallets",
+      "permissive": "PERMISSIVE",
+      "cmd": "ALL",
+      "roles": "{authenticated}",
+      "qual": "has_role(auth.uid(), 'admin'::app_role)",
+      "with_check": "has_role(auth.uid(), 'admin'::app_role)"
+    },
+    {
+      "t": "asset_vaults",
+      "name": "Admins manage asset vaults",
+      "permissive": "PERMISSIVE",
+      "cmd": "ALL",
+      "roles": "{authenticated}",
+      "qual": "has_role(auth.uid(), 'admin'::app_role)",
+      "with_check": "has_role(auth.uid(), 'admin'::app_role)"
+    },
+    {
+      "t": "asset_vaults",
+      "name": "Anyone can read asset vaults",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{anon,authenticated}",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "t": "assets",
+      "name": "Anyone can read assets",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{anon,authenticated}",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "t": "contract_audits",
+      "name": "Anyone can read audits",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{anon,authenticated}",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "t": "csp_reports",
+      "name": "Admins read csp reports",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{authenticated}",
+      "qual": "has_role(auth.uid(), 'admin'::app_role)",
+      "with_check": null
+    },
+    {
+      "t": "deposit_assets",
+      "name": "Admins can delete deposit assets",
+      "permissive": "PERMISSIVE",
+      "cmd": "DELETE",
+      "roles": "{authenticated}",
+      "qual": "has_role(auth.uid(), 'admin'::app_role)",
+      "with_check": null
+    },
+    {
+      "t": "deposit_assets",
+      "name": "Admins can insert deposit assets",
+      "permissive": "PERMISSIVE",
+      "cmd": "INSERT",
+      "roles": "{authenticated}",
+      "qual": null,
+      "with_check": "has_role(auth.uid(), 'admin'::app_role)"
+    },
+    {
+      "t": "deposit_assets",
+      "name": "Admins can update deposit assets",
+      "permissive": "PERMISSIVE",
+      "cmd": "UPDATE",
+      "roles": "{authenticated}",
+      "qual": "has_role(auth.uid(), 'admin'::app_role)",
+      "with_check": "has_role(auth.uid(), 'admin'::app_role)"
+    },
+    {
+      "t": "deposit_assets",
+      "name": "Deposit asset registry is public",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{public}",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "t": "fraction_events",
+      "name": "Admins record fraction events",
+      "permissive": "PERMISSIVE",
+      "cmd": "INSERT",
+      "roles": "{authenticated}",
+      "qual": null,
+      "with_check": "has_role(auth.uid(), 'admin'::app_role)"
+    },
+    {
+      "t": "fraction_events",
+      "name": "Fraction events are public",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{public}",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "t": "funding_request_checklist",
+      "name": "Checklists are public",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{public}",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "t": "funding_request_checklist",
+      "name": "Submitters and admins add checklist items",
+      "permissive": "PERMISSIVE",
+      "cmd": "INSERT",
+      "roles": "{authenticated}",
+      "qual": null,
+      "with_check": "(has_role(auth.uid(), 'admin'::app_role) OR (EXISTS ( SELECT 1\n   FROM funding_requests f\n  WHERE ((f.id = funding_request_checklist.funding_request_id) AND (f.submitted_by = auth.uid())))))"
+    },
+    {
+      "t": "funding_request_checklist",
+      "name": "Submitters and admins edit checklist items",
+      "permissive": "PERMISSIVE",
+      "cmd": "UPDATE",
+      "roles": "{authenticated}",
+      "qual": "(has_role(auth.uid(), 'admin'::app_role) OR (EXISTS ( SELECT 1\n   FROM funding_requests f\n  WHERE ((f.id = funding_request_checklist.funding_request_id) AND (f.submitted_by = auth.uid())))))",
+      "with_check": "(has_role(auth.uid(), 'admin'::app_role) OR (EXISTS ( SELECT 1\n   FROM funding_requests f\n  WHERE ((f.id = funding_request_checklist.funding_request_id) AND (f.submitted_by = auth.uid())))))"
+    },
+    {
+      "t": "funding_requests",
+      "name": "Admins manage funding requests",
+      "permissive": "PERMISSIVE",
+      "cmd": "ALL",
+      "roles": "{authenticated}",
+      "qual": "has_role(auth.uid(), 'admin'::app_role)",
+      "with_check": "has_role(auth.uid(), 'admin'::app_role)"
+    },
+    {
+      "t": "funding_requests",
+      "name": "Read non-draft, own or admin funding requests",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{anon,authenticated}",
+      "qual": "((status <> 'draft'::text) OR (auth.uid() = submitted_by) OR has_role(auth.uid(), 'admin'::app_role))",
+      "with_check": null
+    },
+    {
+      "t": "funding_requests",
+      "name": "Submitters edit their drafts",
+      "permissive": "PERMISSIVE",
+      "cmd": "UPDATE",
+      "roles": "{authenticated}",
+      "qual": "((auth.uid() = submitted_by) AND (status = 'draft'::text))",
+      "with_check": "(auth.uid() = submitted_by)"
+    },
+    {
+      "t": "funding_requests",
+      "name": "Users submit own funding requests",
+      "permissive": "PERMISSIVE",
+      "cmd": "INSERT",
+      "roles": "{authenticated}",
+      "qual": null,
+      "with_check": "(auth.uid() = submitted_by)"
+    },
+    {
+      "t": "governance_proposals",
+      "name": "Admins manage proposals",
+      "permissive": "PERMISSIVE",
+      "cmd": "ALL",
+      "roles": "{authenticated}",
+      "qual": "has_role(auth.uid(), 'admin'::app_role)",
+      "with_check": "has_role(auth.uid(), 'admin'::app_role)"
+    },
+    {
+      "t": "governance_proposals",
+      "name": "Anyone can read proposals",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{anon,authenticated}",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "t": "governance_proposals",
+      "name": "Operators record proposal execution",
+      "permissive": "PERMISSIVE",
+      "cmd": "UPDATE",
+      "roles": "{authenticated}",
+      "qual": "has_role(auth.uid(), 'operator'::app_role)",
+      "with_check": "has_role(auth.uid(), 'operator'::app_role)"
+    },
+    {
+      "t": "impact_attestations",
+      "name": "Owners and admins edit attestations",
+      "permissive": "PERMISSIVE",
+      "cmd": "UPDATE",
+      "roles": "{authenticated}",
+      "qual": "((auth.uid() = created_by) OR has_role(auth.uid(), 'admin'::app_role))",
+      "with_check": "((auth.uid() = created_by) OR has_role(auth.uid(), 'admin'::app_role))"
+    },
+    {
+      "t": "impact_attestations",
+      "name": "Owners create attestations",
+      "permissive": "PERMISSIVE",
+      "cmd": "INSERT",
+      "roles": "{authenticated}",
+      "qual": null,
+      "with_check": "(auth.uid() = created_by)"
+    },
+    {
+      "t": "impact_attestations",
+      "name": "Owners delete their attestations",
+      "permissive": "PERMISSIVE",
+      "cmd": "DELETE",
+      "roles": "{authenticated}",
+      "qual": "(auth.uid() = created_by)",
+      "with_check": null
+    },
+    {
+      "t": "impact_attestations",
+      "name": "Published attestations are public",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{public}",
+      "qual": "(published OR ((auth.uid() IS NOT NULL) AND (auth.uid() = created_by)) OR ((auth.uid() IS NOT NULL) AND has_role(auth.uid(), 'admin'::app_role)))",
+      "with_check": null
+    },
+    {
+      "t": "impact_metrics",
+      "name": "Metrics follow their attestation",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{public}",
+      "qual": "((EXISTS ( SELECT 1\n   FROM impact_attestations ia\n  WHERE ((ia.id = impact_metrics.attestation_id) AND ia.published))) OR ((auth.uid() IS NOT NULL) AND (EXISTS ( SELECT 1\n   FROM impact_attestations ia\n  WHERE ((ia.id = impact_metrics.attestation_id) AND (ia.created_by = auth.uid()))))) OR ((auth.uid() IS NOT NULL) AND has_role(auth.uid(), 'admin'::app_role)))",
+      "with_check": null
+    },
+    {
+      "t": "impact_metrics",
+      "name": "Owners add metrics",
+      "permissive": "PERMISSIVE",
+      "cmd": "INSERT",
+      "roles": "{authenticated}",
+      "qual": null,
+      "with_check": "(EXISTS ( SELECT 1\n   FROM impact_attestations a\n  WHERE ((a.id = impact_metrics.attestation_id) AND (a.created_by = auth.uid()))))"
+    },
+    {
+      "t": "impact_metrics",
+      "name": "Owners delete metrics",
+      "permissive": "PERMISSIVE",
+      "cmd": "DELETE",
+      "roles": "{authenticated}",
+      "qual": "(EXISTS ( SELECT 1\n   FROM impact_attestations a\n  WHERE ((a.id = impact_metrics.attestation_id) AND (a.created_by = auth.uid()))))",
+      "with_check": null
+    },
+    {
+      "t": "impact_metrics",
+      "name": "Owners edit metrics",
+      "permissive": "PERMISSIVE",
+      "cmd": "UPDATE",
+      "roles": "{authenticated}",
+      "qual": "(EXISTS ( SELECT 1\n   FROM impact_attestations a\n  WHERE ((a.id = impact_metrics.attestation_id) AND (a.created_by = auth.uid()))))",
+      "with_check": "(EXISTS ( SELECT 1\n   FROM impact_attestations a\n  WHERE ((a.id = impact_metrics.attestation_id) AND (a.created_by = auth.uid()))))"
+    },
+    {
+      "t": "issuer_leads",
+      "name": "Admins manage issuer leads",
+      "permissive": "PERMISSIVE",
+      "cmd": "UPDATE",
+      "roles": "{authenticated}",
+      "qual": "has_role(auth.uid(), 'admin'::app_role)",
+      "with_check": "has_role(auth.uid(), 'admin'::app_role)"
+    },
+    {
+      "t": "issuer_leads",
+      "name": "Admins read issuer leads",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{authenticated}",
+      "qual": "has_role(auth.uid(), 'admin'::app_role)",
+      "with_check": null
+    },
+    {
+      "t": "issuer_verifications",
+      "name": "Verification history is public",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{public}",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "t": "issuers",
+      "name": "Issuer profiles are public",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{public}",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "t": "issuers",
+      "name": "Owners and admins edit issuer profiles",
+      "permissive": "PERMISSIVE",
+      "cmd": "UPDATE",
+      "roles": "{authenticated}",
+      "qual": "((auth.uid() = owner_user_id) OR has_role(auth.uid(), 'admin'::app_role))",
+      "with_check": "((auth.uid() = owner_user_id) OR has_role(auth.uid(), 'admin'::app_role))"
+    },
+    {
+      "t": "issuers",
+      "name": "Owners create their issuer profile",
+      "permissive": "PERMISSIVE",
+      "cmd": "INSERT",
+      "roles": "{authenticated}",
+      "qual": null,
+      "with_check": "(auth.uid() = owner_user_id)"
+    },
+    {
+      "t": "kyc_attestations",
+      "name": "Users can read their own attestations",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{authenticated}",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": null
+    },
+    {
+      "t": "ledger_entries",
+      "name": "Admins read ledger entries",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{authenticated}",
+      "qual": "has_role(auth.uid(), 'admin'::app_role)",
+      "with_check": null
+    },
+    {
+      "t": "ledger_periods",
+      "name": "Admins read ledger periods",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{authenticated}",
+      "qual": "has_role(auth.uid(), 'admin'::app_role)",
+      "with_check": null
+    },
+    {
+      "t": "ledger_projects",
+      "name": "Admins read ledger projects",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{authenticated}",
+      "qual": "has_role(auth.uid(), 'admin'::app_role)",
+      "with_check": null
+    },
+    {
+      "t": "linked_wallets",
+      "name": "Users read own linked wallets",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{authenticated}",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": null
+    },
+    {
+      "t": "offerings",
+      "name": "Admins manage offerings",
+      "permissive": "PERMISSIVE",
+      "cmd": "ALL",
+      "roles": "{authenticated}",
+      "qual": "has_role(auth.uid(), 'admin'::app_role)",
+      "with_check": "has_role(auth.uid(), 'admin'::app_role)"
+    },
+    {
+      "t": "offerings",
+      "name": "Offerings are public",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{public}",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "t": "oracle_feeds",
+      "name": "Anyone can read oracle feeds",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{anon,authenticated}",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "t": "proposal_votes",
+      "name": "Voters read own votes",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{authenticated}",
+      "qual": "((auth.uid() = voter_user_id) OR has_role(auth.uid(), 'admin'::app_role))",
+      "with_check": null
+    },
+    {
+      "t": "security_audit_log",
+      "name": "Users read own audit log",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{authenticated}",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": null
+    },
+    {
+      "t": "security_sessions",
+      "name": "Users manage own sessions",
+      "permissive": "PERMISSIVE",
+      "cmd": "ALL",
+      "roles": "{authenticated}",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": "(auth.uid() = user_id)"
+    },
+    {
+      "t": "transactions",
+      "name": "Users read own transactions",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{authenticated}",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": null
+    },
+    {
+      "t": "treasury_config",
+      "name": "Anyone can read treasury config",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{anon,authenticated}",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "t": "treasury_events",
+      "name": "Anyone can read treasury events",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{anon,authenticated}",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "t": "user_profiles",
+      "name": "Users insert own profile",
+      "permissive": "PERMISSIVE",
+      "cmd": "INSERT",
+      "roles": "{authenticated}",
+      "qual": null,
+      "with_check": "(auth.uid() = user_id)"
+    },
+    {
+      "t": "user_profiles",
+      "name": "Users read own profile",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{authenticated}",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": null
+    },
+    {
+      "t": "user_profiles",
+      "name": "Users update own profile",
+      "permissive": "PERMISSIVE",
+      "cmd": "UPDATE",
+      "roles": "{authenticated}",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": "(auth.uid() = user_id)"
+    },
+    {
+      "t": "user_roles",
+      "name": "Admins manage roles",
+      "permissive": "PERMISSIVE",
+      "cmd": "ALL",
+      "roles": "{authenticated}",
+      "qual": "has_role(auth.uid(), 'admin'::app_role)",
+      "with_check": "has_role(auth.uid(), 'admin'::app_role)"
+    },
+    {
+      "t": "user_roles",
+      "name": "Admins read all roles",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{authenticated}",
+      "qual": "has_role(auth.uid(), 'admin'::app_role)",
+      "with_check": null
+    },
+    {
+      "t": "user_roles",
+      "name": "Users read own roles",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{authenticated}",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": null
+    },
+    {
+      "t": "user_security_settings",
+      "name": "Users insert own security settings",
+      "permissive": "PERMISSIVE",
+      "cmd": "INSERT",
+      "roles": "{authenticated}",
+      "qual": null,
+      "with_check": "(auth.uid() = user_id)"
+    },
+    {
+      "t": "user_security_settings",
+      "name": "Users read own security settings",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{authenticated}",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": null
+    },
+    {
+      "t": "user_security_settings",
+      "name": "Users update own security settings",
+      "permissive": "PERMISSIVE",
+      "cmd": "UPDATE",
+      "roles": "{authenticated}",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": "(auth.uid() = user_id)"
+    },
+    {
+      "t": "vault_fee_schedules",
+      "name": "Admins manage vault fee schedules",
+      "permissive": "PERMISSIVE",
+      "cmd": "ALL",
+      "roles": "{authenticated}",
+      "qual": "has_role(auth.uid(), 'admin'::app_role)",
+      "with_check": "has_role(auth.uid(), 'admin'::app_role)"
+    },
+    {
+      "t": "vault_fee_schedules",
+      "name": "Anyone can read vault fee schedules",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{anon,authenticated}",
+      "qual": "true",
+      "with_check": null
+    },
+    {
+      "t": "vault_positions",
+      "name": "Users read own positions",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{authenticated}",
+      "qual": "(auth.uid() = user_id)",
+      "with_check": null
+    },
+    {
+      "t": "yield_accruals",
+      "name": "Admins record accruals",
+      "permissive": "PERMISSIVE",
+      "cmd": "INSERT",
+      "roles": "{authenticated}",
+      "qual": null,
+      "with_check": "has_role(auth.uid(), 'admin'::app_role)"
+    },
+    {
+      "t": "yield_accruals",
+      "name": "Anyone can read yield accruals",
+      "permissive": "PERMISSIVE",
+      "cmd": "SELECT",
+      "roles": "{anon,authenticated}",
+      "qual": "true",
+      "with_check": null
+    }
+  ],
+  "definers": [
+    {
+      "f": "execute_fund_asset_proposal(_proposal_id uuid, _user_id uuid)",
+      "acl": ""
+    },
+    {
+      "f": "guard_attestation_publish()",
+      "acl": "=X/postgres anon=X/postgres authenticated=X/postgres"
+    },
+    {
+      "f": "guard_checklist_verification()",
+      "acl": ""
+    },
+    {
+      "f": "guard_funding_request()",
+      "acl": "=X/postgres anon=X/postgres authenticated=X/postgres"
+    },
+    {
+      "f": "guard_governance_proposal()",
+      "acl": ""
+    },
+    {
+      "f": "guard_issuer_verification()",
+      "acl": ""
+    },
+    {
+      "f": "guard_profile_kyc()",
+      "acl": ""
+    },
+    {
+      "f": "guard_proposal_vote()",
+      "acl": ""
+    },
+    {
+      "f": "guard_published_attestation()",
+      "acl": ""
+    },
+    {
+      "f": "guard_published_metrics()",
+      "acl": ""
+    },
+    {
+      "f": "guard_session_revoke()",
+      "acl": ""
+    },
+    {
+      "f": "handle_new_user()",
+      "acl": ""
+    },
+    {
+      "f": "handle_new_user_security_settings()",
+      "acl": ""
+    },
+    {
+      "f": "has_role(_user_id uuid, _role app_role)",
+      "acl": "anon=X/postgres authenticated=X/postgres"
+    },
+    {
+      "f": "hit_rate_limit(p_key text, p_window_seconds integer, p_max integer)",
+      "acl": ""
+    },
+    {
+      "f": "is_privileged_writer()",
+      "acl": "authenticated=X/postgres"
+    },
+    {
+      "f": "log_security_setting_change()",
+      "acl": ""
+    },
+    {
+      "f": "mark_proposal_executed_offchain(_proposal_id uuid, _user_id uuid)",
+      "acl": ""
+    },
+    {
+      "f": "record_csp_report(p_directive text, p_blocked text, p_document_path text, p_disposition text)",
+      "acl": ""
+    }
+  ]
+}
