@@ -19,5 +19,6 @@ database.
   then review the JSON diff like any other security change.
 - `governance-integrity.test.ts` — regression tests for G-7 to G-12 (migration 0012).
 
-They need the dev dependency `@electric-sql/pglite`. Without it they skip with
-a message, so `npm test` still passes.
+They run on the dev dependency `@electric-sql/pglite` (pinned, installed by
+`bun install`), so CI runs them on every pull request. If it is ever missing
+they skip with a message instead of failing.

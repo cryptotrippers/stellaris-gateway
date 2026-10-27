@@ -82,6 +82,7 @@
         "zod": "^4.6.7",
       },
       "devDependencies": {
+        "@electric-sql/pglite": "0.5.10",
         "@eslint/js": "^9.32.0",
         "@lovable.dev/vite-tanstack-config": "2.26.5",
         "@types/node": "^22.16.5",
@@ -235,6 +236,8 @@
     "@effect/platform": ["@effect/platform@0.71.7", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@effect/platform/-/platform-0.71.7.tgz", { "dependencies": { "find-my-way-ts": "^0.1.5", "multipasta": "^0.2.5" }, "peerDependencies": { "effect": "^3.11.10" } }, "sha512-Ttw8OhbcP1x5cPgcX4VdnDSWrskVdUrf9bO3eDd++TTcQzEiYVu9GZJaSMvz6Yqzfzt+1tIKoKi2jp6dLdJ9dg=="],
 
     "@effect/schema": ["@effect/schema@0.66.16", "https://europe-west4-npm.pkg.dev/lovable-core-prod/sandbox-npm-cache/@effect/schema/-/schema-0.66.16.tgz", { "peerDependencies": { "effect": "^3.1.3", "fast-check": "^3.13.2" } }, "sha512-sT/k5NOgKslGPzs3DUaCFuM6g2JQoIIT8jpwEorAZooplPIMK2xIspr7ECz6pp6Dc7Wz/ppXGk7HVyGZQsIYEQ=="],
+
+    "@electric-sql/pglite": ["@electric-sql/pglite@0.5.10", "", {}, "sha512-tXc/25U3ulOkiRQuTFdwIv+JhBqtMdAF7Gvo6CfZZWtSB4+hgC4Wr2vwK5ngvvN5PJfAAEGIsfyCVy1JhCOBYw=="],
 
     "@emnapi/core": ["@emnapi/core@1.10.0", "", { "dependencies": { "@emnapi/wasi-threads": "1.2.1", "tslib": "^2.4.0" } }, "sha512-yq6OkJ4p82CAfPl0u9mQebQHKPJkY7WrIuk205cTYnYe+k2Z8YBh11FrbRG/H6ihirqcacOgl2BIO8oyMQLeXw=="],
 
