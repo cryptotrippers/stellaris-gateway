@@ -9,7 +9,8 @@ test("Worker-safe Tessera decoder preserves Lucid values and bigint precision", 
     new Map([["aa", 3n]]),
   ]);
   const hex = Data.to(value);
-  assert.deepEqual(decodeTesseraDatum(hex), Data.from(hex));
+  // The snapshot needs constructor fields, not Lucid's class prototype.
+  assert.deepEqual(decodeTesseraDatum(hex), structuredClone(Data.from(hex)));
 });
 
 for (const paymentScript of [false, true]) {
