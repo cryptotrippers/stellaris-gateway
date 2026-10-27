@@ -27,7 +27,7 @@ use stellaris/fv2.{
   WindingDown, pledge_marker,
 }
 use stellaris/fv2_fixture.{
-  alice, asset, between, bob, c1, c2, c3, carol, dl, elig, empty_book, fp,
+  alice, asset, between, bob, book, c1, c2, c3, carol, dl, elig, empty_book, fp,
   fractions, input, issuer, keeper, key_out, mallory, oh, p_ref, ph,
   pledge_datum, pledge_out, price, raised, seed, settle_tx, settled,
   spv, state, state_in, state_out, t0, terms, treas, tsra, un, up, wallet_in,
@@ -274,6 +274,65 @@ test open_cannot_mint_two_thread_tokens() fail {
   let tx = open_tx(state(Raising, empty_book()), [issuer, c1, c2])
   run(
     Transaction { ..tx, mint: assets.from_asset(oh, thread_name, 2) },
+    None,
+    fn(_) { fail },
+    None,
+  )
+}
+
+test open_rejects_a_book_claiming_fractions_without_units() fail {
+  open_ok(state(Raising, book(10, 10, 0, 0, 0, 0, 0)), [issuer, c1, c2])
+}
+
+test open_cannot_happen_while_a_state_is_spent() fail {
+  let d = state(Raising, empty_book())
+  let tx = open_tx(d, [issuer, c1, c2])
+  run(
+    Transaction { ..tx, inputs: [state_in(raised(10)), ..tx.inputs] },
+    Some(Settle),
+    fn(_) { fail },
+    None,
+  )
+}
+
+test open_must_start_at_period_zero() fail {
+  open_ok(OfferingV2 { ..state(Raising, empty_book()), period: 1 }, [issuer, c1, c2])
+}
+
+test open_must_start_without_a_manifest_root() fail {
+  open_ok(
+    OfferingV2 {
+      ..state(Raising, empty_book()),
+      manifest_root: #"abababababababababababababababababababababababababababababababab",
+    },
+    [issuer, c1, c2],
+  )
+}
+
+test open_rejects_a_duplicate_committee_member() fail {
+  open_ok(
+    OfferingV2 { ..state(Raising, empty_book()), committee: [c1, c2, c2], threshold: 2 },
+    [issuer, c1, c2],
+  )
+}
+
+test open_rejects_another_unit_policy() fail {
+  let d = state(Raising, empty_book())
+  open_ok(
+    OfferingV2 { ..d, terms: fv2.Terms { ..terms(), unit_policy: mallory } },
+    [issuer, c1, c2],
+  )
+}
+
+test open_rejects_junk_beside_the_thread_token() fail {
+  let d = state(Raising, empty_book())
+  let o = state_out(d)
+  run(
+    swap_out(
+      open_tx(d, [issuer, c1, c2]),
+      0,
+      Output { ..o, value: assets.add(o.value, mallory, "junk", 1) },
+    ),
     None,
     fn(_) { fail },
     None,
