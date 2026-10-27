@@ -119,7 +119,10 @@ export const createVaultProposal = createServerFn({ method: "POST" })
     const now = new Date();
     const endsAt = new Date(now.getTime() + data.votingDays * 24 * 60 * 60 * 1000);
 
-    const { data: inserted, error } = await context.supabase
+    // G-7: proposals are written by the platform after the checks above; the
+    // database refuses a proposal inserted directly by a user's session.
+    const { supabaseAdmin: proposalWriter } = await import("@/integrations/supabase/client.server");
+    const { data: inserted, error } = await proposalWriter
       .from("governance_proposals")
       .insert({
         sip_number: nextSipNumber(existing ?? []),
@@ -207,7 +210,9 @@ export const finalizeProposal = createServerFn({ method: "POST" })
 
     const nextStatus = outcome.verdict === "would_pass" ? "passed" : "rejected";
 
-    const { error: updErr } = await context.supabase
+    // G-8: the result is written by the platform from the recomputed tally;
+    // an operator's session can no longer set "passed" directly.
+    const { error: updErr } = await supabaseAdmin
       .from("governance_proposals")
       .update({ status: nextStatus })
       .eq("id", proposal.id)

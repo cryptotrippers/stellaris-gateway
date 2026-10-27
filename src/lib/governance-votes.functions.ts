@@ -132,7 +132,10 @@ export const castVote = createServerFn({ method: "POST" })
             w.weightsPerUser(await w.liveOwnerWeights(assetId), owners).get(context.userId) ?? 0n,
           );
 
-    const { error } = await context.supabase.from("proposal_votes").upsert(
+    // G-9: ballots are written by the platform after the window check above;
+    // the database also refuses any ballot outside the voting window.
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.from("proposal_votes").upsert(
       {
         proposal_id: data.proposalId,
         voter_user_id: context.userId,

@@ -116,6 +116,7 @@
     "nanoid@^3.3.11": "3.3.18"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.10",
     "@eslint/js": "^9.32.0",
     "@lovable.dev/vite-tanstack-config": "2.26.5",
     "@types/node": "^22.16.5",

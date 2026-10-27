@@ -18,18 +18,17 @@ import {
   LUCID_NETWORK,
   assertWalletMatchesAppNetwork,
 } from "./network";
-import { getBlockfrostClientConfig } from "./blockfrost.functions";
+import { BLOCKFROST_PROXY_PREFIX, BLOCKFROST_PROXY_PROJECT_ID } from "./blockfrost-proxy.shared";
 
-/** Cached Blockfrost client config fetched from the server function. */
-let blockfrostConfigPromise: Promise<{ projectId: string; url: string }> | null = null;
-async function getBlockfrostConfig() {
-  if (!blockfrostConfigPromise) {
-    blockfrostConfigPromise = getBlockfrostClientConfig().catch(e => {
-      blockfrostConfigPromise = null;
-      throw e;
-    });
-  }
-  return blockfrostConfigPromise;
+/**
+ * E13: Lucid talks to Blockfrost through our same-origin proxy
+ * (src/routes/api/bf/$.ts); the project key never reaches the browser.
+ */
+function getBlockfrostConfig() {
+  return {
+    url: `${window.location.origin}${BLOCKFROST_PROXY_PREFIX}`,
+    projectId: BLOCKFROST_PROXY_PROJECT_ID,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -122,7 +121,7 @@ export async function initLucidWithWallet() {
  * without prompting the user to sign anything.
  */
 export async function initLucidReadOnly() {
-  const bf = await getBlockfrostConfig();
+  const bf = getBlockfrostConfig();
   const lucidMod = await import("@lucid-evolution/lucid");
   const lucid = await lucidMod.Lucid(
     new lucidMod.Blockfrost(bf.url, bf.projectId),

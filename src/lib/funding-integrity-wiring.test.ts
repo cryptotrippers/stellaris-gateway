@@ -40,3 +40,16 @@ test("E01: linking an issuer to a request checks ownership and stage, then write
   assert.match(before, /fr\.status !== "draft" && fr\.status !== "submitted"/);
   assert.match(before, /await supabaseAdmin\s*\.from\("funding_requests"\)\s*\.$/);
 });
+
+test("G-7/G-8/G-9: proposals, results and ballots are written by the platform", () => {
+  const vault = read("./governance-vault.functions.ts");
+  assert.match(vault, /await proposalWriter\s*\.from\("governance_proposals"\)\s*\.insert\(/);
+  assert.doesNotMatch(vault, /context\.supabase\s*\.from\("governance_proposals"\)\s*\.insert\(/);
+  assert.match(
+    vault,
+    /await supabaseAdmin\s*\.from\("governance_proposals"\)\s*\.update\(\{ status: nextStatus \}\)/,
+  );
+  const votes = read("./governance-votes.functions.ts");
+  assert.match(votes, /supabaseAdmin\.from\("proposal_votes"\)\.upsert\(/);
+  assert.doesNotMatch(votes, /context\.supabase\.from\("proposal_votes"\)\.upsert\(/);
+});

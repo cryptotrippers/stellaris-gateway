@@ -60,6 +60,7 @@ import { Route as OfferingsIdRouteImport } from './routes/offerings.$id'
 import { Route as UpgradeIndexRouteImport } from './routes/upgrade.index'
 import { Route as UpgradeReturnRouteImport } from './routes/upgrade.return'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as ApiBfSplatRouteImport } from './routes/api/bf/$'
 import { Route as ApiV1YieldRouteImport } from './routes/api/v1/yield'
 import { Route as ApiPublicBlockfrostWebhookRouteImport } from './routes/api/public/blockfrost/webhook'
 import { Route as ApiPublicPaymentsWebhookRouteImport } from './routes/api/public/payments/webhook'
@@ -324,6 +325,11 @@ const Char91DotmcpChar93InvokeToolToolRoute =
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiBfSplatRoute = ApiBfSplatRouteImport.update({
+  id: '/api/bf/$',
+  path: '/api/bf/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiV1YieldRoute = ApiV1YieldRouteImport.update({
   id: '/api/v1/yield',
   path: '/api/v1/yield',
@@ -400,6 +406,7 @@ export interface FileRoutesByFullPath {
   '/offerings/': typeof OfferingsIndexRoute
   '/upgrade/': typeof UpgradeIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/bf/$': typeof ApiBfSplatRoute
   '/api/v1/yield': typeof ApiV1YieldRouteWithChildren
   '/api/public/blockfrost/webhook': typeof ApiPublicBlockfrostWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -455,6 +462,7 @@ export interface FileRoutesByTo {
   '/offerings': typeof OfferingsIndexRoute
   '/upgrade': typeof UpgradeIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/bf/$': typeof ApiBfSplatRoute
   '/api/v1/yield': typeof ApiV1YieldRouteWithChildren
   '/api/public/blockfrost/webhook': typeof ApiPublicBlockfrostWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -513,6 +521,7 @@ export interface FileRoutesById {
   '/offerings/': typeof OfferingsIndexRoute
   '/upgrade/': typeof UpgradeIndexRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
+  '/api/bf/$': typeof ApiBfSplatRoute
   '/api/v1/yield': typeof ApiV1YieldRouteWithChildren
   '/api/public/blockfrost/webhook': typeof ApiPublicBlockfrostWebhookRoute
   '/api/public/payments/webhook': typeof ApiPublicPaymentsWebhookRoute
@@ -572,6 +581,7 @@ export interface FileRouteTypes {
     | '/offerings/'
     | '/upgrade/'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/bf/$'
     | '/api/v1/yield'
     | '/api/public/blockfrost/webhook'
     | '/api/public/payments/webhook'
@@ -627,6 +637,7 @@ export interface FileRouteTypes {
     | '/offerings'
     | '/upgrade'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/bf/$'
     | '/api/v1/yield'
     | '/api/public/blockfrost/webhook'
     | '/api/public/payments/webhook'
@@ -684,6 +695,7 @@ export interface FileRouteTypes {
     | '/offerings/'
     | '/upgrade/'
     | '/.mcp/invoke-tool/$tool'
+    | '/api/bf/$'
     | '/api/v1/yield'
     | '/api/public/blockfrost/webhook'
     | '/api/public/payments/webhook'
@@ -736,6 +748,7 @@ export interface RootRouteChildren {
   LearnIndexRoute: typeof LearnIndexRoute
   OfferingsIndexRoute: typeof OfferingsIndexRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiBfSplatRoute: typeof ApiBfSplatRoute
   ApiV1YieldRoute: typeof ApiV1YieldRouteWithChildren
   ApiPublicBlockfrostWebhookRoute: typeof ApiPublicBlockfrostWebhookRoute
   ApiPublicPaymentsWebhookRoute: typeof ApiPublicPaymentsWebhookRoute
@@ -1100,6 +1113,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/bf/$': {
+      id: '/api/bf/$'
+      path: '/api/bf/$'
+      fullPath: '/api/bf/$'
+      preLoaderRoute: typeof ApiBfSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/v1/yield': {
       id: '/api/v1/yield'
       path: '/api/v1/yield'
@@ -1232,6 +1252,7 @@ const rootRouteChildren: RootRouteChildren = {
   LearnIndexRoute: LearnIndexRoute,
   OfferingsIndexRoute: OfferingsIndexRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiBfSplatRoute: ApiBfSplatRoute,
   ApiV1YieldRoute: ApiV1YieldRouteWithChildren,
   ApiPublicBlockfrostWebhookRoute: ApiPublicBlockfrostWebhookRoute,
   ApiPublicPaymentsWebhookRoute: ApiPublicPaymentsWebhookRoute,
