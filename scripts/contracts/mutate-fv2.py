@@ -117,7 +117,9 @@ def mutants_for(path, text):
     for i in sorted(code):
         l = lines[i]
         body = l.split("//")[0]
-        for pat, rep in REL + [(r"&&", "||"), (r"\|\|", "&&"), (r" \+ ", " - "), (r" - ", " + ")]:
+        # type signatures (`List<Input>`, `Option<PolicyId>`) are not comparisons
+        rel = [] if re.search(r"\w<\w", body) else REL
+        for pat, rep in rel + [(r"&&", "||"), (r"\|\|", "&&"), (r" \+ ", " - "), (r" - ", " + ")]:
             for m in re.finditer(pat, body):
                 nl = l[:m.start()] + (rep if not rep.startswith(" ") else rep) + l[m.end():]
                 new = lines[:i] + [nl] + lines[i + 1:]
