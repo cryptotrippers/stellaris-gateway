@@ -1672,3 +1672,24 @@ test alone_state_accepts_a_pledge_dated_exactly_at_the_deadline() {
     Settle,
   )
 }
+
+test pledge_cannot_mint_a_spare_marker_to_another_wallet() fail {
+  // a spare marker could later be planted in a forged pledge
+  let tx = pledge_tx(pledge_out(alice, 5), t0, dl, raised(0))
+  pledge_ok(
+    Transaction {
+      ..tx,
+      outputs: [
+        pledge_out(alice, 5),
+        key_out(mallory, assets.from_lovelace(2_000_000) |> assets.add(ph, pledge_marker, 1)),
+      ],
+      mint: assets.from_asset(ph, pledge_marker, 2),
+    },
+  )
+}
+
+test begin_wind_down_with_no_sale_proceeds() {
+  // e.g. the asset was written off: holders share only the unreleased escrow
+  let d = running()
+  act(step(d, wind_down(d, 0), [], assets.zero, board), BeginWindDown { final_pool: 0 })
+}
