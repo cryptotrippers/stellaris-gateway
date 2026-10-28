@@ -33,7 +33,11 @@ export const FRACTION_V2_BLUEPRINT_HASH =
 export const PLEDGE_VERSION = 0n;
 export const OFFERING_V2_VERSION = 0n;
 
-const blueprint = JSON.parse(blueprintSource) as {
+// Vite's `?raw` gives the file's text. Some Node test loaders resolve the
+// `.json` themselves and hand over the parsed object; accept either, so the
+// pins are checked against the same blueprint in the app and in CI.
+const blueprintRaw: unknown = blueprintSource;
+const blueprint = (typeof blueprintRaw === "string" ? JSON.parse(blueprintRaw) : blueprintRaw) as {
   validators?: Array<{ title?: string; compiledCode?: string }>;
 };
 
