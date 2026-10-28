@@ -1817,3 +1817,32 @@ test cancel_pledge_without_an_end_time_is_rejected() fail {
 test refund_pledge_inside_the_settle_window_while_raising_is_rejected() fail {
   refund(pledge_refund_tx(raised(10), dl + 1, dl + 1000))
 }
+
+test open_rejects_a_short_treasury_key() fail {
+  open_with_terms(fv2.Terms { ..terms(), treasury: #"7e" })
+}
+
+test open_rejects_a_docs_hash_that_is_not_32_bytes() fail {
+  open_with_terms(fv2.Terms { ..terms(), docs_hash: #"d0d0" })
+}
+
+test open_rejects_a_fraction_policy_that_is_not_28_bytes() fail {
+  open_with_terms(fv2.Terms { ..terms(), fraction_policy: #"fa" })
+}
+
+test open_rejects_a_negative_settle_window() fail {
+  open_with_terms(fv2.Terms { ..terms(), settle_window: -1 })
+}
+
+test redeem_more_than_outstanding_is_rejected() fail {
+  // the contract pays 0 when qty > outstanding; only the counter check stops it
+  let d = winding()
+  let n = with_book(d, Book { ..d.book, outstanding: -1 })
+  act(
+    Transaction {
+      ..step(d, n, [], assets.from_asset(fp, asset, -501), []),
+      inputs: [state_in(d), wallet_in(bob)],
+    },
+    Redeem { qty: 501 },
+  )
+}
