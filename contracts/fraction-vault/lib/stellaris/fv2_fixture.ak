@@ -11,8 +11,7 @@ use cardano/transaction.{
   placeholder,
 }
 use stellaris/fv2.{
-  Book, OfferingV2, PledgeDatum, Raising, Status, Terms, accounted, bps_of,
-  pledge_marker,
+  Book, OfferingV2, PledgeDatum, Raising, Status, Terms, pledge_marker,
 }
 use stellaris/thread.{thread_name}
 
@@ -153,7 +152,7 @@ pub fn state(status: Status, b: Book) -> OfferingV2 {
 /// A raise with `n` fractions settled at 1% fee.
 pub fn raised(n: Int) -> OfferingV2 {
   let cost = n * price
-  state(Raising, book(n, n, cost, 0, bps_of(cost, 100), 0, 0))
+  state(Raising, book(n, n, cost, 0, cost / 100, 0, 0))
 }
 
 pub fn key_addr(k: ByteArray) -> Address {
@@ -168,7 +167,8 @@ pub fn state_out(d: OfferingV2) -> Output {
     address: address.from_script(oh),
     value: assets.from_lovelace(rider)
       |> assets.add(oh, thread_name, 1)
-      |> assets.add(up, un, accounted(d.book)),
+      // computed here, not with fv2.accounted, so a broken formula is caught
+      |> assets.add(up, un, d.book.escrowed - d.book.released + d.book.pool),
     datum: InlineDatum(d),
     reference_script: None,
   }
@@ -248,7 +248,8 @@ pub fn settled(d: OfferingV2, ps: List<(ByteArray, Int)>) -> OfferingV2 {
       settled: b.settled + q,
       outstanding: b.outstanding + q,
       escrowed: b.escrowed + cost,
-      fees: b.fees + bps_of(cost, d.fee_bps),
+      // fee computed here, not with fv2.bps_of
+      fees: b.fees + cost * d.fee_bps / 10_000,
     },
   }
 }
