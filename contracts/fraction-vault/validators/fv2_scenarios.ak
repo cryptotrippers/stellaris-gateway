@@ -1846,3 +1846,35 @@ test redeem_more_than_outstanding_is_rejected() fail {
     Redeem { qty: 501 },
   )
 }
+
+test release_beyond_the_cap_after_earlier_releases_is_rejected() fail {
+  // 1,000 TSRA already released: only net - 1,000 TSRA remains
+  let d = running()
+  let room = d.book.net_proceeds - d.book.released
+  act(release_tx(d, room + 1, spv), Release { amount: room + 1, evidence_hash: evidence })
+}
+
+test release_of_exactly_the_remaining_room_after_earlier_releases() {
+  let d = running()
+  let room = d.book.net_proceeds - d.book.released
+  act(release_tx(d, room, spv), Release { amount: room, evidence_hash: evidence })
+}
+
+test a_one_of_n_committee_can_act() {
+  let d0 = operating()
+  let d = OfferingV2 { ..d0, committee: [c1, c2], threshold: 1 }
+  act(step(d, OfferingV2 { ..d, period: 1, manifest_root: root1 }, [], assets.zero, [c2]), CommitPeriod { period: 1, manifest_root: root1 })
+}
+
+test open_with_the_soft_cap_equal_to_the_hard_cap() {
+  open_with_terms(fv2.Terms { ..terms(), soft_cap: 1_000 })
+}
+
+test release_after_earlier_releases_cannot_eat_the_retained_amount() fail {
+  // with 100 TSRA retained and 1,000 already released, the room is
+  // net - 100 - 1,000; one unit more would come out of the hold-back
+  let d0 = running()
+  let d = OfferingV2 { ..d0, terms: fv2.Terms { ..terms(), retained: 100_000_000 } }
+  let room = d.book.net_proceeds - 100_000_000 - d.book.released
+  act(release_tx(d, room + 1, spv), Release { amount: room + 1, evidence_hash: evidence })
+}
