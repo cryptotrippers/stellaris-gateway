@@ -21,8 +21,11 @@ export const V2_MAX_FEE_BPS = 500;
 export const V2_MIN_RIDER = 2_000_000n;
 /** Asset name (hex) of the pledge marker: UTF-8 "pledge". */
 export const PLEDGE_MARKER_HEX = "706c65646765";
-/** Pledges per Settle the keeper builds (SPEC-v2 §11.4; CI gate fv2-budget-report). */
-export const KEEPER_BATCH = 20;
+/**
+ * Pledges per Settle the keeper builds: the largest batch that leaves 20%
+ * headroom in the worst input order (SPEC-v2 §11.4; CI gate fv2-budget-report).
+ */
+export const KEEPER_BATCH = 15;
 
 export type V2Status = "raising" | "operating" | "refunding" | "windingDown" | "closed";
 const STATUSES: V2Status[] = ["raising", "operating", "refunding", "windingDown", "closed"];
