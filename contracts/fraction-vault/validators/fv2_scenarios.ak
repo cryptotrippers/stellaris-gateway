@@ -1878,3 +1878,12 @@ test release_after_earlier_releases_cannot_eat_the_retained_amount() fail {
   let room = d.book.net_proceeds - 100_000_000 - d.book.released
   act(release_tx(d, room + 1, spv), Release { amount: room + 1, evidence_hash: evidence })
 }
+
+test open_with_no_settle_window() {
+  open_with_terms(fv2.Terms { ..terms(), settle_window: 0 })
+}
+
+test rotate_to_a_one_of_one_committee() {
+  let d = operating()
+  act(step(d, OfferingV2 { ..d, committee: [c3], threshold: 1 }, [], assets.zero, board), Rotate { committee: [c3], threshold: 1 })
+}
