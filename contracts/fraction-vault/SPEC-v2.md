@@ -316,11 +316,55 @@ amount and the sale proceeds) joins the holders' pool.
   trigger (State spend, each pledge spend, each minting policy present) and
   accepts only if all accept. Every attack in section 8 is a small change to an
   accepted base transaction, and the base is tested too.
-* Harness check: with all three scripts replaced by `True`, 107 of the 108 attack
-  transactions are accepted. So each rejection comes from a script, not from a
-  malformed fixture. The 108th calls `fraction_v2` directly.
+* Counts: 231 v2 tests (225 whole-transaction and single-script scenarios, 6 library
+  unit tests) beside the 68 v1 tests; 173 of the scenarios are attacks.
+* Harness check: with all three scripts replaced by `True`, all 162 attack
+  transactions that go through the harness are accepted. So each rejection comes
+  from a script, not from a malformed fixture. The other 11 attacks call one script
+  directly ("each script on its own"), each beside an accepted control.
 * Script sizes: `offering_v2` 8,117 B, `pledge` 4,423 B, `fraction_v2` 1,470 B
   (all under 13,000).
 * Mutation pass: see 11.8.
 * Not yet: Lucid emulator runs on serialised transactions (E07, with the
-  builders).
+  builders), which also re-measure the Settle budget.
+
+### 11.8 Mutation pass
+
+Tool: `scripts/contracts/mutate-fv2.py` (resumable). It drops each conjunct of every
+`and { }` block, flips each comparison (`==`/`!=`, `<`/`<=`, `>`/`>=`), swaps `&&`/`||`
+and `+`/`-`, flips `True`/`False` and removes each `!`, in `offering_v2.ak`, `pledge.ak`,
+`fraction_v2.ak` and `lib/stellaris/fv2.ak`. Each mutant runs the test group
+nearest the change first and stops at the first failing test.
+
+**324 mutants generated. 293 killed, 31 equivalent, 0 open.** (The run recorded
+320; four mutants on a line that already had the same kind of mutation were skipped
+by the resume key. The last four kills came from tests added after the run and
+were each checked by re-applying the mutant.)
+
+The pass found about 40 test gaps, all now closed by named tests. **None was a
+contract bug.** The ones that mattered most:
+
+* `CloseRaise` after a cancelled raise: without the status check, a committee
+  could turn a refunding offering back into an operating one and release escrow
+  owed to holders (`close_after_a_cancelled_raise_is_rejected`).
+* Negative `Redeem` after some holders redeemed: it would mint fractions back for
+  free (`redeem_of_a_negative_quantity_after_redemptions_is_rejected`).
+* Negative `final_pool` at `BeginWindDown`: it would take escrow out of the State
+  (`begin_wind_down_cannot_take_units_out`).
+* Releases after earlier releases eating into the D-7 hold-back
+  (`release_after_earlier_releases_cannot_eat_the_retained_amount`).
+* A spare pledge marker minted to another wallet, or kept on cancel, which could
+  later be planted in a forged pledge.
+* The fixture had computed the State's balance and fees with the library's own
+  functions, which hid mutations in them. It now computes both itself.
+
+**Equivalent mutants (31).** Each one cannot change what the scripts accept, for
+the reason given:
+
+| Kind | Mutants | Why no transaction can tell them apart |
+| --- | --- | --- |
+| Double guard: another check refuses the same state | `offering_v2`: `RefundFraction qty > 0` dropped (`outstanding <= settled`); `ClaimFee amount <= fees` dropped (`fees >= 0`). `fv2.book_ok`: `settled >= 0` (`0 <= outstanding <= settled`), `fees >= 0` (`amount <= fees`), `outstanding <= settled` (`qty > 0` on every burn or mint), `pool >= 0` (pro-rata share is at most the pool; `final_pool >= 0`), `released >= 0` (`amount > 0`), escrow cover dropped or its signs flipped (x3: the release cap, the fee cap and the refund price each keep it). `fv2.terms_ok`: `total_fractions > 0` dropped or loosened (x2: `0 < soft_cap <= total_fractions`) | The state the check refuses is already refused by the named check. Kept as defence in depth. |
+| Zero is a no-op | `Release amount > 0`, `ClaimFee amount > 0`, `RefundFraction qty > 0`, `Redeem qty > 0`, each loosened to `>= 0` | An amount or quantity of 0 gives a next State equal to the old one and moves nothing. |
+| Same value at the boundary | `bps_of` (x3: `amount <= 0` → `< 0`, `bps <= 0` → `< 0`, `||` → `&&`); `pro_rata` (x3: `pool`, `qty`, `outstanding` `<= 0` → `< 0`) | At 0 the formula's own result is 0 as well (for `outstanding = 0`, the `qty > outstanding` guard returns 0 first). |
+| Cannot be built on the ledger | `Open`: "no State input" dropped (the seed can be spent only once, so a second opening cannot run); `BurnPledges marked > 0` dropped or loosened (x2) and `fraction_v2 delta != 0` dropped (a mint never lists a zero quantity); `SettlePledge` State check `&&` → `||` (an input at the offering address without the thread token cannot be spent at all) | The distinguishing transaction is not a valid Cardano transaction. |
+| Implied by a stronger check | `offering_v2`: `at(out, own)` (`continuing_ok` compares the full address); `n.terms == t` (every action compares the whole next datum). `pledge`: `holds_marker(out)` at mint (the clean-value check on the value less one marker refuses a missing marker); `CancelPledge marked` (an unmarked UTxO may be returned to its owner by anyone anyway) | The stronger check makes the same decision. |

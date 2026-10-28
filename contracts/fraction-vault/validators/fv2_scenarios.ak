@@ -1887,3 +1887,9 @@ test rotate_to_a_one_of_one_committee() {
   let d = operating()
   act(step(d, OfferingV2 { ..d, committee: [c3], threshold: 1 }, [], assets.zero, board), Rotate { committee: [c3], threshold: 1 })
 }
+
+test fail_raise_with_nothing_settled() {
+  // no pledge was ever settled: the raise still fails cleanly
+  let d = raised(0)
+  act(after_window(step(d, refunding_from(d), [], assets.zero, [])), FailRaise)
+}
