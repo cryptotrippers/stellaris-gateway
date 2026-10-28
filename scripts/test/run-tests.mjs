@@ -32,10 +32,38 @@ if (files.length === 0) {
   process.exit(1);
 }
 
-console.log(`Running ${files.length} test file(s).`);
-const res = spawnSync(
-  "npx",
-  ["tsx", "--import", "./scripts/test/register-asset-stub.mjs", "--test", ...files],
-  { stdio: "inherit", shell: process.platform === "win32" },
-);
+console.log(`Running ${files.length} test file(s) on Node ${process.version}.`);
+const argv = ["tsx", "--import", "./scripts/test/register-asset-stub.mjs", "--test", ...files];
+
+if (!process.env.GITHUB_ACTIONS) {
+  const res = spawnSync("npx", argv, { stdio: "inherit", shell: process.platform === "win32" });
+  process.exit(res.status ?? 1);
+}
+
+// On GitHub Actions, also turn each failing test into an annotation, so a
+// failure can be read from the check run without downloading the full log.
+const res = spawnSync("npx", argv, {
+  stdio: ["inherit", "pipe", "inherit"],
+  encoding: "utf8",
+  maxBuffer: 256 * 1024 * 1024,
+});
+const out = res.stdout ?? "";
+process.stdout.write(out);
+const lines = out.split("\n");
+const esc = (s) => s.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
+let shown = 0;
+for (let i = 0; i < lines.length && shown < 10; i++) {
+  const m = /^\s*not ok \d+ - (.*)$/.exec(lines[i]);
+  if (!m) continue;
+  const detail = lines
+    .slice(i + 1, i + 40)
+    .filter((l) => /error:|code:|ERR_|expected|actual|location:|at /.test(l))
+    .slice(0, 8)
+    .map((l) => l.trim())
+    .join("\n");
+  console.log(
+    `::error title=${esc(m[1].slice(0, 200))}::${esc(detail.slice(0, 1500) || "(no detail)")}`,
+  );
+  shown++;
+}
 process.exit(res.status ?? 1);
