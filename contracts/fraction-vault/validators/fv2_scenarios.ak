@@ -1693,3 +1693,27 @@ test begin_wind_down_with_no_sale_proceeds() {
   let d = running()
   act(step(d, wind_down(d, 0), [], assets.zero, board), BeginWindDown { final_pool: 0 })
 }
+
+test pledge_under_a_stake_credential_is_rejected() fail {
+  // F-6: a pledge sits at the pledge script's enterprise address
+  let o = pledge_out(alice, 5)
+  pledge_ok(
+    pledge_tx(
+      Output {
+        ..o,
+        address: Address {
+          ..o.address,
+          stake_credential: Some(address.Inline(VerificationKey(mallory))),
+        },
+      },
+      t0,
+      dl,
+      raised(0),
+    ),
+  )
+}
+
+test pledge_with_a_reference_script_is_rejected() fail {
+  let o = pledge_out(alice, 5)
+  pledge_ok(pledge_tx(Output { ..o, reference_script: Some(mallory) }, t0, dl, raised(0)))
+}
