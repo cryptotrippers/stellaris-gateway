@@ -1744,3 +1744,8 @@ test pledge_with_less_than_the_rider_is_rejected() fail {
     pledge_tx(Output { ..o, value: assets.add(o.value, #"", #"", -1_000_001) }, t0, dl, raised(0)),
   )
 }
+
+test cancel_pledge_paid_to_someone_else_is_rejected() fail {
+  let tx = pledge_refund_tx(raised(10), t0, dl)
+  cancel(Transaction { ..swap_out(tx, 0, refund_out(mallory, 5, 0)), extra_signatories: [alice] })
+}
