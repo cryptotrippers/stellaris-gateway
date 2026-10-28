@@ -190,6 +190,32 @@ if (fractionValidators) {
       file: "src/lib/fraction-vault.ts",
     },
   );
+  // fraction_vault v2 (E06/E07): src/lib/fraction-vault-v2.ts imports the CBOR
+  // from plutus.json and pins the UNAPPLIED hash of each validator.
+  const v2Pin = readPins(resolve("src/lib/fraction-vault-v2.ts"));
+  targets.push(
+    {
+      label: "offering_v2 (State + thread token)",
+      onChain: findIn(fractionValidators, "offering_v2.offering_v2"),
+      hash: v2Pin("OFFERING_V2_BLUEPRINT_HASH"),
+      cbor: "__BLUEPRINT_IMPORT__",
+      file: "src/lib/fraction-vault-v2.ts",
+    },
+    {
+      label: "pledge (pledges + marker policy)",
+      onChain: findIn(fractionValidators, "pledge.pledge"),
+      hash: v2Pin("PLEDGE_BLUEPRINT_HASH"),
+      cbor: "__BLUEPRINT_IMPORT__",
+      file: "src/lib/fraction-vault-v2.ts",
+    },
+    {
+      label: "fraction_v2 (token policy)",
+      onChain: findIn(fractionValidators, "fraction_v2.fraction_v2", ".mint"),
+      hash: v2Pin("FRACTION_V2_BLUEPRINT_HASH"),
+      cbor: "__BLUEPRINT_IMPORT__",
+      file: "src/lib/fraction-vault-v2.ts",
+    },
+  );
 } else {
   console.log(
     "[verify-vault-hash] contracts/fraction-vault/plutus.json not present — skipping fraction pins.",
