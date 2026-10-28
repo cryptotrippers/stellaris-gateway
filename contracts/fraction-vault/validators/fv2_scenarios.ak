@@ -1717,3 +1717,30 @@ test pledge_with_a_reference_script_is_rejected() fail {
   let o = pledge_out(alice, 5)
   pledge_ok(pledge_tx(Output { ..o, reference_script: Some(mallory) }, t0, dl, raised(0)))
 }
+
+test cancel_pledge_keeping_the_marker_is_rejected() fail {
+  // a kept marker could later be planted in a forged pledge
+  let tx = pledge_refund_tx(raised(10), t0, dl)
+  cancel(
+    Transaction {
+      ..tx,
+      outputs: [
+        Output {
+          ..refund_out(alice, 5, 0),
+          value: assets.from_lovelace(2_000_000)
+            |> assets.add(up, un, 50_000_000)
+            |> assets.add(ph, pledge_marker, 1),
+        },
+      ],
+      mint: assets.zero,
+      extra_signatories: [alice],
+    },
+  )
+}
+
+test pledge_with_less_than_the_rider_is_rejected() fail {
+  let o = pledge_out(alice, 5)
+  pledge_ok(
+    pledge_tx(Output { ..o, value: assets.add(o.value, #"", #"", -1_000_001) }, t0, dl, raised(0)),
+  )
+}
