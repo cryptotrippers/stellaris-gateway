@@ -1749,3 +1749,46 @@ test cancel_pledge_paid_to_someone_else_is_rejected() fail {
   let tx = pledge_refund_tx(raised(10), t0, dl)
   cancel(Transaction { ..swap_out(tx, 0, refund_out(mallory, 5, 0)), extra_signatories: [alice] })
 }
+
+test refund_pledge_exactly_at_the_end_of_the_window_is_rejected() fail {
+  refund(pledge_refund_tx(raised(10), dl + win, dl + win + 1000))
+}
+
+test refund_pledge_without_a_start_time_while_raising_is_rejected() fail {
+  let tx = pledge_refund_tx(raised(10), t0, dl)
+  refund(Transaction { ..tx, validity_range: interval.before(dl + win + 1000) })
+}
+
+test refund_a_stray_utxo_and_a_pledge_together() {
+  // the stray UTxO (no marker) is not counted in the marker burn
+  let o = pledge_out(alice, 5)
+  let bare = Output { ..o, value: assets.add(o.value, ph, pledge_marker, -1) }
+  let tx = pledge_refund_tx(refunding_from(raised(10)), t0, dl)
+  refund(
+    Transaction {
+      ..tx,
+      inputs: [input(0, pledge_out(alice, 5)), input(1, bare), wallet_in(mallory)],
+      outputs: [refund_out(alice, 5, 0), refund_out(alice, 5, 1)],
+      mint: assets.from_asset(ph, pledge_marker, -1),
+    },
+  )
+}
+
+test refund_of_a_stray_utxo_returns_every_asset() fail {
+  // a foreign token that happens to be called "pledge" must go back too
+  let o = pledge_out(alice, 5)
+  let bare =
+    Output {
+      ..o,
+      value: assets.add(o.value, ph, pledge_marker, -1) |> assets.add(mallory, pledge_marker, 1),
+    }
+  let tx = pledge_refund_tx(raised(10), t0, dl)
+  refund(
+    Transaction {
+      ..tx,
+      inputs: [input(0, bare), wallet_in(mallory)],
+      reference_inputs: [],
+      mint: assets.zero,
+    },
+  )
+}
