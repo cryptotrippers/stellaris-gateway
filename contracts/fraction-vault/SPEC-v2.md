@@ -387,3 +387,30 @@ affected, because their rider is separate from the balance and the builders set
 it to 5 ADA. The builders refuse an ADA unit with a clear message. A fix (a
 rider recorded in the datum) is a contract change for the second audit, only if
 an ADA-denominated offering is ever wanted. Found by the E07 emulator run.
+
+## 12. E07 off-chain (29 Oct 2026)
+
+| Module | What |
+| --- | --- |
+| `src/lib/fraction-vault-v2.ts` | Pins the three unapplied blueprints (checked by `verify-vault-hash` in CI), derives pledge → offering → fraction policy, registers each with the S1 trust view, and `fractionPolicyIsGenuine` (§11.1). |
+| `src/lib/offering-v2-chain.ts` | The single encoder and strict decoder for the State and pledge datums and every redeemer; next-State rules mirroring `offering_v2`, refusing early with a readable reason. `KEEPER_BATCH = 15`. |
+| `src/lib/offering-v2-tx.ts` | Builders for every action in §7: open, pledge, cancel, refund (batch), settle (≤ 15), close, fail, cancel raise, refund fraction, release, commit period, set fees, claim fee, rotate, begin wind-down, redeem, publish reference scripts. Each returns the unsigned transaction and its S1 intent; nothing signs. |
+| `src/lib/tx-tracker.shared.ts` | Follows a submitted transaction: pending → on chain → final (15 blocks), with rollbacks reported and counted, and expiry once its validity window closes. Reads `/txs/{hash}` and `/blocks/latest` through the E13 proxy (two read-only rules added). |
+
+Evidence, on Lucid's emulator with the real compiled scripts, every
+transaction checked by `assertIntent` before signing:
+
+* Full success path (open, two settle batches, close, release, commit period,
+  claim fee, wind down, redeem) and failure path (cancel, fail, refund pledge,
+  refund fraction to Closed): `tests/contracts/fv2-emulator.test.ts`.
+* Seven hand-built attacks refused by the real UPLC, each beside its honest
+  control: `tests/contracts/fv2-emulator-attacks.test.ts`.
+* Settle of 15 with reference scripts: 52.9% memory, 27.4% CPU, 3,091 bytes in
+  the measured order; the worst order is bounded by the Aiken gate (§11.4).
+* Findings: the State needs a 5 ADA rider (its datum's min-ADA is above 3 ADA;
+  the guard caught the builder's 2 ADA); release and claim payouts carry a 2 ADA
+  rider from the signing wallet, now declared in the intent; §11.4's batch size
+  corrected to 15; §11.9's ADA-unit limitation.
+
+Not in E07: the app UI (Lovable), a keeper service that runs `buildSettle` on
+a schedule, a Preprod bootstrap, and E09 (snapshot, manifest, payouts).
