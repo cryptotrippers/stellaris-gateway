@@ -1792,3 +1792,28 @@ test refund_of_a_stray_utxo_returns_every_asset() fail {
     },
   )
 }
+
+fn open_with_terms(t: fv2.Terms) -> Bool {
+  open_ok(OfferingV2 { ..state(Raising, empty_book()), terms: t }, [issuer, c1, c2])
+}
+
+test open_rejects_a_zero_soft_cap() fail {
+  open_with_terms(fv2.Terms { ..terms(), soft_cap: 0 })
+}
+
+test open_rejects_a_zero_price() fail {
+  open_with_terms(fv2.Terms { ..terms(), price: 0 })
+}
+
+test open_rejects_a_negative_retained_amount() fail {
+  open_with_terms(fv2.Terms { ..terms(), retained: -1 })
+}
+
+test cancel_pledge_without_an_end_time_is_rejected() fail {
+  let tx = pledge_refund_tx(raised(10), t0, dl)
+  cancel(Transaction { ..tx, validity_range: interval.after(t0), extra_signatories: [alice] })
+}
+
+test refund_pledge_inside_the_settle_window_while_raising_is_rejected() fail {
+  refund(pledge_refund_tx(raised(10), dl + 1, dl + 1000))
+}
