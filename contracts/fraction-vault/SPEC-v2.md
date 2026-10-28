@@ -270,12 +270,19 @@ while `Raising`.
 * Eligibility (when `eligibility_policy` is set): a reference input holds exactly
   one eligibility token named by the owner's key hash. No owner signature is
   needed, because the fractions can only go to the owner.
-* Batch size: **20 pledges per Settle** (77.6% of the per-transaction memory
-  limit, 39.6% of CPU; 25 pledges would use 96.8% of memory). These figures come
-  from the Aiken evaluator, with the cost of building the transaction subtracted
-  (`scripts/contracts/fv2-budget-report.mjs`, run in CI). E07 re-measures them on
-  real serialised transactions in the emulator before the keeper ships. About 50
-  investors settle in three batches.
+* Batch size: **15 pledges per Settle.** Every pledge script searches the
+  transaction's inputs for the State, and the ledger orders inputs by
+  transaction id, so the cost depends on where the State lands. With the State
+  last (the worst order) 15 pledges use 75.6% of the per-transaction memory
+  limit and 40.5% of CPU; 16 use 81.4%, and 20 would use 105.9%, over the
+  limit. In the best order 20 use 77.6%. The gate
+  (`scripts/contracts/fv2-budget-report.mjs`, run in CI) reads the worst-order
+  tests (`settle_worst_cost_N`) and fails if 15 stops leaving 20% headroom. On
+  Lucid's emulator, with real serialised transactions and reference scripts,
+  20 pledges measured between 72.6% and 86% of memory over three random
+  orders, consistent with these bounds. About 50 investors settle in four
+  batches. (E06 first stated 20, measured in the best order only; corrected in
+  E07, 29 Oct 2026.)
 
 ### 11.5 State datum layout
 
@@ -368,3 +375,15 @@ the reason given:
 | Same value at the boundary | `bps_of` (x3: `amount <= 0` → `< 0`, `bps <= 0` → `< 0`, `||` → `&&`); `pro_rata` (x3: `pool`, `qty`, `outstanding` `<= 0` → `< 0`) | At 0 the formula's own result is 0 as well (for `outstanding = 0`, the `qty > outstanding` guard returns 0 first). |
 | Cannot be built on the ledger | `Open`: "no State input" dropped (the seed can be spent only once, so a second opening cannot run); `BurnPledges marked > 0` dropped or loosened (x2) and `fraction_v2 delta != 0` dropped (a mint never lists a zero quantity); `SettlePledge` State check `&&` → `||` (an input at the offering address without the thread token cannot be spent at all) | The distinguishing transaction is not a valid Cardano transaction. |
 | Implied by a stronger check | `offering_v2`: `at(out, own)` (`continuing_ok` compares the full address); `n.terms == t` (every action compares the whole next datum). `pledge`: `holds_marker(out)` at mint (the clean-value check on the value less one marker refuses a missing marker); `CancelPledge marked` (an unmarked UTxO may be returned to its owner by anyone anyway) | The stronger check makes the same decision. |
+
+### 11.9 Known limitation: ADA as the deposit unit
+
+For an ADA unit the State must hold exactly `2 ADA + (escrowed − released +
+pool)` lovelace (`units_in` subtracts a fixed 2 ADA rider). The State datum is
+about 400 bytes, so the ledger's minimum ADA for it is above 3 ADA, and a fresh
+State (balance 0) cannot be created: an ADA-denominated offering cannot be
+opened. Native-token units (TSRA on Preprod, any stablecoin on mainnet) are not
+affected, because their rider is separate from the balance and the builders set
+it to 5 ADA. The builders refuse an ADA unit with a clear message. A fix (a
+rider recorded in the datum) is a contract change for the second audit, only if
+an ADA-denominated offering is ever wanted. Found by the E07 emulator run.
