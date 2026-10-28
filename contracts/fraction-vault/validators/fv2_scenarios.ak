@@ -1893,3 +1893,73 @@ test fail_raise_with_nothing_settled() {
   let d = raised(0)
   act(after_window(step(d, refunding_from(d), [], assets.zero, [])), FailRaise)
 }
+
+// ==================================================================
+// Budget, worst case: the State input LAST (after every pledge and the
+// keeper's fee input). The ledger orders inputs by transaction id, so on
+// chain the State can land anywhere; with it last, every pledge's search
+// for the State walks the whole input list. The keeper's batch size is set
+// from these (scripts/contracts/fv2-budget-report.mjs).
+// ==================================================================
+
+fn settle_tx_worst(d: OfferingV2, ps: List<(ByteArray, Int)>) -> Transaction {
+  let tx = settle_tx(d, ps)
+  expect [s, ..pledges] = tx.inputs
+  Transaction { ..tx, inputs: list.concat(pledges, [wallet_in(keeper), s]) }
+}
+
+test settle_worst_cost_1() {
+  settle(settle_tx_worst(raised(0), fv2_fixture.batch(1)))
+}
+
+test settle_worst_fixture_1() {
+  fixture_only(settle_tx_worst(raised(0), fv2_fixture.batch(1)))
+}
+
+test settle_worst_cost_5() {
+  settle(settle_tx_worst(raised(0), fv2_fixture.batch(5)))
+}
+
+test settle_worst_fixture_5() {
+  fixture_only(settle_tx_worst(raised(0), fv2_fixture.batch(5)))
+}
+
+test settle_worst_cost_10() {
+  settle(settle_tx_worst(raised(0), fv2_fixture.batch(10)))
+}
+
+test settle_worst_fixture_10() {
+  fixture_only(settle_tx_worst(raised(0), fv2_fixture.batch(10)))
+}
+
+test settle_worst_cost_15() {
+  settle(settle_tx_worst(raised(0), fv2_fixture.batch(15)))
+}
+
+test settle_worst_fixture_15() {
+  fixture_only(settle_tx_worst(raised(0), fv2_fixture.batch(15)))
+}
+
+test settle_worst_cost_16() {
+  settle(settle_tx_worst(raised(0), fv2_fixture.batch(16)))
+}
+
+test settle_worst_fixture_16() {
+  fixture_only(settle_tx_worst(raised(0), fv2_fixture.batch(16)))
+}
+
+test settle_worst_cost_18() {
+  settle(settle_tx_worst(raised(0), fv2_fixture.batch(18)))
+}
+
+test settle_worst_fixture_18() {
+  fixture_only(settle_tx_worst(raised(0), fv2_fixture.batch(18)))
+}
+
+test settle_worst_cost_20() {
+  settle(settle_tx_worst(raised(0), fv2_fixture.batch(20)))
+}
+
+test settle_worst_fixture_20() {
+  fixture_only(settle_tx_worst(raised(0), fv2_fixture.batch(20)))
+}
