@@ -16,8 +16,10 @@ import assert from "node:assert/strict";
 import * as L from "@lucid-evolution/lucid";
 import { KEEPER_BATCH, accounted } from "../../src/lib/offering-v2-chain";
 import {
+  VALIDITY_SLACK_MS,
   buildAction,
   buildCancelPledge,
+  buildPledge,
   buildRefundPledges,
   buildSettle,
   findPledges,
@@ -233,10 +235,13 @@ test("E07: failure path — cancel, fail, refund a pledge and a fraction", async
     await buildSettle(as(f, f.keeper), seven, [keyHash(f.keeper.address)], f.emulator.now()),
   );
 
-  // Past the deadline and the settle window: anyone can fail the raise.
+  // Past the deadline and the settle window: anyone can fail the raise. The
+  // transaction's validity starts VALIDITY_SLACK_MS before now, and the script
+  // needs that start past the window, so wait that much longer too.
   const t = (await findState(f.ctx)).state.terms;
   f.emulator.awaitSlot(
-    Math.ceil((Number(t.deadline + t.settleWindow) - f.emulator.now()) / 1000) + 5,
+    Math.ceil((Number(t.deadline + t.settleWindow) - f.emulator.now() + VALIDITY_SLACK_MS) / 1000) +
+      5,
   );
   await run(
     f,
@@ -270,6 +275,23 @@ test("E07: failure path — cancel, fail, refund a pledge and a fraction", async
   assert.equal(end.status, "closed");
   assert.equal(end.book.outstanding, 0n);
   assert.equal(accounted(end.book), 0n);
+});
+
+test("E07: every transaction's validity starts VALIDITY_SLACK_MS before now", async () => {
+  // On Preprod the node checks the start against the last block's slot, which
+  // trails the wall clock; a start of exactly "now" was refused there
+  // (OutsideValidityIntervalUTxO, 30 Oct). The emulator has no such lag, so
+  // pin the start itself.
+  const v = await setup();
+  v.emulator.awaitSlot(600);
+  const inv = v.investors[0]!;
+  const now = v.emulator.now();
+  const p = await buildPledge(as(v, inv), inv.address, 1n, now);
+  const body = L.CML.Transaction.from_cbor_hex(p.tx.toCBOR()).body();
+  const startSlot = Number(body.validity_interval_start());
+  const nowSlot = L.unixTimeToSlot("Custom" as never, now);
+  assert.ok(nowSlot - startSlot >= VALIDITY_SLACK_MS / 1000, `start ${startSlot}, now ${nowSlot}`);
+  await run(v, inv, p);
 });
 
 test("E07: the builders and the CI budget gate use the same batch size", async () => {
