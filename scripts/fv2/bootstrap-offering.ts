@@ -55,6 +55,7 @@ import {
   pickSeed,
   refLockAddress,
   testOpeningState,
+  walletCaughtUp,
   type Stage,
 } from "./lib/bootstrap";
 
@@ -238,7 +239,10 @@ async function main() {
       status: "confirmed",
       confirmedAt: new Date().toISOString(),
     };
-    await walletCaughtUp(lucid, s);
+    if (!(await walletCaughtUp(lucid, s.tx.toCBOR())))
+      die(
+        `The wallet view still lists inputs [${s.name}] spent. Wait a minute and re-run (it resumes).`,
+      );
     save();
     console.log(`[${s.name}] confirmed.`);
   }
@@ -257,28 +261,6 @@ async function main() {
       : "\nWARNING: read-back did not match; inspect the links above.",
   );
   console.log(`Commit ${FILE} (no keys in it), then pin the seed (see the step guide).`);
-}
-
-/**
- * Blockfrost reports a transaction before its address index drops the inputs
- * it spent, so a stage built right after can pick those inputs again ("All
- * inputs are spent"). Wait until the wallet view no longer lists any of them.
- */
-async function walletCaughtUp(lucid: Awaited<ReturnType<typeof Lucid>>, s: Stage) {
-  const body = CML.Transaction.from_cbor_hex(s.tx.toCBOR()).body();
-  const spent = new Set<string>();
-  for (let i = 0; i < body.inputs().len(); i++) {
-    const inp = body.inputs().get(i);
-    spent.add(`${inp.transaction_id().to_hex()}#${inp.index()}`);
-  }
-  for (let attempt = 0; attempt < 30; attempt++) {
-    const utxos = await lucid.wallet().getUtxos();
-    if (!utxos.some((u) => spent.has(`${u.txHash}#${u.outputIndex}`))) return;
-    await new Promise((r) => setTimeout(r, 4_000));
-  }
-  die(
-    `The wallet view still lists inputs [${s.name}] spent. Wait a minute and re-run (it resumes).`,
-  );
 }
 
 async function buildRefsRecord(s: Stage, hash: string) {

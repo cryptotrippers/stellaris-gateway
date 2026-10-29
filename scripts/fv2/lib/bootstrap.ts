@@ -256,3 +256,29 @@ export function pickSeed(utxos: UTxO[]): UTxO {
   if (!pure[0]) throw new Error("The operator wallet has no ADA-only UTxO to use as the seed.");
   return pure[0];
 }
+
+/**
+ * Blockfrost reports a transaction before its address index drops the inputs
+ * it spent, so a transaction built right after can pick those inputs again
+ * ("All inputs are spent"). Resolve once the wallet view no longer lists any
+ * of them; false if it still does after ~2 minutes.
+ */
+export async function walletCaughtUp(
+  lucid: LucidEvolution,
+  txCbor: string,
+  attempts = 30,
+  waitMs = 4_000,
+): Promise<boolean> {
+  const body = L.CML.Transaction.from_cbor_hex(txCbor).body();
+  const spent = new Set<string>();
+  for (let i = 0; i < body.inputs().len(); i++) {
+    const inp = body.inputs().get(i);
+    spent.add(`${inp.transaction_id().to_hex()}#${inp.index()}`);
+  }
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    const utxos = await lucid.wallet().getUtxos();
+    if (!utxos.some((u) => spent.has(`${u.txHash}#${u.outputIndex}`))) return true;
+    await new Promise((r) => setTimeout(r, waitMs));
+  }
+  return false;
+}
