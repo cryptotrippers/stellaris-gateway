@@ -88,13 +88,25 @@ test("E13: anything Lucid doesn't need is refused", () => {
     `/accounts/${STAKE}/addresses`,
     `/addresses/${ADDR}`,
     `/addresses/${ADDR}/transactions`,
-    `/txs/${TX}`,
     `/txs/${TX}/metadata`,
+    `/txs/${TX}/redeemers`,
+    "/blocks/latest/txs",
+    `/blocks/${TX}`,
     "/epochs/latest",
     "/mempool",
   ]) {
     assert.equal(get(p).ok, false, p);
   }
+});
+
+test("E07: the transaction tracker's two reads are allowed, without queries", () => {
+  for (const p of [`/txs/${TX}`, "/blocks/latest"]) {
+    const d = get(p);
+    assert.equal(d.ok, true, p);
+  }
+  const q = get(`/txs/${TX}?page=2`);
+  assert.ok(!q.ok || !q.upstreamUrl.includes("page"), "no query kept on the tracker reads");
+  assert.equal(get(`/txs/${TX.toUpperCase()}`).ok, false, "lower-case hex only");
 });
 
 test("E13: traversal, encoding and query tricks are refused", () => {

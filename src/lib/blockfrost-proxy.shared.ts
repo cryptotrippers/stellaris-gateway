@@ -58,6 +58,9 @@ export const PROXY_RULES: readonly Rule[] = [
   { method: "GET", path: re(`/addresses/${ADDRESS}/utxos`), query: ["page", "count"] },
   { method: "GET", path: re(`/addresses/${ADDRESS}/utxos/${UNIT}`), query: ["page", "count"] },
   { method: "GET", path: re(`/assets/${UNIT}/addresses`), query: ["count"] },
+  // E07 transaction tracker: the block a transaction is in, and the tip.
+  { method: "GET", path: re(`/txs/${TX_HASH}`) },
+  { method: "GET", path: re("/blocks/latest") },
   { method: "GET", path: re(`/txs/${TX_HASH}/utxos`) },
   { method: "GET", path: re(`/txs/${TX_HASH}/cbor`) },
   { method: "GET", path: re(`/accounts/${STAKE}`) },
