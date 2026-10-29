@@ -27,6 +27,7 @@ import {
   SMOKE_RELEASE,
   SMOKE_STAGES,
   buildSmokeStage,
+  chainCaughtUp,
   expectedEnd,
 } from "../../scripts/fv2/lib/smoke";
 import {
@@ -122,6 +123,7 @@ test("fv2 smoke: pledges, settle, close, release, commit, claim — end state as
     const stage = await buildSmokeStage(ctx, name, roles, emulator.now());
     await guard(lucid, { name: "open", tx: stage.tx, intent: stage.intent, record: {} });
     await submit(stage.tx, COMMITTEE_STAGES.has(name) ? committee.slice(0, 2) : []);
+    assert.ok(await chainCaughtUp(ctx, name, stage.tx.toHash(), 1, 0), `${name} output visible`);
     if (name === "pledge-3") assert.equal((await findPledges(ctx)).length, 3);
   }
 

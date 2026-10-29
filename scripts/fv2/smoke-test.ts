@@ -50,6 +50,7 @@ import {
   SMOKE_PLEDGES,
   SMOKE_STAGES,
   buildSmokeStage,
+  chainCaughtUp,
   expectedEnd,
   type SmokeStageName,
 } from "./lib/smoke";
@@ -164,6 +165,11 @@ async function main() {
   const signerHashes = signerKeys.map(keyHashOf);
   for (const [i, h] of signerHashes.entries())
     if (!committee.includes(h)) die(`${SIGNERS[i]!} (${h}) is not on this offering's committee.`);
+  // A resumed run: wait until the last confirmed stage's output is visible, so
+  // nothing below reads (or builds on) the chain as it was before it.
+  const lastDone = [...SMOKE_STAGES].reverse().find((s) => smoke[s]?.status === "confirmed");
+  if (lastDone && !(await chainCaughtUp(ctx, lastDone, String(smoke[lastDone]!.tx))))
+    die(`Blockfrost does not show [${lastDone}]'s output yet. Wait a minute and re-run.`);
   const { state: now0 } = await findState(ctx);
   if (new Set(signerHashes).size < now0.threshold)
     die(
@@ -242,6 +248,10 @@ async function main() {
     if (!(await walletCaughtUp(lucid, stage.tx.toCBOR())))
       die(
         `The wallet view still lists inputs [${name}] spent. Wait a minute and re-run (it resumes).`,
+      );
+    if (!(await chainCaughtUp(ctx, name, hash)))
+      die(
+        `Blockfrost does not show [${name}]'s output at the script address yet. Wait a minute and re-run (it resumes).`,
       );
   }
 

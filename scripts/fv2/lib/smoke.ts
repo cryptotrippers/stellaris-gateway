@@ -144,6 +144,34 @@ export async function buildSmokeStage(
   }
 }
 
+/**
+ * Blockfrost confirms a transaction before its script-address index shows the
+ * outputs, so a read right after can still return the State (or the pledge
+ * set) as it was before. Resolve once the stage's own output is visible: for
+ * a pledge, a pledge UTxO from `txHash`; for every other stage, the State
+ * UTxO itself coming from `txHash`. False if not after ~2 minutes.
+ */
+export async function chainCaughtUp(
+  ctx: V2Context,
+  name: SmokeStageName,
+  txHash: string,
+  attempts = 30,
+  waitMs = 4_000,
+): Promise<boolean> {
+  const isPledge = name.startsWith("pledge-");
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      if (isPledge) {
+        if ((await findPledges(ctx)).some((p) => p.utxo.txHash === txHash)) return true;
+      } else if ((await findState(ctx)).utxo.txHash === txHash) return true;
+    } catch {
+      // Transient read errors (index mid-update): try again.
+    }
+    await new Promise((r) => setTimeout(r, waitMs));
+  }
+  return false;
+}
+
 /** What the State should look like after every stage has run. */
 export function expectedEnd() {
   const fractions = SMOKE_PLEDGES.reduce((a, b) => a + b, 0n);
