@@ -1,0 +1,59 @@
+{
+  "label": "fv2-preprod-test",
+  "network": "Preprod",
+  "purpose": "fraction_vault v2 TEST offering",
+  "open": {
+    "assetId": "fv2-test-01",
+    "seed": {
+      "txHash": "6a0856c421fcfd95a0e77d48cfe5000cab7ec52329db186a7bb716a9dd966bd3",
+      "outputIndex": 1
+    },
+    "offeringHash": "3b1ef5a251336cb8d3943c1e6778f6d676186223fed6fe9145ca02c9",
+    "offeringAddress": "addr_test1wqa3aadz2yekewxnjs7puemc7mt8vxrzy0lddl53gh9q9jgyyqrkl",
+    "threadUnit": "3b1ef5a251336cb8d3943c1e6778f6d676186223fed6fe9145ca02c97374617465",
+    "pledgeHash": "01b22716f4236c9fafd9bd070a0a130fcc98b0717c7a75ae7086ba5c",
+    "pledgeAddress": "addr_test1wqqmyfck7s3ke8a0mx7swzs2zv8uex9sw9785adwwzrt5hq2gelcp",
+    "pledgeMarkerUnit": "01b22716f4236c9fafd9bd070a0a130fcc98b0717c7a75ae7086ba5c706c65646765",
+    "fractionPolicy": "4eed54e1a71fc1ad143b95b85228a51f76d5c0d0b19bc3e7ce00bc6c",
+    "fractionUnit": "4eed54e1a71fc1ad143b95b85228a51f76d5c0d0b19bc3e7ce00bc6c6676322d746573742d3031",
+    "depositUnit": "938b32e0f660dc06d3b58a20103cbe5ae1cc00531b53c7ba191d740054535241",
+    "stateRiderLovelace": "5000000",
+    "terms": {
+      "totalFractions": "1000",
+      "softCap": "100",
+      "price": "10000000",
+      "deadline": "2026-11-12T20:20:28.022Z",
+      "deadlineMs": "1794514828022",
+      "settleWindowMs": "172800000",
+      "retained": "0",
+      "feeBps": 100,
+      "docsHash": "86749d96e6292f0a3446190e557d9af6278ac75765a9214824228a73d7116721",
+      "docsText": "Stellaris fraction_vault v2 Preprod TEST offering. Not an investment, not an offer of securities, no real asset. Test TSRA only. Terms: 1,000 fractions at 10 TSRA, soft cap 100, 1% settlement fee, 2-of-3 offering committee.",
+      "issuer": "53a260ba5f7195165a9ca8fa8592389e3da98c25e5d4a5fb69e14f8e",
+      "keeper": "53a260ba5f7195165a9ca8fa8592389e3da98c25e5d4a5fb69e14f8e",
+      "treasury": "53a260ba5f7195165a9ca8fa8592389e3da98c25e5d4a5fb69e14f8e",
+      "spvPayout": "53a260ba5f7195165a9ca8fa8592389e3da98c25e5d4a5fb69e14f8e"
+    },
+    "committee": [
+      "c9329c2f39ebff39ee0e2d2c5a31f1573f7ad25d392a0e38324b30b3",
+      "a63b0b85b307d9bf47e95e7887dd6bcb3f10dd13c48fa2d4bda028e5",
+      "8612fcf3f7b28fc1f4bd4e3bb7dad6e97fa4fa691e1a94437c8fc38c"
+    ],
+    "threshold": 2,
+    "tx": "d5f8eb7571fdedeed45b20798797fbff0d9cc5000e72e21616ea1b92e036c601",
+    "status": "confirmed",
+    "submittedAt": "2026-10-29T20:20:32.321Z",
+    "confirmedAt": "2026-10-29T20:20:59.096Z"
+  },
+  "refs": {
+    "lockAddress": "addr_test1wpfdc02rkmfyvh5kzzwwwk4kr2l9a8qa3g7feehl3ga022qez7f2d",
+    "offering": "be1c0a3cf9c1f962ba251bfa159d5ae7f4dc59696d26e0582810763cdff6745f#0",
+    "pledge": "be1c0a3cf9c1f962ba251bfa159d5ae7f4dc59696d26e0582810763cdff6745f#1",
+    "fraction": "be1c0a3cf9c1f962ba251bfa159d5ae7f4dc59696d26e0582810763cdff6745f#2",
+    "lovelaceLocked": "75000000",
+    "tx": "be1c0a3cf9c1f962ba251bfa159d5ae7f4dc59696d26e0582810763cdff6745f",
+    "status": "confirmed",
+    "submittedAt": "2026-10-29T20:53:19.852Z",
+    "confirmedAt": "2026-10-29T20:53:27.519Z"
+  }
+}

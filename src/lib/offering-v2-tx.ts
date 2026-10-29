@@ -207,6 +207,23 @@ export function slotAligned(ctx: V2Context, ms: number): number {
   return ctx.mod.slotToUnixTime(net, ctx.mod.unixTimeToSlot(net, ms));
 }
 
+/**
+ * How far before "now" every transaction's validity starts. The ledger checks
+ * the start against the slot of the latest block, which trails the wall clock
+ * by up to a block interval or more (and a local clock may run ahead), so a
+ * start of exactly "now" can be in the chain's future and the node refuses the
+ * transaction (OutsideValidityIntervalUTxO). The scripts only bound the END of
+ * a window, plus `created` = the start for a pledge, so starting earlier is safe.
+ */
+export const VALIDITY_SLACK_MS = 120_000;
+
+/** The slot-aligned validity start for a transaction built at `nowMs`. */
+export function validStart(ctx: V2Context, nowMs: number): number {
+  const net = ctx.scripts.network as never;
+  const zero = ctx.mod.slotToUnixTime(net, 0);
+  return slotAligned(ctx, Math.max(zero, nowMs - VALIDITY_SLACK_MS));
+}
+
 function withSpendScript(ctx: V2Context, b: TxBuilder, which: "offering" | "pledge"): TxBuilder {
   const ref = ctx.refs?.[which];
   return ref ? b.readFrom([ref]) : b.attach.SpendingValidator(v3(ctx.scripts[which].cbor));
@@ -285,7 +302,7 @@ export async function buildOpen(
       { kind: "inline", value: encodeState(mod, state) },
       stateValue(ctx, state, rider),
     )
-    .validFrom(nowMs)
+    .validFrom(validStart(ctx, nowMs))
     .validTo(Math.min(deadline, nowMs + 3_600_000));
   for (const k of signers) b = b.addSignerKey(k);
   const tx = await b.complete();
@@ -324,7 +341,7 @@ export async function buildPledge(
   if (qty <= 0n) throw new V2Refused("Pledge at least one fraction.");
   const left = s.terms.totalFractions - s.book.settled;
   if (qty > left) throw new V2Refused(`Only ${left} fractions are left in this raise.`);
-  const from = slotAligned(ctx, nowMs);
+  const from = validStart(ctx, nowMs);
   const deadline = Number(s.terms.deadline);
   if (from >= deadline) throw new V2Refused("The pledge deadline has passed.");
   const to = Math.min(deadline, from + 1_800_000);
@@ -409,7 +426,7 @@ export async function buildCancelPledge(
   const tx = await b.pay
     .ToAddressWithData(pay.address, { kind: "inline", value: pay.datum }, pay.value)
     .addSignerKey(owner)
-    .validFrom(slotAligned(ctx, nowMs))
+    .validFrom(validStart(ctx, nowMs))
     .validTo(Math.min(deadline, nowMs + 1_800_000))
     .complete();
   return {
@@ -438,7 +455,7 @@ export async function buildRefundPledges(
   if (marked.length > 0) {
     live = await findState(ctx);
     const t = live.state.terms;
-    const windowOver = BigInt(slotAligned(ctx, nowMs)) > t.deadline + t.settleWindow;
+    const windowOver = BigInt(validStart(ctx, nowMs)) > t.deadline + t.settleWindow;
     if (live.state.status === "raising" && !windowOver) {
       throw new V2Refused("The raise is still open; only the owner can cancel a pledge now.");
     }
@@ -463,7 +480,7 @@ export async function buildRefundPledges(
     b = b.pay.ToAddressWithData(pay.address, { kind: "inline", value: pay.datum }, pay.value);
   }
   const tx = await b
-    .validFrom(slotAligned(ctx, nowMs))
+    .validFrom(validStart(ctx, nowMs))
     .validTo(nowMs + 1_800_000)
     .complete();
   return {
@@ -539,7 +556,7 @@ export async function buildSettle(
   }
   for (const k of signers) b = b.addSignerKey(k);
   const tx = await b
-    .validFrom(slotAligned(ctx, nowMs))
+    .validFrom(validStart(ctx, nowMs))
     .validTo(Math.min(Number(end), nowMs + 1_800_000))
     .complete();
   return {
@@ -591,7 +608,7 @@ export async function buildAction(
   if (action.kind === "settle") throw new V2Refused("Use buildSettle for Settle.");
   const live = await findState(ctx);
   const s = live.state;
-  const from = slotAligned(ctx, opts.nowMs);
+  const from = validStart(ctx, opts.nowMs);
   const next = nextState(s, action, BigInt(from));
   const signers = opts.signers ?? [];
   if (COMMITTEE.has(action.kind)) {

@@ -39,6 +39,21 @@ export const MULTI_VAULT_SEEDS: Readonly<Record<string, VaultSeed>> = {};
 /** fraction_vault v2 — keyed by `${assetId}:${unitPolicyId}${unitAssetNameHex}`. */
 export const OFFERING_SEEDS: Readonly<Record<string, VaultSeed>> = {};
 
+/**
+ * fraction_vault v2 offerings (offering_v2 + pledge + fraction_v2, SPEC-v2.md),
+ * keyed by `${assetId}:${unitPolicyId}${unitAssetNameHex}`. Pinned from
+ * `deployments/<label>.json → open.seed` after `scripts/fv2/bootstrap-offering.ts`
+ * confirms, in a reviewed commit.
+ */
+export const OFFERING_V2_SEEDS: Readonly<Record<string, VaultSeed>> = {
+  // Preprod TEST offering (not an investment), opened 30 Oct 2026, tx d5f8eb75…c601;
+  // deployments/fv2-preprod-test.json. Deposit unit: Preprod TSRA.
+  "fv2-test-01:938b32e0f660dc06d3b58a20103cbe5ae1cc00531b53c7ba191d740054535241": {
+    txHash: "6a0856c421fcfd95a0e77d48cfe5000cab7ec52329db186a7bb716a9dd966bd3",
+    outputIndex: 1,
+  },
+};
+
 /** Thrown when a vault family has no pinned seed for the requested instance. */
 export class VaultNotBootstrappedError extends Error {
   constructor(
