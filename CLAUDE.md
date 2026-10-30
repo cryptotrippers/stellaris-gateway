@@ -154,7 +154,7 @@ never by datum shape, epoch or position in a list. Positions in `yield_vault` an
 `multi_asset_vault` likewise carry a **position marker** minted by `Deposit`
 (AUDIT.md F-4); builders mint it into new Positions, burn it on a full close,
 and ignore unmarked Positions. `contracts/fraction-vault` also holds **fraction_vault v2**
-(`offering_v2`, `pledge`, `fraction_v2`; `SPEC-v2.md`), built but not yet bootstrapped: one
+(`offering_v2`, `pledge`, `fraction_v2`; `SPEC-v2.md`), opened on Preprod as the test offering `fv2-test-01` (`deployments/fv2-preprod-test.json`, smoke test passed) and run by the keeper (`src/lib/offering-v2-keeper.ts`, `scripts/fv2/keeper.ts`; SPEC-v2 §13): one
 shared `pledge` script whose marker token proves a pledge was made on time for the exact
 amount, an `offering_v2` State that settles pledges in batches of at most 15 (worst-case gate:
 `scripts/contracts/fv2-budget-report.mjs`), and refunds that need no committee. Its tests

@@ -414,3 +414,46 @@ transaction checked by `assertIntent` before signing:
 
 Not in E07: the app UI (Lovable), a keeper service that runs `buildSettle` on
 a schedule, a Preprod bootstrap, and E09 (snapshot, manifest, payouts).
+
+## 13. Preprod test offering and keeper (30–31 Oct 2026)
+
+**Test offering.** `fv2-test-01` (TSRA, 1,000 fractions at 10 TSRA, soft cap
+100, 1% fee, 2-of-3 committee) was opened on Preprod and taken through its whole
+ordinary life by `scripts/fv2/smoke-test.ts`: three pledges, a Settle, CloseRaise,
+Release, CommitPeriod 1 and ClaimFee. End State: `operating`, holding 939.5 TSRA,
+equal to its books. Record: `deployments/fv2-preprod-test.json`. Found there:
+Blockfrost confirms a transaction before its script-address index moves, so
+every operator script waits until the transaction's own output is visible before
+reading the chain again.
+
+**Keeper** (`src/lib/offering-v2-keeper.ts`, operator script `scripts/fv2/keeper.ts`).
+A pure planner reads one snapshot (State, pledges, time) and lists every job
+legal now; the runner does one job, waits until the chain shows it, and plans
+again, so a crash, a rollback or a rival only means the next plan starts from
+the chain.
+
+| Job | When | Who may | Rule it follows |
+| --- | --- | --- | --- |
+| Settle | `Raising`, ≥ 10 min before deadline + settle window | keeper key only (the committee settles by hand) | marked pledges, first come first served (by `created`), ≤ 15 per tx, never past the hard cap: a pledge that does not fit is skipped and later smaller ones still settle |
+| FailRaise | `Raising`, validity start past deadline + window, `settled < soft_cap` | anyone | the refunds follow on the next plan |
+| Refund | not `Raising`, or `Raising` past the window | anyone | marked pledges the raise can no longer take, ≤ 15 per tx, each to its owner |
+| Return strays | any time, only with `--return-strays` | anyone | unmarked UTxOs naming the offering, to their datum's owner; opt-in because anyone can create them and the keeper pays the fees |
+
+It never signs a committee action; it prints when one is due (CloseRaise after
+the deadline with the soft cap met, or after the window). Offerings with an
+eligibility policy are not settled unless an eligibility source is supplied.
+
+Refund batch: 15 refunds with reference scripts measured 45–46% of memory, 22%
+of CPU and 3.3 kB on the emulator (each refund's pledge run reads the State as a
+reference input, so input order does not change its search).
+
+Evidence: `src/lib/offering-v2-keeper.test.ts` (planner rules, 17 tests) and
+`tests/contracts/fv2-keeper.test.ts` (emulator, real scripts): 19 pledges settled
+15 + 4 with a hard-cap overflow refunded after close; a failed raise with 17
+pledges returned 15 + 2 by a wallet that is not the keeper; a forged unmarked
+pledge never settled; a Settle by a stranger refused; a rival settling first;
+a look-alike State without the thread token ignored.
+
+Where it runs: on the operator's PC (`--submit --watch`). Running it unattended
+elsewhere (a scheduled job holding the keeper key) is a deployment decision
+for later and needs approval.
