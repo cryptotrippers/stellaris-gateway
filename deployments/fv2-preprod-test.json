@@ -55,5 +55,69 @@
     "status": "confirmed",
     "submittedAt": "2026-10-29T20:53:19.852Z",
     "confirmedAt": "2026-10-29T20:53:27.519Z"
+  },
+  "smoke": {
+    "pledge-1": {
+      "owner": "addr_test1vpf6yc96tace29j6nj504pvj8z0rm2vvyhjaff0md8s5lrsv0c0f5",
+      "qty": "40",
+      "tx": "c8b5c362c752c7f9dddf080fe56adc0377a7a0a79c5a7be4ea0eb635e6b847ee",
+      "status": "confirmed",
+      "submittedAt": "2026-10-29T22:21:35.593Z",
+      "confirmedAt": "2026-10-29T22:21:42.046Z"
+    },
+    "pledge-2": {
+      "owner": "addr_test1vryn98p0884l7w0wpckjck3379tn77kjt5uj5r3cxf9npvc0tagtw",
+      "qty": "35",
+      "tx": "d2df19b33f26687a1aa0e240e624f80d0e5cce7433342717c468121ab878f1b2",
+      "status": "confirmed",
+      "submittedAt": "2026-10-29T22:21:53.820Z",
+      "confirmedAt": "2026-10-29T22:22:00.265Z"
+    },
+    "pledge-3": {
+      "owner": "addr_test1vznrkzu9kvran068a9083p7ad09n7yxaz0zglgk5hksz3egansaxz",
+      "qty": "30",
+      "tx": "e9cf2d04912c23a0acbed6406b52d57af258fe313a7e09a2eefc26810d3fe5ad",
+      "status": "confirmed",
+      "submittedAt": "2026-10-29T22:22:11.857Z",
+      "confirmedAt": "2026-10-29T22:22:33.339Z"
+    },
+    "settle": {
+      "pledges": 3,
+      "fractions": "105",
+      "tx": "4266c6b4f46e464d5e2748a51de51ebb74bd876e39b5dc219bc3c16d4e6f50a7",
+      "status": "confirmed",
+      "submittedAt": "2026-10-29T22:22:45.597Z",
+      "confirmedAt": "2026-10-29T22:23:32.149Z"
+    },
+    "close": {
+      "netProceeds": "1039500000",
+      "tx": "2dc90dd7974f8e3281c3ecb8389e84437451a7f36ace8107f0dcfd87560129be",
+      "status": "confirmed",
+      "submittedAt": "2026-10-29T22:23:37.655Z",
+      "confirmedAt": "2026-10-29T22:23:44.127Z"
+    },
+    "release": {
+      "amount": "100000000",
+      "evidenceHash": "79a0ec6dd0e59a0b8a34168577071465f648215eb6bf34882633fbf4fca5bac7",
+      "tx": "99a4fe55c87a33e8a026b60a3f426d3b5839f0b351a76f134966a179eb442a51",
+      "status": "confirmed",
+      "submittedAt": "2026-10-29T23:10:56.507Z",
+      "confirmedAt": "2026-10-29T23:11:12.905Z"
+    },
+    "commit": {
+      "period": "1",
+      "manifestRoot": "fd76d0e8635f1522f8f1283c3d3e003b3f1c61bf40fc67f5661cbc723700d3f4",
+      "tx": "31dcc2825178b4a79acfc7b26dd7eca03fc74a83b11c7cee14538a0a8eb402de",
+      "status": "confirmed",
+      "submittedAt": "2026-10-29T23:11:32.679Z",
+      "confirmedAt": "2026-10-29T23:11:59.132Z"
+    },
+    "claim": {
+      "amount": "10500000",
+      "tx": "4dc683bc1bd1d86b6a15cf1e7e485f848bb7cc9dc117bf9555b737bb1f8ea484",
+      "status": "confirmed",
+      "submittedAt": "2026-10-29T23:12:12.561Z",
+      "confirmedAt": "2026-10-29T23:12:39.089Z"
+    }
   }
 }
