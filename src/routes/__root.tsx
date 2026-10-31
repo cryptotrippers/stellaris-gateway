@@ -82,7 +82,8 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
   );
 }
 
-const OG_IMAGE = "https://stellarischain.com/__l5e/assets-v1/2bd9f637-d650-4bde-b8b5-e2806a389cbe/og-landing.jpg";
+const OG_IMAGE =
+  "https://stellarischain.com/__l5e/assets-v1/2bd9f637-d650-4bde-b8b5-e2806a389cbe/og-landing.jpg";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
@@ -90,7 +91,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Stellaris Finance · Real-world assets on Cardano" },
-      { name: "description", content: "The transparent gateway to real-world assets on Cardano. Testnet preview: no real-money investments are available." },
+      {
+        name: "description",
+        content:
+          "The transparent gateway to real-world assets on Cardano. Testnet preview: no real-money investments are available.",
+      },
       { name: "author", content: "Stellaris Finance" },
       { name: "theme-color", content: "#102438" },
       { property: "og:site_name", content: "Stellaris Finance" },
@@ -103,7 +108,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap",
+      },
     ],
     scripts: [
       {
@@ -153,7 +161,9 @@ function RootComponent() {
           const { toast } = await import("sonner");
           toast.error(m.REFERRAL_ERROR_COPY[result.reason]);
         }
-      } catch { /* ignore */ }
+      } catch {
+        /* ignore */
+      }
     })();
   }, []);
 
@@ -164,7 +174,9 @@ function RootComponent() {
       {/* Drops cached chain data whenever the deployed validators change. */}
       <ScriptCacheGuard />
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <AccountSession><Outlet /></AccountSession>
+      <AccountSession>
+        <Outlet />
+      </AccountSession>
       <Toaster />
       {/* Asks for confirmation before any page lets the wallet sign. */}
       <ClientOnly fallback={null}>

@@ -17,7 +17,9 @@ import {
 } from "@/lib/auth-flow.shared";
 
 export const Route = createFileRoute("/auth")({
-  validateSearch: (search: Record<string, unknown>): { mode?: "signup" | "signin"; redirect?: string } => ({
+  validateSearch: (
+    search: Record<string, unknown>,
+  ): { mode?: "signup" | "signin"; redirect?: string } => ({
     mode: search.mode === "signup" ? ("signup" as const) : ("signin" as const),
     redirect: safeAuthReturn(search.redirect ?? search.returnTo),
   }),

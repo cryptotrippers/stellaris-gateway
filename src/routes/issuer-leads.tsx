@@ -63,7 +63,9 @@ function IssuerLeadsPage() {
           <div className="mt-8">
             <p>Sign in with an administrator account to review enquiries.</p>
             <Button asChild className="mt-4">
-              <Link to="/auth" search={{ mode: "signin", redirect: "/issuer-leads" }}>Sign in</Link>
+              <Link to="/auth" search={{ mode: "signin", redirect: "/issuer-leads" }}>
+                Sign in
+              </Link>
             </Button>
           </div>
         ) : q.isPending ? (

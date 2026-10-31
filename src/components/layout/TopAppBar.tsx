@@ -25,7 +25,9 @@ export function TopAppBar() {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
-          <span className="hidden xl:inline-flex"><NetworkBadge /></span>
+          <span className="hidden xl:inline-flex">
+            <NetworkBadge />
+          </span>
           <Link
             to="/upgrade"
             className="hidden lg:inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-accent to-primary px-3 py-1 text-[11px] font-semibold text-primary-foreground shadow-sm hover:opacity-90 transition-opacity"
@@ -54,7 +56,9 @@ function NavItem({ to, children }: { to: string; children: React.ReactNode }) {
       to={to}
       activeOptions={{ exact: to === "/" || to === "/app" }}
       activeProps={{ className: "bg-secondary text-foreground" }}
-      inactiveProps={{ className: "text-muted-foreground hover:text-foreground hover:bg-secondary/60" }}
+      inactiveProps={{
+        className: "text-muted-foreground hover:text-foreground hover:bg-secondary/60",
+      }}
       className="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
     >
       {children}
