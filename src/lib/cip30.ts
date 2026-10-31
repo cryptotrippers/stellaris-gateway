@@ -127,6 +127,26 @@ function decodeCborLovelace(hex: string): bigint {
   return 0n;
 }
 
+const enabledApis = new Map<CardanoWalletId, CIP30Api>();
+
+export async function readWalletInfo(api: CIP30Api) {
+  const [networkId, changeAddress, balanceHex, rewardAddrs] = await Promise.all([
+    api.getNetworkId(), api.getChangeAddress(), api.getBalance(),
+    api.getRewardAddresses().catch(() => [] as string[]),
+  ]);
+  const lovelace = decodeCborLovelace(balanceHex);
+  return { networkId, changeAddressHex: changeAddress, rewardAddressHex: rewardAddrs[0] ?? null, balanceAda: Number(lovelace) / 1_000_000 };
+}
+
+/** Reads an already-enabled API, never calls enable or requests a signature. */
+export async function refreshEnabledWallet(id: CardanoWalletId) {
+  const api = enabledApis.get(id);
+  if (!api) throw new Error("Wallet session is no longer available. Reconnect your wallet.");
+  return readWalletInfo(api);
+}
+
+export function forgetWalletApis() { enabledApis.clear(); }
+
 export async function enableWallet(id: CardanoWalletId) {
   const c = win();
   const w = c?.[id];
@@ -135,19 +155,9 @@ export async function enableWallet(id: CardanoWalletId) {
     throw err;
   }
   const api = await w.enable();
-  const [networkId, changeAddress, balanceHex, rewardAddrs] = await Promise.all([
-    api.getNetworkId(),
-    api.getChangeAddress(),
-    api.getBalance(),
-    api.getRewardAddresses().catch(() => [] as string[]),
-  ]);
-  const lovelace = decodeCborLovelace(balanceHex);
-  return {
-    networkId, // 0 = testnet (preprod/preview), 1 = mainnet
-    changeAddressHex: changeAddress,
-    rewardAddressHex: rewardAddrs[0] ?? null,
-    balanceAda: Number(lovelace) / 1_000_000,
-  };
+  const info = await readWalletInfo(api);
+  enabledApis.set(id, api);
+  return info;
 }
 
 /** True when the wallet extension reports an already-active session. */

@@ -20,6 +20,7 @@ import { Route as BlockfrostHealthRouteImport } from './routes/blockfrost-health
 import { Route as DevelopersRouteImport } from './routes/developers'
 import { Route as DocumentReviewRouteImport } from './routes/document-review'
 import { Route as ForIssuersRouteImport } from './routes/for-issuers'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as GovernanceRouteImport } from './routes/governance'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as InviteRouteImport } from './routes/invite'
@@ -30,6 +31,7 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as OperatorsRouteImport } from './routes/operators'
 import { Route as PipelineRouteImport } from './routes/pipeline'
 import { Route as PropertyRouteImport } from './routes/property'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SecurityRouteImport } from './routes/security'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StakeRouteImport } from './routes/stake'
@@ -45,6 +47,7 @@ import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotwellKnownChar93SecurityChar91DotChar93txtRouteImport } from './routes/[.well-known]/security[.]txt'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as FundingIndexRouteImport } from './routes/funding.index'
 import { Route as FundingIdRouteImport } from './routes/funding.$id'
 import { Route as FundingNewRouteImport } from './routes/funding.new'
@@ -122,6 +125,11 @@ const ForIssuersRoute = ForIssuersRouteImport.update({
   path: '/for-issuers',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GovernanceRoute = GovernanceRouteImport.update({
   id: '/governance',
   path: '/governance',
@@ -170,6 +178,11 @@ const PipelineRoute = PipelineRouteImport.update({
 const PropertyRoute = PropertyRouteImport.update({
   id: '/property',
   path: '/property',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SecurityRoute = SecurityRouteImport.update({
@@ -249,6 +262,11 @@ const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/callback',
+  path: '/callback',
+  getParentRoute: () => AuthRoute,
 } as any)
 const FundingIndexRoute = FundingIndexRouteImport.update({
   id: '/funding/',
@@ -367,11 +385,12 @@ export interface FileRoutesByFullPath {
   '/ask': typeof AskRoute
   '/asset-to-yield': typeof AssetToYieldRoute
   '/assets': typeof AssetsRoute
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/blockfrost-health': typeof BlockfrostHealthRoute
   '/developers': typeof DevelopersRoute
   '/document-review': typeof DocumentReviewRoute
   '/for-issuers': typeof ForIssuersRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/governance': typeof GovernanceRouteWithChildren
   '/how-it-works': typeof HowItWorksRoute
   '/invite': typeof InviteRoute
@@ -382,6 +401,7 @@ export interface FileRoutesByFullPath {
   '/operators': typeof OperatorsRoute
   '/pipeline': typeof PipelineRoute
   '/property': typeof PropertyRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stake': typeof StakeRoute
@@ -397,6 +417,7 @@ export interface FileRoutesByFullPath {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.well-known/security.txt': typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
   '/api/chat': typeof ApiChatRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/funding/$id': typeof FundingIdRoute
   '/funding/new': typeof FundingNewRoute
   '/governance/$sip': typeof GovernanceSipRoute
@@ -426,11 +447,12 @@ export interface FileRoutesByTo {
   '/ask': typeof AskRoute
   '/asset-to-yield': typeof AssetToYieldRoute
   '/assets': typeof AssetsRoute
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/blockfrost-health': typeof BlockfrostHealthRoute
   '/developers': typeof DevelopersRoute
   '/document-review': typeof DocumentReviewRoute
   '/for-issuers': typeof ForIssuersRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/how-it-works': typeof HowItWorksRoute
   '/invite': typeof InviteRoute
   '/issuer': typeof IssuerRoute
@@ -440,6 +462,7 @@ export interface FileRoutesByTo {
   '/operators': typeof OperatorsRoute
   '/pipeline': typeof PipelineRoute
   '/property': typeof PropertyRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stake': typeof StakeRoute
@@ -454,6 +477,7 @@ export interface FileRoutesByTo {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.well-known/security.txt': typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
   '/api/chat': typeof ApiChatRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/funding/$id': typeof FundingIdRoute
   '/funding/new': typeof FundingNewRoute
   '/governance/$sip': typeof GovernanceSipRoute
@@ -484,11 +508,12 @@ export interface FileRoutesById {
   '/ask': typeof AskRoute
   '/asset-to-yield': typeof AssetToYieldRoute
   '/assets': typeof AssetsRoute
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/blockfrost-health': typeof BlockfrostHealthRoute
   '/developers': typeof DevelopersRoute
   '/document-review': typeof DocumentReviewRoute
   '/for-issuers': typeof ForIssuersRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/governance': typeof GovernanceRouteWithChildren
   '/how-it-works': typeof HowItWorksRoute
   '/invite': typeof InviteRoute
@@ -499,6 +524,7 @@ export interface FileRoutesById {
   '/operators': typeof OperatorsRoute
   '/pipeline': typeof PipelineRoute
   '/property': typeof PropertyRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stake': typeof StakeRoute
@@ -514,6 +540,7 @@ export interface FileRoutesById {
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.well-known/security.txt': typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
   '/api/chat': typeof ApiChatRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/funding/$id': typeof FundingIdRoute
   '/funding/new': typeof FundingNewRoute
   '/governance/$sip': typeof GovernanceSipRoute
@@ -550,6 +577,7 @@ export interface FileRouteTypes {
     | '/developers'
     | '/document-review'
     | '/for-issuers'
+    | '/forgot-password'
     | '/governance'
     | '/how-it-works'
     | '/invite'
@@ -560,6 +588,7 @@ export interface FileRouteTypes {
     | '/operators'
     | '/pipeline'
     | '/property'
+    | '/reset-password'
     | '/security'
     | '/sitemap.xml'
     | '/stake'
@@ -575,6 +604,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/.well-known/security.txt'
     | '/api/chat'
+    | '/auth/callback'
     | '/funding/$id'
     | '/funding/new'
     | '/governance/$sip'
@@ -609,6 +639,7 @@ export interface FileRouteTypes {
     | '/developers'
     | '/document-review'
     | '/for-issuers'
+    | '/forgot-password'
     | '/how-it-works'
     | '/invite'
     | '/issuer'
@@ -618,6 +649,7 @@ export interface FileRouteTypes {
     | '/operators'
     | '/pipeline'
     | '/property'
+    | '/reset-password'
     | '/security'
     | '/sitemap.xml'
     | '/stake'
@@ -632,6 +664,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/.well-known/security.txt'
     | '/api/chat'
+    | '/auth/callback'
     | '/funding/$id'
     | '/funding/new'
     | '/governance/$sip'
@@ -666,6 +699,7 @@ export interface FileRouteTypes {
     | '/developers'
     | '/document-review'
     | '/for-issuers'
+    | '/forgot-password'
     | '/governance'
     | '/how-it-works'
     | '/invite'
@@ -676,6 +710,7 @@ export interface FileRouteTypes {
     | '/operators'
     | '/pipeline'
     | '/property'
+    | '/reset-password'
     | '/security'
     | '/sitemap.xml'
     | '/stake'
@@ -691,6 +726,7 @@ export interface FileRouteTypes {
     | '/.well-known/oauth-protected-resource'
     | '/.well-known/security.txt'
     | '/api/chat'
+    | '/auth/callback'
     | '/funding/$id'
     | '/funding/new'
     | '/governance/$sip'
@@ -721,11 +757,12 @@ export interface RootRouteChildren {
   AskRoute: typeof AskRoute
   AssetToYieldRoute: typeof AssetToYieldRoute
   AssetsRoute: typeof AssetsRoute
-  AuthRoute: typeof AuthRoute
+  AuthRoute: typeof AuthRouteWithChildren
   BlockfrostHealthRoute: typeof BlockfrostHealthRoute
   DevelopersRoute: typeof DevelopersRoute
   DocumentReviewRoute: typeof DocumentReviewRoute
   ForIssuersRoute: typeof ForIssuersRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   GovernanceRoute: typeof GovernanceRouteWithChildren
   HowItWorksRoute: typeof HowItWorksRoute
   InviteRoute: typeof InviteRoute
@@ -736,6 +773,7 @@ export interface RootRouteChildren {
   OperatorsRoute: typeof OperatorsRoute
   PipelineRoute: typeof PipelineRoute
   PropertyRoute: typeof PropertyRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SecurityRoute: typeof SecurityRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StakeRoute: typeof StakeRoute
@@ -846,6 +884,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ForIssuersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/governance': {
       id: '/governance'
       path: '/governance'
@@ -914,6 +959,13 @@ declare module '@tanstack/react-router' {
       path: '/property'
       fullPath: '/property'
       preLoaderRoute: typeof PropertyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/security': {
@@ -1020,6 +1072,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/chat'
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof AuthRoute
     }
     '/funding/': {
       id: '/funding/'
@@ -1171,6 +1230,16 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthRouteChildren {
+  AuthCallbackRoute: typeof AuthCallbackRoute
+}
+
+const AuthRouteChildren: AuthRouteChildren = {
+  AuthCallbackRoute: AuthCallbackRoute,
+}
+
+const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
+
 interface GovernanceRouteChildren {
   GovernanceSipRoute: typeof GovernanceSipRoute
   GovernanceNewRoute: typeof GovernanceNewRoute
@@ -1231,11 +1300,12 @@ const rootRouteChildren: RootRouteChildren = {
   AskRoute: AskRoute,
   AssetToYieldRoute: AssetToYieldRoute,
   AssetsRoute: AssetsRoute,
-  AuthRoute: AuthRoute,
+  AuthRoute: AuthRouteWithChildren,
   BlockfrostHealthRoute: BlockfrostHealthRoute,
   DevelopersRoute: DevelopersRoute,
   DocumentReviewRoute: DocumentReviewRoute,
   ForIssuersRoute: ForIssuersRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   GovernanceRoute: GovernanceRouteWithChildren,
   HowItWorksRoute: HowItWorksRoute,
   InviteRoute: InviteRoute,
@@ -1246,6 +1316,7 @@ const rootRouteChildren: RootRouteChildren = {
   OperatorsRoute: OperatorsRoute,
   PipelineRoute: PipelineRoute,
   PropertyRoute: PropertyRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SecurityRoute: SecurityRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StakeRoute: StakeRoute,
