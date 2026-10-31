@@ -39,14 +39,18 @@ export function WalletLinkCard({ compact = false }: { compact?: boolean }) {
       if (!wallet.addressHex) throw new Error("Connect a browser wallet first.");
       const n = await withTimeout(requestNonce({ data: { addressHex: wallet.addressHex } }));
       const signed = await withTimeout(signMessageWithConnectedWallet(n.messageHex), 60_000);
-      return withTimeout(confirm({ data: { nonce: n.nonce, signature: signed.signature, key: signed.key } }));
+      return withTimeout(
+        confirm({ data: { nonce: n.nonce, signature: signed.signature, key: signed.key } }),
+      );
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["linked-wallets"] });
       qc.invalidateQueries({ queryKey: ["governance", "my-weights"] });
     },
     onError: (e: Error) => setError(e.message),
-    onSettled: () => { submitting.current = false; },
+    onSettled: () => {
+      submitting.current = false;
+    },
   });
 
   if (!user) return null;
@@ -58,8 +62,8 @@ export function WalletLinkCard({ compact = false }: { compact?: boolean }) {
         <ShieldCheck className="h-4 w-4 text-primary" aria-hidden="true" /> Linked wallets
       </h2>
       <p className="mt-1 text-xs text-muted-foreground">
-        Your vault positions count for voting only from wallets you have proven are yours. Linking asks
-        your wallet to sign a short message. It is not a transaction and costs nothing.
+        Your vault positions count for voting only from wallets you have proven are yours. Linking
+        asks your wallet to sign a short message. It is not a transaction and costs nothing.
       </p>
       {wallets.length > 0 && (
         <ul className="mt-3 space-y-1 text-xs">
@@ -75,15 +79,42 @@ export function WalletLinkCard({ compact = false }: { compact?: boolean }) {
       )}
       <Button
         type="button"
-        onClick={() => { if (submitting.current) return; submitting.current = true; link.mutate(); }}
+        onClick={() => {
+          if (submitting.current) return;
+          submitting.current = true;
+          link.mutate();
+        }}
         disabled={link.isPending || !wallet.connected || !wallet.addressHex}
         className="mt-3 min-h-11 gap-2 text-xs"
       >
-        {link.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Link2 className="h-3 w-3" />}
-        {wallet.connected ? wallet.addressHex ? "Link this wallet" : "Use a browser wallet to link" : "Connect a wallet to link it"}
+        {link.isPending ? (
+          <Loader2 className="h-3 w-3 animate-spin" />
+        ) : (
+          <Link2 className="h-3 w-3" />
+        )}
+        {wallet.connected
+          ? wallet.addressHex
+            ? "Link this wallet"
+            : "Use a browser wallet to link"
+          : "Connect a wallet to link it"}
       </Button>
-      {linked.isError && <p role="alert" className="mt-2 text-xs text-destructive">Linked wallets could not be loaded. <Button variant="link" className="min-h-11 px-0 text-xs" onClick={() => void linked.refetch()}>Retry</Button></p>}
-      {error && <p role="alert" className="mt-2 text-xs text-destructive">{error}</p>}
+      {linked.isError && (
+        <p role="alert" className="mt-2 text-xs text-destructive">
+          Linked wallets could not be loaded.{" "}
+          <Button
+            variant="link"
+            className="min-h-11 px-0 text-xs"
+            onClick={() => void linked.refetch()}
+          >
+            Retry
+          </Button>
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="mt-2 text-xs text-destructive">
+          {error}
+        </p>
+      )}
     </section>
   );
 }

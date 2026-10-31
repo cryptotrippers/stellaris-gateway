@@ -550,6 +550,7 @@ export async function signMessageWithConnectedWallet(
   const provider = state.provider;
   const addressHex = state.addressHex;
   const r = await withTimeout(signDataWithWallet(ID_MAP[provider], addressHex, payloadHex), 60_000);
-  if (!state.connected || state.provider !== provider || state.addressHex !== addressHex) throw new Error("Wallet changed while signing. Reconnect and start a new ownership challenge.");
+  if (!state.connected || state.provider !== provider || state.addressHex !== addressHex)
+    throw new Error("Wallet changed while signing. Reconnect and start a new ownership challenge.");
   return { addressHex, ...r };
 }
