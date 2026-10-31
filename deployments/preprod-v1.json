@@ -321,6 +321,16 @@
       "status": "confirmed",
       "submittedAt": "2026-10-26T01:48:43.203Z",
       "confirmedAt": "2026-10-26T01:49:10.585Z"
+    },
+    "claim": {
+      "ticket": "ab627dfed29accd9c60f2039d904ee31be53b3750257a0407ed77c4da900a62d#1",
+      "paidTsra": "400000000",
+      "paidTo": "addr_test1vpf6yc96tace29j6nj504pvj8z0rm2vvyhjaff0md8s5lrsv0c0f5",
+      "escrowAfter": "0",
+      "tx": "ccd687b79e5120b8dd15fee21cec58d5c2f3814b35b14eb75486ae6c3fb394d9",
+      "status": "confirmed",
+      "submittedAt": "2026-10-31T04:53:31.016Z",
+      "confirmedAt": "2026-10-31T04:54:02.477Z"
     }
   }
 }
