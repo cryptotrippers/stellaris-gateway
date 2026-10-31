@@ -12,7 +12,13 @@ type AccountState = {
   recovery: boolean;
   finishRecovery: () => void;
 };
-const INITIAL: AccountState = { user: null, loading: true, error: null, recovery: false, finishRecovery: () => {} };
+const INITIAL: AccountState = {
+  user: null,
+  loading: true,
+  error: null,
+  recovery: false,
+  finishRecovery: () => {},
+};
 const AccountContext = createContext<AccountState>(INITIAL);
 
 export function AccountSession({ children }: { children: ReactNode }) {
@@ -77,7 +83,16 @@ export function AccountSession({ children }: { children: ReactNode }) {
       data.subscription.unsubscribe();
     };
   }, [queryClient, router]);
-  return <AccountContext.Provider value={{ ...state, finishRecovery: () => setState((previous) => ({ ...previous, recovery: false })) }}>{children}</AccountContext.Provider>;
+  return (
+    <AccountContext.Provider
+      value={{
+        ...state,
+        finishRecovery: () => setState((previous) => ({ ...previous, recovery: false })),
+      }}
+    >
+      {children}
+    </AccountContext.Provider>
+  );
 }
 
 export function useAccountSession() {
