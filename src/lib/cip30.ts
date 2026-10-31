@@ -144,6 +144,7 @@ function decodeCborLovelace(hex: string): bigint {
 }
 
 const enabledApis = new Map<CardanoWalletId, CIP30Api>();
+let enableGeneration = 0;
 
 export async function readWalletInfo(api: CIP30Api) {
   const [networkId, changeAddress, balanceHex, rewardAddrs] = await Promise.all([
@@ -169,10 +170,12 @@ export async function refreshEnabledWallet(id: CardanoWalletId) {
 }
 
 export function forgetWalletApis() {
+  enableGeneration++;
   enabledApis.clear();
 }
 
 export async function enableWallet(id: CardanoWalletId) {
+  const generation = ++enableGeneration;
   const c = win();
   const w = c?.[id];
   if (!w) {
@@ -181,7 +184,7 @@ export async function enableWallet(id: CardanoWalletId) {
   }
   const api = await w.enable();
   const info = await readWalletInfo(api);
-  enabledApis.set(id, api);
+  if (generation === enableGeneration) enabledApis.set(id, api);
   return info;
 }
 

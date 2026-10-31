@@ -67,6 +67,7 @@ function ResetPasswordPage() {
       // The Auth server verifies the recovery session. No current_password on recovery.
       const { error } = await withTimeout(supabase.auth.updateUser({ password }));
       if (error) throw error;
+      account.finishRecovery();
       setDone(true);
       setPassword("");
       setConfirm("");
