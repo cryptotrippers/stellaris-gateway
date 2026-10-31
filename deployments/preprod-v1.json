@@ -332,5 +332,21 @@
       "submittedAt": "2026-10-31T04:53:31.016Z",
       "confirmedAt": "2026-10-31T04:54:02.477Z"
     }
-  }
+  },
+  "attestations": [
+    {
+      "attestedReserve": "100000000000",
+      "attestedAt": 1793423087000,
+      "attestationEpoch": "2",
+      "signers": [
+        "c1",
+        "c2",
+        "c3"
+      ],
+      "tx": "96542a8e14f7a32f0b8bd3b21db6b3873bff7b56d772c4560138f98fb6b7c316",
+      "status": "confirmed",
+      "submittedAt": "2026-10-31T05:06:49.893Z",
+      "confirmedAt": "2026-10-31T05:07:11.593Z"
+    }
+  ]
 }
