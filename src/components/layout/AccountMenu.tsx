@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { ChevronDown, LogOut, ShieldCheck, UserRound } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { useAccountSignOut } from "@/components/auth/useAccountSignOut";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,8 +15,10 @@ import { accountGroups } from "./account-links";
 
 /** Desktop account control for the public navigation. */
 export function AccountMenu() {
-  const { user, isAdmin } = useMyRoles();
+  const { user, isAdmin, loading } = useMyRoles();
+  const logout = useAccountSignOut();
 
+  if (loading) return <span className="text-xs text-muted-foreground">Account…</span>;
   if (!user) {
     return (
       <Button asChild variant="ghost" className="hidden h-10 md:inline-flex">
@@ -53,11 +55,13 @@ export function AccountMenu() {
           ))}
         </div>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild><Link to="/account">Account & wallets</Link></DropdownMenuItem>
+        {logout.error && <p role="alert" className="p-2 text-xs text-destructive">{logout.error}</p>}
         <p className="flex items-center gap-1.5 px-1 py-1 text-[11px] text-muted-foreground">
           <ShieldCheck className="h-3.5 w-3.5 text-teal" aria-hidden="true" />
-          Access to every page is checked on the server.
+          Account login is separate from wallet connection.
         </p>
-        <DropdownMenuItem onSelect={() => supabase.auth.signOut()} className="text-sm">
+        <DropdownMenuItem disabled={logout.busy} onSelect={() => void logout.signOut()} className="text-sm">
           <LogOut className="h-4 w-4" aria-hidden="true" /> Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -67,7 +71,9 @@ export function AccountMenu() {
 
 /** Mobile account section rendered inside the collapsible menu. */
 export function MobileAccountLinks({ onNavigate }: { onNavigate: () => void }) {
-  const { user, isAdmin } = useMyRoles();
+  const { user, isAdmin, loading } = useMyRoles();
+  const logout = useAccountSignOut();
+  if (loading) return <span className="text-xs text-muted-foreground">Account…</span>;
   if (!user) {
     return (
       <Button asChild variant="ghost" className="justify-start">
@@ -79,6 +85,8 @@ export function MobileAccountLinks({ onNavigate }: { onNavigate: () => void }) {
   }
   return (
     <div className="mt-2 grid gap-3 border-t border-border pt-3">
+      <Button asChild variant="ghost" className="min-h-11 justify-start"><Link to="/account" onClick={onNavigate}>Account & wallets</Link></Button>
+      {logout.error && <p role="alert" className="text-xs text-destructive">{logout.error}</p>}
       {accountGroups(isAdmin).map((g) => (
         <div key={g.title}>
           <p className="px-4 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -105,7 +113,7 @@ export function MobileAccountLinks({ onNavigate }: { onNavigate: () => void }) {
         variant="ghost"
         className="justify-start"
         onClick={() => {
-          void supabase.auth.signOut();
+          void logout.signOut();
           onNavigate();
         }}
       >

@@ -49,7 +49,7 @@ function AuthPage() {
   useEffect(() => {
     if (hasAuthReturn(window.location.search, window.location.hash)) {
       setReturning(true);
-      void navigate({ to: "/auth/callback", search: { redirect }, hash: window.location.hash.slice(1), replace: true });
+      void navigate({ to: "/auth/callback", search: { redirect, code: new URLSearchParams(window.location.search).get("code") ?? undefined, error: new URLSearchParams(window.location.search).get("error") ?? undefined, error_code: new URLSearchParams(window.location.search).get("error_code") ?? undefined, type: new URLSearchParams(window.location.search).get("type") ?? undefined }, hash: window.location.hash.slice(1), replace: true });
     } else if (account.recovery && account.user) {
       void navigate({ to: "/reset-password", replace: true });
     } else if (!account.loading && account.user && !sent && !busy) {

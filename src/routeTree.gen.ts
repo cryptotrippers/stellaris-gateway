@@ -42,12 +42,13 @@ import { Route as TestnetRouteImport } from './routes/testnet'
 import { Route as TransparencyRouteImport } from './routes/transparency'
 import { Route as TrustRouteImport } from './routes/trust'
 import { Route as UpgradeRouteImport } from './routes/upgrade'
+import { Route as WalletRouteImport } from './routes/wallet'
 import { Route as YieldRouteImport } from './routes/yield'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotwellKnownChar93SecurityChar91DotChar93txtRouteImport } from './routes/[.well-known]/security[.]txt'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
-import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
+import { Route as AuthCallbackRouteImport } from './routes/auth_.callback'
 import { Route as FundingIndexRouteImport } from './routes/funding.index'
 import { Route as FundingIdRouteImport } from './routes/funding.$id'
 import { Route as FundingNewRouteImport } from './routes/funding.new'
@@ -235,6 +236,11 @@ const UpgradeRoute = UpgradeRouteImport.update({
   path: '/upgrade',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WalletRoute = WalletRouteImport.update({
+  id: '/wallet',
+  path: '/wallet',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const YieldRoute = YieldRouteImport.update({
   id: '/yield',
   path: '/yield',
@@ -264,9 +270,9 @@ const ApiChatRoute = ApiChatRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
-  id: '/callback',
-  path: '/callback',
-  getParentRoute: () => AuthRoute,
+  id: '/auth_/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const FundingIndexRoute = FundingIndexRouteImport.update({
   id: '/funding/',
@@ -385,7 +391,7 @@ export interface FileRoutesByFullPath {
   '/ask': typeof AskRoute
   '/asset-to-yield': typeof AssetToYieldRoute
   '/assets': typeof AssetsRoute
-  '/auth': typeof AuthRouteWithChildren
+  '/auth': typeof AuthRoute
   '/blockfrost-health': typeof BlockfrostHealthRoute
   '/developers': typeof DevelopersRoute
   '/document-review': typeof DocumentReviewRoute
@@ -412,6 +418,7 @@ export interface FileRoutesByFullPath {
   '/transparency': typeof TransparencyRoute
   '/trust': typeof TrustRoute
   '/upgrade': typeof UpgradeRouteWithChildren
+  '/wallet': typeof WalletRoute
   '/yield': typeof YieldRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -447,7 +454,7 @@ export interface FileRoutesByTo {
   '/ask': typeof AskRoute
   '/asset-to-yield': typeof AssetToYieldRoute
   '/assets': typeof AssetsRoute
-  '/auth': typeof AuthRouteWithChildren
+  '/auth': typeof AuthRoute
   '/blockfrost-health': typeof BlockfrostHealthRoute
   '/developers': typeof DevelopersRoute
   '/document-review': typeof DocumentReviewRoute
@@ -472,6 +479,7 @@ export interface FileRoutesByTo {
   '/testnet': typeof TestnetRoute
   '/transparency': typeof TransparencyRoute
   '/trust': typeof TrustRoute
+  '/wallet': typeof WalletRoute
   '/yield': typeof YieldRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
@@ -508,7 +516,7 @@ export interface FileRoutesById {
   '/ask': typeof AskRoute
   '/asset-to-yield': typeof AssetToYieldRoute
   '/assets': typeof AssetsRoute
-  '/auth': typeof AuthRouteWithChildren
+  '/auth': typeof AuthRoute
   '/blockfrost-health': typeof BlockfrostHealthRoute
   '/developers': typeof DevelopersRoute
   '/document-review': typeof DocumentReviewRoute
@@ -535,12 +543,13 @@ export interface FileRoutesById {
   '/transparency': typeof TransparencyRoute
   '/trust': typeof TrustRoute
   '/upgrade': typeof UpgradeRouteWithChildren
+  '/wallet': typeof WalletRoute
   '/yield': typeof YieldRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.well-known/security.txt': typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
   '/api/chat': typeof ApiChatRoute
-  '/auth/callback': typeof AuthCallbackRoute
+  '/auth_/callback': typeof AuthCallbackRoute
   '/funding/$id': typeof FundingIdRoute
   '/funding/new': typeof FundingNewRoute
   '/governance/$sip': typeof GovernanceSipRoute
@@ -599,6 +608,7 @@ export interface FileRouteTypes {
     | '/transparency'
     | '/trust'
     | '/upgrade'
+    | '/wallet'
     | '/yield'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -659,6 +669,7 @@ export interface FileRouteTypes {
     | '/testnet'
     | '/transparency'
     | '/trust'
+    | '/wallet'
     | '/yield'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
@@ -721,12 +732,13 @@ export interface FileRouteTypes {
     | '/transparency'
     | '/trust'
     | '/upgrade'
+    | '/wallet'
     | '/yield'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/.well-known/security.txt'
     | '/api/chat'
-    | '/auth/callback'
+    | '/auth_/callback'
     | '/funding/$id'
     | '/funding/new'
     | '/governance/$sip'
@@ -757,7 +769,7 @@ export interface RootRouteChildren {
   AskRoute: typeof AskRoute
   AssetToYieldRoute: typeof AssetToYieldRoute
   AssetsRoute: typeof AssetsRoute
-  AuthRoute: typeof AuthRouteWithChildren
+  AuthRoute: typeof AuthRoute
   BlockfrostHealthRoute: typeof BlockfrostHealthRoute
   DevelopersRoute: typeof DevelopersRoute
   DocumentReviewRoute: typeof DocumentReviewRoute
@@ -784,11 +796,13 @@ export interface RootRouteChildren {
   TransparencyRoute: typeof TransparencyRoute
   TrustRoute: typeof TrustRoute
   UpgradeRoute: typeof UpgradeRouteWithChildren
+  WalletRoute: typeof WalletRoute
   YieldRoute: typeof YieldRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute: typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
   ApiChatRoute: typeof ApiChatRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   FundingIdRoute: typeof FundingIdRoute
   FundingNewRoute: typeof FundingNewRoute
   IssuersIdRoute: typeof IssuersIdRoute
@@ -1038,6 +1052,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UpgradeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/wallet': {
+      id: '/wallet'
+      path: '/wallet'
+      fullPath: '/wallet'
+      preLoaderRoute: typeof WalletRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/yield': {
       id: '/yield'
       path: '/yield'
@@ -1073,12 +1094,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/auth/callback': {
-      id: '/auth/callback'
-      path: '/callback'
+    '/auth_/callback': {
+      id: '/auth_/callback'
+      path: '/auth/callback'
       fullPath: '/auth/callback'
       preLoaderRoute: typeof AuthCallbackRouteImport
-      parentRoute: typeof AuthRoute
+      parentRoute: typeof rootRouteImport
     }
     '/funding/': {
       id: '/funding/'
@@ -1230,16 +1251,6 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AuthRouteChildren {
-  AuthCallbackRoute: typeof AuthCallbackRoute
-}
-
-const AuthRouteChildren: AuthRouteChildren = {
-  AuthCallbackRoute: AuthCallbackRoute,
-}
-
-const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
-
 interface GovernanceRouteChildren {
   GovernanceSipRoute: typeof GovernanceSipRoute
   GovernanceNewRoute: typeof GovernanceNewRoute
@@ -1300,7 +1311,7 @@ const rootRouteChildren: RootRouteChildren = {
   AskRoute: AskRoute,
   AssetToYieldRoute: AssetToYieldRoute,
   AssetsRoute: AssetsRoute,
-  AuthRoute: AuthRouteWithChildren,
+  AuthRoute: AuthRoute,
   BlockfrostHealthRoute: BlockfrostHealthRoute,
   DevelopersRoute: DevelopersRoute,
   DocumentReviewRoute: DocumentReviewRoute,
@@ -1327,6 +1338,7 @@ const rootRouteChildren: RootRouteChildren = {
   TransparencyRoute: TransparencyRoute,
   TrustRoute: TrustRoute,
   UpgradeRoute: UpgradeRouteWithChildren,
+  WalletRoute: WalletRoute,
   YieldRoute: YieldRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
@@ -1334,6 +1346,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute:
     Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute,
   ApiChatRoute: ApiChatRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   FundingIdRoute: FundingIdRoute,
   FundingNewRoute: FundingNewRoute,
   IssuersIdRoute: IssuersIdRoute,

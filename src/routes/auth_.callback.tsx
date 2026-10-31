@@ -6,8 +6,8 @@ import { useAccountSession } from "@/components/auth/AccountSession";
 import { Button } from "@/components/ui/button";
 import { safeAuthReturn } from "@/lib/auth-flow.shared";
 
-export const Route = createFileRoute("/auth/callback")({
-  validateSearch: (search: Record<string, unknown>) => ({ redirect: safeAuthReturn(search.redirect), error: typeof search.error === "string" ? search.error : undefined }),
+export const Route = createFileRoute("/auth_/callback")({
+  validateSearch: (search: Record<string, unknown>) => ({ redirect: safeAuthReturn(search.redirect), error: typeof search.error === "string" ? search.error : undefined, code: typeof search.code === "string" ? search.code : undefined, error_code: typeof search.error_code === "string" ? search.error_code : undefined, type: typeof search.type === "string" ? search.type : undefined }),
   component: AuthCallbackPage,
   head: () => ({ meta: [
     { title: "Confirm account access · Stellaris Finance" }, { name: "description", content: "Complete your secure Stellaris account return." },
@@ -23,7 +23,7 @@ function AuthCallbackPage() {
   const completed = useRef(false);
   useEffect(() => {
     const fragment = new URLSearchParams(window.location.hash.slice(1));
-    if (search.error || fragment.has("error") || fragment.has("error_code")) {
+    if (search.error || search.error_code || fragment.has("error") || fragment.has("error_code")) {
       setFailed(true);
       // Remove sensitive fragments and codes after the client has processed its return.
       window.history.replaceState(window.history.state, "", "/auth/callback");

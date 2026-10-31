@@ -59,7 +59,7 @@ function DocumentReviewPage() {
               Sign in with an administrator account to review documents.
             </p>
             <Button asChild className="mt-4">
-              <Link to="/auth">
+              <Link to="/auth" search={{ mode: "signin", redirect: "/document-review" }}>
                 <LogIn /> Sign in
               </Link>
             </Button>

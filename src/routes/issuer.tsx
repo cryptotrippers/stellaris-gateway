@@ -82,7 +82,7 @@ function SignedOut() {
       </p>
       <div className="mt-6 flex flex-wrap justify-center gap-3">
         <Button asChild>
-          <Link to="/auth">
+          <Link to="/auth" search={{ mode: "signin", redirect: "/issuer" }}>
             <LogIn /> Sign in
           </Link>
         </Button>

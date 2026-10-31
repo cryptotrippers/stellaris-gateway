@@ -1,37 +1,12 @@
-import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
+import { UserRound } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 
-/** Header control showing the signed-in account, or a link to sign in. */
+/** Mobile and app-header entry point shares the root account session. */
 export function AccountButton() {
-  const [email, setEmail] = useState<string | null>(null);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setEmail(data.session?.user.email ?? null));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) =>
-      setEmail(session?.user.email ?? null),
-    );
-    return () => sub.subscription.unsubscribe();
-  }, []);
-
-  if (!email) {
-    return (
-      <Link
-        to="/auth"
-        className="hidden sm:inline-flex items-center rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium hover:bg-secondary"
-      >
-        Sign in
-      </Link>
-    );
-  }
-
-  return (
-    <button
-      onClick={() => supabase.auth.signOut()}
-      title={email}
-      className="hidden sm:inline-flex items-center rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium hover:bg-secondary"
-    >
-      Sign out
-    </button>
-  );
+  const { user, loading } = useSupabaseUser();
+  return <Button asChild variant="outline" className="min-h-11 px-3" aria-label={user ? "Your account" : "Sign in"}>
+    <Link to={user ? "/account" : "/auth"}><UserRound /><span className="hidden sm:inline">{loading ? "Account" : user ? "Account" : "Sign in"}</span></Link>
+  </Button>;
 }
