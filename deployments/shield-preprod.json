@@ -1,0 +1,17 @@
+{
+  "treasury": {
+    "type": "native-multisig",
+    "threshold": 3,
+    "signers": [
+      "c9329c2f39ebff39ee0e2d2c5a31f1573f7ad25d392a0e38324b30b3",
+      "a63b0b85b307d9bf47e95e7887dd6bcb3f10dd13c48fa2d4bda028e5",
+      "8612fcf3f7b28fc1f4bd4e3bb7dad6e97fa4fa691e1a94437c8fc38c",
+      "3f4c841efec8d364036f7621a08136abde99434df29e88a5376ef7aa",
+      "2c418b91993adc8153ca6cc22063236aeffcd2a0458e01452320ecc8"
+    ],
+    "scriptHash": "626b335d250324166b783d6357377a2b6c8aad4b8985328906283c84",
+    "address": "addr_test1wp3xkv6ay5pjg9nt0q7kx4eh0g4kez4dfwyc2v5fqc5repqpuc9wg",
+    "note": "Shield G1 stopgap. Preprod test keys (reserve committee c1-c5), not independent signers.",
+    "createdAt": "2026-10-31T09:09:32.542Z"
+  }
+}
