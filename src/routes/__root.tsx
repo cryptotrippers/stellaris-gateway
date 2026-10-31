@@ -16,6 +16,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { ScriptCacheGuard } from "@/components/chain/ScriptCacheGuard";
 import { TxConfirmDialog } from "@/components/wallet/TxConfirmDialog";
+import { WalletLifecycle } from "@/components/wallet/WalletLifecycle";
 import { AccountSession } from "@/components/auth/AccountSession";
 import { installStaleChunkReload, recoverFromStaleChunkBrowser } from "@/lib/stale-chunk-reload";
 
@@ -167,6 +168,7 @@ function RootComponent() {
       <Toaster />
       {/* Asks for confirmation before any page lets the wallet sign. */}
       <ClientOnly fallback={null}>
+        <WalletLifecycle />
         <TxConfirmDialog />
       </ClientOnly>
     </QueryClientProvider>

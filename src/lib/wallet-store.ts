@@ -370,8 +370,8 @@ export function useEffectiveAddress(): EffectiveAddress {
 export function useWallet(): WalletState {
   return useSyncExternalStore(
     (cb) => { listeners.add(cb); return () => listeners.delete(cb); },
-    () => serverState,
     () => state,
+    () => serverState,
   );
 }
 
