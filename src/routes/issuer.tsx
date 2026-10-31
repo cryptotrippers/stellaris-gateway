@@ -20,7 +20,10 @@ import { FeatureStatus } from "@/components/brand/FeatureStatus";
 import { useSupabaseUser } from "@/hooks/useSupabaseUser";
 import { listPipeline } from "@/lib/accelerator.functions";
 import { CHECKLIST_ITEMS, PIPELINE_STAGES } from "@/lib/accelerator.shared";
-import { issuerWorkspaceQuery, type WorkspaceIssuer } from "@/components/issuers/issuer-workspace.query";
+import {
+  issuerWorkspaceQuery,
+  type WorkspaceIssuer,
+} from "@/components/issuers/issuer-workspace.query";
 import { buildJourney, nextStep } from "@/components/issuers/journey/journey";
 import { IssuerJourney } from "@/components/issuers/journey/IssuerJourney";
 import { DataRoomPreview } from "@/components/issuers/journey/DataRoomPreview";
@@ -31,10 +34,14 @@ export const Route = createFileRoute("/issuer")({
       { title: "Issuer workspace · Stellaris" },
       {
         name: "description",
-        content: "Track your organisation's verification, funding requests, evidence review and reporting on Stellaris.",
+        content:
+          "Track your organisation's verification, funding requests, evidence review and reporting on Stellaris.",
       },
       { property: "og:title", content: "Issuer workspace · Stellaris" },
-      { property: "og:description", content: "Verification, review progress and evidence for project issuers." },
+      {
+        property: "og:description",
+        content: "Verification, review progress and evidence for project issuers.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "robots", content: "noindex" },
@@ -43,7 +50,10 @@ export const Route = createFileRoute("/issuer")({
   component: IssuerWorkspace,
 });
 
-const REQUIRED = CHECKLIST_ITEMS.filter((c) => c.required).map((c) => ({ key: c.key, label: c.label }));
+const REQUIRED = CHECKLIST_ITEMS.filter((c) => c.required).map((c) => ({
+  key: c.key,
+  label: c.label,
+}));
 
 const VERIFY_LABEL: Record<WorkspaceIssuer["verification_status"], string> = {
   unverified: "Not yet submitted for review",
@@ -82,7 +92,7 @@ function SignedOut() {
       </p>
       <div className="mt-6 flex flex-wrap justify-center gap-3">
         <Button asChild>
-          <Link to="/auth">
+          <Link to="/auth" search={{ mode: "signin", redirect: "/issuer" }}>
             <LogIn /> Sign in
           </Link>
         </Button>
@@ -96,7 +106,11 @@ function SignedOut() {
 
 function Workspace({ userId, email }: { userId: string; email: string }) {
   const ws = useQuery(issuerWorkspaceQuery(userId));
-  const pipeline = useQuery({ queryKey: ["pipeline"], queryFn: () => listPipeline(), staleTime: 60_000 });
+  const pipeline = useQuery({
+    queryKey: ["pipeline"],
+    queryFn: () => listPipeline(),
+    staleTime: 60_000,
+  });
   const requests = ws.data?.requests ?? [];
   const issuers = ws.data?.issuers ?? [];
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -125,7 +139,14 @@ function Workspace({ userId, email }: { userId: string; email: string }) {
 
   const outstanding = (pipeline.data?.projects ?? [])
     .filter((p) => requests.some((r) => r.id === p.fundingRequestId))
-    .reduce((n, p) => n + REQUIRED.filter((req) => !p.checklist.some((c) => c.item_key === req.key && c.status === "verified")).length, 0);
+    .reduce(
+      (n, p) =>
+        n +
+        REQUIRED.filter(
+          (req) => !p.checklist.some((c) => c.item_key === req.key && c.status === "verified"),
+        ).length,
+      0,
+    );
   const listed = requests.filter((r) => r.asset_id).length;
 
   if (ws.isLoading) {
@@ -161,7 +182,10 @@ function Workspace({ userId, email }: { userId: string; email: string }) {
             {issuer?.legal_name ?? "Your organisation"}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {issuer ? `${issuer.jurisdiction} · ${issuer.wrapper_type.toUpperCase()}` : "No issuer profile yet"} · Signed in as {email}
+            {issuer
+              ? `${issuer.jurisdiction} · ${issuer.wrapper_type.toUpperCase()}`
+              : "No issuer profile yet"}{" "}
+            · Signed in as {email}
           </p>
         </div>
         <Button asChild>
@@ -172,20 +196,45 @@ function Workspace({ userId, email }: { userId: string; email: string }) {
       </header>
 
       <dl className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <Tile icon={Building2} label="Verification status" value={issuer ? VERIFY_LABEL[issuer.verification_status] : "No issuer profile"} />
-        <Tile icon={FileCheck2} label="Active funding requests" value={String(requests.filter((r) => r.status !== "rejected").length)} />
-        <Tile icon={FileWarning} label="Outstanding required evidence" value={pipeline.isLoading ? "…" : String(outstanding)} />
+        <Tile
+          icon={Building2}
+          label="Verification status"
+          value={issuer ? VERIFY_LABEL[issuer.verification_status] : "No issuer profile"}
+        />
+        <Tile
+          icon={FileCheck2}
+          label="Active funding requests"
+          value={String(requests.filter((r) => r.status !== "rejected").length)}
+        />
+        <Tile
+          icon={FileWarning}
+          label="Outstanding required evidence"
+          value={pipeline.isLoading ? "…" : String(outstanding)}
+        />
         <Tile icon={ArrowRight} label="Approved listings (testnet)" value={String(listed)} />
-        <Tile icon={CalendarClock} label="Upcoming milestones" value="None published" badge={<FeatureStatus stage="awaiting_backend" />} />
-        <Tile icon={Bell} label="Notifications" value="None" badge={<FeatureStatus stage="awaiting_backend" />} />
+        <Tile
+          icon={CalendarClock}
+          label="Upcoming milestones"
+          value="None published"
+          badge={<FeatureStatus stage="awaiting_backend" />}
+        />
+        <Tile
+          icon={Bell}
+          label="Notifications"
+          value="None"
+          badge={<FeatureStatus stage="awaiting_backend" />}
+        />
       </dl>
 
       {requests.length === 0 ? (
         <div className="mt-10 card-institutional p-8 text-center">
-          <p className="font-display text-lg font-semibold text-foreground">No funding requests yet</p>
+          <p className="font-display text-lg font-semibold text-foreground">
+            No funding requests yet
+          </p>
           <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground">
-            Submit your first project to start the review journey. Everything you enter in a request is
-            public; confidential files go in the project&apos;s private document room once it exists.
+            Submit your first project to start the review journey. Everything you enter in a request
+            is public; confidential files go in the project&apos;s private document room once it
+            exists.
           </p>
           <div className="mt-5 flex flex-wrap justify-center gap-3">
             <Button asChild>
@@ -199,7 +248,11 @@ function Workspace({ userId, email }: { userId: string; email: string }) {
       ) : (
         <>
           {requests.length > 1 && (
-            <div className="mt-10 flex flex-wrap gap-2" role="tablist" aria-label="Your funding requests">
+            <div
+              className="mt-10 flex flex-wrap gap-2"
+              role="tablist"
+              aria-label="Your funding requests"
+            >
               {requests.map((r) => (
                 <button
                   key={r.id}
@@ -221,13 +274,18 @@ function Workspace({ userId, email }: { userId: string; email: string }) {
                   <h2 id="journey-h" className="font-display text-xl font-semibold text-foreground">
                     Review progress · {selected.name}
                   </h2>
-                  <Link to="/funding/$id" params={{ id: selected.asset_slug }} className="text-sm font-medium text-teal hover:underline">
+                  <Link
+                    to="/funding/$id"
+                    params={{ id: selected.asset_slug }}
+                    className="text-sm font-medium text-teal hover:underline"
+                  >
                     Open request
                   </Link>
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Stage: {PIPELINE_STAGES.find((s) => s.key === project?.stage)?.label ?? selected.status} · submitted{" "}
-                  {new Date(selected.created_at).toLocaleDateString("en-AU")}
+                  Stage:{" "}
+                  {PIPELINE_STAGES.find((s) => s.key === project?.stage)?.label ?? selected.status}{" "}
+                  · submitted {new Date(selected.created_at).toLocaleDateString("en-AU")}
                 </p>
                 <div className="mt-4 rounded-xl border border-teal/30 bg-teal/5 p-4 text-sm">
                   <p className="font-medium text-foreground">Next permitted step</p>
@@ -243,21 +301,40 @@ function Workspace({ userId, email }: { userId: string; email: string }) {
               </section>
 
               <div className="space-y-8">
-                <section id="data-room" aria-labelledby="dr-h" className="scroll-mt-28 card-institutional p-5">
-                  <h2 id="dr-h" className="font-display text-lg font-semibold text-foreground">Data room</h2>
+                <section
+                  id="data-room"
+                  aria-labelledby="dr-h"
+                  className="scroll-mt-28 card-institutional p-5"
+                >
+                  <h2 id="dr-h" className="font-display text-lg font-semibold text-foreground">
+                    Data room
+                  </h2>
                   <div className="mt-4">
-                    <DataRoomPreview checklist={project?.checklist ?? []} slug={selected.asset_slug} fundingRequestId={selected.id} category={selected.category} />
+                    <DataRoomPreview
+                      checklist={project?.checklist ?? []}
+                      slug={selected.asset_slug}
+                      fundingRequestId={selected.id}
+                      category={selected.category}
+                    />
                   </div>
                 </section>
-                <section id="reports" aria-labelledby="rp-h" className="scroll-mt-28 card-institutional p-5">
+                <section
+                  id="reports"
+                  aria-labelledby="rp-h"
+                  className="scroll-mt-28 card-institutional p-5"
+                >
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h2 id="rp-h" className="font-display text-lg font-semibold text-foreground">Reports</h2>
+                    <h2 id="rp-h" className="font-display text-lg font-semibold text-foreground">
+                      Reports
+                    </h2>
                     <FeatureStatus stage="awaiting_backend" />
                   </div>
                   <dl className="mt-4 space-y-2 text-sm">
                     <div className="flex justify-between gap-3">
                       <dt className="text-muted-foreground">Committed reporting cadence</dt>
-                      <dd className="font-medium text-foreground">{selected.reporting_cadence ?? "Not stated"}</dd>
+                      <dd className="font-medium text-foreground">
+                        {selected.reporting_cadence ?? "Not stated"}
+                      </dd>
                     </div>
                     <div className="flex justify-between gap-3">
                       <dt className="text-muted-foreground">Reports submitted</dt>
@@ -278,7 +355,17 @@ function Workspace({ userId, email }: { userId: string; email: string }) {
   );
 }
 
-function Tile({ icon: Icon, label, value, badge }: { icon: LucideIcon; label: string; value: string; badge?: React.ReactNode }) {
+function Tile({
+  icon: Icon,
+  label,
+  value,
+  badge,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  badge?: React.ReactNode;
+}) {
   return (
     <div className="card-institutional p-5">
       <div className="flex items-start justify-between gap-2">

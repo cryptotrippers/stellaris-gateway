@@ -3,7 +3,15 @@
  * No external deps — reads window.cardano and decodes the balance CBOR manually.
  */
 
-export type CardanoWalletId = "lace" | "eternl" | "nami" | "typhon" | "flint" | "yoroi" | "gerowallet" | "vespr";
+export type CardanoWalletId =
+  | "lace"
+  | "eternl"
+  | "nami"
+  | "typhon"
+  | "flint"
+  | "yoroi"
+  | "gerowallet"
+  | "vespr";
 
 /** `wrong_network` is set by the connect-time network gate (E21), not by the wallet. */
 export type CIP30ErrorKind = "no_extension" | "rejected" | "locked" | "wrong_network" | "unknown";
@@ -31,13 +39,15 @@ export interface CIP30Api {
 }
 
 interface WindowCardano {
-  [key: string]: {
-    name?: string;
-    icon?: string;
-    apiVersion?: string;
-    enable: () => Promise<CIP30Api>;
-    isEnabled: () => Promise<boolean>;
-  } | undefined;
+  [key: string]:
+    | {
+        name?: string;
+        icon?: string;
+        apiVersion?: string;
+        enable: () => Promise<CIP30Api>;
+        isEnabled: () => Promise<boolean>;
+      }
+    | undefined;
 }
 
 const KNOWN: Array<{ id: CardanoWalletId; name: string }> = [
@@ -62,7 +72,7 @@ export function hasExtension(id: CardanoWalletId): boolean {
 
 export function listWallets(): CardanoWalletInfo[] {
   const c = win();
-  return KNOWN.map(w => ({
+  return KNOWN.map((w) => ({
     id: w.id,
     name: c?.[w.id]?.name ?? w.name,
     icon: c?.[w.id]?.icon ?? "",
@@ -94,20 +104,26 @@ export function classifyCIP30Error(e: unknown, installed: boolean): CIP30Error {
 // Minimal CBOR decode for CIP-30 balance: either a uint (lovelace only)
 // or an array [coin, multiasset]. We only need the first coin value.
 function decodeCborLovelace(hex: string): bigint {
-  const bytes = new Uint8Array(hex.match(/.{1,2}/g)?.map(b => parseInt(b, 16)) ?? []);
+  const bytes = new Uint8Array(hex.match(/.{1,2}/g)?.map((b) => parseInt(b, 16)) ?? []);
   let i = 0;
   const readUint = (info: number): bigint => {
     if (info < 24) return BigInt(info);
     if (info === 24) return BigInt(bytes[i++]);
-    if (info === 25) { const v = (bytes[i] << 8) | bytes[i+1]; i += 2; return BigInt(v); }
+    if (info === 25) {
+      const v = (bytes[i] << 8) | bytes[i + 1];
+      i += 2;
+      return BigInt(v);
+    }
     if (info === 26) {
-      const v = (bytes[i] * 2**24) + (bytes[i+1] << 16) + (bytes[i+2] << 8) + bytes[i+3];
-      i += 4; return BigInt(v);
+      const v = bytes[i] * 2 ** 24 + (bytes[i + 1] << 16) + (bytes[i + 2] << 8) + bytes[i + 3];
+      i += 4;
+      return BigInt(v);
     }
     if (info === 27) {
       let v = 0n;
-      for (let j = 0; j < 8; j++) v = (v << 8n) | BigInt(bytes[i+j]);
-      i += 8; return v;
+      for (let j = 0; j < 8; j++) v = (v << 8n) | BigInt(bytes[i + j]);
+      i += 8;
+      return v;
     }
     return 0n;
   };
@@ -127,14 +143,10 @@ function decodeCborLovelace(hex: string): bigint {
   return 0n;
 }
 
-export async function enableWallet(id: CardanoWalletId) {
-  const c = win();
-  const w = c?.[id];
-  if (!w) {
-    const err: CIP30Error = { kind: "no_extension", message: `${id} wallet not installed` };
-    throw err;
-  }
-  const api = await w.enable();
+const enabledApis = new Map<CardanoWalletId, CIP30Api>();
+let enableGeneration = 0;
+
+export async function readWalletInfo(api: CIP30Api) {
   const [networkId, changeAddress, balanceHex, rewardAddrs] = await Promise.all([
     api.getNetworkId(),
     api.getChangeAddress(),
@@ -143,18 +155,48 @@ export async function enableWallet(id: CardanoWalletId) {
   ]);
   const lovelace = decodeCborLovelace(balanceHex);
   return {
-    networkId, // 0 = testnet (preprod/preview), 1 = mainnet
+    networkId,
     changeAddressHex: changeAddress,
     rewardAddressHex: rewardAddrs[0] ?? null,
     balanceAda: Number(lovelace) / 1_000_000,
   };
 }
 
+/** Reads an already-enabled API, never calls enable or requests a signature. */
+export async function refreshEnabledWallet(id: CardanoWalletId) {
+  const api = enabledApis.get(id);
+  if (!api) throw new Error("Wallet session is no longer available. Reconnect your wallet.");
+  return readWalletInfo(api);
+}
+
+export function forgetWalletApis() {
+  enableGeneration++;
+  enabledApis.clear();
+}
+
+export async function enableWallet(id: CardanoWalletId) {
+  const generation = ++enableGeneration;
+  const c = win();
+  const w = c?.[id];
+  if (!w) {
+    const err: CIP30Error = { kind: "no_extension", message: `${id} wallet not installed` };
+    throw err;
+  }
+  const api = await w.enable();
+  const info = await readWalletInfo(api);
+  if (generation === enableGeneration) enabledApis.set(id, api);
+  return info;
+}
+
 /** True when the wallet extension reports an already-active session. */
 export async function isWalletEnabled(id: CardanoWalletId): Promise<boolean> {
   const w = win()?.[id];
   if (!w) return false;
-  try { return await w.isEnabled(); } catch { return false; }
+  try {
+    return await w.isEnabled();
+  } catch {
+    return false;
+  }
 }
 
 /** CIP-30 signData with an already-enabled browser wallet (no transaction). */

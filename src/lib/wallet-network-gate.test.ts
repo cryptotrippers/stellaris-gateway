@@ -28,8 +28,8 @@ test("E21: every connect path in wallet-store runs the gate before promoting sta
   // Browser connect, silent restore and WalletConnect approval.
   const calls = src.match(/checkWalletNetworkAtConnect\(/g) ?? [];
   assert.ok(calls.length >= 3, `expected 3 gate calls, found ${calls.length}`);
-  for (const fn of ["connectWallet", "restoreWallet", "connectWithWalletConnect"]) {
-    const start = src.indexOf(`export async function ${fn}`);
+  for (const fn of ["connectWallet", "restoreOnce", "connectWithWalletConnect"]) {
+    const start = src.indexOf(`async function ${fn}`);
     assert.ok(start >= 0, `${fn} not found`);
     const body = src.slice(start, src.indexOf("\nexport ", start + 10));
     const gate = body.indexOf("checkWalletNetworkAtConnect(");

@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AskRouteImport } from './routes/ask'
@@ -20,6 +21,7 @@ import { Route as BlockfrostHealthRouteImport } from './routes/blockfrost-health
 import { Route as DevelopersRouteImport } from './routes/developers'
 import { Route as DocumentReviewRouteImport } from './routes/document-review'
 import { Route as ForIssuersRouteImport } from './routes/for-issuers'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as GovernanceRouteImport } from './routes/governance'
 import { Route as HowItWorksRouteImport } from './routes/how-it-works'
 import { Route as InviteRouteImport } from './routes/invite'
@@ -30,6 +32,7 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as OperatorsRouteImport } from './routes/operators'
 import { Route as PipelineRouteImport } from './routes/pipeline'
 import { Route as PropertyRouteImport } from './routes/property'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SecurityRouteImport } from './routes/security'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as StakeRouteImport } from './routes/stake'
@@ -40,11 +43,14 @@ import { Route as TestnetRouteImport } from './routes/testnet'
 import { Route as TransparencyRouteImport } from './routes/transparency'
 import { Route as TrustRouteImport } from './routes/trust'
 import { Route as UpgradeRouteImport } from './routes/upgrade'
+import { Route as WalletRouteImport } from './routes/wallet'
 import { Route as YieldRouteImport } from './routes/yield'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
 import { Route as Char91DotwellKnownChar93SecurityChar91DotChar93txtRouteImport } from './routes/[.well-known]/security[.]txt'
+import { Route as AuthenticatedAccountRouteImport } from './routes/_authenticated/account'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as AuthCallbackRouteImport } from './routes/auth_.callback'
 import { Route as FundingIndexRouteImport } from './routes/funding.index'
 import { Route as FundingIdRouteImport } from './routes/funding.$id'
 import { Route as FundingNewRouteImport } from './routes/funding.new'
@@ -70,6 +76,10 @@ import { Route as ApiV1YieldUserAddressQueueRouteImport } from './routes/api/v1/
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -122,6 +132,11 @@ const ForIssuersRoute = ForIssuersRouteImport.update({
   path: '/for-issuers',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GovernanceRoute = GovernanceRouteImport.update({
   id: '/governance',
   path: '/governance',
@@ -170,6 +185,11 @@ const PipelineRoute = PipelineRouteImport.update({
 const PropertyRoute = PropertyRouteImport.update({
   id: '/property',
   path: '/property',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SecurityRoute = SecurityRouteImport.update({
@@ -222,6 +242,11 @@ const UpgradeRoute = UpgradeRouteImport.update({
   path: '/upgrade',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WalletRoute = WalletRouteImport.update({
+  id: '/wallet',
+  path: '/wallet',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const YieldRoute = YieldRouteImport.update({
   id: '/yield',
   path: '/yield',
@@ -245,9 +270,19 @@ const Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute =
     path: '/.well-known/security.txt',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AuthenticatedAccountRoute = AuthenticatedAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth_/callback',
+  path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FundingIndexRoute = FundingIndexRouteImport.update({
@@ -372,6 +407,7 @@ export interface FileRoutesByFullPath {
   '/developers': typeof DevelopersRoute
   '/document-review': typeof DocumentReviewRoute
   '/for-issuers': typeof ForIssuersRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/governance': typeof GovernanceRouteWithChildren
   '/how-it-works': typeof HowItWorksRoute
   '/invite': typeof InviteRoute
@@ -382,6 +418,7 @@ export interface FileRoutesByFullPath {
   '/operators': typeof OperatorsRoute
   '/pipeline': typeof PipelineRoute
   '/property': typeof PropertyRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stake': typeof StakeRoute
@@ -392,11 +429,14 @@ export interface FileRoutesByFullPath {
   '/transparency': typeof TransparencyRoute
   '/trust': typeof TrustRoute
   '/upgrade': typeof UpgradeRouteWithChildren
+  '/wallet': typeof WalletRoute
   '/yield': typeof YieldRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.well-known/security.txt': typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
+  '/account': typeof AuthenticatedAccountRoute
   '/api/chat': typeof ApiChatRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/funding/$id': typeof FundingIdRoute
   '/funding/new': typeof FundingNewRoute
   '/governance/$sip': typeof GovernanceSipRoute
@@ -431,6 +471,7 @@ export interface FileRoutesByTo {
   '/developers': typeof DevelopersRoute
   '/document-review': typeof DocumentReviewRoute
   '/for-issuers': typeof ForIssuersRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/how-it-works': typeof HowItWorksRoute
   '/invite': typeof InviteRoute
   '/issuer': typeof IssuerRoute
@@ -440,6 +481,7 @@ export interface FileRoutesByTo {
   '/operators': typeof OperatorsRoute
   '/pipeline': typeof PipelineRoute
   '/property': typeof PropertyRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stake': typeof StakeRoute
@@ -449,11 +491,14 @@ export interface FileRoutesByTo {
   '/testnet': typeof TestnetRoute
   '/transparency': typeof TransparencyRoute
   '/trust': typeof TrustRoute
+  '/wallet': typeof WalletRoute
   '/yield': typeof YieldRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.well-known/security.txt': typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
+  '/account': typeof AuthenticatedAccountRoute
   '/api/chat': typeof ApiChatRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/funding/$id': typeof FundingIdRoute
   '/funding/new': typeof FundingNewRoute
   '/governance/$sip': typeof GovernanceSipRoute
@@ -479,6 +524,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/app': typeof AppRoute
   '/ask': typeof AskRoute
@@ -489,6 +535,7 @@ export interface FileRoutesById {
   '/developers': typeof DevelopersRoute
   '/document-review': typeof DocumentReviewRoute
   '/for-issuers': typeof ForIssuersRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/governance': typeof GovernanceRouteWithChildren
   '/how-it-works': typeof HowItWorksRoute
   '/invite': typeof InviteRoute
@@ -499,6 +546,7 @@ export interface FileRoutesById {
   '/operators': typeof OperatorsRoute
   '/pipeline': typeof PipelineRoute
   '/property': typeof PropertyRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/security': typeof SecurityRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/stake': typeof StakeRoute
@@ -509,11 +557,14 @@ export interface FileRoutesById {
   '/transparency': typeof TransparencyRoute
   '/trust': typeof TrustRoute
   '/upgrade': typeof UpgradeRouteWithChildren
+  '/wallet': typeof WalletRoute
   '/yield': typeof YieldRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/.well-known/security.txt': typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
+  '/_authenticated/account': typeof AuthenticatedAccountRoute
   '/api/chat': typeof ApiChatRoute
+  '/auth_/callback': typeof AuthCallbackRoute
   '/funding/$id': typeof FundingIdRoute
   '/funding/new': typeof FundingNewRoute
   '/governance/$sip': typeof GovernanceSipRoute
@@ -550,6 +601,7 @@ export interface FileRouteTypes {
     | '/developers'
     | '/document-review'
     | '/for-issuers'
+    | '/forgot-password'
     | '/governance'
     | '/how-it-works'
     | '/invite'
@@ -560,6 +612,7 @@ export interface FileRouteTypes {
     | '/operators'
     | '/pipeline'
     | '/property'
+    | '/reset-password'
     | '/security'
     | '/sitemap.xml'
     | '/stake'
@@ -570,11 +623,14 @@ export interface FileRouteTypes {
     | '/transparency'
     | '/trust'
     | '/upgrade'
+    | '/wallet'
     | '/yield'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/.well-known/security.txt'
+    | '/account'
     | '/api/chat'
+    | '/auth/callback'
     | '/funding/$id'
     | '/funding/new'
     | '/governance/$sip'
@@ -609,6 +665,7 @@ export interface FileRouteTypes {
     | '/developers'
     | '/document-review'
     | '/for-issuers'
+    | '/forgot-password'
     | '/how-it-works'
     | '/invite'
     | '/issuer'
@@ -618,6 +675,7 @@ export interface FileRouteTypes {
     | '/operators'
     | '/pipeline'
     | '/property'
+    | '/reset-password'
     | '/security'
     | '/sitemap.xml'
     | '/stake'
@@ -627,11 +685,14 @@ export interface FileRouteTypes {
     | '/testnet'
     | '/transparency'
     | '/trust'
+    | '/wallet'
     | '/yield'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/.well-known/security.txt'
+    | '/account'
     | '/api/chat'
+    | '/auth/callback'
     | '/funding/$id'
     | '/funding/new'
     | '/governance/$sip'
@@ -656,6 +717,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/_authenticated'
     | '/about'
     | '/app'
     | '/ask'
@@ -666,6 +728,7 @@ export interface FileRouteTypes {
     | '/developers'
     | '/document-review'
     | '/for-issuers'
+    | '/forgot-password'
     | '/governance'
     | '/how-it-works'
     | '/invite'
@@ -676,6 +739,7 @@ export interface FileRouteTypes {
     | '/operators'
     | '/pipeline'
     | '/property'
+    | '/reset-password'
     | '/security'
     | '/sitemap.xml'
     | '/stake'
@@ -686,11 +750,14 @@ export interface FileRouteTypes {
     | '/transparency'
     | '/trust'
     | '/upgrade'
+    | '/wallet'
     | '/yield'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/.well-known/security.txt'
+    | '/_authenticated/account'
     | '/api/chat'
+    | '/auth_/callback'
     | '/funding/$id'
     | '/funding/new'
     | '/governance/$sip'
@@ -716,6 +783,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AboutRoute: typeof AboutRoute
   AppRoute: typeof AppRoute
   AskRoute: typeof AskRoute
@@ -726,6 +794,7 @@ export interface RootRouteChildren {
   DevelopersRoute: typeof DevelopersRoute
   DocumentReviewRoute: typeof DocumentReviewRoute
   ForIssuersRoute: typeof ForIssuersRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   GovernanceRoute: typeof GovernanceRouteWithChildren
   HowItWorksRoute: typeof HowItWorksRoute
   InviteRoute: typeof InviteRoute
@@ -736,6 +805,7 @@ export interface RootRouteChildren {
   OperatorsRoute: typeof OperatorsRoute
   PipelineRoute: typeof PipelineRoute
   PropertyRoute: typeof PropertyRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SecurityRoute: typeof SecurityRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   StakeRoute: typeof StakeRoute
@@ -746,11 +816,13 @@ export interface RootRouteChildren {
   TransparencyRoute: typeof TransparencyRoute
   TrustRoute: typeof TrustRoute
   UpgradeRoute: typeof UpgradeRouteWithChildren
+  WalletRoute: typeof WalletRoute
   YieldRoute: typeof YieldRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute: typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute
   ApiChatRoute: typeof ApiChatRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   FundingIdRoute: typeof FundingIdRoute
   FundingNewRoute: typeof FundingNewRoute
   IssuersIdRoute: typeof IssuersIdRoute
@@ -774,6 +846,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -846,6 +925,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ForIssuersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/governance': {
       id: '/governance'
       path: '/governance'
@@ -914,6 +1000,13 @@ declare module '@tanstack/react-router' {
       path: '/property'
       fullPath: '/property'
       preLoaderRoute: typeof PropertyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/security': {
@@ -986,6 +1079,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UpgradeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/wallet': {
+      id: '/wallet'
+      path: '/wallet'
+      fullPath: '/wallet'
+      preLoaderRoute: typeof WalletRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/yield': {
       id: '/yield'
       path: '/yield'
@@ -1014,11 +1114,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotwellKnownChar93SecurityChar91DotChar93txtRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/account': {
+      id: '/_authenticated/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AuthenticatedAccountRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/api/chat': {
       id: '/api/chat'
       path: '/api/chat'
       fullPath: '/api/chat'
       preLoaderRoute: typeof ApiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth_/callback': {
+      id: '/auth_/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/funding/': {
@@ -1171,6 +1285,17 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAccountRoute: typeof AuthenticatedAccountRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAccountRoute: AuthenticatedAccountRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 interface GovernanceRouteChildren {
   GovernanceSipRoute: typeof GovernanceSipRoute
   GovernanceNewRoute: typeof GovernanceNewRoute
@@ -1226,6 +1351,7 @@ const ApiV1YieldRouteWithChildren = ApiV1YieldRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AboutRoute: AboutRoute,
   AppRoute: AppRoute,
   AskRoute: AskRoute,
@@ -1236,6 +1362,7 @@ const rootRouteChildren: RootRouteChildren = {
   DevelopersRoute: DevelopersRoute,
   DocumentReviewRoute: DocumentReviewRoute,
   ForIssuersRoute: ForIssuersRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   GovernanceRoute: GovernanceRouteWithChildren,
   HowItWorksRoute: HowItWorksRoute,
   InviteRoute: InviteRoute,
@@ -1246,6 +1373,7 @@ const rootRouteChildren: RootRouteChildren = {
   OperatorsRoute: OperatorsRoute,
   PipelineRoute: PipelineRoute,
   PropertyRoute: PropertyRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SecurityRoute: SecurityRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   StakeRoute: StakeRoute,
@@ -1256,6 +1384,7 @@ const rootRouteChildren: RootRouteChildren = {
   TransparencyRoute: TransparencyRoute,
   TrustRoute: TrustRoute,
   UpgradeRoute: UpgradeRouteWithChildren,
+  WalletRoute: WalletRoute,
   YieldRoute: YieldRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
@@ -1263,6 +1392,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute:
     Char91DotwellKnownChar93SecurityChar91DotChar93txtRoute,
   ApiChatRoute: ApiChatRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   FundingIdRoute: FundingIdRoute,
   FundingNewRoute: FundingNewRoute,
   IssuersIdRoute: IssuersIdRoute,

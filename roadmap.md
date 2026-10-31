@@ -1,5 +1,12 @@
 # Home page refresh
 
+# Account and wallet experience
+
+- [x] Rebuild the existing account flow with safe return destinations, verification and authorized password recovery.
+- [x] Consolidate wallet controls and bounded connection/reconnect handling without changing signing or ownership verification.
+- [x] Verify public route wiring, mocked session transitions/recovery, failed links and 360px account/wallet layouts.
+- [ ] Verify real email confirmation/recovery, Google completion and real extension/mobile wallet reconnect — requires an account session and user-operated email/provider/wallet checks; no private credentials or signatures requested.
+
 # Tessera live Preprod dashboard
 
 - [x] Add the read-only live snapshot, countdowns, contracts and clear test-data disclosures.

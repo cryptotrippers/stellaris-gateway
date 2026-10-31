@@ -15,7 +15,7 @@ export const INVESTOR_LINKS: AccountGroup = {
     { label: "Distributions", to: "/app", hash: "distributions" },
     { label: "Documents", to: "/app", hash: "documents" },
     { label: "Governance", to: "/governance" },
-    { label: "Account", to: "/security" },
+    { label: "Account", to: "/account" },
   ],
 };
 
