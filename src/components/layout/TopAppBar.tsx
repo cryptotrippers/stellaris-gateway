@@ -9,7 +9,7 @@ import { MoreMenu } from "@/components/layout/MoreMenu";
 export function TopAppBar() {
   return (
     <header className="sticky top-0 z-30 border-b border-border/70 bg-surface/85 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-4 px-4 md:px-6">
+      <div className="mx-auto flex h-16 max-w-[1400px] items-center gap-2 px-3 sm:gap-4 md:px-6">
         <Link to="/" className="shrink-0">
           <StellarisWordmark />
         </Link>
@@ -25,7 +25,7 @@ export function TopAppBar() {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
-          <NetworkBadge />
+          <span className="hidden xl:inline-flex"><NetworkBadge /></span>
           <Link
             to="/upgrade"
             className="hidden lg:inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-accent to-primary px-3 py-1 text-[11px] font-semibold text-primary-foreground shadow-sm hover:opacity-90 transition-opacity"

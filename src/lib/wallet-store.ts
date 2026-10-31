@@ -299,6 +299,7 @@ export async function connectWithWalletConnect(
   // Fire-and-forget: when approval lands, promote it into wallet state.
   handle.approval
     .then((acct) => {
+      if (!attempts.current(attempt)) return;
       if (checkWalletNetworkAtConnect(acct.networkId, EXPECTED_WALLET_NETWORK_ID)) return;
       state = {
         ...state,
