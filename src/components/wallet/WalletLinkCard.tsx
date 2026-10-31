@@ -80,29 +80,35 @@ export function WalletLinkCard({ compact = false }: { compact?: boolean }) {
       )}
       {!wallet.connected || !wallet.addressHex ? (
         <div className="mt-3">
-          <WalletButton label={wallet.connected ? "Use a browser wallet to link" : "Connect a wallet to link it"} />
+          <WalletButton
+            label={
+              wallet.connected ? "Use a browser wallet to link" : "Connect a wallet to link it"
+            }
+          />
         </div>
-      ) : <Button
-        type="button"
-        onClick={() => {
-          if (submitting.current) return;
-          submitting.current = true;
-          link.mutate();
-        }}
-        disabled={link.isPending}
-        className="mt-3 min-h-11 gap-2 text-xs"
-      >
-        {link.isPending ? (
-          <Loader2 className="h-3 w-3 animate-spin" />
-        ) : (
-          <Link2 className="h-3 w-3" />
-        )}
-        {wallet.connected
-          ? wallet.addressHex
-            ? "Link this wallet"
-            : "Use a browser wallet to link"
-          : "Connect a wallet to link it"}
-      </Button>}
+      ) : (
+        <Button
+          type="button"
+          onClick={() => {
+            if (submitting.current) return;
+            submitting.current = true;
+            link.mutate();
+          }}
+          disabled={link.isPending}
+          className="mt-3 min-h-11 gap-2 text-xs"
+        >
+          {link.isPending ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <Link2 className="h-3 w-3" />
+          )}
+          {wallet.connected
+            ? wallet.addressHex
+              ? "Link this wallet"
+              : "Use a browser wallet to link"
+            : "Connect a wallet to link it"}
+        </Button>
+      )}
       {linked.isError && (
         <p role="alert" className="mt-2 text-xs text-destructive">
           Linked wallets could not be loaded.{" "}

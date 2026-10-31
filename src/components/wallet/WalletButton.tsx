@@ -30,15 +30,20 @@ export function WalletButton({ label }: { label?: string }) {
           aria-label={label ?? "Manage wallet connection"}
         >
           {wallet.viewerAddress && !wallet.connected ? <Eye /> : <Wallet />}
-          {label ? <span>{label}</span> : <><span className="hidden lg:inline">
-            {wallet.connected
-              ? shortAddr(wallet.address)
-              : wallet.viewerAddress
-                ? "Read-only"
-                : "Connect wallet"}
-          </span>
-          <span className="lg:hidden">{wallet.connected ? wallet.provider : "Wallet"}</span>
-          </>}
+          {label ? (
+            <span>{label}</span>
+          ) : (
+            <>
+              <span className="hidden lg:inline">
+                {wallet.connected
+                  ? shortAddr(wallet.address)
+                  : wallet.viewerAddress
+                    ? "Read-only"
+                    : "Connect wallet"}
+              </span>
+              <span className="lg:hidden">{wallet.connected ? wallet.provider : "Wallet"}</span>
+            </>
+          )}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[90dvh] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-lg p-5 sm:p-6 [&>button]:min-h-11 [&>button]:min-w-11">
