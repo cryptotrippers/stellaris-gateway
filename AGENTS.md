@@ -24,3 +24,5 @@
 - The root ScriptCacheGuard resets queries rather than clearing them; clearing orphans in-flight requests and leaves first-visit pages loading forever.
 - Governance weight is read live from unspent on-chain Position UTxOs owned by wallets proven via CIP-30 signData (`linked_wallets`); recorded `vault_positions`/vote weights are history only, so withdrawn or moved funds can never be counted twice.
 - `vault_positions`, `transactions`, `security_audit_log`, `linked_wallets` and issuer private columns are written/read only by server functions after verification; browser roles have no insert rights, keeping forged rows out.
+- Account UI shares one root AccountSession subscriber; auth returns use the generated client's automatic URL processing once and validated internal destinations, so recovery and OAuth never compete with manual exchanges.
+- Wallet connection controls share the wallet store and one connection panel; attempt generations invalidate cancelled/late results while verified ownership remains exclusively the server-checked wallet-link flow.

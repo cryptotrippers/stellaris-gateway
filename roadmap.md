@@ -1,5 +1,11 @@
 # Home page refresh
 
+# Account and wallet experience
+
+- [ ] Rebuild the existing account flow with safe return destinations, verification and authorized password recovery.
+- [ ] Consolidate wallet controls and bounded connection/reconnect handling without changing signing or ownership verification.
+- [ ] Verify route wiring, session transitions, failed links and mobile layouts; report external testing limits.
+
 # Tessera live Preprod dashboard
 
 - [x] Add the read-only live snapshot, countdowns, contracts and clear test-data disclosures.
