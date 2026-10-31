@@ -46,7 +46,7 @@ function AuthCallbackPage() {
     }
     const timer = setTimeout(() => setFailed(true), 20_000);
     return () => clearTimeout(timer);
-  }, [search.error]);
+  }, [search.error, search.error_code]);
   useEffect(() => {
     const fragment = new URLSearchParams(window.location.hash.slice(1));
     if (

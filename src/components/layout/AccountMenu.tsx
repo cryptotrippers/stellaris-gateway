@@ -21,7 +21,7 @@ export function AccountMenu() {
   if (loading) return <span className="text-xs text-muted-foreground">Account…</span>;
   if (!user) {
     return (
-      <Button asChild variant="ghost" className="hidden h-10 md:inline-flex">
+      <Button asChild variant="ghost" className="hidden min-h-11 md:inline-flex">
         <Link to="/auth">Sign in</Link>
       </Button>
     );
@@ -32,7 +32,7 @@ export function AccountMenu() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="outline"
-          className="hidden h-10 gap-1.5 px-3 md:inline-flex"
+          className="hidden min-h-11 gap-1.5 px-3 md:inline-flex"
           aria-label="Account menu"
         >
           <UserRound className="h-4 w-4" aria-hidden="true" />
@@ -90,7 +90,7 @@ export function MobileAccountLinks({ onNavigate }: { onNavigate: () => void }) {
   if (loading) return <span className="text-xs text-muted-foreground">Account…</span>;
   if (!user) {
     return (
-      <Button asChild variant="ghost" className="justify-start">
+      <Button asChild variant="ghost" className="min-h-11 justify-start">
         <Link to="/auth" onClick={onNavigate}>
           Sign in
         </Link>
@@ -121,7 +121,7 @@ export function MobileAccountLinks({ onNavigate }: { onNavigate: () => void }) {
                 asChild
                 variant="ghost"
                 size="sm"
-                className="justify-start"
+                className="min-h-11 justify-start"
               >
                 <Link to={l.to} hash={l.hash} onClick={onNavigate}>
                   {l.label}
@@ -133,7 +133,8 @@ export function MobileAccountLinks({ onNavigate }: { onNavigate: () => void }) {
       ))}
       <Button
         variant="ghost"
-        className="justify-start"
+        className="min-h-11 justify-start"
+        disabled={logout.busy}
         onClick={() => {
           void logout.signOut();
           onNavigate();

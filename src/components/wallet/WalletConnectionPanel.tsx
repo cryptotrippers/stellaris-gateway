@@ -57,7 +57,6 @@ export function WalletConnectionPanel({ onConnected }: { onConnected?: () => voi
       if (ownsAttempt.current) cancelWalletConnection();
     };
     // A single panel owns an attempt; cancellation is also enforced in the store.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   function cancel() {
     ownsAttempt.current = false;

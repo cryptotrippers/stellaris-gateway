@@ -28,17 +28,17 @@ export function AccountFrame({
         </div>
       </header>
       <main className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:px-6 sm:py-16 lg:grid-cols-[1fr_1fr] lg:gap-20">
-        <section className="protocol relative overflow-hidden rounded-lg border border-border bg-deep p-6 text-deep-foreground sm:p-10">
+        <section className="protocol relative overflow-hidden rounded-lg border border-border bg-deep p-5 text-deep-foreground sm:p-10">
           <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-aqua">
             <ShieldCheck className="h-4 w-4" /> Stellaris account
           </div>
-          <h1 className="mt-7 text-3xl font-semibold tracking-normal sm:text-4xl">{title}</h1>
+          <h1 className="mt-4 text-3xl font-semibold tracking-normal sm:mt-7 sm:text-4xl">{title}</h1>
           <p className="mt-4 max-w-md text-sm leading-7 text-deep-foreground/80">{subtitle}</p>
-          <div className="mt-10 border-t border-border pt-6">
+          <div className="mt-5 border-t border-border pt-4 sm:mt-10 sm:pt-6">
             <div className="flex items-center gap-2 text-sm font-semibold">
               <Wallet className="h-5 w-5 text-aqua" /> Your account. Your wallet. Separate.
             </div>
-            <p className="mt-3 text-sm leading-6 text-deep-foreground/80">
+            <p className="mt-3 hidden text-sm leading-6 text-deep-foreground/80 sm:block">
               Signing in does not connect a wallet or grant administrator access. Connecting a
               wallet does not prove ownership to your account.
             </p>
