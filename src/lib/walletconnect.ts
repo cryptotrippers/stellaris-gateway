@@ -39,36 +39,44 @@ const sessionListeners = new Set<(topic: string) => void>();
 
 export function onWalletConnectSessionChange(listener: (topic: string) => void) {
   sessionListeners.add(listener);
-  return () => { sessionListeners.delete(listener); };
+  return () => {
+    sessionListeners.delete(listener);
+  };
 }
 
 async function getClient(): Promise<SignClient> {
   if (!PROJECT_ID) {
     throw new Error(
-      "WalletConnect is not configured. Set VITE_WALLETCONNECT_PROJECT_ID (get one at https://cloud.reown.com) and reload."
+      "WalletConnect is not configured. Set VITE_WALLETCONNECT_PROJECT_ID (get one at https://cloud.reown.com) and reload.",
     );
   }
   if (!clientPromise) {
     clientPromise = SignClient.init({
       projectId: PROJECT_ID,
       metadata: METADATA,
-    }).then((client) => {
-      const notify = ({ topic }: { topic: string }) => sessionListeners.forEach((listener) => listener(topic));
-      client.on("session_delete", notify);
-      client.on("session_expire", notify);
-      client.on("session_update", notify);
-      client.on("session_event", notify);
-      return client;
-    }).catch((error) => { clientPromise = null; throw error; });
+    })
+      .then((client) => {
+        const notify = ({ topic }: { topic: string }) =>
+          sessionListeners.forEach((listener) => listener(topic));
+        client.on("session_delete", notify);
+        client.on("session_expire", notify);
+        client.on("session_update", notify);
+        client.on("session_event", notify);
+        return client;
+      })
+      .catch((error) => {
+        clientPromise = null;
+        throw error;
+      });
   }
   return clientPromise;
 }
 
 export interface WalletConnectAccount {
-  chainId: string;         // e.g. cip34:0-1
-  networkId: 0 | 1;        // 0 testnet, 1 mainnet
-  stakeAddress: string;    // bech32 stake address from the CIP-45 account string
-  topic: string;           // WC session topic — keep for later disconnect
+  chainId: string; // e.g. cip34:0-1
+  networkId: 0 | 1; // 0 testnet, 1 mainnet
+  stakeAddress: string; // bech32 stake address from the CIP-45 account string
+  topic: string; // WC session topic — keep for later disconnect
 }
 
 export interface PairingHandle {
@@ -117,7 +125,12 @@ export async function startPairing(chain: Cip34Chain = "preprod"): Promise<Pairi
     // Account string format: `cip34:<netId>-<magic>:<bech32StakeAddr>`
     const [ns, ref, stakeAddress] = accounts[0].split(":");
     const netId = Number(ref?.split("-")[0]);
-    if (ns !== "cip34" || (netId !== 0 && netId !== 1) || !stakeAddress || `${ns}:${ref}` !== chainId) {
+    if (
+      ns !== "cip34" ||
+      (netId !== 0 && netId !== 1) ||
+      !stakeAddress ||
+      `${ns}:${ref}` !== chainId
+    ) {
       throw new Error(`Unexpected CIP-34 account format: ${accounts[0]}`);
     }
     return {
@@ -130,7 +143,11 @@ export async function startPairing(chain: Cip34Chain = "preprod"): Promise<Pairi
 
   let cancelled = false;
   // Providers cannot always cancel a proposal, but late approvals are never retained.
-  void account.then((acct) => { if (cancelled) void disconnectSession(acct.topic); }).catch(() => {});
+  void account
+    .then((acct) => {
+      if (cancelled) void disconnectSession(acct.topic);
+    })
+    .catch(() => {});
   return {
     uri,
     approval: account,

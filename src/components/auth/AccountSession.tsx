@@ -5,7 +5,12 @@ import { useRouter } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { isCurrentAuthRead, withTimeout } from "@/lib/auth-flow.shared";
 
-type AccountState = { user: User | null; loading: boolean; error: string | null; recovery: boolean };
+type AccountState = {
+  user: User | null;
+  loading: boolean;
+  error: string | null;
+  recovery: boolean;
+};
 const INITIAL: AccountState = { user: null, loading: true, error: null, recovery: false };
 const AccountContext = createContext<AccountState>(INITIAL);
 
@@ -23,25 +28,54 @@ export function AccountSession({ children }: { children: ReactNode }) {
       const next = session?.user ?? null;
       const changed = identity !== (next?.id ?? null);
       identity = next?.id ?? null;
-      setState((previous) => ({ user: next, loading: false, error: null, recovery: event === "PASSWORD_RECOVERY" || (event !== "SIGNED_OUT" && previous.recovery) }));
+      setState((previous) => ({
+        user: next,
+        loading: false,
+        error: null,
+        recovery: event === "PASSWORD_RECOVERY" || (event !== "SIGNED_OUT" && previous.recovery),
+      }));
       // Do not call Auth again inside its subscriber (it holds the Auth lock).
-      if (changed || event === "USER_UPDATED") queueMicrotask(() => {
-        if (!active) return;
-        if (!next || changed) { void queryClient.cancelQueries(); queryClient.clear(); }
-        void router.invalidate();
-      });
+      if (changed || event === "USER_UPDATED")
+        queueMicrotask(() => {
+          if (!active) return;
+          if (!next || changed) {
+            void queryClient.cancelQueries();
+            queryClient.clear();
+          }
+          void router.invalidate();
+        });
     });
     const started = revision;
-    void withTimeout(supabase.auth.getUser()).then(({ data, error }) => {
-      if (!active || !isCurrentAuthRead(started, revision)) return;
-      identity = data.user?.id ?? null;
-      setState((previous) => ({ ...previous, user: data.user, loading: false, error: error && error.name !== "AuthSessionMissingError" ? "Your account session could not be checked. Please sign in again." : null }));
-    }).catch(() => {
-      if (active && isCurrentAuthRead(started, revision)) setState({ ...INITIAL, loading: false, error: "Your session check timed out. Please try signing in again." });
-    });
-    return () => { active = false; data.subscription.unsubscribe(); };
+    void withTimeout(supabase.auth.getUser())
+      .then(({ data, error }) => {
+        if (!active || !isCurrentAuthRead(started, revision)) return;
+        identity = data.user?.id ?? null;
+        setState((previous) => ({
+          ...previous,
+          user: data.user,
+          loading: false,
+          error:
+            error && error.name !== "AuthSessionMissingError"
+              ? "Your account session could not be checked. Please sign in again."
+              : null,
+        }));
+      })
+      .catch(() => {
+        if (active && isCurrentAuthRead(started, revision))
+          setState({
+            ...INITIAL,
+            loading: false,
+            error: "Your session check timed out. Please try signing in again.",
+          });
+      });
+    return () => {
+      active = false;
+      data.subscription.unsubscribe();
+    };
   }, [queryClient, router]);
   return <AccountContext.Provider value={state}>{children}</AccountContext.Provider>;
 }
 
-export function useAccountSession() { return useContext(AccountContext); }
+export function useAccountSession() {
+  return useContext(AccountContext);
+}

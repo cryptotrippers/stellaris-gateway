@@ -30,7 +30,11 @@ export function AccountMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="hidden h-10 gap-1.5 px-3 md:inline-flex" aria-label="Account menu">
+        <Button
+          variant="outline"
+          className="hidden h-10 gap-1.5 px-3 md:inline-flex"
+          aria-label="Account menu"
+        >
           <UserRound className="h-4 w-4" aria-hidden="true" />
           <span className="hidden xl:inline">Account</span>
           <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
@@ -55,13 +59,23 @@ export function AccountMenu() {
           ))}
         </div>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild><Link to="/account">Account & wallets</Link></DropdownMenuItem>
-        {logout.error && <p role="alert" className="p-2 text-xs text-destructive">{logout.error}</p>}
+        <DropdownMenuItem asChild>
+          <Link to="/account">Account & wallets</Link>
+        </DropdownMenuItem>
+        {logout.error && (
+          <p role="alert" className="p-2 text-xs text-destructive">
+            {logout.error}
+          </p>
+        )}
         <p className="flex items-center gap-1.5 px-1 py-1 text-[11px] text-muted-foreground">
           <ShieldCheck className="h-3.5 w-3.5 text-teal" aria-hidden="true" />
           Account login is separate from wallet connection.
         </p>
-        <DropdownMenuItem disabled={logout.busy} onSelect={() => void logout.signOut()} className="text-sm">
+        <DropdownMenuItem
+          disabled={logout.busy}
+          onSelect={() => void logout.signOut()}
+          className="text-sm"
+        >
           <LogOut className="h-4 w-4" aria-hidden="true" /> Sign out
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -85,8 +99,16 @@ export function MobileAccountLinks({ onNavigate }: { onNavigate: () => void }) {
   }
   return (
     <div className="mt-2 grid gap-3 border-t border-border pt-3">
-      <Button asChild variant="ghost" className="min-h-11 justify-start"><Link to="/account" onClick={onNavigate}>Account & wallets</Link></Button>
-      {logout.error && <p role="alert" className="text-xs text-destructive">{logout.error}</p>}
+      <Button asChild variant="ghost" className="min-h-11 justify-start">
+        <Link to="/account" onClick={onNavigate}>
+          Account & wallets
+        </Link>
+      </Button>
+      {logout.error && (
+        <p role="alert" className="text-xs text-destructive">
+          {logout.error}
+        </p>
+      )}
       {accountGroups(isAdmin).map((g) => (
         <div key={g.title}>
           <p className="px-4 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">

@@ -7,9 +7,17 @@ export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async ({ location }) => {
     // Client-only gate; private server functions retain their own authorization.
     let user = null;
-    try { const result = await withTimeout(supabase.auth.getUser()); user = result.data.user; }
-    catch { /* An unreadable session is not authenticated. */ }
-    if (!user) throw redirect({ to: "/auth", search: { mode: "signin", redirect: safeAuthReturn(location.href) } });
+    try {
+      const result = await withTimeout(supabase.auth.getUser());
+      user = result.data.user;
+    } catch {
+      /* An unreadable session is not authenticated. */
+    }
+    if (!user)
+      throw redirect({
+        to: "/auth",
+        search: { mode: "signin", redirect: safeAuthReturn(location.href) },
+      });
   },
   component: Outlet,
 });

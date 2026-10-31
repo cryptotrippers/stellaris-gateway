@@ -11,15 +11,19 @@ export function useAccountSignOut() {
   const [error, setError] = useState<string | null>(null);
   async function signOut() {
     if (busy) return;
-    setBusy(true); setError(null);
+    setBusy(true);
+    setError(null);
     try {
       await queryClient.cancelQueries();
       queryClient.clear();
       const { error } = await withTimeout(supabase.auth.signOut());
       if (error) throw error;
       await navigate({ to: "/auth", search: { mode: "signin", redirect: "/app" }, replace: true });
-    } catch (err) { setError(authErrorMessage(err)); }
-    finally { setBusy(false); }
+    } catch (err) {
+      setError(authErrorMessage(err));
+    } finally {
+      setBusy(false);
+    }
   }
   return { signOut, busy, error };
 }
