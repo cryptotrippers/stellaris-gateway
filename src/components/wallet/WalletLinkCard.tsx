@@ -12,6 +12,7 @@ import {
   requestWalletNonce,
 } from "@/lib/wallet-link.functions";
 import { shortenAddress } from "@/lib/address";
+import { WalletButton } from "./WalletButton";
 
 /**
  * Prove a wallet belongs to this account by signing a one-time message.
@@ -77,14 +78,18 @@ export function WalletLinkCard({ compact = false }: { compact?: boolean }) {
           ))}
         </ul>
       )}
-      <Button
+      {!wallet.connected || !wallet.addressHex ? (
+        <div className="mt-3">
+          <WalletButton label={wallet.connected ? "Use a browser wallet to link" : "Connect a wallet to link it"} />
+        </div>
+      ) : <Button
         type="button"
         onClick={() => {
           if (submitting.current) return;
           submitting.current = true;
           link.mutate();
         }}
-        disabled={link.isPending || !wallet.connected || !wallet.addressHex}
+        disabled={link.isPending}
         className="mt-3 min-h-11 gap-2 text-xs"
       >
         {link.isPending ? (
@@ -97,7 +102,7 @@ export function WalletLinkCard({ compact = false }: { compact?: boolean }) {
             ? "Link this wallet"
             : "Use a browser wallet to link"
           : "Connect a wallet to link it"}
-      </Button>
+      </Button>}
       {linked.isError && (
         <p role="alert" className="mt-2 text-xs text-destructive">
           Linked wallets could not be loaded.{" "}

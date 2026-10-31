@@ -12,7 +12,7 @@ import {
 import { WalletConnectionPanel } from "./WalletConnectionPanel";
 import { cancelWalletConnection, shortAddr, useWallet } from "@/lib/wallet-store";
 
-export function WalletButton() {
+export function WalletButton({ label }: { label?: string }) {
   const wallet = useWallet();
   const [open, setOpen] = useState(false);
   return (
@@ -27,10 +27,10 @@ export function WalletButton() {
         <Button
           className="min-h-11 gap-2 px-3"
           variant={wallet.connected ? "outline" : "default"}
-          aria-label="Manage wallet connection"
+          aria-label={label ?? "Manage wallet connection"}
         >
           {wallet.viewerAddress && !wallet.connected ? <Eye /> : <Wallet />}
-          <span className="hidden lg:inline">
+          {label ? <span>{label}</span> : <><span className="hidden lg:inline">
             {wallet.connected
               ? shortAddr(wallet.address)
               : wallet.viewerAddress
@@ -38,6 +38,7 @@ export function WalletButton() {
                 : "Connect wallet"}
           </span>
           <span className="lg:hidden">{wallet.connected ? wallet.provider : "Wallet"}</span>
+          </>}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-h-[90dvh] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-lg p-5 sm:p-6 [&>button]:min-h-11 [&>button]:min-w-11">
