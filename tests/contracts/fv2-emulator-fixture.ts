@@ -168,3 +168,34 @@ export async function pledgeAll(w: World, qtys: bigint[]) {
 }
 
 export const tsraOf = (u: UTxO[]) => u.reduce((a, x) => a + (x.assets[TSRA] ?? 0n), 0n);
+
+/** Sum of the execution units the builder set on every redeemer. */
+export function txBudget(cbor: string): { mem: bigint; cpu: bigint; bytes: number } {
+  const tx = L.CML.Transaction.from_cbor_hex(cbor);
+  const rs = tx.witness_set().redeemers();
+  let mem = 0n;
+  let cpu = 0n;
+  if (rs) {
+    const legacy = rs.as_arr_legacy_redeemer();
+    if (legacy) {
+      for (let i = 0; i < legacy.len(); i++) {
+        const u = legacy.get(i).ex_units();
+        mem += u.mem();
+        cpu += u.steps();
+      }
+    }
+    const map = rs.as_map_redeemer_key_to_redeemer_val();
+    if (map) {
+      const keys = map.keys();
+      for (let i = 0; i < keys.len(); i++) {
+        const u = map.get(keys.get(i))!.ex_units();
+        mem += u.mem();
+        cpu += u.steps();
+      }
+    }
+  }
+  return { mem, cpu, bytes: cbor.length / 2 };
+}
+
+/** Conway per-transaction limits. */
+export const TX_MAX = { mem: 14_000_000n, cpu: 10_000_000_000n, bytes: 16_384 };

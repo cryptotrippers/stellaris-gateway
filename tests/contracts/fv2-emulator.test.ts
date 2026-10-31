@@ -34,6 +34,7 @@ import {
   run,
   setup,
   tsraOf,
+  txBudget,
   type World,
 } from "./fv2-emulator-fixture";
 
@@ -303,34 +304,6 @@ test("E07: the builders and the CI budget gate use the same batch size", async (
 // --------------------------------------------------------------------------
 // Settle budget on serialised transactions (SPEC-v2 §8, §11.4)
 // --------------------------------------------------------------------------
-
-/** Sum of the execution units the builder set on every redeemer. */
-export function txBudget(cbor: string): { mem: bigint; cpu: bigint; bytes: number } {
-  const tx = L.CML.Transaction.from_cbor_hex(cbor);
-  const rs = tx.witness_set().redeemers();
-  let mem = 0n;
-  let cpu = 0n;
-  if (rs) {
-    const legacy = rs.as_arr_legacy_redeemer();
-    if (legacy) {
-      for (let i = 0; i < legacy.len(); i++) {
-        const u = legacy.get(i).ex_units();
-        mem += u.mem();
-        cpu += u.steps();
-      }
-    }
-    const map = rs.as_map_redeemer_key_to_redeemer_val();
-    if (map) {
-      const keys = map.keys();
-      for (let i = 0; i < keys.len(); i++) {
-        const u = map.get(keys.get(i))!.ex_units();
-        mem += u.mem();
-        cpu += u.steps();
-      }
-    }
-  }
-  return { mem, cpu, bytes: cbor.length / 2 };
-}
 
 const MAX_MEM = 14_000_000n;
 const MAX_CPU = 10_000_000_000n;
