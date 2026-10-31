@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { ClientOnly, createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, ArrowDownUp, Coins, Layers, Lock, Timer, ShieldCheck } from "lucide-react";
 import { BRAND } from "@/config/brand";
 import { TRANSPARENCY as T } from "@/data/transparency.mock";
@@ -6,6 +6,7 @@ import { MarketingLayout } from "@/components/layout/MarketingLayout";
 import { SectionHeader } from "@/components/brand/SectionHeader";
 import { StatusPill } from "@/components/brand/StatusPill";
 import { TesseraLiveDashboard } from "@/components/brand/TesseraLiveDashboard";
+import { TesseraKeeperPanel } from "@/components/tessera/TesseraKeeperPanel";
 
 const B = BRAND.base.ticker;
 const S = BRAND.staked.ticker;
@@ -41,6 +42,9 @@ function TesseraPage() {
   return (
     <MarketingLayout>
       <TesseraLiveDashboard />
+      <ClientOnly fallback={null}>
+        <TesseraKeeperPanel />
+      </ClientOnly>
       {/* Hero */}
       <section className="home-dark-section">
         <div className="home-container home-section">
