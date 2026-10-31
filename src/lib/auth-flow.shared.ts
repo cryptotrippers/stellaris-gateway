@@ -13,8 +13,15 @@ export function safeAuthReturn(value: unknown): string {
   } catch {
     return AUTH_FALLBACK;
   }
-  const controlCharacter = Array.from(decoded).some((char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127);
-  if (!decoded.startsWith("/") || decoded.startsWith("//") || /[\\\s]/.test(decoded) || controlCharacter) {
+  const controlCharacter = Array.from(decoded).some(
+    (char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127,
+  );
+  if (
+    !decoded.startsWith("/") ||
+    decoded.startsWith("//") ||
+    /[\\\s]/.test(decoded) ||
+    controlCharacter
+  ) {
     return AUTH_FALLBACK;
   }
   const url = new URL(decoded, "https://internal.invalid");

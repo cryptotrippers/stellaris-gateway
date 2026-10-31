@@ -32,7 +32,9 @@ export function AccountFrame({
           <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-aqua">
             <ShieldCheck className="h-4 w-4" /> Stellaris account
           </div>
-          <h1 className="mt-4 text-3xl font-semibold tracking-normal sm:mt-7 sm:text-4xl">{title}</h1>
+          <h1 className="mt-4 text-3xl font-semibold tracking-normal sm:mt-7 sm:text-4xl">
+            {title}
+          </h1>
           <p className="mt-4 max-w-md text-sm leading-7 text-deep-foreground/80">{subtitle}</p>
           <div className="mt-5 border-t border-border pt-4 sm:mt-10 sm:pt-6">
             <div className="flex items-center gap-2 text-sm font-semibold">
