@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { withTimeout } from "@/lib/auth-flow.shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Link2, Loader2, ShieldCheck } from "lucide-react";
@@ -23,6 +25,7 @@ export function WalletLinkCard({ compact = false }: { compact?: boolean }) {
   const requestNonce = useServerFn(requestWalletNonce);
   const confirm = useServerFn(confirmWalletLink);
   const [error, setError] = useState<string | null>(null);
+  const submitting = useRef(false);
 
   const linked = useQuery({
     queryKey: ["linked-wallets", user?.id ?? null],
@@ -34,15 +37,16 @@ export function WalletLinkCard({ compact = false }: { compact?: boolean }) {
     mutationFn: async () => {
       setError(null);
       if (!wallet.addressHex) throw new Error("Connect a browser wallet first.");
-      const n = await requestNonce({ data: { addressHex: wallet.addressHex } });
-      const signed = await signMessageWithConnectedWallet(n.messageHex);
-      return confirm({ data: { nonce: n.nonce, signature: signed.signature, key: signed.key } });
+      const n = await withTimeout(requestNonce({ data: { addressHex: wallet.addressHex } }));
+      const signed = await withTimeout(signMessageWithConnectedWallet(n.messageHex), 60_000);
+      return withTimeout(confirm({ data: { nonce: n.nonce, signature: signed.signature, key: signed.key } }));
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["linked-wallets"] });
       qc.invalidateQueries({ queryKey: ["governance", "my-weights"] });
     },
     onError: (e: Error) => setError(e.message),
+    onSettled: () => { submitting.current = false; },
   });
 
   if (!user) return null;
@@ -69,15 +73,16 @@ export function WalletLinkCard({ compact = false }: { compact?: boolean }) {
           ))}
         </ul>
       )}
-      <button
+      <Button
         type="button"
-        onClick={() => link.mutate()}
-        disabled={link.isPending || !wallet.connected}
-        className="mt-3 inline-flex items-center gap-2 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground disabled:opacity-50"
+        onClick={() => { if (submitting.current) return; submitting.current = true; link.mutate(); }}
+        disabled={link.isPending || !wallet.connected || !wallet.addressHex}
+        className="mt-3 min-h-11 gap-2 text-xs"
       >
         {link.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Link2 className="h-3 w-3" />}
-        {wallet.connected ? "Link this wallet" : "Connect a wallet to link it"}
-      </button>
+        {wallet.connected ? wallet.addressHex ? "Link this wallet" : "Use a browser wallet to link" : "Connect a wallet to link it"}
+      </Button>
+      {linked.isError && <p role="alert" className="mt-2 text-xs text-destructive">Linked wallets could not be loaded. <Button variant="link" className="min-h-11 px-0 text-xs" onClick={() => void linked.refetch()}>Retry</Button></p>}
       {error && <p role="alert" className="mt-2 text-xs text-destructive">{error}</p>}
     </section>
   );
