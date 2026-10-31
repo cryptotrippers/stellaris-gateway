@@ -17,7 +17,7 @@ import {
 } from "@/lib/auth-flow.shared";
 
 export const Route = createFileRoute("/auth")({
-  validateSearch: (search: Record<string, unknown>) => ({
+  validateSearch: (search: Record<string, unknown>): { mode?: "signup" | "signin"; redirect?: string } => ({
     mode: search.mode === "signup" ? ("signup" as const) : ("signin" as const),
     redirect: safeAuthReturn(search.redirect ?? search.returnTo),
   }),
@@ -42,7 +42,7 @@ export const Route = createFileRoute("/auth")({
 });
 
 function AuthPage() {
-  const { mode, redirect } = Route.useSearch();
+  const { mode = "signin", redirect = "/app" } = Route.useSearch();
   const navigate = useNavigate();
   const account = useAccountSession();
   const providers = useAuthProviders();

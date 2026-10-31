@@ -43,9 +43,10 @@ function ResetPasswordPage() {
     const query = new URLSearchParams(window.location.search);
     const fragment = new URLSearchParams(window.location.hash.slice(1));
     if (query.has("error") || fragment.has("error") || fragment.has("error_code")) setExpired(true);
+    if (account.recovery && account.user) return;
     const timer = setTimeout(() => setExpired(true), 20_000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [account.recovery, account.user]);
   useEffect(() => {
     if (account.recovery && account.user) {
       setExpired(false);

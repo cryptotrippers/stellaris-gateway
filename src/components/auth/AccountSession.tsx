@@ -38,11 +38,13 @@ export function AccountSession({ children }: { children: ReactNode }) {
       if (changed || event === "USER_UPDATED")
         queueMicrotask(() => {
           if (!active) return;
-          if (!next || changed) {
-            void queryClient.cancelQueries();
-            queryClient.clear();
-          }
-          void router.invalidate();
+          void (async () => {
+            if (!next || changed) {
+              await queryClient.cancelQueries();
+              queryClient.clear();
+            }
+            if (active) await router.invalidate();
+          })().catch(() => {});
         });
     });
     const started = revision;
