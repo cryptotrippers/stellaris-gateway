@@ -23,18 +23,20 @@ export function WalletConnectionPanel({ onConnected }: { onConnected?: () => voi
   const pairing = useRef<PairingHandle | null>(null);
   const active = useRef(true);
   const request = useRef(0);
+  const ownsAttempt = useRef(false);
   useEffect(() => {
     active.current = true;
     setInstalled(listWallets().filter((w) => w.installed).map((w) => w.name.toLowerCase()));
     return () => {
       active.current = false; request.current++;
       if (pairing.current) void pairing.current.cancel().catch(() => {});
-      if (provider) cancelWalletConnection();
+      if (ownsAttempt.current) cancelWalletConnection();
     };
     // A single panel owns an attempt; cancellation is also enforced in the store.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   function cancel() {
+    ownsAttempt.current = false;
     request.current++; cancelWalletConnection();
     if (pairing.current) void pairing.current.cancel().catch(() => {});
     pairing.current = null; setUri(null); setQr(null); setProvider(null);
@@ -42,6 +44,7 @@ export function WalletConnectionPanel({ onConnected }: { onConnected?: () => voi
   async function connect(id: Exclude<WalletProvider, "WalletConnect">) {
     if (wallet.connecting) return;
     const current = ++request.current;
+    ownsAttempt.current = true;
     setError(null); setProvider(id);
     try {
       const result = await connectWallet(id);
@@ -49,11 +52,12 @@ export function WalletConnectionPanel({ onConnected }: { onConnected?: () => voi
       if (!result.ok) setError(result.error.message);
       else onConnected?.();
     } catch { if (active.current && current === request.current) setError("Connection failed. Unlock your wallet and try again."); }
-    finally { if (active.current && current === request.current) setProvider(null); }
+    finally { if (active.current && current === request.current) { ownsAttempt.current = false; setProvider(null); } }
   }
   async function mobile() {
     if (wallet.connecting) return;
     const current = ++request.current;
+    ownsAttempt.current = true;
     setError(null); setProvider("WalletConnect");
     try {
       const handle = await connectWithWalletConnect("preprod");

@@ -33,7 +33,8 @@ function AuthCallbackPage() {
     return () => clearTimeout(timer);
   }, [search.error]);
   useEffect(() => {
-    if (failed || account.loading || !account.user || completed.current) return;
+    const fragment = new URLSearchParams(window.location.hash.slice(1));
+    if (failed || search.error || search.error_code || fragment.has("error") || fragment.has("error_code") || account.loading || !account.user || completed.current) return;
     completed.current = true;
     let destination = search.redirect;
     try {
@@ -42,7 +43,7 @@ function AuthCallbackPage() {
       sessionStorage.removeItem("stellaris:auth:return");
     } catch { /* A blocked storage API falls back to the validated query. */ }
     void navigate({ to: account.recovery ? "/reset-password" : destination, replace: true });
-  }, [account.loading, account.user, account.recovery, failed, navigate, search.redirect]);
+  }, [account.loading, account.user, account.recovery, failed, navigate, search.redirect, search.error, search.error_code]);
   const unavailable = failed || (!account.loading && !account.user);
   return <AccountFrame title={unavailable ? "Let’s try again" : "Confirming your account"} subtitle="Your secure return is checked before any account access is granted.">
     {unavailable ? <div className="space-y-5">
